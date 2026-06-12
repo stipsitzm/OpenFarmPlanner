@@ -17,8 +17,7 @@
   },
   "checklist": {
     "title": "Projektstart",
-    "intro": "OpenFarmPlanner unterstützt dich bei der strukturierten Planung von Flächen, Kulturen und Anbauzyklen. Beginne mit dem ersten Schritt deiner Anbauplanung.",
-    "location": "Standort hinzufügen",
+    "intro": "OpenFarmPlanner unterstützt dich bei der strukturierten Planung von Flächen, Kulturen und Anbauzyklen. Beginne mit deiner ersten Parzelle.",
     "field": "Parzelle hinzufügen",
     "bed": "Beet hinzufügen",
     "culture": "Kultur hinzufügen",

@@ -125,10 +125,14 @@ describe('Suppliers page empty and table states', () => {
     const supplierRow = supplierName.closest('tr');
     expect(supplierRow).not.toBeNull();
 
-    fireEvent.contextMenu(supplierRow as HTMLTableRowElement);
+    const contextMenuEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    const stopPropagationSpy = vi.spyOn(contextMenuEvent, 'stopPropagation');
+    fireEvent(supplierRow as HTMLTableRowElement, contextMenuEvent);
 
     expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+    expect(contextMenuEvent.defaultPrevented).toBe(true);
+    expect(stopPropagationSpy).toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('menuitem', { name: 'Bearbeiten' }));
 

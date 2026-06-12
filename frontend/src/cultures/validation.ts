@@ -11,6 +11,8 @@ export interface ValidationResult {
   errors: Record<string, string>;
 }
 
+export type CultureValidationMode = 'live' | 'submit';
+
 const toNumber = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') {
     return null;
@@ -29,6 +31,43 @@ const toNumber = (value: unknown): number | null => {
   return null;
 };
 
+const hasValue = (value: unknown): boolean => (
+  value !== null && value !== undefined && value !== ''
+);
+
+const hasUnit = (value: unknown): boolean => (
+  value !== null && value !== undefined && value !== ''
+);
+
+const validateSeedRateFields = (
+  draft: Partial<Culture>,
+  errors: Record<string, string>,
+  t: TFunction,
+  mode: CultureValidationMode,
+  valueField: 'seed_rate_direct_value' | 'seed_rate_pre_cultivation_value',
+  unitField: 'seed_rate_direct_unit' | 'seed_rate_pre_cultivation_unit',
+): void => {
+  const value = draft[valueField];
+  const unit = draft[unitField];
+  const valueIsPresent = hasValue(value);
+  const unitIsPresent = hasUnit(unit);
+
+  if (valueIsPresent && Number(value) <= 0) {
+    errors[valueField] = t('form.seedRateValueRequired');
+  }
+
+  if (mode !== 'submit') {
+    return;
+  }
+
+  if (valueIsPresent && !unitIsPresent) {
+    errors[unitField] = t('form.seedRateUnitRequired');
+  }
+  if (!valueIsPresent && unitIsPresent) {
+    errors[valueField] = t('form.seedRateValueRequired');
+  }
+};
+
 /**
  * Validates a draft culture object for the form.
  *
@@ -38,7 +77,8 @@ const toNumber = (value: unknown): number | null => {
  */
 export function validateCulture(
   draft: Partial<Culture>,
-  t: TFunction
+  t: TFunction,
+  mode: CultureValidationMode = 'submit',
 ): ValidationResult {
   const errors: Record<string, string> = {};
 
@@ -47,36 +87,21 @@ export function validateCulture(
   const hasPreCultivation = cultivationTypes.includes('pre_cultivation');
 
   if (hasDirect) {
-    const hasValue = draft.seed_rate_direct_value !== null && draft.seed_rate_direct_value !== undefined;
-    const hasUnit = draft.seed_rate_direct_unit !== null && draft.seed_rate_direct_unit !== undefined;
-    if (hasValue && !hasUnit) {
-      errors.seed_rate_direct_unit = t('form.seedRateUnitRequired');
-    }
-    if (hasValue && Number(draft.seed_rate_direct_value) <= 0) {
-      errors.seed_rate_direct_value = t('form.seedRateValueRequired');
-    }
-    if (!hasValue && hasUnit) {
-      errors.seed_rate_direct_value = t('form.seedRateValueRequired');
-    }
+    validateSeedRateFields(draft, errors, t, mode, 'seed_rate_direct_value', 'seed_rate_direct_unit');
   }
 
   if (hasPreCultivation) {
-    const hasValue = draft.seed_rate_pre_cultivation_value !== null && draft.seed_rate_pre_cultivation_value !== undefined;
-    const hasUnit = draft.seed_rate_pre_cultivation_unit !== null && draft.seed_rate_pre_cultivation_unit !== undefined;
-    if (hasValue && !hasUnit) {
-      errors.seed_rate_pre_cultivation_unit = t('form.seedRateUnitRequired');
-    }
-    if (hasValue && Number(draft.seed_rate_pre_cultivation_value) <= 0) {
-      errors.seed_rate_pre_cultivation_value = t('form.seedRateValueRequired');
-    }
+    validateSeedRateFields(draft, errors, t, mode, 'seed_rate_pre_cultivation_value', 'seed_rate_pre_cultivation_unit');
   }
 
   // Required fields: name, variety
-  if (!draft.name) {
-    errors.name = t('form.nameRequired');
-  }
-  if (!draft.variety) {
-    errors.variety = t('form.varietyRequired');
+  if (mode === 'submit') {
+    if (!draft.name) {
+      errors.name = t('form.nameRequired');
+    }
+    if (!draft.variety) {
+      errors.variety = t('form.varietyRequired');
+    }
   }
   // Optional numeric fields with explicit error keys
   if (draft.growth_duration_days !== undefined && draft.growth_duration_days !== null && (typeof draft.growth_duration_days !== 'string' || draft.growth_duration_days !== '')) {
@@ -131,6 +156,7 @@ export function validateCulture(
 
   // If expected_yield is set, harvest_method must also be selected
   if (
+    mode === 'submit' &&
     draft.expected_yield !== undefined &&
     draft.expected_yield !== null &&
     !draft.harvest_method
@@ -139,12 +165,14 @@ export function validateCulture(
   }
 
   if (
+    mode === 'submit' &&
     (draft.seeding_requirement === undefined || draft.seeding_requirement === null) &&
     draft.seeding_requirement_type
   ) {
     errors.seeding_requirement = t('form.seedingRequirementValueRequired');
   }
   if (
+    mode === 'submit' &&
     draft.seeding_requirement !== undefined &&
     draft.seeding_requirement !== null &&
     !draft.seeding_requirement_type

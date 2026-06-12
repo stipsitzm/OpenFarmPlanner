@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "if [ ! -f node_modules/react-modern-gantt/dist/index.esm.js ]; then npm --prefix node_modules/react-modern-gantt install --no-audit --no-fund && npm --prefix node_modules/react-modern-gantt run build; fi",
+    "prebuild": "npm run ensure:gantt",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:ci": "vitest run --reporter=default",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:coverage:ci": "vitest run --coverage --reporter=verbose",
@@ -19,7 +20,8 @@
     "mutation:report": "open mutation-report/index.html",
     "lint:circular": "madge --circular src",
     "quality:frontend": "npm run lint && npm run lint:circular",
-    "postinstall": "if [ ! -f node_modules/react-modern-gantt/dist/index.esm.js ]; then npm --prefix node_modules/react-modern-gantt install --no-audit --no-fund && npm --prefix node_modules/react-modern-gantt run build; fi"
+    "ensure:gantt": "node scripts/ensure-react-modern-gantt.mjs",
+    "postinstall": "npm run ensure:gantt"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

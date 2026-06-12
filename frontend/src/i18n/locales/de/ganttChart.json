@@ -47,6 +47,9 @@
     "bed": "Beet",
     "location": "Standort",
     "plantsCount": "Pflanzenanzahl",
+    "totalPlantsCount": "Gesamtpflanzen",
+    "plantingPlanCount": "Anzahl Anbaupläne",
+    "involvedLocations": "Beteiligte Standorte",
     "seedRequirement": "Saatgutbedarf",
     "notes": "Hinweis"
   },
@@ -88,14 +91,10 @@
     "seedlings": "Anzuchtzeiträume für Jungpflanzen nach Kultur. Diese Ansicht ist schreibgeschützt und zeigt nur relevante Voranzuchten im aktuellen Jahr."
   },
   "seedlings": {
-    "emptyState": "Keine Jungpflanzen-Anzuchtzeiträume für dieses Jahr vorhanden."
+    "emptyState": "Keine Jungpflanzen-Anzuchtzeiträume für dieses Jahr vorhanden.",
+    "plantsUnit": "Pflanzen"
   },
   "requirements": {
-    "location": {
-      "label": "Standort",
-      "missing": "Standort fehlt",
-      "done": "Standort vorhanden"
-    },
     "field": {
       "label": "Parzelle",
       "missing": "Parzelle fehlt",
@@ -120,8 +119,13 @@
   "emptyStates": {
     "requirementsTitle": "Noch keine Anbauplanung möglich",
     "requirementsDescription": "Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu. Danach kannst du Beete, Kulturen und Anbaupläne erfassen.",
+    "states": {
+      "cultures": {
+        "title": "Noch keine Kulturen vorhanden",
+        "description": "Lege jetzt deine erste Kultur an oder importiere eine Kultur aus der Kulturbibliothek. Danach kannst du Anbaupläne erstellen."
+      }
+    },
     "actions": {
-      "createLocation": "Standort hinzufügen",
       "createCulture": "Kultur hinzufügen",
       "createField": "Parzelle hinzufügen",
       "createAreas": "Zu Anbauflächen",

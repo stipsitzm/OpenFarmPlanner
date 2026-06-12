@@ -2,10 +2,11 @@
  * TimingSection: Cultivation type, growth/harvest/propagation durations
  * @remarks Presentational, no internal state
  */
-import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField, Tooltip, Checkbox, ListItemText } from '@mui/material';
+import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField, Checkbox, ListItemText } from '@mui/material';
 import { smallFieldSx } from './styles.tsx';
 import type { Culture, CultivationType } from '../../api/types';
 import type { TFunction } from 'i18next';
+import { DropdownAwareTooltip } from '../../components/DropdownAwareTooltip';
 
 interface TimingSectionProps {
   formData: Partial<Culture>;
@@ -61,7 +62,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
           </FormControl>
         </Box>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <Tooltip title={t('form.growthDurationDaysHelp')} arrow>
+          <DropdownAwareTooltip title={t('form.growthDurationDaysHelp')} arrow>
             <TextField
               sx={smallFieldSx}
               type="number"
@@ -73,7 +74,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
               helperText={errors.growth_duration_days}
               slotProps={{ htmlInput: { min: 1, step: 1 } }}
             />
-          </Tooltip>
+          </DropdownAwareTooltip>
           <TextField
             sx={smallFieldSx}
             type="number"
@@ -85,7 +86,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
             helperText={errors.harvest_duration_days}
             slotProps={{ htmlInput: { min: 0, step: 1 } }}
           />
-          <Tooltip title={isDirectSowingOnly ? t('form.directSowingPropagationDisabledHelp') : ''} arrow>
+          <DropdownAwareTooltip title={isDirectSowingOnly ? t('form.directSowingPropagationDisabledHelp') : ''} arrow>
             <TextField
               sx={smallFieldSx}
               type="number"
@@ -102,7 +103,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
               }
               slotProps={{ htmlInput: { min: 0, step: 1 } }}
             />
-          </Tooltip>
+          </DropdownAwareTooltip>
         </Box>
       </Box>
     </>

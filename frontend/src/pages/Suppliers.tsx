@@ -39,7 +39,9 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { useRegisterCreateActions } from '../commands/useCommandContext';
 import { DELETE_UNDO_DURATION_MS, DeleteUndoSnackbar, TableCopyMenuItems } from '../components/data-grid';
+import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from '../components/data-grid/contextMenuFocus';
 import { extractApiErrorMessage } from '../api/errors';
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
 
 interface SupplierDraft {
   id?: number;
@@ -108,6 +110,7 @@ export default function Suppliers() {
     mouseX: number;
     mouseY: number;
   } | null>(null);
+  const contextMenuOriginRef = useRef<HTMLElement | null>(null);
   const [pendingSupplierDeletions, setPendingSupplierDeletions] = useState<PendingSupplierDeletion[]>([]);
   const [deleteUsageDialog, setDeleteUsageDialog] = useState<SupplierDeleteUsageDialogState | null>(null);
   const [unlinkDeletingSupplierId, setUnlinkDeletingSupplierId] = useState<number | null>(null);
@@ -449,13 +452,19 @@ export default function Suppliers() {
 
   const closeContextMenu = useCallback((): void => {
     setContextMenuState(null);
+    focusContextMenuOrigin(contextMenuOriginRef.current);
   }, []);
+  const contextMenuListRef = useContextMenuFocus(contextMenuState !== null, closeContextMenu);
 
   const openSupplierContextMenu = useCallback((
     event: MouseEvent<HTMLTableRowElement>,
     supplier: Supplier,
   ): void => {
-    event.preventDefault();
+    if (!shouldOpenCustomContextMenu(event.target)) {
+      return;
+    }
+    suppressNativeContextMenu(event);
+    contextMenuOriginRef.current = event.currentTarget;
     setContextMenuState({
       supplier,
       mouseX: event.clientX + 2,
@@ -472,7 +481,8 @@ export default function Suppliers() {
       return;
     }
 
-    event.preventDefault();
+    suppressNativeContextMenu(event);
+    contextMenuOriginRef.current = event.currentTarget;
     const rowRect = event.currentTarget.getBoundingClientRect();
     setContextMenuState({
       supplier,
@@ -569,6 +579,7 @@ export default function Suppliers() {
                     tabIndex={0}
                     onContextMenu={(event) => openSupplierContextMenu(event, supplier)}
                     onKeyDown={(event) => openSupplierKeyboardContextMenu(event, supplier)}
+                    sx={{ WebkitTouchCallout: 'none' }}
                   >
                     <TableCell sx={{ py: 1.25 }}>{supplier.name}</TableCell>
                     <TableCell sx={{ py: 1.25 }}>
@@ -610,6 +621,16 @@ export default function Suppliers() {
       <Menu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
+        autoFocus
+        disableAutoFocusItem={false}
+        slotProps={{
+          list: {
+            autoFocus: true,
+            ref: contextMenuListRef,
+            onKeyDown: (event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
+          },
+        }}
+        onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
         anchorReference="anchorPosition"
         anchorPosition={
           contextMenuState !== null

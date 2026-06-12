@@ -115,3 +115,56 @@ class SeedDemandSupplierSelectionApiTest(APITestCase):
 
         culture.refresh_from_db()
         self.assertIsNone(culture.selected_seed_demand_supplier_id)
+
+    def test_seed_demand_displays_seed_requirement_as_grams_with_selected_supplier_tkg(self):
+        culture = Culture.objects.create(
+            name='Radieschen',
+            cultivation_types=['direct_sowing'],
+            seed_rate_direct_value=1000,
+            seed_rate_direct_unit='seeds_per_m2',
+            project=self.project,
+        )
+        supplier = Supplier.objects.create(name='TKG Supplier', homepage_url='https://tkg.example', project=self.project)
+        CultureSupplierData.objects.create(
+            culture=culture,
+            supplier=supplier,
+            project=self.project,
+            thousand_kernel_weight_g=5,
+            packaging_sizes=[{'size_value': 10, 'size_unit': 'g'}],
+        )
+        self._create_plan(culture, 2)
+
+        response = self.client.get('/openfarmplanner/api/seed-demand/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        row = response.data['results'][0]
+        self.assertEqual(row['required_amount_value'], 10.0)
+        self.assertEqual(row['required_amount_unit'], 'g')
+        self.assertEqual(row['total_grams'], 10.0)
+        self.assertIsNone(row['required_amount_warning'])
+
+    def test_seed_demand_hides_seed_requirement_when_tkg_is_missing(self):
+        culture = Culture.objects.create(
+            name='Kresse',
+            cultivation_types=['direct_sowing'],
+            seed_rate_direct_value=1000,
+            seed_rate_direct_unit='seeds_per_m2',
+            project=self.project,
+        )
+        supplier = Supplier.objects.create(name='No TKG Supplier', homepage_url='https://no-tkg.example', project=self.project)
+        CultureSupplierData.objects.create(
+            culture=culture,
+            supplier=supplier,
+            project=self.project,
+            packaging_sizes=[{'size_value': 1000, 'size_unit': 'seeds'}],
+        )
+        self._create_plan(culture, 2)
+
+        response = self.client.get('/openfarmplanner/api/seed-demand/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        row = response.data['results'][0]
+        self.assertIsNone(row['required_amount_value'])
+        self.assertEqual(row['required_amount_unit'], 'g')
+        self.assertIsNone(row['total_grams'])
+        self.assertEqual(row['required_amount_warning'], 'missing_tkg')

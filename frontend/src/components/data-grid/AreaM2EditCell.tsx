@@ -4,27 +4,11 @@
  * Provides a numeric input for area editing with optional normalization on blur.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { TextField } from '@mui/material';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
-import { formatLocalizedNumber, parseLocalizedNumber } from '../../utils/numberLocalization';
-
-function isMaxAreaKeyword(value: string, maxKeyword: string): boolean {
-  const normalized = value.trim().toLowerCase();
-  return [maxKeyword.trim().toLowerCase(), 'maximum'].includes(normalized);
-}
-
-function parseAreaInput(value: string, locale: string, maxKeyword: string): number | string | null {
-  const normalized = value.trim();
-  if (normalized === '') {
-    return null;
-  }
-  if (isMaxAreaKeyword(normalized, maxKeyword)) {
-    return normalized;
-  }
-  return parseLocalizedNumber(value, locale) ?? value;
-}
+import { formatLocalizedNumber } from '../../utils/numberLocalization';
 
 function getInitialInputValue(
   value: unknown,
@@ -64,7 +48,7 @@ export interface AreaM2EditCellProps extends GridRenderEditCellParams {
   maxPlaceholder: string;
 }
 
-export function AreaM2EditCell(props: AreaM2EditCellProps) {
+function AreaM2EditCellComponent(props: AreaM2EditCellProps) {
   const {
     id,
     value,
@@ -73,7 +57,6 @@ export function AreaM2EditCell(props: AreaM2EditCellProps) {
     onLastEditedFieldChange,
     fallbackValue,
     locale,
-    maxKeyword,
     maxPlaceholder,
   } = props;
   const apiRef = useGridApiContext();
@@ -84,8 +67,11 @@ export function AreaM2EditCell(props: AreaM2EditCellProps) {
 
 
   useEffect(() => {
+    if (hasFocus) {
+      return;
+    }
     setInputValue(getInitialInputValue(value, fallbackValue, locale));
-  }, [fallbackValue, locale, value]);
+  }, [fallbackValue, hasFocus, locale, value]);
 
   useEffect(() => {
     if (hasFocus) {
@@ -94,7 +80,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps) {
     }
   }, [hasFocus]);
 
-  const applyValue = async (nextValue: number | string | null): Promise<void> => {
+  const applyValue = async (nextValue: string): Promise<void> => {
     onLastEditedFieldChange('area_m2');
     await apiRef.current.setEditCellValue({
       id,
@@ -106,8 +92,7 @@ export function AreaM2EditCell(props: AreaM2EditCellProps) {
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
     const val = e.target.value;
     setInputValue(val);
-    const parsedValue = parseAreaInput(val, locale, maxKeyword);
-    await applyValue(parsedValue);
+    await applyValue(val);
   };
 
   return (
@@ -148,3 +133,14 @@ export function AreaM2EditCell(props: AreaM2EditCellProps) {
     />
   );
 }
+
+export const AreaM2EditCell = memo(AreaM2EditCellComponent, (previous, next) => (
+  previous.id === next.id
+  && previous.field === next.field
+  && previous.value === next.value
+  && previous.hasFocus === next.hasFocus
+  && previous.fallbackValue === next.fallbackValue
+  && previous.locale === next.locale
+  && previous.maxKeyword === next.maxKeyword
+  && previous.maxPlaceholder === next.maxPlaceholder
+));

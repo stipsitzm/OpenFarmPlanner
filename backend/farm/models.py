@@ -24,6 +24,7 @@ from .seed_units import (
     SEED_RATE_UNIT_SEEDS_PER_LFM,
     SEED_RATE_UNIT_SEEDS_PER_M2,
     SEED_RATE_UNIT_SEEDS_PER_PLANT,
+    SEED_RATE_UNITS,
 )
 
 
@@ -496,6 +497,12 @@ class Field(TimestampedModel):
         ordering = ['location', 'name']
         verbose_name = 'Parzelle'
         verbose_name_plural = 'Parzellen'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['location', 'name'],
+                name='unique_field_name_per_location',
+            ),
+        ]
 
 
 class Bed(TimestampedModel):
@@ -545,6 +552,12 @@ class Bed(TimestampedModel):
 
     class Meta:
         ordering = ['field', 'name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['field', 'name'],
+                name='unique_bed_name_per_field',
+            ),
+        ]
 
 
 class BedLayout(TimestampedModel):
@@ -623,12 +636,7 @@ class Culture(TimestampedModel):
         ('direct_sowing', 'Direct Sowing'),  # Direktsaat
     ]
     CULTIVATION_TYPE_VALUES = {item[0] for item in CULTIVATION_TYPE_CHOICES}
-    DIRECT_SOWING_SEED_RATE_UNITS = {
-        SEED_RATE_UNIT_G_PER_M2,
-        SEED_RATE_UNIT_G_PER_LFM,
-        SEED_RATE_UNIT_SEEDS_PER_M2,
-        SEED_RATE_UNIT_SEEDS_PER_LFM,
-    }
+    DIRECT_SOWING_SEED_RATE_UNITS = SEED_RATE_UNITS
     PRE_CULTIVATION_AUTO_SEED_RATE_UNITS = {
         SEED_RATE_UNIT_G_PER_M2,
         SEED_RATE_UNIT_G_PER_LFM,
@@ -855,6 +863,9 @@ class Culture(TimestampedModel):
         """Validate numeric ranges for positive values."""
         super().clean()
         errors = {}
+        for field_name in ('seed_rate_unit', 'seed_rate_direct_unit', 'seed_rate_pre_cultivation_unit'):
+            if getattr(self, field_name) == '-':
+                setattr(self, field_name, None)
 
         if not isinstance(self.cultivation_types, list):
             errors['cultivation_types'] = 'Cultivation types must be a list.'
@@ -945,6 +956,8 @@ class Culture(TimestampedModel):
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is unsupported.'
         if has_pre and self.seed_rate_pre_cultivation_value is not None and not self.seed_rate_pre_cultivation_unit:
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is required when pre-cultivation value is set.'
+        if has_pre and self.seed_rate_pre_cultivation_value is None and self.seed_rate_pre_cultivation_unit:
+            errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value is required when pre-cultivation unit is set.'
 
         if self.thousand_kernel_weight_g is not None and self.thousand_kernel_weight_g <= 0:
             errors['thousand_kernel_weight_g'] = 'Thousand kernel weight must be greater than zero.'

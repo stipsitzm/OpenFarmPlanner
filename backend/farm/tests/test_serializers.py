@@ -154,13 +154,53 @@ class SerializerBranchCoverageTest(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
-    def test_allows_pre_cultivation_unit_without_value(self):
+    def test_rejects_pre_cultivation_unit_without_value(self):
         serializer = CultureSerializer(
             data={
                 'name': 'Mangold',
                 'variety': 'X',
                 'cultivation_types': ['pre_cultivation'],
                 'seed_rate_pre_cultivation_unit': 'g_per_m2',
+                'project': self.project.id,
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('seed_rate_pre_cultivation_value', serializer.errors)
+
+    def test_normalizes_legacy_empty_seed_rate_unit_placeholder(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Mangold',
+                'variety': 'X',
+                'cultivation_types': ['pre_cultivation'],
+                'seed_rate_pre_cultivation_unit': '-',
+                'project': self.project.id,
+            }
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertIsNone(serializer.validated_data['seed_rate_pre_cultivation_unit'])
+
+    def test_represents_legacy_empty_seed_rate_unit_placeholder_as_null(self):
+        culture = Culture.objects.create(
+            name='Mangold',
+            variety='X',
+            cultivation_types=['pre_cultivation'],
+            seed_rate_pre_cultivation_unit='-',
+            project=self.project,
+        )
+
+        data = CultureSerializer(culture).data
+
+        self.assertIsNone(data['seed_rate_pre_cultivation_unit'])
+
+    def test_accepts_direct_sowing_seeds_per_plant_unit(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Bohne',
+                'variety': 'X',
+                'cultivation_types': ['direct_sowing'],
+                'seed_rate_direct_value': 2,
+                'seed_rate_direct_unit': 'seeds_per_plant',
                 'project': self.project.id,
             }
         )
@@ -301,6 +341,35 @@ class SerializerBranchCoverageTest(TestCase):
 
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
+    def test_field_serializer_rejects_duplicate_name_in_same_location(self):
+        serializer = FieldSerializer(
+            data={
+                'name': self.field.name,
+                'location': self.location.id,
+                'area_sqm': '12.3',
+                'project': self.project.id,
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors['name'][0],
+            'Eine Parzelle mit diesem Namen existiert in diesem Standort bereits.',
+        )
+
+    def test_field_serializer_allows_duplicate_name_in_different_location(self):
+        other_location = Location.objects.create(name='Standort B', project=self.project)
+        serializer = FieldSerializer(
+            data={
+                'name': self.field.name,
+                'location': other_location.id,
+                'area_sqm': '12.3',
+                'project': self.project.id,
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
     def test_location_serializer_does_not_require_project_field(self):
         serializer = LocationSerializer(data={'name': 'Standort B'})
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -370,6 +439,40 @@ class SerializerBranchCoverageTest(TestCase):
                 'area_sqm': '5.0',
             }
         )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_bed_serializer_rejects_duplicate_name_in_same_field(self):
+        serializer = BedSerializer(
+            data={
+                'name': self.bed.name,
+                'field': self.field.id,
+                'area_sqm': '5.0',
+                'project': self.project.id,
+            }
+        )
+
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            serializer.errors['name'][0],
+            'Ein Beet mit diesem Namen existiert in dieser Parzelle bereits.',
+        )
+
+    def test_bed_serializer_allows_duplicate_name_in_different_field(self):
+        other_field = Field.objects.create(
+            name='Feld B',
+            location=self.location,
+            area_sqm=200,
+            project=self.project,
+        )
+        serializer = BedSerializer(
+            data={
+                'name': self.bed.name,
+                'field': other_field.id,
+                'area_sqm': '5.0',
+                'project': self.project.id,
+            }
+        )
+
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_culture_serializer_does_not_require_project_field(self):

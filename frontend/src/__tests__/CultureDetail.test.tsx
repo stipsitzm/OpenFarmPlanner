@@ -269,7 +269,7 @@ describe('CultureDetail Component', () => {
     );
 
     expect(screen.getByRole('heading', { level: 3, name: 'Lieferant' })).toBeInTheDocument();
-    expect(screen.queryByText('Diese Angaben beziehen sich auf den ausgewählten Saatgutlieferanten. Das Tausendkorngewicht ist kulturweit.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Die folgenden Angaben gelten nur für den ausgewählten Lieferanten dieser Kultur.')).not.toBeInTheDocument();
     expect(screen.getByText('ReinSaat')).toBeInTheDocument();
     expect(screen.getByText('5 g, 10 g, 25 g')).toBeInTheDocument();
     expect(screen.getByText('4 g')).toBeInTheDocument();
@@ -378,8 +378,8 @@ describe('CultureDetail Component', () => {
       />
     );
 
-    expect(screen.getByRole('heading', { level: 3, name: 'Saatgutdaten je Lieferant' })).toBeInTheDocument();
-    expect(screen.getByText('Diese Angaben werden je Lieferant dargestellt.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Kulturspezifische Lieferantendaten' })).toBeInTheDocument();
+    expect(screen.getByText('Die folgenden Angaben gelten nur für den ausgewählten Lieferanten dieser Kultur.')).toBeInTheDocument();
     expect(screen.getByText('Alpha Seeds')).toBeInTheDocument();
     expect(screen.getByText('Beta Seeds')).toBeInTheDocument();
     expect(screen.getByText('5 g')).toBeInTheDocument();

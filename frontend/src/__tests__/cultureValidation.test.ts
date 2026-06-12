@@ -29,12 +29,49 @@ describe('validateCulture', () => {
     );
     expect(nonPositive.errors.seed_rate_direct_value).toBe('form.seedRateValueRequired');
     
-    // Einheit ohne Menge ist erlaubt
     const unitWithoutValue = validateCulture(
       { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as unknown, cultivation_types: ['pre_cultivation'], growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_pre_cultivation_unit: 'g_per_m2' },
       t
     );
-    expect(unitWithoutValue.errors.seed_rate_pre_cultivation_value).toBeUndefined();
+    expect(unitWithoutValue.errors.seed_rate_pre_cultivation_value).toBe('form.seedRateValueRequired');
+  });
+
+  it('keeps empty seed rate partner fields neutral during live validation', () => {
+    const emptyAmountWithUnit = validateCulture(
+      {
+        name: 'Karotte',
+        variety: 'Nantaise',
+        cultivation_types: ['direct_sowing'],
+        seed_rate_direct_unit: 'g_per_m2',
+      },
+      t,
+      'live'
+    );
+    expect(emptyAmountWithUnit.errors.seed_rate_direct_value).toBeUndefined();
+
+    const amountWithoutUnit = validateCulture(
+      {
+        name: 'Karotte',
+        variety: 'Nantaise',
+        cultivation_types: ['direct_sowing'],
+        seed_rate_direct_value: 3,
+      },
+      t,
+      'live'
+    );
+    expect(amountWithoutUnit.errors.seed_rate_direct_unit).toBeUndefined();
+
+    const nonPositive = validateCulture(
+      {
+        name: 'Karotte',
+        variety: 'Nantaise',
+        cultivation_types: ['direct_sowing'],
+        seed_rate_direct_value: 0,
+      },
+      t,
+      'live'
+    );
+    expect(nonPositive.errors.seed_rate_direct_value).toBe('form.seedRateValueRequired');
   });
 
   it('accepts direct sowing without propagation duration', () => {

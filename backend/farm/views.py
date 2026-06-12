@@ -56,6 +56,8 @@ from .serializers import (
     ProjectMembershipSerializer,
     ProjectInvitationSerializer,
     InvitationTokenSerializer,
+    BED_NAME_DUPLICATE_MESSAGE,
+    FIELD_NAME_DUPLICATE_MESSAGE,
 )
 from accounts.models import UserProjectSettings
 from django.core.mail import send_mail
@@ -1114,11 +1116,17 @@ class FieldViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewS
     serializer_class = FieldSerializer
 
     def perform_create(self, serializer):
-        instance = serializer.save(project=self.request.active_project)
+        try:
+            instance = serializer.save(project=self.request.active_project)
+        except IntegrityError as exc:
+            raise DRFValidationError({'name': [FIELD_NAME_DUPLICATE_MESSAGE]}) from exc
         self.create_project_revision(f"Field created #{instance.pk}")
 
     def perform_update(self, serializer):
-        instance = serializer.save()
+        try:
+            instance = serializer.save()
+        except IntegrityError as exc:
+            raise DRFValidationError({'name': [FIELD_NAME_DUPLICATE_MESSAGE]}) from exc
         self.create_project_revision(f"Field updated #{instance.pk}")
 
     def perform_destroy(self, instance):
@@ -1142,11 +1150,17 @@ class BedViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet
     serializer_class = BedSerializer
 
     def perform_create(self, serializer):
-        instance = serializer.save(project=self.request.active_project)
+        try:
+            instance = serializer.save(project=self.request.active_project)
+        except IntegrityError as exc:
+            raise DRFValidationError({'name': [BED_NAME_DUPLICATE_MESSAGE]}) from exc
         self.create_project_revision(f"Bed created #{instance.pk}")
 
     def perform_update(self, serializer):
-        instance = serializer.save()
+        try:
+            instance = serializer.save()
+        except IntegrityError as exc:
+            raise DRFValidationError({'name': [BED_NAME_DUPLICATE_MESSAGE]}) from exc
         self.create_project_revision(f"Bed updated #{instance.pk}")
 
     def perform_destroy(self, instance):
@@ -2200,6 +2214,7 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
     """Read-only endpoint returning typed seed demand aggregated by culture."""
 
     serializer_class = SeedDemandSerializer
+    REQUIRED_AMOUNT_WARNING_MISSING_TKG = 'missing_tkg'
 
     @staticmethod
     def _parse_selected_suppliers(raw_value: str | None) -> dict[int, int]:
@@ -2262,6 +2277,37 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
             return (requirement_value / tkg) * Decimal('1000'), None
         return None, 'Cannot convert between required amount and package unit.'
 
+    @classmethod
+    def _get_required_amount_in_unit(
+        cls,
+        *,
+        amounts_by_unit: dict[str, Decimal],
+        target_unit: str,
+        tkg: Decimal | None,
+    ) -> tuple[Decimal | None, str | None]:
+        total = amounts_by_unit.get(target_unit, Decimal('0'))
+        for source_unit, source_amount in amounts_by_unit.items():
+            if source_unit == target_unit or source_amount <= 0:
+                continue
+            converted, conversion_warning = cls._convert_requirement_to_unit(
+                requirement_value=source_amount,
+                requirement_unit=source_unit,
+                target_unit=target_unit,
+                tkg=tkg,
+            )
+            if converted is None:
+                if {source_unit, target_unit} == {SEED_PACKAGE_UNIT_SEEDS, SEED_PACKAGE_UNIT_GRAMS}:
+                    return None, cls.REQUIRED_AMOUNT_WARNING_MISSING_TKG
+                return None, conversion_warning
+            total += converted
+        return total, None
+
+    @staticmethod
+    def _select_tkg(culture_tkg: Decimal | None, selected_supplier: CultureSupplierData | None) -> Decimal | None:
+        if selected_supplier and selected_supplier.thousand_kernel_weight_g:
+            return Decimal(str(selected_supplier.thousand_kernel_weight_g))
+        return culture_tkg
+
     def _compute_plan_requirement(self, plan: PlantingPlan) -> tuple[Decimal | None, str | None]:
         value, unit = self._select_seed_rate(plan.culture, plan.cultivation_type)
         if value is None or not unit or value <= 0:
@@ -2310,8 +2356,10 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                     'culture_name': culture.name,
                     'variety': culture.variety,
                     'supplier': culture.supplier.name if culture.supplier else (culture.seed_supplier or ''),
-                    'required_amount_value': Decimal('0'),
-                    'required_amount_unit': None,
+                    'required_amount_by_unit': {
+                        SEED_PACKAGE_UNIT_GRAMS: Decimal('0'),
+                        SEED_PACKAGE_UNIT_SEEDS: Decimal('0'),
+                    },
                     'warning': None,
                     'tkg': Decimal(str(culture.thousand_kernel_weight_g)) if culture.thousand_kernel_weight_g else None,
                     'culture': culture,
@@ -2323,23 +2371,10 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
             if requirement_value is None or not requirement_unit:
                 entry['warning'] = requirement_unit or 'Seed requirement could not be calculated.'
                 continue
-            if entry['required_amount_unit'] is None:
-                entry['required_amount_unit'] = requirement_unit
-            elif entry['required_amount_unit'] != requirement_unit:
-                converted, conversion_warning = self._convert_requirement_to_unit(
-                    requirement_value=requirement_value,
-                    requirement_unit=requirement_unit,
-                    target_unit=entry['required_amount_unit'],
-                    tkg=entry['tkg'],
-                )
-                if converted is None:
-                    entry['warning'] = conversion_warning or 'Cannot aggregate mixed seed requirement units.'
-                    continue
-                requirement_value = converted
             margin_factor = Decimal('1') + (
                 self._select_safety_margin_percent(culture, plan.cultivation_type) / Decimal('100')
             )
-            entry['required_amount_value'] += requirement_value * margin_factor
+            entry['required_amount_by_unit'][requirement_unit] += requirement_value * margin_factor
 
         culture_ids = list(grouped.keys())
         selected_supplier_by_culture = self._parse_selected_suppliers(request.query_params.get('supplier_selection'))
@@ -2354,8 +2389,8 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
             suppliers_map[row.culture_id].append(row)
         rows: list[dict] = []
         for culture_id, entry in grouped.items():
-            required_amount = entry['required_amount_value']
-            required_unit = entry['required_amount_unit']
+            required_amounts_by_unit = entry['required_amount_by_unit']
+            has_required_amount = any(amount > 0 for amount in required_amounts_by_unit.values())
             warning = entry['warning']
             culture = entry['culture']
             supplier_options = suppliers_map.get(culture_id, [])
@@ -2369,6 +2404,12 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                 selected_supplier = supplier_options[0]
                 selected_supplier_id = selected_supplier.supplier_id
 
+            selected_tkg = self._select_tkg(entry['tkg'], selected_supplier)
+            display_required_amount, required_amount_warning = self._get_required_amount_in_unit(
+                amounts_by_unit=required_amounts_by_unit,
+                target_unit=SEED_PACKAGE_UNIT_GRAMS,
+                tkg=selected_tkg,
+            )
             packages_raw = selected_supplier.packaging_sizes if selected_supplier else []
             packages = []
             for item in packages_raw or []:
@@ -2396,9 +2437,18 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                     }
                     for item in supplier_options
                 ],
-                'required_amount_value': float(required_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)) if required_unit else None,
-                'required_amount_unit': required_unit,
-                'total_grams': None,
+                'required_amount_value': (
+                    float(display_required_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+                    if display_required_amount is not None
+                    else None
+                ),
+                'required_amount_unit': SEED_PACKAGE_UNIT_GRAMS if has_required_amount else None,
+                'required_amount_warning': required_amount_warning,
+                'total_grams': (
+                    float(display_required_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+                    if display_required_amount is not None
+                    else None
+                ),
                 'seed_packages': packages,
                 'package_suggestion': None,
                 'packages_needed': None,
@@ -2406,10 +2456,8 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
             }
             if not supplier_options:
                 row['warning'] = row['warning'] or 'Keine Lieferantendaten vorhanden.'
-            if required_unit == SEED_PACKAGE_UNIT_GRAMS:
-                row['total_grams'] = row['required_amount_value']
 
-            if warning or required_unit is None:
+            if warning or not has_required_amount:
                 rows.append(row)
                 continue
 
@@ -2417,24 +2465,21 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                 rows.append(row)
                 continue
 
-            same_unit_packages = [pkg for pkg in packages if pkg['size_unit'] == required_unit]
-            target_unit = required_unit
-            target_amount = required_amount
-            if not same_unit_packages and packages:
-                preferred_unit = packages[0]['size_unit']
-                converted, conversion_warning = self._convert_requirement_to_unit(
-                    requirement_value=required_amount,
-                    requirement_unit=required_unit,
-                    target_unit=preferred_unit,
-                    tkg=entry['tkg'],
-                )
-                if converted is None:
-                    row['warning'] = conversion_warning or 'Cannot convert required amount to package units.'
-                    rows.append(row)
-                    continue
-                target_amount = converted
-                target_unit = preferred_unit
-                same_unit_packages = [pkg for pkg in packages if pkg['size_unit'] == target_unit]
+            target_unit = (
+                SEED_PACKAGE_UNIT_GRAMS
+                if any(pkg['size_unit'] == SEED_PACKAGE_UNIT_GRAMS for pkg in packages)
+                else packages[0]['size_unit']
+            )
+            same_unit_packages = [pkg for pkg in packages if pkg['size_unit'] == target_unit]
+            target_amount, conversion_warning = self._get_required_amount_in_unit(
+                amounts_by_unit=required_amounts_by_unit,
+                target_unit=target_unit,
+                tkg=selected_tkg,
+            )
+            if target_amount is None:
+                row['warning'] = conversion_warning or 'Cannot convert required amount to package units.'
+                rows.append(row)
+                continue
 
             suggestion = compute_seed_package_suggestion(
                 required_amount=target_amount,
@@ -2837,6 +2882,15 @@ class AcceptPendingProjectInvitationView(APIView):
         try:
             result = accept_pending_invitation_from_session(session=request.session, user=request.user)
         except InvitationFlowError as exc:
+            if exc.code == 'no_pending_invitation':
+                return Response(
+                    {
+                        'code': exc.code,
+                        'detail': exc.message,
+                        'project_id': None,
+                        'project': None,
+                    }
+                )
             logger.warning('Pending invitation accept failed', extra={'user_id': request.user.id, 'code': exc.code, 'path': request.path})
             return _invitation_error_response(exc)
 

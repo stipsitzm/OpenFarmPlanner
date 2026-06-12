@@ -35,6 +35,7 @@ export interface NotesDrawerProps {
   onChange: (value: string) => void;
   onSave: () => void | Promise<void>;
   onClose: () => void;
+  hasUnsavedChanges?: boolean;
   loading?: boolean;
   noteId?: number;
   focusAttachments?: boolean;
@@ -84,7 +85,7 @@ async function renderProcessedFile(file: File, cropRect?: CropRect): Promise<Fil
   return new File([jpeg], `${file.name.replace(/\.[^.]+$/, '')}.jpg`, { type: 'image/jpeg' });
 }
 
-export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loading = false, noteId, focusAttachments = false, focusRequestId = 0 }: NotesDrawerProps) {
+export function NotesDrawer({ open, title, value, onChange, onSave, onClose, hasUnsavedChanges = false, loading = false, noteId, focusAttachments = false, focusRequestId = 0 }: NotesDrawerProps) {
   const { t } = useTranslation('common');
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
   const [attachments, setAttachments] = useState<NoteAttachment[]>([]);
@@ -92,6 +93,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string>('');
+  const [confirmDiscardOpen, setConfirmDiscardOpen] = useState<boolean>(false);
 
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
@@ -112,6 +114,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
   useEffect(() => {
     if (open) {
       setActiveTab('edit');
+      setConfirmDiscardOpen(false);
       void loadAttachments();
     }
   }, [open, noteId]);
@@ -303,10 +306,44 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
     });
   };
 
+  const closeNestedUi = (): boolean => {
+    if (confirmDiscardOpen) {
+      setConfirmDiscardOpen(false);
+      return true;
+    }
+    if (selectedImage) {
+      setSelectedImage(null);
+      return true;
+    }
+    if (pendingFile) {
+      clearPendingSelection();
+      return true;
+    }
+    return false;
+  };
+
+  const requestClose = (): void => {
+    if (closeNestedUi()) {
+      return;
+    }
+    if (hasUnsavedChanges) {
+      setConfirmDiscardOpen(true);
+      return;
+    }
+    onClose();
+  };
+
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
       void handleSaveClick();
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      requestClose();
     }
   };
 
@@ -318,7 +355,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
   };
 
   return (
-    <Drawer anchor="right" open={open} onClose={onClose} PaperProps={{ sx: { width: { xs: '100%', sm: '680px' }, maxWidth: '95vw' } }}>
+    <Drawer anchor="right" open={open} onClose={requestClose} PaperProps={{ sx: { width: { xs: '100%', sm: '680px' }, maxWidth: '95vw' } }}>
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 3 }} onKeyDown={handleKeyDown}>
         <Typography variant="h6" gutterBottom>{title}</Typography>
         <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
@@ -396,7 +433,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
         </Box>
 
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-          <Button onClick={onClose} disabled={loading} variant="outlined">{t('actions.cancel')}</Button>
+          <Button onClick={requestClose} disabled={loading} variant="outlined">{t('actions.cancel')}</Button>
           <Button onClick={() => void handleSaveClick()} disabled={loading} variant="contained" color="primary" startIcon={loading ? <CircularProgress size={16} /> : undefined}>{t('actions.save')}</Button>
         </Box>
       </Box>
@@ -463,6 +500,30 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, loa
           <Button onClick={clearPendingSelection}>{t('actions.cancel')}</Button>
           <Button onClick={resetCrop}>{t('actions.reset')}</Button>
           <Button onClick={() => void handleUpload()} disabled={uploading || !pendingFile} variant="contained">{t('actions.save')}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={confirmDiscardOpen} onClose={() => setConfirmDiscardOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{t('notesDrawer.unsavedDialog.title')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            {t('notesDrawer.unsavedDialog.message')}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDiscardOpen(false)}>
+            {t('notesDrawer.unsavedDialog.continueEditing')}
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => {
+              setConfirmDiscardOpen(false);
+              onClose();
+            }}
+          >
+            {t('notesDrawer.unsavedDialog.discardAndClose')}
+          </Button>
         </DialogActions>
       </Dialog>
     </Drawer>

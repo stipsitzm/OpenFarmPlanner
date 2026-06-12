@@ -19,6 +19,7 @@ const apiMocks = vi.hoisted(() => ({
 
 const commandApiSpies = vi.hoisted(() => ({
   setDraftValues: vi.fn(),
+  commitDraftValues: vi.fn(),
   saveAttemptResult: vi.fn(),
   apiPayload: vi.fn(),
   gridProps: vi.fn(),
@@ -77,6 +78,15 @@ vi.mock("../components/data-grid", async () => {
           getSelectedRowId: vi.fn(),
           reload: vi.fn(),
           setDraftValues: commandApiSpies.setDraftValues,
+          commitDraftValues: async (rowId, values) => {
+            commandApiSpies.commitDraftValues(rowId, values);
+            const nextRow = { ...mockGridRowState.row, ...values };
+            mockGridRowState.row = nextRow;
+            await Promise.resolve(mapToApiData?.(nextRow)).then((payload) => {
+              commandApiSpies.apiPayload(payload);
+            });
+            commandApiSpies.saveAttemptResult(true);
+          },
         };
       }
       const latestPropsRef = React.useRef({ api, mapToRow, onRowsStateChange, onLoadStateChange });
@@ -241,6 +251,23 @@ describe("PlantingPlans save-time area validation", () => {
     });
   });
 
+  it("uses one compact width for all date columns", async () => {
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+
+    const latestProps = commandApiSpies.gridProps.mock.calls.at(-1)?.[0];
+    const columns = latestProps?.columns ?? [];
+    const dateColumns = ["planting_date", "harvest_date", "harvest_end_date"].map((field) =>
+      columns.find((column: { field: string }) => column.field === field),
+    );
+
+    expect(dateColumns).toEqual([
+      expect.objectContaining({ minWidth: 142, width: 142, maxWidth: 142 }),
+      expect.objectContaining({ minWidth: 142, width: 142, maxWidth: 142 }),
+      expect.objectContaining({ minWidth: 142, width: 142, maxWidth: 142 }),
+    ]);
+  });
+
   it("shows bed-limit dialog when requested area exceeds bed area", async () => {
     mockGridRowState.row = {
       id: 1, bed: 101, culture: 2, planting_date: "2026-04-01", area_m2: "99,00",
@@ -334,7 +361,8 @@ describe("PlantingPlans save-time area validation", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Zeile speichern" }));
     await userEvent.click(await screen.findByRole("button", { name: "Beetfläche übernehmen" }));
 
-    expect(commandApiSpies.setDraftValues).toHaveBeenCalledWith(1, expect.objectContaining({ area_m2: 1, plants_count: 10 }));
+    expect(commandApiSpies.commitDraftValues).toHaveBeenCalledWith(1, expect.objectContaining({ area_m2: 1, plants_count: 10 }));
+    expect(commandApiSpies.saveAttemptResult).toHaveBeenLastCalledWith(true);
     await waitFor(() => {
       expect(screen.queryByText("Die angegebene Fläche überschreitet die Größe dieses Beets.")).not.toBeInTheDocument();
     });
@@ -359,6 +387,30 @@ describe("PlantingPlans save-time area validation", () => {
     expect(await screen.findByText("Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.")).toBeInTheDocument();
     expect(screen.getByText(areaText("Verfügbare Restfläche", "3,00"))).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Restfläche übernehmen" })).toBeInTheDocument();
+  });
+
+  it("commits remaining area when clicking 'Restfläche übernehmen'", async () => {
+    apiMocks.bedList.mockResolvedValue({ data: { results: [{ id: 101, name: "Beet A", field: 11, area_sqm: 7 }] } });
+    apiMocks.planList.mockResolvedValue({
+      data: {
+        results: [{
+          id: 9, bed: 101, culture: 2, planting_date: "2026-04-01", harvest_date: "2026-05-01", area_usage_sqm: 4,
+        }],
+      },
+    });
+    mockGridRowState.row = {
+      id: 1, bed: 101, culture: 2, planting_date: "2026-04-10", harvest_date: "2026-05-10", area_m2: "5",
+    };
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+    await userEvent.click(await screen.findByRole("button", { name: "Zeile speichern" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Restfläche übernehmen" }));
+
+    expect(commandApiSpies.commitDraftValues).toHaveBeenCalledWith(1, expect.objectContaining({ area_m2: 3, plants_count: 30 }));
+    expect(commandApiSpies.saveAttemptResult).toHaveBeenLastCalledWith(true);
+    await waitFor(() => {
+      expect(screen.queryByText("Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.")).not.toBeInTheDocument();
+    });
   });
 
   it("shows remaining-area dialog when saving via Enter flow", async () => {
@@ -451,6 +503,30 @@ describe("PlantingPlans save-time area validation", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Zeile speichern" }));
 
     await expectMaxAreaApplied();
+  });
+
+  it("sends the auto-filled remaining area when the row model still contains an empty area", async () => {
+    mockRemainingAreaScenario();
+    const staleRow = {
+      id: 1,
+      bed: 101,
+      culture: 2,
+      cultivation_type: "direct_sowing",
+      planting_date: "2026-04-10",
+      harvest_date: "2026-05-10",
+      area_m2: "",
+    };
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+
+    const latestProps = commandApiSpies.gridProps.mock.calls.at(-1)?.[0];
+    expect(latestProps?.mapToApiData).toBeDefined();
+    const payload = await latestProps?.mapToApiData?.(staleRow);
+
+    expect(payload).toEqual(expect.objectContaining({
+      area_input_value: 4,
+      area_input_unit: "M2",
+    }));
   });
 
   it("does not count same-bed rows whose German date ranges do not overlap", async () => {

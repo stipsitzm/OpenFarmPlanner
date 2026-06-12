@@ -1,6 +1,5 @@
-export type RequirementStep = 'locations' | 'beds' | 'cultures' | 'plans' | null;
-export type CultivationPlanRequirementStep = 'locations' | 'fields' | 'beds' | 'cultures' | null;
-export type ProjectSetupStep = 'locations' | 'fields' | 'beds' | 'cultures' | 'plans';
+export type CultivationPlanRequirementStep = 'fields' | 'beds' | 'cultures' | null;
+export type ProjectSetupStep = 'fields' | 'beds' | 'cultures' | 'plans';
 
 export interface ProjectSetupAction {
   labelKey: string;
@@ -8,8 +7,7 @@ export interface ProjectSetupAction {
 }
 
 const PROJECT_SETUP_ACTIONS: Record<ProjectSetupStep, ProjectSetupAction> = {
-  locations: { labelKey: 'common:setupActions.createLocation', to: '/app/locations?create=true' },
-  fields: { labelKey: 'common:setupActions.createField', to: '/app/fields-beds' },
+  fields: { labelKey: 'common:setupActions.createField', to: '/app/fields-beds?action=add-parcel' },
   beds: { labelKey: 'common:setupActions.openAreas', to: '/app/fields-beds' },
   cultures: { labelKey: 'common:setupActions.createCulture', to: '/app/cultures?create=true' },
   plans: { labelKey: 'common:setupActions.createPlan', to: '/app/planting-plans?create=true' },
@@ -20,38 +18,20 @@ const CULTURE_SETUP_ACTIONS: ProjectSetupAction[] = [
   PROJECT_SETUP_ACTIONS.cultures,
 ];
 
-const LOCATION_SETUP_ACTIONS: ProjectSetupAction[] = [
-  PROJECT_SETUP_ACTIONS.locations,
-];
+interface CultivationPlanRequirementState {
+  hasFields: boolean;
+  hasBeds: boolean;
+  hasCultures: boolean;
+}
 
-interface RequirementState {
-  hasLocations: boolean;
+interface ProjectSetupState {
+  hasFields: boolean;
   hasBeds: boolean;
   hasCultures: boolean;
   hasPlans: boolean;
 }
 
-export function getFirstMissingRequirement(state: RequirementState): RequirementStep {
-  if (!state.hasLocations) return 'locations';
-  if (!state.hasBeds) return 'beds';
-  if (!state.hasCultures) return 'cultures';
-  if (!state.hasPlans) return 'plans';
-  return null;
-}
-
-interface CultivationPlanRequirementState {
-  hasLocations: boolean;
-  hasFields: boolean;
-  hasBeds: boolean;
-  hasCultures: boolean;
-}
-
-interface ProjectSetupState extends RequirementState {
-  hasFields: boolean;
-}
-
 export function getFirstMissingProjectSetupStep(state: ProjectSetupState): ProjectSetupStep | null {
-  if (!state.hasLocations) return 'locations';
   if (!state.hasFields) return 'fields';
   if (!state.hasBeds) return 'beds';
   if (!state.hasCultures) return 'cultures';
@@ -64,9 +44,6 @@ export function getProjectSetupAction(step: ProjectSetupStep): ProjectSetupActio
 }
 
 export function getProjectSetupActions(step: ProjectSetupStep): ProjectSetupAction[] {
-  if (step === 'locations') {
-    return LOCATION_SETUP_ACTIONS;
-  }
   if (step === 'cultures') {
     return CULTURE_SETUP_ACTIONS;
   }
@@ -76,7 +53,6 @@ export function getProjectSetupActions(step: ProjectSetupStep): ProjectSetupActi
 export function getFirstMissingCultivationPlanRequirement(
   state: CultivationPlanRequirementState,
 ): CultivationPlanRequirementStep {
-  if (!state.hasLocations) return 'locations';
   if (!state.hasFields) return 'fields';
   if (!state.hasBeds) return 'beds';
   if (!state.hasCultures) return 'cultures';

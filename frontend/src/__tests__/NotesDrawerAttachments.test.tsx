@@ -1,5 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NotesDrawer } from '../components/data-grid/NotesDrawer';
 
 vi.mock('../api/api', () => ({
@@ -51,5 +52,69 @@ describe('NotesDrawer attachments', () => {
 
     expect(screen.getByTestId('crop-stage')).toBeInTheDocument();
     expect(screen.getByTestId('crop-handle-se')).toBeInTheDocument();
+  });
+
+  it('closes the drawer with Escape when notes are unchanged', () => {
+    const onClose = vi.fn();
+    render(<NotesDrawer open title="Notes" value="Existing note" onChange={() => {}} onSave={() => {}} onClose={onClose} noteId={1} />);
+
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks before closing with Escape when notes have unsaved changes', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <NotesDrawer
+        open
+        title="Notes"
+        value="Changed note"
+        onChange={() => {}}
+        onSave={() => {}}
+        onClose={onClose}
+        hasUnsavedChanges
+        noteId={1}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Ungespeicherte Notizen' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Weiter bearbeiten' }));
+    expect(onClose).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Ungespeicherte Notizen' })).not.toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+    await user.click(screen.getByRole('button', { name: 'Änderungen verwerfen und schließen' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the unsaved confirmation when Cancel is clicked with dirty notes', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <NotesDrawer
+        open
+        title="Notes"
+        value="Changed note"
+        onChange={() => {}}
+        onSave={() => {}}
+        onClose={onClose}
+        hasUnsavedChanges
+        noteId={1}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Abbrechen' }));
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'Ungespeicherte Notizen' })).toBeInTheDocument();
   });
 });

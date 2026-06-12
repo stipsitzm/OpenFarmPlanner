@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { ColorSection } from '../cultures/sections/ColorSection';
 import { NotesSection } from '../cultures/sections/NotesSection';
 import { SpacingSection } from '../cultures/sections/SpacingSection';
@@ -9,6 +9,7 @@ import { HarvestSection } from '../cultures/sections/HarvestSection';
 const translations: Record<string, string> = {
   'form.sowingCalculationSafetyPercentLabel': 'Sicherheitszuschlag für Saatgut (%)',
   'form.thousandKernelWeightLabel': '1000-Korn-Gewicht (g)',
+  'form.seedUnitPlaceholder': 'Einheit auswählen',
 };
 
 const t = (key: string, options?: Record<string, unknown>) => {
@@ -108,6 +109,46 @@ describe('culture form UI sections', () => {
     expect(onChange).toHaveBeenCalledWith('thousand_kernel_weight_g', 3.9);
 
     expect(screen.getByText('Bitte wählen')).toBeInTheDocument();
+  });
+
+  it('renders an empty seed unit placeholder without a synthetic option', () => {
+    const onChange = vi.fn();
+
+    render(
+      <SeedingSection
+        formData={{ cultivation_types: ['direct_sowing'], seed_rate_direct_unit: null }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+
+    expect(screen.getByText('Einheit auswählen')).toBeInTheDocument();
+    expect(screen.queryByText('-')).not.toBeInTheDocument();
+  });
+
+  it('hides the seed unit tooltip while the dropdown menu is open', async () => {
+    const onChange = vi.fn();
+
+    render(
+      <SeedingSection
+        formData={{ cultivation_types: ['direct_sowing'], seed_rate_direct_unit: 'g_per_m2' }}
+        errors={{}}
+        onChange={onChange}
+        t={t}
+      />
+    );
+
+    const unitSelect = screen.getByRole('combobox');
+    fireEvent.mouseOver(unitSelect);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('form.seedRateHelp');
+
+    fireEvent.mouseDown(unitSelect);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    });
   });
 
   it('shows method blocks based on selected cultivation types', () => {

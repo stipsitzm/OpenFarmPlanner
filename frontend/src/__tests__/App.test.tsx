@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import App from '../App';
 import { resolveRouterBasename } from '../routerBasename';
 import { CommandProvider } from '../commands/CommandProvider';
@@ -22,9 +23,35 @@ const authState = {
   switchActiveProject: vi.fn(async () => {}),
 };
 
+const projectApiMocks = vi.hoisted(() => ({
+  create: vi.fn(async () => ({
+    data: {
+      id: 2,
+      name: 'Beta',
+      slug: 'beta',
+      description: '',
+      is_active: true,
+      deleted_at: null,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    },
+  })),
+}));
+
 vi.mock('../auth/useAuth', () => ({
   useAuth: () => authState,
 }));
+
+vi.mock('../api/api', async () => {
+  const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
+  return {
+    ...actual,
+    projectAPI: {
+      ...actual.projectAPI,
+      create: projectApiMocks.create,
+    },
+  };
+});
 
 vi.mock('../commands/useCommandContext', () => ({
   useCommandContext: () => ({
@@ -47,6 +74,8 @@ describe('App', () => {
     authState.user = null;
     authState.isLoading = false;
     authState.activeProjectId = null;
+    authState.switchActiveProject.mockClear();
+    projectApiMocks.create.mockClear();
     localStorage.clear();
     window.history.pushState({}, '', '/');
   });
@@ -203,6 +232,44 @@ describe('App', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
     fireEvent.click(await screen.findByText('Neues Projekt'));
     expect(await screen.findByRole('heading', { name: 'Projekt anlegen' })).toBeInTheDocument();
+  });
+
+  it('creates a project from the dialog with only a project name', async () => {
+    const user = userEvent.setup();
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: 1,
+      last_project_id: 1,
+      resolved_project_id: 1,
+      needs_project_selection: false,
+      memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+    };
+    authState.activeProjectId = 1;
+    window.history.pushState({}, '', '/app/dashboard');
+
+    render(<CommandProvider><App /></CommandProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
+    fireEvent.click(await screen.findByText('Neues Projekt'));
+
+    const projectNameInput = await screen.findByRole('textbox', { name: 'Projektname' });
+    await waitFor(() => expect(projectNameInput).toHaveFocus());
+    expect(screen.queryByRole('textbox', { name: 'Beschreibung' })).not.toBeInTheDocument();
+
+    await user.type(projectNameInput, 'Beta{Enter}');
+
+    await waitFor(() => {
+      expect(projectApiMocks.create).toHaveBeenCalledWith({
+        name: 'Beta',
+        description: '',
+      });
+    });
+    expect(authState.switchActiveProject).toHaveBeenCalledWith(2);
   });
 
   it('does not show cultures load error for users without projects', async () => {

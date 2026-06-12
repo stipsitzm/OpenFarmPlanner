@@ -6,6 +6,7 @@ import ActivatePage from '../pages/auth/ActivatePage';
 
 const activateMock = vi.fn();
 const switchActiveProjectMock = vi.fn(async () => {});
+const getPendingInvitationMock = vi.fn();
 const acceptPendingInvitationMock = vi.fn();
 
 vi.mock('../auth/useAuth', () => ({
@@ -21,6 +22,7 @@ vi.mock('../api/api', async () => {
     ...actual,
     projectAPI: {
       ...actual.projectAPI,
+      getPendingInvitation: (...args: unknown[]) => getPendingInvitationMock(...args),
       acceptPendingInvitation: (...args: unknown[]) => acceptPendingInvitationMock(...args),
     },
   };
@@ -30,12 +32,37 @@ describe('ActivatePage', () => {
   beforeEach(() => {
     activateMock.mockReset();
     switchActiveProjectMock.mockClear();
+    getPendingInvitationMock.mockReset();
     acceptPendingInvitationMock.mockReset();
     window.localStorage.clear();
   });
 
-  it('reads uid and token from query string and triggers activation plus pending invitation acceptance', async () => {
+  it('reads uid and token from query string and activates without pending invitation acceptance', async () => {
     activateMock.mockResolvedValueOnce(undefined);
+    getPendingInvitationMock.mockResolvedValueOnce({ data: { code: 'no_pending_invitation', requires_auth: false } });
+
+    render(
+      <MemoryRouter initialEntries={['/activate?uid=MTA&token=abc123']}>
+        <Routes>
+          <Route path="/activate" element={<ActivatePage />} />
+          <Route path="/app" element={<div>App</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(activateMock).toHaveBeenCalledWith('MTA', 'abc123');
+    });
+    await waitFor(() => {
+      expect(getPendingInvitationMock).toHaveBeenCalledTimes(1);
+    });
+    expect(acceptPendingInvitationMock).not.toHaveBeenCalled();
+    expect(switchActiveProjectMock).not.toHaveBeenCalled();
+  });
+
+  it('accepts a pending session invitation after activation', async () => {
+    activateMock.mockResolvedValueOnce(undefined);
+    getPendingInvitationMock.mockResolvedValueOnce({ data: { code: 'pending', requires_auth: false } });
     acceptPendingInvitationMock.mockResolvedValueOnce({ data: { code: 'accepted', project_id: 5 } });
 
     render(
@@ -53,9 +80,32 @@ describe('ActivatePage', () => {
     await waitFor(() => {
       expect(acceptPendingInvitationMock).toHaveBeenCalledTimes(1);
     });
-    await waitFor(() => {
-      expect(switchActiveProjectMock).toHaveBeenCalledWith(5);
+    expect(switchActiveProjectMock).toHaveBeenCalledWith(5);
+  });
+
+  it('treats missing pending invitation during acceptance as harmless', async () => {
+    activateMock.mockResolvedValueOnce(undefined);
+    getPendingInvitationMock.mockResolvedValueOnce({ data: { code: 'pending', requires_auth: false } });
+    acceptPendingInvitationMock.mockRejectedValueOnce({
+      response: { data: { code: 'no_pending_invitation' } },
     });
+
+    render(
+      <MemoryRouter initialEntries={['/activate?uid=MTA&token=abc123']}>
+        <Routes>
+          <Route path="/activate" element={<ActivatePage />} />
+          <Route path="/app" element={<div>App</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(activateMock).toHaveBeenCalledWith('MTA', 'abc123');
+    });
+    await waitFor(() => {
+      expect(acceptPendingInvitationMock).toHaveBeenCalledTimes(1);
+    });
+    expect(switchActiveProjectMock).not.toHaveBeenCalled();
   });
 
   it('shows incomplete-link message only when uid or token is missing', async () => {
@@ -100,6 +150,7 @@ describe('ActivatePage', () => {
 
   it('submits activation only once in strict mode for the same activation link', async () => {
     activateMock.mockResolvedValue(undefined);
+    getPendingInvitationMock.mockResolvedValue({ data: { code: 'no_pending_invitation' } });
     acceptPendingInvitationMock.mockResolvedValue({ data: { code: 'no_pending_invitation' } });
 
     render(
@@ -119,5 +170,6 @@ describe('ActivatePage', () => {
     await waitFor(() => {
       expect(activateMock).toHaveBeenCalledTimes(1);
     });
+    expect(acceptPendingInvitationMock).not.toHaveBeenCalled();
   });
 });

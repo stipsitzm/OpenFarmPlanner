@@ -5,11 +5,58 @@
  * all DataGrid instances in the application for consistent styling.
  */
 
+import { alpha } from '@mui/material/styles';
 import type { Theme } from '@mui/material/styles';
 import { CALCULATED_COLUMN_CELL_CLASS, CALCULATED_COLUMN_HEADER_CLASS } from './calculatedColumns';
 
 const CALCULATED_COLUMN_BACKGROUND = '#F5F5F5';
 const CALCULATED_COLUMN_TEXT = 'rgba(0,0,0,0.85)';
+const EDITING_ROW_BACKGROUND_ALPHA = 0.06;
+const DIRTY_CELL_BACKGROUND_ALPHA = 0.08;
+const FOCUSED_CELL_BACKGROUND_ALPHA = 0.04;
+const FOCUSED_CELL_RING_ALPHA = 0.48;
+const EDITING_ROW_CELL_SELECTOR = [
+  '& .ofp-row-editing .MuiDataGrid-cell',
+  '& .ofp-row-editing:hover .MuiDataGrid-cell',
+  '& .MuiDataGrid-row--editing .MuiDataGrid-cell',
+  '& .MuiDataGrid-row--editing:hover .MuiDataGrid-cell',
+].join(', ');
+const EDITING_ROW_HOVER_CELL_SELECTOR = [
+  '& .ofp-row-editing:hover .MuiDataGrid-cell',
+  '& .MuiDataGrid-row--editing:hover .MuiDataGrid-cell',
+].join(', ');
+const SELECTED_ROW_CELL_SELECTOR = [
+  '& .MuiDataGrid-row.Mui-selected .MuiDataGrid-cell',
+  '& .MuiDataGrid-row.Mui-selected:hover .MuiDataGrid-cell',
+].join(', ');
+const SELECTED_ROW_FOCUS_CELL_SELECTOR = [
+  '& .MuiDataGrid-row.Mui-selected .MuiDataGrid-cell:focus',
+  '& .MuiDataGrid-row.Mui-selected .MuiDataGrid-cell:focus-within',
+].join(', ');
+
+const getPrimaryOverlay = (theme: Theme, opacity: number): string =>
+  alpha(theme.palette.primary.main, opacity);
+
+const getDataGridCellFocusRing = (theme: Theme): string =>
+  `inset 0 0 0 2px ${alpha(theme.palette.primary.main, FOCUSED_CELL_RING_ALPHA)}`;
+
+const EDIT_CELL_OUTLINE_SELECTOR = [
+  '& .MuiDataGrid-cell--editing .MuiOutlinedInput-notchedOutline',
+  '& .MuiDataGrid-cell--editing .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline',
+  '& .MuiDataGrid-cell--editing .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline',
+  '& .MuiDataGrid-cell--editing .MuiOutlinedInput-root.Mui-error .MuiOutlinedInput-notchedOutline',
+  '& .MuiDataGrid-cell--editing .MuiOutlinedInput-root.Mui-error:hover .MuiOutlinedInput-notchedOutline',
+  '& .MuiDataGrid-cell--editing .MuiOutlinedInput-root.Mui-error.Mui-focused .MuiOutlinedInput-notchedOutline',
+].join(', ');
+
+const NORMAL_EDITING_CELL_SELECTOR = [
+  '& .MuiDataGrid-cell--editing',
+  '& .MuiDataGrid-cell--editing:focus',
+  '& .MuiDataGrid-cell--editing:focus-within',
+  '& .MuiDataGrid-cell--editing.Mui-error',
+  '& .MuiDataGrid-cell--editing.Mui-error:focus',
+  '& .MuiDataGrid-cell--editing.Mui-error:focus-within',
+].join(', ');
 
 /**
  * Common styles for MUI DataGrid components
@@ -25,6 +72,10 @@ export const dataGridSx = {
     borderBottom: '1px solid',
     borderBottomColor: 'surface.surfaceSoftBorder',
   },
+  '& .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-columnHeader:focus-within': {
+    outline: 'none',
+    boxShadow: (theme: Theme) => getDataGridCellFocusRing(theme),
+  },
   '& .MuiDataGrid-row': {
     minHeight: 44,
   },
@@ -36,7 +87,7 @@ export const dataGridSx = {
   },
   '& .MuiDataGrid-cell': {
     borderColor: 'surface.surfaceSoftBorder',
-    transition: 'background-color 0.15s ease',
+    transition: 'background-color 0.15s ease, box-shadow 0.15s ease',
   },
   '& .MuiDataGrid-cell--editable': {
     bgcolor: (theme: Theme) =>
@@ -49,12 +100,34 @@ export const dataGridSx = {
     backgroundColor: 'surface.surfaceHoverBackground',
   },
   '& .MuiDataGrid-cell--editing': {
-    overflow: 'visible',
+    overflow: 'hidden',
+    backgroundColor: (theme: Theme) => getPrimaryOverlay(theme, EDITING_ROW_BACKGROUND_ALPHA),
+  },
+  [NORMAL_EDITING_CELL_SELECTOR]: {
+    boxShadow: (theme: Theme) => getDataGridCellFocusRing(theme),
   },
   '& .MuiDataGrid-cell--editing .MuiInputBase-root': {
     minHeight: '100%',
     height: 'auto',
     alignItems: 'center',
+  },
+  [EDIT_CELL_OUTLINE_SELECTOR]: {
+    borderColor: (theme: Theme) => `${theme.palette.primary.main} !important`,
+  },
+  '& .MuiDataGrid-cell.Mui-error': {
+    boxShadow: 'none',
+  },
+  '& .MuiDataGrid-cell--editing .MuiFormLabel-root.Mui-error': {
+    color: 'text.secondary',
+  },
+  '& .MuiDataGrid-cell--editing .MuiFormHelperText-root.Mui-error': {
+    color: 'text.secondary',
+  },
+  '& .MuiDataGrid-cell--editing .MuiInputBase-root.Mui-error .MuiSvgIcon-root': {
+    color: 'action.active',
+  },
+  '& .MuiDataGrid-cell--editing .MuiInputBase-root.Mui-error::before, & .MuiDataGrid-cell--editing .MuiInputBase-root.Mui-error::after': {
+    borderColor: (theme: Theme) => `${theme.palette.primary.main} !important`,
   },
   '& .MuiDataGrid-cell--editing .MuiInputBase-input': {
     lineHeight: 1.4,
@@ -69,34 +142,35 @@ export const dataGridSx = {
     paddingTop: '8px',
     paddingBottom: '8px',
   },
-  '& .MuiDataGrid-cell:focus-within': {
+  '& .MuiDataGrid-cell:focus, & .MuiDataGrid-cell:focus-within': {
+    outline: 'none',
     overflow: 'visible',
+    backgroundColor: (theme: Theme) => getPrimaryOverlay(theme, FOCUSED_CELL_BACKGROUND_ALPHA),
+    boxShadow: (theme: Theme) => getDataGridCellFocusRing(theme),
   },
   '& .MuiDataGrid-columnHeaderTitleContainer': {
     minWidth: 0,
   },
   '& .ofp-cell-error': {
-    boxShadow: 'inset 0 0 0 2px #d32f2f',
+    boxShadow: 'none',
   },
   '& .MuiDataGrid-row:hover .ofp-cell-error': {
-    boxShadow: 'inset 0 0 0 2px #d32f2f',
+    boxShadow: 'none',
+  },
+  '& .MuiDataGrid-cell.ofp-cell-error:focus, & .MuiDataGrid-cell.ofp-cell-error:focus-within': {
+    boxShadow: (theme: Theme) => getDataGridCellFocusRing(theme),
   },
   '& .ofp-cell-dirty': {
-    backgroundColor: 'rgba(25, 118, 210, 0.08)',
+    backgroundColor: (theme: Theme) => getPrimaryOverlay(theme, DIRTY_CELL_BACKGROUND_ALPHA),
   },
   '& .MuiDataGrid-row:hover .ofp-cell-dirty': {
-    backgroundColor: 'surface.surfaceHoverBackground',
-    boxShadow: 'inset 0 0 0 9999px rgba(25, 118, 210, 0.08)',
+    backgroundColor: (theme: Theme) => getPrimaryOverlay(theme, DIRTY_CELL_BACKGROUND_ALPHA),
   },
-  '& .ofp-row-editing': {
-    boxShadow: 'inset 3px 0 0 #1976d2',
-    backgroundColor: 'rgba(25, 118, 210, 0.05)',
+  '& .ofp-row-editing, & .MuiDataGrid-row--editing': {
+    backgroundColor: (theme: Theme) => getPrimaryOverlay(theme, EDITING_ROW_BACKGROUND_ALPHA),
   },
-  '& .ofp-row-editing .MuiDataGrid-cell, & .ofp-row-editing:hover .MuiDataGrid-cell, & .MuiDataGrid-row--editing .MuiDataGrid-cell, & .MuiDataGrid-row--editing:hover .MuiDataGrid-cell': {
-    backgroundColor: 'rgba(25, 118, 210, 0.05)',
-  },
-  '& .ofp-row-dirty': {
-    boxShadow: 'inset 3px 0 0 #ed6c02',
+  [EDITING_ROW_CELL_SELECTOR]: {
+    backgroundColor: (theme: Theme) => getPrimaryOverlay(theme, EDITING_ROW_BACKGROUND_ALPHA),
   },
   [`& .${CALCULATED_COLUMN_HEADER_CLASS}`]: {
     backgroundColor: CALCULATED_COLUMN_BACKGROUND,
@@ -112,11 +186,15 @@ export const dataGridSx = {
   [`& .MuiDataGrid-row:hover .${CALCULATED_COLUMN_CELL_CLASS}`]: {
     backgroundColor: 'surface.surfaceHoverBackground',
   },
-  '& .MuiDataGrid-row.Mui-selected:hover .MuiDataGrid-cell': {
+  [EDITING_ROW_HOVER_CELL_SELECTOR]: {
+    backgroundColor: (theme: Theme) => getPrimaryOverlay(theme, EDITING_ROW_BACKGROUND_ALPHA),
+  },
+  [SELECTED_ROW_CELL_SELECTOR]: {
     backgroundColor: 'action.selected',
   },
-  '& .ofp-row-editing:hover .MuiDataGrid-cell, & .MuiDataGrid-row--editing:hover .MuiDataGrid-cell': {
-    backgroundColor: 'rgba(25, 118, 210, 0.05)',
+  [SELECTED_ROW_FOCUS_CELL_SELECTOR]: {
+    backgroundColor: 'action.selected',
+    boxShadow: (theme: Theme) => getDataGridCellFocusRing(theme),
   },
 };
 

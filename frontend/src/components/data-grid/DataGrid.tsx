@@ -18,6 +18,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type MutableRefObject, type TouchEvent } from 'react';
 import {
   DataGrid,
+  GridRowEditStopReasons,
   GridRowModes,
   getGridBooleanOperators,
   getGridDateOperators,
@@ -42,6 +43,7 @@ import { confirmAction } from '../../utils/confirmAction';
 import { useTranslation } from '../../i18n';
 import { NotesCell } from './NotesCell';
 import { NotesDrawer } from './NotesDrawer';
+import { DateEditCell } from './DateEditCell';
 import {
   DeleteUndoSnackbar,
   DELETE_UNDO_DURATION_MS,
@@ -52,6 +54,8 @@ import { extractApiErrorMessage } from '../../api/errors';
 import { germanDataGridLocaleText } from './localeText';
 import { TableCopyMenuItems } from './TableCopyMenuItems';
 import { formatClipboardValue, type TableClipboardRow } from './tableClipboard';
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../../utils/contextMenu';
+import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from './contextMenuFocus';
 
 export interface EditableRow {
   id: number;
@@ -74,6 +78,7 @@ export interface EditableDataGridCommandApi {
   deleteSelectedRow: () => void;
   getSelectedRowId: () => GridRowId | null;
   setDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => Promise<void>;
+  commitDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => Promise<void>;
   reload: () => Promise<void>;
 }
 
@@ -229,6 +234,20 @@ const keepDraftRowsVisibleForColumnFilters = (column: GridColDef): GridColDef =>
   };
 };
 
+const applyDefaultDateEditCell = (column: GridColDef): GridColDef => {
+  if (column.type !== 'date' || column.renderEditCell) {
+    return column;
+  }
+
+  return {
+    ...column,
+    renderEditCell: (params) => <DateEditCell {...params} />,
+  };
+};
+
+const prepareDataGridColumn = (column: GridColDef): GridColDef =>
+  keepDraftRowsVisibleForColumnFilters(applyDefaultDateEditCell(column));
+
 const editModeEditorArrowKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
 
 const isComboboxInteractionTarget = (target: EventTarget | null): boolean => {
@@ -365,10 +384,12 @@ export function EditableDataGrid<T extends EditableRow>({
     mouseX?: number;
     mouseY?: number;
   } | null>(null);
+  const rowActionMenuOriginRef = useRef<HTMLElement | null>(null);
   const [pendingDeleteWithUndo, setPendingDeleteWithUndo] = useState<PendingDeleteWithUndo<T>[]>([]);
   const pendingDeleteTimersRef = useRef<Map<string, number>>(new Map());
   const rowActionLongPressTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const rowSnapshotRef = useRef<Map<string, T>>(new Map());
+  const canceledRowIdsRef = useRef<Set<string>>(new Set());
   const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery('(max-width:900px)');
   
@@ -523,11 +544,15 @@ export function EditableDataGrid<T extends EditableRow>({
       return;
     }
 
+    if (rowModesModel[rowId]?.mode === GridRowModes.Edit) {
+      return;
+    }
+
     setRowModesModel((oldModel) => ({
       ...oldModel,
       [rowId]: { mode: GridRowModes.Edit, fieldToFocus: field },
     }));
-  }, [gridApiRef, notesFieldNames, rowsById]);
+  }, [gridApiRef, notesFieldNames, rowModesModel, rowsById]);
 
   const getHorizontalNavigationTarget = useCallback((
     rowId: GridRowId,
@@ -649,12 +674,17 @@ export function EditableDataGrid<T extends EditableRow>({
 
   const handleDiscardRowChanges = useCallback((rowId: GridRowId): void => {
     const rowKey = String(rowId);
+    canceledRowIdsRef.current.add(rowKey);
+    setError('');
     const snapshot = rowSnapshotRef.current.get(rowKey);
-    if (snapshot) {
-      setRows((prevRows) => prevRows.map((row) => (String(row.id) === rowKey ? snapshot : row)));
-    } else if (Number(rowId) < 0) {
+    const currentRow = rowsById.get(rowKey) ?? snapshot;
+
+    if (currentRow && isUnsavedDraftRow(currentRow)) {
       setRows((prevRows) => prevRows.filter((row) => String(row.id) !== rowKey));
       setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
+      rowSnapshotRef.current.delete(rowKey);
+    } else if (snapshot) {
+      setRows((prevRows) => prevRows.map((row) => (String(row.id) === rowKey ? snapshot : row)));
     }
 
     setDirtyRowIds((prev) => {
@@ -671,6 +701,20 @@ export function EditableDataGrid<T extends EditableRow>({
       ...oldModel,
       [rowId]: { mode: GridRowModes.View, ignoreModifications: true },
     }));
+    window.setTimeout(() => {
+      canceledRowIdsRef.current.delete(rowKey);
+    }, 0);
+  }, [rowsById]);
+
+  const markRowDirty = useCallback((rowKey: string): void => {
+    setDirtyRowIds((previous) => {
+      if (previous.has(rowKey)) {
+        return previous;
+      }
+      const next = new Set(previous);
+      next.add(rowKey);
+      return next;
+    });
   }, []);
 
   const getDraftRow = useCallback((rowId: GridRowId): T | null => {
@@ -683,11 +727,13 @@ export function EditableDataGrid<T extends EditableRow>({
 
   const applyDraftValues = useCallback(async (rowId: GridRowId, values: Partial<T>): Promise<void> => {
     const rowKey = String(rowId);
-    const targetRow = rowsById.get(rowKey);
+    const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
+    const targetRow = rowsById.get(rowKey) as T | undefined;
     const api = gridApiRef.current;
-    if (api) {
+
+    if (isEditing && api) {
       const editUpdates = Object.entries(values).flatMap(([fieldKey, fieldValue]) => {
-        if (fieldValue === undefined) {
+        if (fieldKey === 'id' || fieldKey === 'isNew') {
           return [];
         }
         return [
@@ -714,12 +760,8 @@ export function EditableDataGrid<T extends EditableRow>({
         [rowKey]: fieldErrors,
       }));
     }
-    setDirtyRowIds((previous) => {
-      const next = new Set(previous);
-      next.add(rowKey);
-      return next;
-    });
-  }, [getRowValidationErrors, gridApiRef, rowsById]);
+    markRowDirty(rowKey);
+  }, [getRowValidationErrors, gridApiRef, markRowDirty, rowModesModel, rowsById]);
 
   const runBeforeSaveGate = useCallback(async (row: T): Promise<T | null> => {
     if (!onBeforeSaveRow) {
@@ -735,39 +777,36 @@ export function EditableDataGrid<T extends EditableRow>({
     return row;
   }, [onBeforeSaveRow]);
 
-  const shouldSaveRow = useCallback(async (rowId: GridRowId): Promise<boolean> => {
+  const prepareRowForSave = useCallback(async (rowId: GridRowId): Promise<T | null> => {
     const draftRow = getDraftRow(rowId);
     if (!draftRow) {
-      return true;
+      return rowsById.get(String(rowId)) as T | undefined ?? null;
     }
-    const gatedRow = await runBeforeSaveGate(draftRow);
-    if (!gatedRow) {
-      return false;
-    }
-    if (gatedRow !== draftRow) {
-      await applyDraftValues(rowId, gatedRow);
-    }
-    return true;
-  }, [applyDraftValues, getDraftRow, runBeforeSaveGate]);
+    return draftRow;
+  }, [getDraftRow, rowsById]);
 
-  const commitEditedRowDraftForKeyboardNavigation = useCallback((rowId: GridRowId): boolean => {
-    const draftRow = getDraftRow(rowId);
-    if (!draftRow) {
-      return true;
-    }
-
+  const commitEditedRowDraftForKeyboardNavigation = useCallback((
+    rowId: GridRowId,
+    options: { syncRows: boolean },
+  ): boolean => {
     const rowKey = String(rowId);
-    setError('');
+    setError((currentError) => (currentError ? '' : currentError));
+    markRowDirty(rowKey);
+
+    if (!options.syncRows) {
+      return true;
+    }
+
+    const draftRow = getDraftRow(rowId);
+    if (!draftRow) {
+      return true;
+    }
+
     setRows((prevRows) =>
       prevRows.map((row) => (String(row.id) === rowKey ? draftRow : row)),
     );
-    setDirtyRowIds((prev) => {
-      const next = new Set(prev);
-      next.add(rowKey);
-      return next;
-    });
     return true;
-  }, [getDraftRow]);
+  }, [getDraftRow, markRowDirty]);
 
   const navigateFromEditedCell = useCallback((
     current: { id: GridRowId; field: string },
@@ -778,18 +817,17 @@ export function EditableDataGrid<T extends EditableRow>({
       return;
     }
 
-    const canCommitCurrentDraft = commitEditedRowDraftForKeyboardNavigation(current.id);
+    const isSameRow = String(current.id) === String(target.id);
+    const canCommitCurrentDraft = commitEditedRowDraftForKeyboardNavigation(current.id, {
+      syncRows: !isSameRow,
+    });
     if (!canCommitCurrentDraft) {
       return;
     }
 
-    const isSameRow = String(current.id) === String(target.id);
-
     if (isSameRow) {
-      requestAnimationFrame(() => {
-        focusKeyboardNavigableCell(target.id, target.field, {
-          startEdit: options.startTargetEdit,
-        });
+      focusKeyboardNavigableCell(target.id, target.field, {
+        startEdit: options.startTargetEdit,
       });
       return;
     }
@@ -845,23 +883,10 @@ export function EditableDataGrid<T extends EditableRow>({
     rowModesModel,
   ]);
 
-  const processRowUpdate = useCallback(async (newRow: T): Promise<T> => {
-    // Clear previous error before validating
-    // This ensures dropdown selections and other changes trigger fresh validation
-    setError('');
-
-    const rowAfterSaveGate = await runBeforeSaveGate(newRow);
-    if (!rowAfterSaveGate) {
-      setRowModesModel((oldModel) => ({
-        ...oldModel,
-        [newRow.id]: { mode: GridRowModes.Edit },
-      }));
-      throw new SaveBlockedError();
-    }
-
+  const saveResolvedRow = useCallback(async (rowAfterSaveGate: T): Promise<T> => {
+    const rowKey = String(rowAfterSaveGate.id);
     // Validate required fields
     const validationError = validateRow(rowAfterSaveGate);
-    const rowKey = String(rowAfterSaveGate.id);
     const fieldErrors = getRowValidationErrors?.(rowAfterSaveGate) ?? {};
     setActiveValidationErrors((prev) => ({
       ...prev,
@@ -939,10 +964,46 @@ export function EditableDataGrid<T extends EditableRow>({
     isSaveErrorHandled,
     mapToApiData,
     mapToRow,
-    runBeforeSaveGate,
     saveErrorMessage,
     t,
     validateRow,
+  ]);
+
+  const processRowUpdate = useCallback(async (newRow: T): Promise<T> => {
+    const rowKey = String(newRow.id);
+    if (canceledRowIdsRef.current.has(rowKey)) {
+      canceledRowIdsRef.current.delete(rowKey);
+      setError('');
+      setDirtyRowIds((prev) => {
+        const next = new Set(prev);
+        next.delete(rowKey);
+        return next;
+      });
+      setActiveValidationErrors((prev) => {
+        const next = { ...prev };
+        delete next[rowKey];
+        return next;
+      });
+      return rowSnapshotRef.current.get(rowKey) ?? newRow;
+    }
+
+    // Clear previous error before validating
+    // This ensures dropdown selections and other changes trigger fresh validation
+    setError('');
+
+    const rowAfterSaveGate = await runBeforeSaveGate(newRow);
+    if (!rowAfterSaveGate) {
+      setRowModesModel((oldModel) => ({
+        ...oldModel,
+        [newRow.id]: { mode: GridRowModes.Edit },
+      }));
+      throw new SaveBlockedError();
+    }
+
+    return saveResolvedRow(rowAfterSaveGate);
+  }, [
+    runBeforeSaveGate,
+    saveResolvedRow,
   ]);
 
   const handleProcessRowUpdateError = useCallback((error: unknown): void => {
@@ -961,40 +1022,64 @@ export function EditableDataGrid<T extends EditableRow>({
     setError(errorMessage);
   }, [isSaveErrorHandled, saveErrorMessage, t]);
 
-  const handleSaveRow = useCallback(async (rowId: GridRowId): Promise<void> => {
-    if (!(await shouldSaveRow(rowId))) {
+  const commitDraftValues = useCallback(async (rowId: GridRowId, values: Partial<T>): Promise<void> => {
+    const rowKey = String(rowId);
+    await applyDraftValues(rowId, values);
+
+    const draftRow = getDraftRow(rowId);
+    const baseRow = draftRow ?? (rowsById.get(rowKey) as T | undefined);
+    if (!baseRow) {
       return;
     }
 
-    if (rowModesModel[rowId]?.mode === GridRowModes.Edit) {
+    const rowToSave = { ...baseRow, ...values } as T;
+    try {
+      const savedRow = await saveResolvedRow(rowToSave);
+      setRows((prevRows) =>
+        prevRows.map((currentRow) =>
+          String(currentRow.id) === rowKey ? savedRow : currentRow,
+        ),
+      );
+      gridApiRef.current?.stopRowEditMode({ id: rowId, ignoreModifications: true });
       setRowModesModel((oldModel) => ({
         ...oldModel,
-        [rowId]: { mode: GridRowModes.View },
+        [rowId]: { mode: GridRowModes.View, ignoreModifications: true },
       }));
-      return;
+    } catch (error) {
+      setRowModesModel((oldModel) => ({
+        ...oldModel,
+        [rowId]: { mode: GridRowModes.Edit },
+      }));
+      handleProcessRowUpdateError(error);
     }
+  }, [applyDraftValues, getDraftRow, handleProcessRowUpdateError, rowsById, saveResolvedRow]);
 
-    const row = rowsById.get(String(rowId)) as T | undefined;
-    if (!row) {
+  const handleSaveRow = useCallback(async (rowId: GridRowId): Promise<void> => {
+    const preparedRow = await prepareRowForSave(rowId);
+    if (!preparedRow) {
       return;
     }
 
     try {
-      const savedRow = await processRowUpdate(row);
+      const savedRow = await processRowUpdate(preparedRow);
+      setRowModesModel((oldModel) => ({
+        ...oldModel,
+        [rowId]: { mode: GridRowModes.View, ignoreModifications: true },
+      }));
       setRows((prevRows) =>
-        prevRows.map((currentRow) =>
-          String(currentRow.id) === String(rowId) ? savedRow : currentRow,
-        ),
+        prevRows.some((currentRow) => String(currentRow.id) === String(rowId))
+          ? prevRows.map((currentRow) =>
+            String(currentRow.id) === String(rowId) ? savedRow : currentRow,
+          )
+          : prevRows,
       );
     } catch (error) {
       handleProcessRowUpdateError(error);
     }
   }, [
     handleProcessRowUpdateError,
+    prepareRowForSave,
     processRowUpdate,
-    rowModesModel,
-    rowsById,
-    shouldSaveRow,
   ]);
 
   const handleSaveAllDirtyRows = useCallback(async (): Promise<void> => {
@@ -1003,7 +1088,7 @@ export function EditableDataGrid<T extends EditableRow>({
       .map(([id]) => id);
     const saveableRowIds: GridRowId[] = [];
     for (const rowId of editingRowIds) {
-      if (await shouldSaveRow(rowId)) {
+      if (await prepareRowForSave(rowId)) {
         saveableRowIds.push(rowId);
       }
     }
@@ -1022,7 +1107,7 @@ export function EditableDataGrid<T extends EditableRow>({
         await handleSaveRow(rowKey);
       }
     }
-  }, [dirtyRowIds, handleSaveRow, rowModesModel, shouldSaveRow]);
+  }, [dirtyRowIds, handleSaveRow, prepareRowForSave, rowModesModel]);
 
   const handleEditSelectedRow = (): void => {
     const selectedRowId = selectedRowIds[0];
@@ -1220,45 +1305,7 @@ export function EditableDataGrid<T extends EditableRow>({
       deleteSelectedRow: handleDeleteSelectedRow,
       getSelectedRowId: () => selectedRowIds[0] ?? null,
       setDraftValues: async (rowId, values) => {
-        const rowKey = String(rowId);
-        const isEditing = rowModesModel[rowId]?.mode === GridRowModes.Edit;
-        const targetRow = rowsById.get(rowKey) as T | undefined;
-
-        const api = gridApiRef.current;
-        if (isEditing && api) {
-          const editUpdates = Object.entries(values).flatMap(([fieldKey, fieldValue]) => {
-            if (fieldKey === 'id' || fieldKey === 'isNew') {
-              return [];
-            }
-            return [
-              api.setEditCellValue({
-                id: rowId,
-                field: fieldKey,
-                value: fieldValue,
-              }),
-            ];
-          });
-          await Promise.allSettled(editUpdates);
-        }
-
-        setRows((previousRows) =>
-          previousRows.map((row) =>
-            String(row.id) === rowKey ? ({ ...row, ...values } as T) : row,
-          ),
-        );
-        if (targetRow) {
-          const nextRow = { ...targetRow, ...values } as T;
-          const fieldErrors = getRowValidationErrors?.(nextRow) ?? {};
-          setActiveValidationErrors((prev) => ({
-            ...prev,
-            [rowKey]: fieldErrors,
-          }));
-        }
-        setDirtyRowIds((previous) => {
-          const next = new Set(previous);
-          next.add(rowKey);
-          return next;
-        });
+        await applyDraftValues(rowId, values as Partial<T>);
         setRowModesModel((previousModel) => ({
           ...previousModel,
           [rowId]: {
@@ -1267,13 +1314,16 @@ export function EditableDataGrid<T extends EditableRow>({
           },
         }));
       },
+      commitDraftValues: async (rowId, values) => {
+        await commitDraftValues(rowId, values as Partial<T>);
+      },
       reload: fetchData,
     };
 
     return () => {
       commandApiRef.current = null;
     };
-  }, [commandApiRef, fetchData, getRowValidationErrors, gridApiRef, rowModesModel, rowsById, selectedRowIds]);
+  }, [applyDraftValues, commandApiRef, commitDraftValues, fetchData, selectedRowIds]);
 
   /**
    * Handle row deletion
@@ -1447,15 +1497,18 @@ export function EditableDataGrid<T extends EditableRow>({
   };
 
   const openRowActionContextMenu = useCallback((rowId: GridRowId, event: React.MouseEvent): void => {
-    event.preventDefault();
+    suppressNativeContextMenu(event);
     setSelectedRowIds([rowId]);
+    rowActionMenuOriginRef.current = event.currentTarget as HTMLElement;
     setRowActionMenuState({ rowId, mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
   }, []);
 
   const closeRowActionMenu = useCallback((): void => {
     setRowActionMenuState(null);
     setLongPressFeedbackRowId(null);
+    focusContextMenuOrigin(rowActionMenuOriginRef.current);
   }, []);
+  const rowActionMenuListRef = useContextMenuFocus(Boolean(rowActionMenuState), closeRowActionMenu);
 
   const menuRow = rowActionMenuState ? rowsById.get(String(rowActionMenuState.rowId)) as T | undefined : undefined;
   const shouldUseRowActions = Boolean(getRowActions || duplicateRow);
@@ -1496,15 +1549,22 @@ export function EditableDataGrid<T extends EditableRow>({
     if (!hasContextualRowActions || event.touches.length !== 1) {
       return;
     }
+    if (!shouldOpenCustomContextMenu(event.target)) {
+      return;
+    }
     const rowId = getRowIdFromElement(event.target);
     if (rowId === null || !rowsById.has(String(rowId))) {
       return;
     }
+    const originElement = event.target instanceof HTMLElement
+      ? event.target.closest<HTMLElement>('[role="row"][data-id]')
+      : null;
     const touch = event.touches[0];
     clearRowActionLongPressTimer();
     rowActionLongPressTimerRef.current = window.setTimeout(() => {
       setSelectedRowIds([rowId]);
       setLongPressFeedbackRowId(rowId);
+      rowActionMenuOriginRef.current = originElement;
       setRowActionMenuState({ rowId, mouseX: touch.clientX + 2, mouseY: touch.clientY - 6 });
       rowActionLongPressTimerRef.current = null;
     }, ROW_ACTION_LONG_PRESS_MS);
@@ -1570,17 +1630,17 @@ export function EditableDataGrid<T extends EditableRow>({
    */
   const processedColumns: GridColDef[] = useMemo(() => {
     if (!notes || !notes.fields || notes.fields.length === 0) {
-      return columns.map((col) => keepDraftRowsVisibleForColumnFilters(col));
+      return columns.map((col) => prepareDataGridColumn(col));
     }
 
     return columns.map((col) => {
       if (!notesFieldNames.includes(col.field)) {
-        return keepDraftRowsVisibleForColumnFilters(col);
+        return prepareDataGridColumn(col);
       }
 
       const fieldConfig = notes.fields.find((f) => f.field === col.field);
 
-      return keepDraftRowsVisibleForColumnFilters({
+      return prepareDataGridColumn({
         ...col,
         editable: false,
         renderCell: (params) => {
@@ -1768,6 +1828,9 @@ export function EditableDataGrid<T extends EditableRow>({
           <Box
             ref={gridSurfaceRef}
             onContextMenu={hasContextualRowActions ? (event) => {
+              if (!shouldOpenCustomContextMenu(event.target)) {
+                return;
+              }
               const rowId = getRowIdFromElement(event.target);
               if (rowId === null || !rowsById.has(String(rowId))) {
                 return;
@@ -1784,6 +1847,9 @@ export function EditableDataGrid<T extends EditableRow>({
               width: isContentSizedSurface ? 'fit-content' : '100%',
               minWidth: isContentSizedSurface ? 0 : '100%',
               maxWidth: '100%',
+              '& [role="row"][data-id]': {
+                WebkitTouchCallout: 'none',
+              },
             }}
           >
             <DataGrid
@@ -1791,7 +1857,12 @@ export function EditableDataGrid<T extends EditableRow>({
           columns={columnsWithActions}
           rowModesModel={rowModesModel}
           onRowModesModelChange={setRowModesModel}
-          onRowEditStop={handleRowEditStop}
+          onRowEditStop={(params, event, details) => {
+            if (params.reason === GridRowEditStopReasons.escapeKeyDown) {
+              handleDiscardRowChanges(params.id);
+            }
+            handleRowEditStop(params, event, details);
+          }}
           processRowUpdate={processRowUpdate}
           onProcessRowUpdateError={handleProcessRowUpdateError}
           loading={loading}
@@ -1858,7 +1929,7 @@ export function EditableDataGrid<T extends EditableRow>({
                 rowSnapshotRef.current.set(rowKey, row as T);
               }
             }
-            setDirtyRowIds((prev) => new Set(prev).add(rowKey));
+            markRowDirty(rowKey);
             handleEditableCellClick(params, rowModesModel, setRowModesModel);
           }}
           onCellKeyDown={(params: GridCellParams<T>, event) => {
@@ -1918,6 +1989,7 @@ export function EditableDataGrid<T extends EditableRow>({
             }
             if (event.key === 'Escape') {
               event.preventDefault();
+              event.defaultMuiPrevented = true;
               handleDiscardRowChanges(params.id);
               return;
             }
@@ -1935,6 +2007,16 @@ export function EditableDataGrid<T extends EditableRow>({
       <Menu
         open={Boolean(rowActionMenuState)}
         onClose={closeRowActionMenu}
+        autoFocus
+        disableAutoFocusItem={false}
+        slotProps={{
+          list: {
+            autoFocus: true,
+            ref: rowActionMenuListRef,
+            onKeyDown: (event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeRowActionMenu),
+          },
+        }}
+        onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeRowActionMenu)}
         anchorEl={rowActionMenuState?.anchorEl}
         anchorReference={(rowActionMenuState?.anchorEl ? 'anchorEl' : 'anchorPosition') as 'anchorEl' | 'anchorPosition'}
         anchorPosition={
@@ -2003,6 +2085,11 @@ export function EditableDataGrid<T extends EditableRow>({
           onChange={notesEditor.setDraft}
           onSave={notesEditor.handleSave}
           onClose={notesEditor.handleClose}
+          hasUnsavedChanges={Boolean(
+            notesEditor.currentRow &&
+              notesEditor.field &&
+              notesEditor.draft !== ((notesEditor.currentRow[notesEditor.field] as string) || ''),
+          )}
           loading={notesEditor.isSaving}
           focusAttachments={notesEditor.focusAttachments}
           focusRequestId={notesEditor.focusRequestId}

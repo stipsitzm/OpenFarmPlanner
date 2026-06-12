@@ -39,6 +39,10 @@ from .models import (
     is_supplier_domain,
 )
 
+FIELD_NAME_DUPLICATE_MESSAGE = 'Eine Parzelle mit diesem Namen existiert in diesem Standort bereits.'
+BED_NAME_DUPLICATE_MESSAGE = 'Ein Beet mit diesem Namen existiert in dieser Parzelle bereits.'
+EMPTY_SEED_RATE_UNIT_VALUES = {None, '', '-'}
+
 
 def _resolve_active_project_from_serializer(serializer) -> Project | None:
     """Resolve active project from serializer context or bound instance."""
@@ -51,6 +55,16 @@ def _resolve_active_project_from_serializer(serializer) -> Project | None:
     if instance is not None and hasattr(instance, 'project'):
         return instance.project
     return None
+
+
+def _normalize_seed_rate_unit_value(value: object) -> str | None:
+    """Normalize supported seed rate units and legacy empty placeholders."""
+    if value in EMPTY_SEED_RATE_UNIT_VALUES:
+        return None
+    normalized_value = normalize_seed_rate_unit(value)
+    if normalized_value:
+        return normalized_value
+    raise serializers.ValidationError('Unsupported seed rate unit.')
 
 
 class AuditUserSerializer(serializers.Serializer):
@@ -230,6 +244,7 @@ class FieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Field
         fields = '__all__'
+        validators = []
         extra_kwargs = {
             'project': {'required': False},
             'name': {'label': 'Parzelle'},
@@ -265,6 +280,13 @@ class FieldSerializer(serializers.ModelSerializer):
         location = attrs.get('location') or getattr(self.instance, 'location', None)
         if project is not None and location is not None and location.project_id != project.id:
             raise serializers.ValidationError({'location': 'Location does not belong to the active project.'})
+        name = attrs.get('name') or getattr(self.instance, 'name', None)
+        if location is not None and name:
+            duplicate_fields = Field.objects.filter(location=location, name=name)
+            if self.instance is not None and self.instance.pk is not None:
+                duplicate_fields = duplicate_fields.exclude(pk=self.instance.pk)
+            if duplicate_fields.exists():
+                raise serializers.ValidationError({'name': FIELD_NAME_DUPLICATE_MESSAGE})
         return attrs
 
 
@@ -282,6 +304,7 @@ class BedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bed
         fields = '__all__'
+        validators = []
         extra_kwargs = {
             'project': {'required': False},
             'field': {'label': 'Parzelle'},
@@ -317,6 +340,13 @@ class BedSerializer(serializers.ModelSerializer):
         field = attrs.get('field') or getattr(self.instance, 'field', None)
         if project is not None and field is not None and field.project_id != project.id:
             raise serializers.ValidationError({'field': 'Field does not belong to the active project.'})
+        name = attrs.get('name') or getattr(self.instance, 'name', None)
+        if field is not None and name:
+            duplicate_beds = Bed.objects.filter(field=field, name=name)
+            if self.instance is not None and self.instance.pk is not None:
+                duplicate_beds = duplicate_beds.exclude(pk=self.instance.pk)
+            if duplicate_beds.exists():
+                raise serializers.ValidationError({'name': BED_NAME_DUPLICATE_MESSAGE})
         return attrs
 
 
@@ -440,6 +470,35 @@ class SeedPackageSerializer(serializers.ModelSerializer):
         return attrs
 
 
+def _has_text_value(value: object) -> bool:
+    return isinstance(value, str) and value.strip() != ''
+
+
+def _supplier_data_payload_has_supplier(row: dict[str, object]) -> bool:
+    return (
+        row.get('supplier_id') is not None
+        or row.get('supplier') is not None
+        or _has_text_value(row.get('supplier_name_input'))
+    )
+
+
+def _supplier_data_payload_has_information(row: dict[str, object]) -> bool:
+    return (
+        _has_text_value(row.get('supplier_product_name'))
+        or _has_text_value(row.get('supplier_product_url'))
+        or _has_text_value(row.get('supplier_url'))
+        or _has_text_value(row.get('notes'))
+        or _has_text_value(row.get('source_url'))
+        or row.get('germination_rate') is not None
+        or row.get('price') is not None
+        or bool(row.get('packaging_sizes'))
+    )
+
+
+def _is_empty_supplier_data_payload(row: dict[str, object]) -> bool:
+    return not _supplier_data_payload_has_supplier(row) and not _supplier_data_payload_has_information(row)
+
+
 class CultureSupplierDataSerializer(serializers.ModelSerializer):
     supplier = SupplierSerializer(read_only=True)
     supplier_id = serializers.PrimaryKeyRelatedField(
@@ -495,7 +554,7 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
             queryset = queryset.exclude(pk=self.instance.pk)
         if queryset.exists():
             raise serializers.ValidationError({
-                'supplier_id': 'Supplier data for this culture already exists.',
+                'supplier_id': 'supplier_data_duplicate',
             })
 
     def validate(self, attrs):
@@ -503,15 +562,15 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
         raw_initial_data = getattr(self, 'initial_data', None)
         if isinstance(raw_initial_data, dict) and 'thousand_kernel_weight_g' in raw_initial_data:
             raise serializers.ValidationError({
-                'thousand_kernel_weight_g': 'Supplier-specific thousand-kernel weight is no longer supported.',
+                'thousand_kernel_weight_g': 'supplier_specific_tkg_unsupported',
             })
         project = _resolve_active_project_from_serializer(self)
         culture = self._resolve_culture_for_validation(attrs)
-        supplier = attrs.get('supplier') or (self.instance.supplier if self.instance is not None else None)
+        supplier = attrs.get('supplier') if 'supplier' in attrs else (self.instance.supplier if self.instance is not None else None)
         if project is not None and culture is not None and culture.project_id != project.id:
-            raise serializers.ValidationError({'culture': 'Culture does not belong to the active project.'})
+            raise serializers.ValidationError({'culture': 'culture_project_mismatch'})
         if project is not None and supplier is not None and supplier.project_id != project.id:
-            raise serializers.ValidationError({'supplier_id': 'Supplier does not belong to the active project.'})
+            raise serializers.ValidationError({'supplier_id': 'supplier_project_mismatch'})
         supplier_name_input = attrs.pop('supplier_name_input', None)
         if not attrs.get('supplier') and supplier_name_input:
             from .utils import normalize_supplier_name
@@ -538,6 +597,12 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError({'supplier': 'Lieferant konnte nicht gespeichert werden.'}) from exc
             attrs['supplier'] = supplier
             attrs['supplier_name'] = supplier.name
+
+        supplier = attrs.get('supplier') if 'supplier' in attrs else (self.instance.supplier if self.instance is not None else None)
+        if supplier is None:
+            raise serializers.ValidationError({
+                'supplier_id': 'supplier_data_missing_supplier',
+            })
 
         self._validate_unique_culture_supplier(attrs)
         return attrs
@@ -745,7 +810,20 @@ class CultureSerializer(serializers.ModelSerializer):
         ).order_by('-updated_at', '-id').values_list('id', flat=True).first()
         return linked_public
 
-
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        for field_name in (
+            'seed_rate_unit',
+            'seed_rate_direct_unit',
+            'seed_rate_pre_cultivation_unit',
+        ):
+            raw_value = data.get(field_name)
+            data[field_name] = (
+                None
+                if raw_value in EMPTY_SEED_RATE_UNIT_VALUES
+                else normalize_seed_rate_unit(raw_value) or raw_value
+            )
+        return data
 
     def validate_seed_packages(self, value):
         seen: set[str] = set()
@@ -794,6 +872,8 @@ class CultureSerializer(serializers.ModelSerializer):
                 if not isinstance(row, dict):
                     continue
                 row_data = dict(row)
+                if _is_empty_supplier_data_payload(row_data):
+                    continue
                 serializer = CultureSupplierDataSerializer(
                     data=row_data,
                     context={**self.context, 'parent_culture': culture},
@@ -821,6 +901,8 @@ class CultureSerializer(serializers.ModelSerializer):
                     if not isinstance(row, dict):
                         continue
                     row_data = dict(row)
+                    if _is_empty_supplier_data_payload(row_data):
+                        continue
                     raw_row_id = row_data.get('id')
                     try:
                         row_id = int(raw_row_id)
@@ -866,17 +948,16 @@ class CultureSerializer(serializers.ModelSerializer):
 
     def validate_seed_rate_unit(self, value):
         """Normalize legacy seed rate unit values and validate supported units."""
-        if value is None or value == '':
-            return value
+        return _normalize_seed_rate_unit_value(value)
 
-        normalized_value = normalize_seed_rate_unit(value)
-        if normalized_value:
-            value = normalized_value
+    def validate_seed_rate_direct_unit(self, value):
+        """Normalize direct-sowing seed rate units and legacy empty placeholders."""
+        return _normalize_seed_rate_unit_value(value)
 
-        allowed_values = SEED_RATE_UNITS
-        if value not in allowed_values:
-            raise serializers.ValidationError('Unsupported seed rate unit.')
-        return value
+    def validate_seed_rate_pre_cultivation_unit(self, value):
+        """Normalize pre-cultivation seed rate units and legacy empty placeholders."""
+        return _normalize_seed_rate_unit_value(value)
+
     def validate_growth_duration_days(self, value):
         if value is not None and value < 0:
             raise serializers.ValidationError('Growth duration must be non-negative.')
@@ -1014,12 +1095,7 @@ class CultureSerializer(serializers.ModelSerializer):
                         }:
                             errors['seed_rate_by_cultivation'] = 'Pre-cultivation seed rate unit is unsupported.'
                             break
-                        if method == 'direct_sowing' and unit not in {
-                            SEED_RATE_UNIT_G_PER_M2,
-                            SEED_RATE_UNIT_G_PER_LFM,
-                            SEED_RATE_UNIT_SEEDS_PER_M2,
-                            SEED_RATE_UNIT_SEEDS_PER_LFM,
-                        }:
+                        if method == 'direct_sowing' and unit not in SEED_RATE_UNITS:
                             errors['seed_rate_by_cultivation'] = 'Direct sowing seed rate unit is unsupported.'
                             break
 
@@ -1051,6 +1127,12 @@ class CultureSerializer(serializers.ModelSerializer):
             getattr(self.instance, 'seed_rate_pre_cultivation_unit', None) if self.instance else None,
         )
         active_types = set(attrs.get('cultivation_types') or cultivation_types or [])
+        direct_unit = _normalize_seed_rate_unit_value(direct_unit)
+        pre_unit = _normalize_seed_rate_unit_value(pre_unit)
+        if 'seed_rate_direct_unit' in attrs:
+            attrs['seed_rate_direct_unit'] = direct_unit
+        if 'seed_rate_pre_cultivation_unit' in attrs:
+            attrs['seed_rate_pre_cultivation_unit'] = pre_unit
 
         if 'direct_sowing' in active_types and direct_value is None and direct_unit:
             errors['seed_rate_direct_value'] = 'Direct sowing seed rate value is required when direct sowing unit is set.'
@@ -1058,16 +1140,13 @@ class CultureSerializer(serializers.ModelSerializer):
             errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is required when direct sowing value is set.'
         if direct_value is not None and direct_value <= 0:
             errors['seed_rate_direct_value'] = 'Direct sowing seed rate value must be greater than zero.'
-        if direct_unit and direct_unit not in {
-            SEED_RATE_UNIT_G_PER_M2,
-            SEED_RATE_UNIT_G_PER_LFM,
-            SEED_RATE_UNIT_SEEDS_PER_M2,
-            SEED_RATE_UNIT_SEEDS_PER_LFM,
-        }:
+        if direct_unit and direct_unit not in SEED_RATE_UNITS:
             errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is unsupported.'
 
         if 'pre_cultivation' in active_types and pre_value is not None and not pre_unit:
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is required when pre-cultivation value is set.'
+        if 'pre_cultivation' in active_types and pre_value is None and pre_unit:
+            errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value is required when pre-cultivation unit is set.'
         if pre_value is not None and pre_value <= 0:
             errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value must be greater than zero.'
         if pre_unit and pre_unit not in {
@@ -1078,6 +1157,40 @@ class CultureSerializer(serializers.ModelSerializer):
             SEED_RATE_UNIT_SEEDS_PER_PLANT,
         }:
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is unsupported.'
+
+        supplier_data_input = attrs.get('supplier_data_input')
+        if isinstance(supplier_data_input, list):
+            existing_supplier_rows = {}
+            if self.instance is not None:
+                existing_supplier_rows = {row.id: row for row in self.instance.supplier_data.all()}
+
+            supplier_data_errors = {}
+            for index, row in enumerate(supplier_data_input):
+                if not isinstance(row, dict) or _is_empty_supplier_data_payload(row):
+                    continue
+
+                has_supplier = _supplier_data_payload_has_supplier(row)
+                raw_row_id = row.get('id')
+                try:
+                    row_id = int(raw_row_id)
+                except (TypeError, ValueError):
+                    row_id = None
+                if (
+                    not has_supplier
+                    and row_id is not None
+                    and row_id in existing_supplier_rows
+                    and 'supplier_id' not in row
+                    and 'supplier' not in row
+                ):
+                    has_supplier = True
+
+                if not has_supplier and _supplier_data_payload_has_information(row):
+                    supplier_data_errors[index] = {
+                        'supplier_id': 'supplier_data_missing_supplier',
+                    }
+
+            if supplier_data_errors:
+                errors['supplier_data_input'] = supplier_data_errors
 
         # Handle supplier_name via get-or-create to keep imports ergonomic.
         # If supplier_id was explicitly provided (including null), respect it and
@@ -1127,13 +1240,13 @@ class CultureSerializer(serializers.ModelSerializer):
         supplier = attrs.get('supplier', getattr(self.instance, 'supplier', None) if self.instance else None)
         project = attrs.get('project') or _resolve_active_project_from_serializer(self)
         if project is not None and supplier is not None and supplier.project_id != project.id:
-            errors['supplier'] = 'Supplier does not belong to the active project.'
+            errors['supplier'] = 'supplier_project_mismatch'
         selected_supplier = attrs.get(
             'selected_seed_demand_supplier',
             getattr(self.instance, 'selected_seed_demand_supplier', None) if self.instance else None,
         )
         if project is not None and selected_supplier is not None and selected_supplier.project_id != project.id:
-            errors['selected_seed_demand_supplier'] = 'Selected supplier does not belong to the active project.'
+            errors['selected_seed_demand_supplier'] = 'selected_supplier_project_mismatch'
         supplier_product_url = attrs.get(
             'supplier_product_url',
             getattr(self.instance, 'supplier_product_url', None) if self.instance else None,
@@ -1393,6 +1506,7 @@ class SeedDemandSerializer(serializers.Serializer):
     supplier_options = serializers.ListField(child=serializers.DictField(), required=False)
     required_amount_value = serializers.FloatField(allow_null=True)
     required_amount_unit = serializers.CharField(allow_null=True)
+    required_amount_warning = serializers.CharField(allow_null=True, required=False)
     total_grams = serializers.FloatField(allow_null=True)
     seed_packages = serializers.ListField(child=serializers.DictField(), required=False)
     package_suggestion = SeedDemandPackageSuggestionSerializer(allow_null=True, required=False)

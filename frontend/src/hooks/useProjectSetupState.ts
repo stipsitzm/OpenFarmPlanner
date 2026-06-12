@@ -1,5 +1,4 @@
 export interface ProjectSetupStateInput {
-  locationsCount: number;
   fieldsCount: number;
   bedsCount: number;
   culturesCount: number;
@@ -8,7 +7,6 @@ export interface ProjectSetupStateInput {
 }
 
 export interface ProjectSetupState {
-  hasLocations: boolean;
   hasFields: boolean;
   hasBeds: boolean;
   hasCultures: boolean;
@@ -18,7 +16,6 @@ export interface ProjectSetupState {
 }
 
 export const deriveProjectSetupState = (input: ProjectSetupStateInput): ProjectSetupState => {
-  const hasLocations = input.locationsCount > 0;
   const hasFields = input.fieldsCount > 0;
   const hasBeds = input.bedsCount > 0;
   const hasCultures = input.culturesCount > 0;
@@ -29,7 +26,6 @@ export const deriveProjectSetupState = (input: ProjectSetupStateInput): ProjectS
   if (!hasBeds) missingForPlantingPlans.push('beds');
 
   return {
-    hasLocations,
     hasFields,
     hasBeds,
     hasCultures,

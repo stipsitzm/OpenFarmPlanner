@@ -132,6 +132,36 @@ describe('extractApiErrorMessage', () => {
     expect(result).toBe('Name: Eine Kultur mit diesem Namen existiert bereits.');
   });
 
+  it('maps duplicate supplier-data backend codes to localized text', () => {
+    const t = createT({
+      'fields.supplier_id': 'Lieferant',
+      'errors.supplierDataDuplicate': 'Für diesen Lieferanten sind bereits Daten für diese Kultur vorhanden.',
+    });
+
+    const error = createAxiosError(400, {
+      supplier_id: ['supplier_data_duplicate'],
+    });
+
+    const result = extractApiErrorMessage(error, t, fallbackMessage);
+
+    expect(result).toBe('Lieferant: Für diesen Lieferanten sind bereits Daten für diese Kultur vorhanden.');
+  });
+
+  it('keeps old duplicate supplier-data backend messages localized', () => {
+    const t = createT({
+      'fields.supplier_id': 'Lieferant',
+      'errors.supplierDataDuplicate': 'Für diesen Lieferanten sind bereits Daten für diese Kultur vorhanden.',
+    });
+
+    const error = createAxiosError(400, {
+      supplier_id: ['Supplier data for this culture already exists.'],
+    });
+
+    const result = extractApiErrorMessage(error, t, fallbackMessage);
+
+    expect(result).toBe('Lieferant: Für diesen Lieferanten sind bereits Daten für diese Kultur vorhanden.');
+  });
+
 
 
   it('returns fallback when 400 object has no string or array messages', () => {

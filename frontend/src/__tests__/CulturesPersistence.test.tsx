@@ -6,9 +6,11 @@ import Cultures from '../pages/Cultures';
 import { CommandProvider } from '../commands/CommandProvider';
 
 const {
+  formCultureIdHistory,
   listMock,
   selectedIdHistory,
 } = vi.hoisted(() => ({
+  formCultureIdHistory: [] as Array<number | undefined>,
   listMock: vi.fn(),
   selectedIdHistory: [] as Array<number | undefined>,
 }));
@@ -39,6 +41,14 @@ vi.mock('../cultures/CultureDetail', () => ({
         </button>
       </div>
     );
+  },
+}));
+
+vi.mock('../cultures/CultureForm', () => ({
+  CultureForm: ({ culture }: { culture?: { id?: number } }): ReactElement => {
+    formCultureIdHistory.push(culture?.id);
+
+    return <div data-testid="culture-form">culture-form-{culture?.id ?? 'new'}</div>;
   },
 }));
 
@@ -92,6 +102,7 @@ function CrossRouteHarness(): ReactElement {
 describe('Cultures selection persistence', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    formCultureIdHistory.length = 0;
     selectedIdHistory.length = 0;
     localStorage.clear();
 
@@ -120,6 +131,20 @@ describe('Cultures selection persistence', () => {
     expect(screen.getByTestId('location-search')).toHaveTextContent('?cultureId=1');
     expect(localStorage.getItem('selectedCultureId')).toBe('1');
     expect(selectedIdHistory).not.toContain(undefined);
+  });
+
+  it('opens edit dialog from explicit url action and removes only the action parameter', async () => {
+    renderCultures('/cultures?cultureId=1&action=edit');
+
+    await waitFor(() => {
+      expect(screen.getByTestId('culture-form')).toHaveTextContent('culture-form-1');
+    }, { timeout: 3000 });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location-search')).toHaveTextContent('?cultureId=1');
+    }, { timeout: 3000 });
+
+    expect(formCultureIdHistory[0]).toBe(1);
   });
 
   it('persists user selection to url and localStorage', async () => {

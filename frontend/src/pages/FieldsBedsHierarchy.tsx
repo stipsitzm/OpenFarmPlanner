@@ -32,7 +32,7 @@ import type {
   GridRowsProp,
   GridRowModesModel,
 } from "@mui/x-data-grid";
-import { Box, Alert } from "@mui/material";
+import { Box, Alert, useMediaQuery } from "@mui/material";
 import Divider from "@mui/material/Divider";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -46,6 +46,7 @@ import {
   NotesDrawer,
   getPlainExcerpt,
 } from "../components/data-grid";
+import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from "../components/data-grid/contextMenuFocus";
 import {
   handleEditableCellClick,
 } from "../components/data-grid/handlers";
@@ -65,6 +66,7 @@ import {
   DEFAULT_HIERARCHY_COLUMN_WIDTHS,
 } from "../components/hierarchy/HierarchyColumns";
 import { extractApiErrorMessage } from "../api/errors";
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from "../utils/contextMenu";
 import type { HierarchyRow } from "../components/hierarchy/utils/types";
 import {
   useCommandContextTag,
@@ -315,6 +317,8 @@ function FieldsBedsHierarchy({
   const navigate = useNavigate();
   const location = useLocation();
   const gridApiRef = useGridApiRef();
+  const isTouchLikePointer = useMediaQuery("(pointer: coarse)");
+  const isMobileViewport = useMediaQuery("(max-width:900px)");
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
   const [selectedRowId, setSelectedRowId] = useState<string | number | null>(
     null,
@@ -332,6 +336,7 @@ function FieldsBedsHierarchy({
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
   const touchLongPressTimeoutRef = useRef<number | null>(null);
+  const contextMenuOriginRef = useRef<HTMLElement | null>(null);
 
   useCommandContextTag("areas");
 
@@ -618,12 +623,15 @@ function FieldsBedsHierarchy({
       return;
     }
 
-    const firstLocation = locations.find((locationItem) => locationItem.id !== undefined);
-    if (firstLocation?.id !== undefined) {
-      handleAddField(firstLocation.id);
+    const hasActiveFieldDraft = fields.some((field) => typeof field.id === "number" && field.id < 0);
+    if (!hasActiveFieldDraft) {
+      const firstLocation = locations.find((locationItem) => locationItem.id !== undefined);
+      if (firstLocation?.id !== undefined) {
+        handleAddField(firstLocation.id);
+      }
     }
     onCreateFieldRequestHandled?.();
-  }, [createFieldRequest, handleAddField, loading, locations, onCreateFieldRequestHandled]);
+  }, [createFieldRequest, fields, handleAddField, loading, locations, onCreateFieldRequestHandled]);
 
   const handleCreatePlantingPlan = useCallback(
     (bedId: number): void => {
@@ -794,6 +802,30 @@ function FieldsBedsHierarchy({
     return sum;
   };
 
+  const hasDuplicateFieldName = useCallback((row: HierarchyRow): boolean => {
+    const normalizedName = (row.name ?? "").trim();
+    if (!normalizedName) {
+      return false;
+    }
+    return fields.some((field) =>
+      field.id !== row.fieldId &&
+      field.location === row.locationId &&
+      field.name.trim() === normalizedName,
+    );
+  }, [fields]);
+
+  const hasDuplicateBedName = useCallback((row: HierarchyRow): boolean => {
+    const normalizedName = (row.name ?? "").trim();
+    if (!normalizedName) {
+      return false;
+    }
+    return beds.some((bed) =>
+      bed.id !== row.bedId &&
+      bed.field === row.field &&
+      bed.name.trim() === normalizedName,
+    );
+  }, [beds]);
+
   const processRowUpdate = async (
     newRow: HierarchyRow,
   ): Promise<HierarchyRow> => {
@@ -809,6 +841,11 @@ function FieldsBedsHierarchy({
     setDraftValidationWarning("");
 
     if (newRow.type === "bed") {
+      if (hasDuplicateBedName(newRow)) {
+        setError(t("validation.duplicateBedName"));
+        throw new Error(t("validation.duplicateBedName"));
+      }
+
       const parsedLength = parseDimensionValue(newRow.length_m);
       const parsedWidth = parseDimensionValue(newRow.width_m);
 
@@ -874,6 +911,11 @@ function FieldsBedsHierarchy({
     }
 
     if (newRow.type === "field") {
+      if (hasDuplicateFieldName(newRow)) {
+        setError(t("validation.duplicateFieldName"));
+        throw new Error(t("validation.duplicateFieldName"));
+      }
+
       const isNewField = typeof newRow.fieldId === "number" && newRow.fieldId < 0;
       const parsedLength = parseDimensionValue(newRow.length_m);
       const parsedWidth = parseDimensionValue(newRow.width_m);
@@ -924,10 +966,10 @@ function FieldsBedsHierarchy({
 
           setFields((prevFields) => {
             const filteredFields = prevFields.filter((field) => field.id !== newRow.fieldId);
-            return [created.data, ...filteredFields];
+            return [{ ...created.data }, ...filteredFields];
           });
+          void fetchData({ showLoading: false });
           setError("");
-          await fetchData();
           return {
             ...newRow,
             id: `field-${created.data.id}`,
@@ -1000,11 +1042,10 @@ function FieldsBedsHierarchy({
             return f;
           }),
         );
-        await fetchData();
         return {
           ...newRow,
           name: updated.data.name,
-          area_sqm: updated.data.area_sqm,
+          area_sqm: updatedArea,
           length_m: updated.data.length_m,
           width_m: updated.data.width_m,
           notes: updated.data.notes,
@@ -1043,7 +1084,6 @@ function FieldsBedsHierarchy({
             : locationItem,
         ),
       );
-      await fetchData();
       return {
         ...newRow,
         name: updated.data.name,
@@ -1370,13 +1410,15 @@ function FieldsBedsHierarchy({
     t,
   ]);
 
-  const openContextMenuForRow = useCallback((row: HierarchyRow, mouseX: number, mouseY: number): void => {
+  const openContextMenuForRow = useCallback((row: HierarchyRow, mouseX: number, mouseY: number, origin?: HTMLElement | null): void => {
     setSelectedRowId(row.id);
     setTreeActive(true);
+    contextMenuOriginRef.current = origin ?? null;
     setContextMenuState({ row, mouseX, mouseY });
   }, []);
 
   const handleNameCellContextMenu = useCallback((event: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>, row: HierarchyRow): void => {
+    suppressNativeContextMenu(event);
     const hasPointerCoordinates =
       "clientX" in event &&
       "clientY" in event &&
@@ -1386,15 +1428,18 @@ function FieldsBedsHierarchy({
       Number.isFinite(event.clientY) &&
       (event.clientX !== 0 || event.clientY !== 0);
     if (hasPointerCoordinates) {
-      openContextMenuForRow(row, event.clientX + 2, event.clientY - 6);
+      openContextMenuForRow(row, event.clientX + 2, event.clientY - 6, event.currentTarget);
       return;
     }
 
     const rect = event.currentTarget.getBoundingClientRect();
-    openContextMenuForRow(row, rect.right - 8, rect.top + 12);
+    openContextMenuForRow(row, rect.right - 8, rect.top + 12, event.currentTarget);
   }, [openContextMenuForRow]);
 
   const handleGridContextMenu = useCallback((event: React.MouseEvent<HTMLElement>): void => {
+    if (!shouldOpenCustomContextMenu(event.target)) {
+      return;
+    }
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
       return;
@@ -1409,13 +1454,16 @@ function FieldsBedsHierarchy({
       return;
     }
 
-    event.preventDefault();
+    suppressNativeContextMenu(event);
     setSelectedRowId(targetRow.id);
     setTreeActive(true);
-    openContextMenuForRow(targetRow, event.clientX + 2, event.clientY - 6);
+    openContextMenuForRow(targetRow, event.clientX + 2, event.clientY - 6, rowElement);
   }, [openContextMenuForRow, rows]);
 
   const handleGridTouchStart = useCallback((event: React.TouchEvent<HTMLElement>): void => {
+    if (!shouldOpenCustomContextMenu(event.target)) {
+      return;
+    }
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
       return;
@@ -1432,7 +1480,7 @@ function FieldsBedsHierarchy({
     }
 
     touchLongPressTimeoutRef.current = window.setTimeout(() => {
-      openContextMenuForRow(targetRow, touch.clientX, touch.clientY);
+      openContextMenuForRow(targetRow, touch.clientX, touch.clientY, rowElement);
     }, 550);
   }, [openContextMenuForRow, rows]);
 
@@ -1445,7 +1493,9 @@ function FieldsBedsHierarchy({
 
   const closeContextMenu = useCallback((): void => {
     setContextMenuState(null);
+    focusContextMenuOrigin(contextMenuOriginRef.current);
   }, []);
+  const contextMenuListRef = useContextMenuFocus(contextMenuState !== null, closeContextMenu);
 
   const areaCommands = useMemo<CommandSpec[]>(
     () => [
@@ -1499,7 +1549,7 @@ function FieldsBedsHierarchy({
     };
 
     const handleTreeNavigation = (event: KeyboardEvent) => {
-      if (!treeActive || !selectedRowId) {
+      if (contextMenuState !== null || !treeActive || !selectedRowId) {
         return;
       }
 
@@ -1573,7 +1623,7 @@ function FieldsBedsHierarchy({
       document.removeEventListener("mousedown", handleDocumentPointerDown);
       window.removeEventListener("keydown", handleTreeNavigation);
     };
-  }, [discardActiveRowEdit, expandedRows, rows, selectedRowId, toggleExpand, treeActive]);
+  }, [contextMenuState, discardActiveRowEdit, expandedRows, rows, selectedRowId, toggleExpand, treeActive]);
 
   useEffect(() => {
     const handleContextMenuKeyboard = (event: KeyboardEvent) => {
@@ -1589,12 +1639,13 @@ function FieldsBedsHierarchy({
       }
 
       event.preventDefault();
+      event.stopPropagation();
       const targetElement = document.querySelector(`[data-id="${String(selectedRowId)}"]`) as HTMLElement | null;
       if (!targetElement) {
         return;
       }
       const rect = targetElement.getBoundingClientRect();
-      openContextMenuForRow(selectedRow, rect.left + Math.min(240, rect.width), rect.top + 12);
+      openContextMenuForRow(selectedRow, rect.left + Math.min(240, rect.width), rect.top + 12, targetElement);
     };
 
     window.addEventListener("keydown", handleContextMenuKeyboard);
@@ -1672,6 +1723,9 @@ function FieldsBedsHierarchy({
         ...DEFAULT_HIERARCHY_COLUMN_WIDTHS,
         name: nameColumnWidth,
       },
+      {
+        disablePlantingPlanHoverAction: isTouchLikePointer || isMobileViewport,
+      },
     );
   }, [
     toggleExpand,
@@ -1684,6 +1738,8 @@ function FieldsBedsHierarchy({
     rowsById,
     t,
     nameColumnWidth,
+    isTouchLikePointer,
+    isMobileViewport,
   ]);
 
   const getRowHeight = useCallback((params: GridRowHeightParams) => {
@@ -1764,6 +1820,7 @@ function FieldsBedsHierarchy({
   const contextMenuActions = contextMenuState
     ? getHierarchyRowActions(contextMenuState.row)
     : [];
+  const shouldShowHierarchyTable = fields.length > 0 || createFieldRequest > 0;
 
   const formatHierarchyValue = useCallback((value: unknown): string => {
     if (value === null || value === undefined || value === "") {
@@ -1837,76 +1894,91 @@ function FieldsBedsHierarchy({
           </Box>
         )}
 
-        <Box
-          ref={tableWrapperRef}
-          sx={{ width: "100%", maxWidth: "100%", minWidth: 1, overflowX: "auto", overflowY: "visible", display: "block" }}
-          onClick={() => setTreeActive(true)}
-          onContextMenu={handleGridContextMenu}
-          onTouchStart={handleGridTouchStart}
-          onTouchEnd={handleGridTouchEnd}
-        >
-          <Box sx={{ display: "inline-block", width: "fit-content", minWidth: 320, maxWidth: "100%" }}>
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            columnHeaderHeight={HEADER_ROW_HEIGHT}
-            getRowHeight={getRowHeight}
-            getRowClassName={(params) => `ofp-hierarchy-row-${params.row.type}`}
-            rowModesModel={rowModesModel}
-            onRowModesModelChange={setRowModesModel}
-            onRowEditStop={handleHierarchyRowEditStop}
-            processRowUpdate={processRowUpdate}
-            onProcessRowUpdateError={handleProcessRowUpdateError}
-            loading={loading}
-            editMode="row"
-            autoHeight
-            hideFooter={true}
-            sortingMode="server"
-            sortModel={sortModel}
-            onSortModelChange={setSortModel}
-            isRowSelectable={() => true}
-            isCellEditable={isCellEditable}
-            sx={HIERARCHY_DATA_GRID_SX}
-            rowSelectionModel={rowSelectionModel}
-            onRowSelectionModelChange={(nextModel) =>
-              setSelectedRowId(Array.from(nextModel.ids)[0] ?? null)
-            }
-            onCellClick={(params) => {
-              const editingRowId = Object.entries(rowModesModel).find(([, mode]) => mode.mode === GridRowModes.Edit)?.[0];
-              if (editingRowId !== undefined && String(editingRowId) !== String(params.id)) {
-                discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
-              }
-              rememberRowSnapshot(params.id);
-              setSelectedRowId(params.id);
-              setTreeActive(true);
-              handleEditableCellClick(params, rowModesModel, setRowModesModel);
+        {shouldShowHierarchyTable ? (
+          <Box
+            ref={tableWrapperRef}
+            sx={{
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 1,
+              overflowX: "auto",
+              overflowY: "visible",
+              display: "block",
+              '& [role="row"][data-id]': {
+                WebkitTouchCallout: "none",
+              },
             }}
-            onCellKeyDown={(params: GridCellParams<HierarchyRow>, event: React.KeyboardEvent) => {
-              const keyboardEvent = event as React.KeyboardEvent & { defaultMuiPrevented?: boolean };
-              if (
-                keyboardEvent.key === "Escape" &&
-                rowModesModel[params.id]?.mode === GridRowModes.Edit
-              ) {
-                keyboardEvent.preventDefault();
-                keyboardEvent.defaultMuiPrevented = true;
-                discardRowEdit(params.id);
-                return;
+            onClick={() => setTreeActive(true)}
+            onContextMenu={handleGridContextMenu}
+            onTouchStart={handleGridTouchStart}
+            onTouchMove={handleGridTouchEnd}
+            onTouchEnd={handleGridTouchEnd}
+            onTouchCancel={handleGridTouchEnd}
+          >
+            <Box sx={{ display: "inline-block", width: "fit-content", minWidth: 320, maxWidth: "100%" }}>
+            <DataGrid
+              rows={rows}
+              columns={columns}
+              columnHeaderHeight={HEADER_ROW_HEIGHT}
+              getRowHeight={getRowHeight}
+              getRowClassName={(params) => `ofp-hierarchy-row-${params.row.type}`}
+              rowModesModel={rowModesModel}
+              onRowModesModelChange={setRowModesModel}
+              onRowEditStop={handleHierarchyRowEditStop}
+              processRowUpdate={processRowUpdate}
+              onProcessRowUpdateError={handleProcessRowUpdateError}
+              loading={loading}
+              editMode="row"
+              autoHeight
+              hideFooter={true}
+              sortingMode="server"
+              sortModel={sortModel}
+              onSortModelChange={setSortModel}
+              isRowSelectable={() => true}
+              isCellEditable={isCellEditable}
+              sx={HIERARCHY_DATA_GRID_SX}
+              rowSelectionModel={rowSelectionModel}
+              onRowSelectionModelChange={(nextModel) =>
+                setSelectedRowId(Array.from(nextModel.ids)[0] ?? null)
               }
-              if (keyboardEvent.key === "ContextMenu" || (keyboardEvent.shiftKey && keyboardEvent.key === "F10")) {
-                keyboardEvent.preventDefault();
-                const targetRow = rows.find((row) => row.id === params.id);
-                if (targetRow) {
-                  const targetElement = keyboardEvent.currentTarget as HTMLElement;
-                  const rect = targetElement.getBoundingClientRect();
-                  openContextMenuForRow(targetRow, rect.left + Math.min(240, rect.width), rect.top + 12);
+              onCellClick={(params) => {
+                const editingRowId = Object.entries(rowModesModel).find(([, mode]) => mode.mode === GridRowModes.Edit)?.[0];
+                if (editingRowId !== undefined && String(editingRowId) !== String(params.id)) {
+                  discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
                 }
-              }
-            }}
-            localeText={germanDataGridLocaleText}
-            apiRef={gridApiRef}
-          />
+                rememberRowSnapshot(params.id);
+                setSelectedRowId(params.id);
+                setTreeActive(true);
+                handleEditableCellClick(params, rowModesModel, setRowModesModel);
+              }}
+              onCellKeyDown={(params: GridCellParams<HierarchyRow>, event: React.KeyboardEvent) => {
+                const keyboardEvent = event as React.KeyboardEvent & { defaultMuiPrevented?: boolean };
+                if (
+                  keyboardEvent.key === "Escape" &&
+                  rowModesModel[params.id]?.mode === GridRowModes.Edit
+                ) {
+                  keyboardEvent.preventDefault();
+                  keyboardEvent.defaultMuiPrevented = true;
+                  discardRowEdit(params.id);
+                  return;
+                }
+                if (keyboardEvent.key === "ContextMenu" || (keyboardEvent.shiftKey && keyboardEvent.key === "F10")) {
+                  keyboardEvent.preventDefault();
+                  keyboardEvent.stopPropagation();
+                  const targetRow = rows.find((row) => row.id === params.id);
+                  if (targetRow) {
+                    const targetElement = keyboardEvent.currentTarget as HTMLElement;
+                    const rect = targetElement.getBoundingClientRect();
+                    openContextMenuForRow(targetRow, rect.left + Math.min(240, rect.width), rect.top + 12, targetElement);
+                  }
+                }
+              }}
+              localeText={germanDataGridLocaleText}
+              apiRef={gridApiRef}
+            />
+            </Box>
           </Box>
-        </Box>
+        ) : null}
       </Box>
 
       {/* Notes Editor Drawer */}
@@ -1917,11 +1989,26 @@ function FieldsBedsHierarchy({
         onChange={notesEditor.setDraft}
         onSave={notesEditor.handleSave}
         onClose={notesEditor.handleClose}
+        hasUnsavedChanges={Boolean(
+          notesEditor.currentRow &&
+            notesEditor.field &&
+            notesEditor.draft !== ((notesEditor.currentRow[notesEditor.field] as string) || ""),
+        )}
         loading={notesEditor.isSaving}
       />
       <Menu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
+        autoFocus
+        disableAutoFocusItem={false}
+        slotProps={{
+          list: {
+            autoFocus: true,
+            ref: contextMenuListRef,
+            onKeyDown: (event: React.KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
+          },
+        }}
+        onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
         anchorReference="anchorPosition"
         anchorPosition={
           contextMenuState !== null

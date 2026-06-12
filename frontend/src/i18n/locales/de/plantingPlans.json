@@ -45,7 +45,8 @@
   "tooltips": {
     "coupledFields": "Genutzte Fläche: Mit Pflanzenanzahl gekoppelt. Änderungen aktualisieren automatisch den anderen Wert.",
     "areaAutoMax": "Leer oder „max“ verwendet automatisch die maximal verfügbare Restfläche.",
-    "areaInput": "Genutzte Fläche: Mit Pflanzenanzahl gekoppelt. Änderungen aktualisieren automatisch den anderen Wert. Leer oder „max“ verwendet automatisch die maximal verfügbare Restfläche.",
+    "areaInputTitle": "Vom Anbauplan belegte Fläche",
+    "areaInputDescription": "Die Fläche des Beets, die durch diesen Anbauplan beansprucht wird. Änderungen an Fläche oder Pflanzenanzahl aktualisieren automatisch den jeweils anderen Wert. Leer oder „max“ verwendet die maximal verfügbare Restfläche.",
     "plantsFromSpacing": "Pflanzenanzahl: Mit genutzter Fläche gekoppelt. Änderungen aktualisieren automatisch den anderen Wert.",
     "calculatedHarvestDate": "Wird automatisch aus Pflanzdatum und den Daten der Kulturbibliothek berechnet."
   },
@@ -106,10 +107,6 @@
   "emptyStates": {
     "createBlockedTooltip": "Beete werden innerhalb von Parzellen auf der Seite Anbauflächen hinzugefügt.",
     "states": {
-      "locations": {
-        "title": "Du kannst noch keinen Anbauplan hinzufügen.",
-        "description": "Lege zuerst einen Standort an. Danach kannst du auf der Seite Anbauflächen eine Parzelle hinzufügen."
-      },
       "fields": {
         "title": "Du kannst noch keinen Anbauplan hinzufügen.",
         "description": "Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu."
@@ -128,7 +125,6 @@
       }
     },
     "actions": {
-      "createLocation": "Standort hinzufügen",
       "createField": "Parzelle hinzufügen",
       "createAreas": "Zu Anbauflächen",
       "openCultureLibrary": "Kulturbibliothek öffnen",

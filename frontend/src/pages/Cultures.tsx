@@ -13,7 +13,7 @@ import { Link as RouterLink, useLocation, useNavigate, useOutletContext } from '
 import axios from 'axios';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
-import { bedAPI, cultureAPI, fieldAPI, locationAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
+import { bedAPI, cultureAPI, fieldAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
 import type {
   CultivationType,
   CultureHistoryEntry,
@@ -173,7 +173,6 @@ function Cultures() {
   const [publicLibraryInitialSelectedId, setPublicLibraryInitialSelectedId] = useState<number | null>(null);
   const [publicLibraryInitialQuery, setPublicLibraryInitialQuery] = useState('');
   const [publishingCultureId, setPublishingCultureId] = useState<number | null>(null);
-  const [hasLocations, setHasLocations] = useState(false);
   const [hasFields, setHasFields] = useState(false);
   const [hasBeds, setHasBeds] = useState(false);
   const selectedCulture = cultures.find((culture) => culture.id === selectedCultureId);
@@ -214,7 +213,6 @@ function Cultures() {
     if (shouldShowProjectRequiredState) {
       setCultures([]);
       setIsCulturesLoading(false);
-      setHasLocations(false);
       setHasFields(false);
       setHasBeds(false);
       return;
@@ -229,16 +227,13 @@ function Cultures() {
     }
     const fetchPlanRequirements = async (): Promise<void> => {
       try {
-        const [locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
-          locationAPI.list(),
+        const [fieldsResponse, bedsResponse] = await Promise.all([
           fieldAPI.list(),
           bedAPI.list(),
         ]);
-        setHasLocations(locationsResponse.data.results.length > 0);
         setHasFields(fieldsResponse.data.results.length > 0);
         setHasBeds(bedsResponse.data.results.length > 0);
       } catch {
-        setHasLocations(false);
         setHasFields(false);
         setHasBeds(false);
       }
@@ -295,23 +290,22 @@ function Cultures() {
     );
   }, [handleAddNew, location.pathname, location.search, navigate, shouldShowProjectRequiredState, showForm]);
 
-  const handleEdit = (culture: Culture) => {
+  const handleEdit = useCallback((culture: Culture) => {
     setEditingCulture(culture);
     setShowForm(true);
-  };
+  }, []);
 
   useEffect(() => {
     if (shouldShowProjectRequiredState || showForm || !selectedCulture) {
       return;
     }
     const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get('edit') !== 'true') {
+    if (searchParams.get('action') !== 'edit' || searchParams.get('cultureId') !== String(selectedCulture.id)) {
       return;
     }
 
-    setEditingCulture(selectedCulture);
-    setShowForm(true);
-    searchParams.delete('edit');
+    handleEdit(selectedCulture);
+    searchParams.delete('action');
     const nextSearch = searchParams.toString();
     navigate(
       {
@@ -320,7 +314,7 @@ function Cultures() {
       },
       { replace: true },
     );
-  }, [location.pathname, location.search, navigate, selectedCulture, shouldShowProjectRequiredState, showForm]);
+  }, [handleEdit, location.pathname, location.search, navigate, selectedCulture, shouldShowProjectRequiredState, showForm]);
 
   const handleDelete = (culture: Culture) => {
     setDeleteDialogCulture(culture);
@@ -358,20 +352,12 @@ function Cultures() {
     }
   }, [updateSelectedCultureId]);
 
-  const finalizePendingCultureDeletion = useCallback(async (deletion: PendingCultureDeletion): Promise<void> => {
+  const expirePendingCultureDeletion = useCallback((deletion: PendingCultureDeletion): void => {
     pendingCultureDeleteTimersRef.current.delete(deletion.id);
     removePendingCultureDeletion(deletion.id);
+  }, [removePendingCultureDeletion]);
 
-    try {
-      await cultureAPI.delete(deletion.cultureId);
-    } catch (error) {
-      console.error('Error deleting culture:', error);
-      restorePendingCultureDeletion(deletion);
-      showSnackbar(extractApiErrorMessage(error, t, t('messages.deleteError')), 'error');
-    }
-  }, [removePendingCultureDeletion, restorePendingCultureDeletion, showSnackbar, t]);
-
-  const undoPendingCultureDeletion = useCallback((deletionId: string): void => {
+  const undoPendingCultureDeletion = useCallback(async (deletionId: string): Promise<void> => {
     const deletion = pendingCultureDeletions.find((pendingDeletion) => pendingDeletion.id === deletionId);
     if (!deletion) {
       return;
@@ -383,9 +369,15 @@ function Cultures() {
       pendingCultureDeleteTimersRef.current.delete(deletionId);
     }
 
-    restorePendingCultureDeletion(deletion);
-    removePendingCultureDeletion(deletionId);
-  }, [pendingCultureDeletions, removePendingCultureDeletion, restorePendingCultureDeletion]);
+    try {
+      await cultureAPI.undelete(deletion.cultureId);
+      restorePendingCultureDeletion(deletion);
+      removePendingCultureDeletion(deletionId);
+    } catch (error) {
+      console.error('Error restoring culture:', error);
+      showSnackbar(extractApiErrorMessage(error, t, t('messages.restoreDeleteError')), 'error');
+    }
+  }, [pendingCultureDeletions, removePendingCultureDeletion, restorePendingCultureDeletion, showSnackbar, t]);
 
   const closePendingCultureDeletionSnackbar = useCallback((deletionId: string): void => {
     setPendingCultureDeletions((currentDeletions) =>
@@ -438,7 +430,7 @@ function Cultures() {
   };
 
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async (): Promise<void> => {
     if (!deleteDialogCulture?.id) {
       return;
     }
@@ -461,6 +453,16 @@ function Cultures() {
       visible: true,
     };
 
+    setDeleteDialogCulture(null);
+
+    try {
+      await cultureAPI.delete(cultureId);
+    } catch (error) {
+      console.error('Error deleting culture:', error);
+      showSnackbar(extractApiErrorMessage(error, t, t('messages.deleteError')), 'error');
+      return;
+    }
+
     setCultures((currentItems) => currentItems.filter((culture) => culture.id !== cultureId));
     if (selectedCultureId === cultureId) {
       const nextSelectedCulture =
@@ -469,11 +471,10 @@ function Cultures() {
         null;
       updateSelectedCultureId(nextSelectedCulture?.id, 'internal');
     }
-    setDeleteDialogCulture(null);
     setPendingCultureDeletions((currentDeletions) => [...currentDeletions, pendingDeletion]);
 
     const timerId = window.setTimeout(() => {
-      void finalizePendingCultureDeletion(pendingDeletion);
+      expirePendingCultureDeletion(pendingDeletion);
     }, DELETE_UNDO_DURATION_MS);
     pendingCultureDeleteTimersRef.current.set(deletionId, timerId);
   };
@@ -767,7 +768,6 @@ function Cultures() {
   };
 
   const firstMissingPlanRequirement = getFirstMissingCultivationPlanRequirement({
-    hasLocations,
     hasFields,
     hasBeds,
     hasCultures: cultures.length > 0,
@@ -780,21 +780,6 @@ function Cultures() {
   const dialogCostInfo = getDialogCostInfo(enrichmentResult);
 
   useCommandContextTag('cultures');
-
-  const getCultureCultivationTypeLabel = useCallback((culture: Culture): string | null => {
-    const rawTypes = Array.isArray(culture.cultivation_types) && culture.cultivation_types.length > 0
-      ? culture.cultivation_types
-      : (culture.cultivation_type ? [culture.cultivation_type] : []);
-    const labels = rawTypes
-      .map((type) => normalizeCultivationType(type))
-      .filter((type): type is CultivationType => type === 'direct_sowing' || type === 'pre_cultivation')
-      .map((type) => (
-        type === 'direct_sowing'
-          ? t('form.cultivationTypeDirectSowing')
-          : t('form.cultivationTypePreCultivation')
-      ));
-    return labels.length > 0 ? labels.join(', ') : null;
-  }, [t]);
 
   const goToRelativeCulture = useCallback((direction: 'next' | 'previous') => {
     if (!selectedCultureId || cultures.length === 0) {
@@ -1307,44 +1292,9 @@ function Cultures() {
           {t('deleteDialog.title')}
         </DialogTitle>
         <DialogContent sx={{ pt: 1 }}>
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
-            {t('deleteDialog.description')}
+          <Typography color="text.secondary">
+            {t('deleteDialog.confirmation', { name: deleteDialogCulture?.name ?? '' })}
           </Typography>
-          {deleteDialogCulture ? (
-            <Box
-              sx={{
-                p: 2,
-                borderRadius: 1,
-                border: '1px solid',
-                borderColor: 'surface.surfaceSoftBorder',
-                bgcolor: 'surface.surfaceSubtleBackground',
-              }}
-            >
-              <Typography sx={{ fontWeight: 700, mb: 1 }}>
-                {deleteDialogCulture.name}
-              </Typography>
-              <Stack spacing={0.75}>
-                {deleteDialogCulture.variety ? (
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'baseline' }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 86 }}>
-                      {t('deleteDialog.variety')}
-                    </Typography>
-                    <Typography variant="body2">{deleteDialogCulture.variety}</Typography>
-                  </Box>
-                ) : null}
-                {getCultureCultivationTypeLabel(deleteDialogCulture) ? (
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'baseline' }}>
-                    <Typography variant="caption" color="text.secondary" sx={{ minWidth: 86 }}>
-                      {t('deleteDialog.cultivationType')}
-                    </Typography>
-                    <Typography variant="body2">
-                      {getCultureCultivationTypeLabel(deleteDialogCulture)}
-                    </Typography>
-                  </Box>
-                ) : null}
-              </Stack>
-            </Box>
-          ) : null}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
           <Button onClick={() => setDeleteDialogCulture(null)}>

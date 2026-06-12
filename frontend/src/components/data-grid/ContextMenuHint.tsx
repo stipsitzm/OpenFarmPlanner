@@ -1,12 +1,13 @@
 import CloseIcon from '@mui/icons-material/Close';
 import MouseOutlinedIcon from '@mui/icons-material/MouseOutlined';
-import { Box, IconButton, Typography, type SxProps, type Theme } from '@mui/material';
+import { Box, IconButton, Typography, useMediaQuery, type SxProps, type Theme } from '@mui/material';
 import type { ReactNode } from 'react';
 import { useTranslation } from '../../i18n';
 
 interface ContextMenuHintProps {
   message: ReactNode;
   secondary?: ReactNode;
+  touchMessage?: ReactNode;
   onClose?: () => void;
   compact?: boolean;
   sx?: SxProps<Theme>;
@@ -15,11 +16,19 @@ interface ContextMenuHintProps {
 export function ContextMenuHint({
   message,
   secondary,
+  touchMessage,
   onClose,
   compact = false,
   sx,
 }: ContextMenuHintProps) {
   const { t } = useTranslation('common');
+  const isTouchLikePointer = useMediaQuery('(pointer: coarse)');
+  const isMobileViewport = useMediaQuery('(max-width:900px)');
+  const shouldUseTouchHint = isTouchLikePointer || isMobileViewport;
+  const displayMessage = shouldUseTouchHint
+    ? touchMessage ?? t('messages.contextMenuTouchHint')
+    : message;
+  const displaySecondary = shouldUseTouchHint ? null : secondary;
 
   return (
     <Box
@@ -58,11 +67,11 @@ export function ContextMenuHint({
       </Box>
       <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 0.75, flexWrap: 'wrap' }}>
         <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500, lineHeight: 1.35 }}>
-          {message}
+          {displayMessage}
         </Typography>
-        {secondary ? (
+        {displaySecondary ? (
           <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.35 }}>
-            {secondary}
+            {displaySecondary}
           </Typography>
         ) : null}
       </Box>

@@ -274,6 +274,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
       data: { id: 300 + Number(locationCreateMock.mock.calls.length), ...data },
     }));
     fieldUpdateMock.mockResolvedValue({ data: { id: 10, name: 'Nordfeld', location: 1, area_sqm: 20 } });
+    bedUpdateMock.mockResolvedValue({ data: { id: 21, name: 'Beet A', field: 10, area_sqm: 10 } });
     locationUpdateMock.mockResolvedValue({ data: { id: 1, name: 'Hofstelle umbenannt' } });
   });
 
@@ -335,6 +336,46 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
     expect(await screen.findByText('Name ist ein Pflichtfeld')).toBeInTheDocument();
     expect(locationUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate field names within the same location before saving', async () => {
+    const user = userEvent.setup();
+    fieldListMock.mockResolvedValue({
+      data: {
+        results: [
+          { id: 10, name: 'Teilweise gefuellt', location: 1, area_sqm: 20 },
+          { id: 11, name: 'Suedfeld', location: 1, area_sqm: 20 },
+        ],
+      },
+    });
+    renderHierarchy();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit field-11' }));
+    await user.click(screen.getByRole('button', { name: 'Partial name field-11' }));
+    await user.click(screen.getByRole('button', { name: 'Enter field-11' }));
+
+    expect(await screen.findByText('Eine Parzelle mit diesem Namen existiert in diesem Standort bereits.')).toBeInTheDocument();
+    expect(fieldUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate bed names within the same field before saving', async () => {
+    const user = userEvent.setup();
+    bedListMock.mockResolvedValue({
+      data: {
+        results: [
+          { id: 21, name: 'Teilweise gefuellt', field: 10, area_sqm: 5 },
+          { id: 22, name: 'Beet B', field: 10, area_sqm: 5 },
+        ],
+      },
+    });
+    renderHierarchy();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit 22' }));
+    await user.click(screen.getByRole('button', { name: 'Partial name 22' }));
+    await user.click(screen.getByRole('button', { name: 'Enter 22' }));
+
+    expect(await screen.findByText('Ein Beet mit diesem Namen existiert in dieser Parzelle bereits.')).toBeInTheDocument();
+    expect(bedUpdateMock).not.toHaveBeenCalled();
   });
 
   it('cancels editing on an existing row with Escape without deleting data', async () => {

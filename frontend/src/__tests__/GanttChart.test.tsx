@@ -123,9 +123,10 @@ beforeEach(() => {
 });
 
 describe('GanttChartPage', () => {
-  it('shows location-specific guidance when no locations exist', async () => {
+  it('shows field-specific guidance when no locations exist', async () => {
     mocks.planList.mockResolvedValue({ data: { results: [] } });
     mocks.cultureList.mockResolvedValue({ data: { results: [] } });
+    mocks.fieldList.mockResolvedValue({ data: { results: [] } });
     mocks.bedList.mockResolvedValue({ data: { results: [] } });
     mocks.locationList.mockResolvedValue({ data: { results: [] } });
 
@@ -139,9 +140,9 @@ describe('GanttChartPage', () => {
 
     await waitFor(() => expect(screen.getByText('Noch keine Anbauplanung möglich')).toBeInTheDocument());
     expect(screen.getByText('Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu. Danach kannst du Beete, Kulturen und Anbaupläne erfassen.')).toBeInTheDocument();
-    expect(screen.getByText('Standort fehlt')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Standort hinzufügen' })).toHaveAttribute('href', '/app/locations?create=true');
-    expect(screen.queryByRole('link', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Parzelle fehlt')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Parzelle hinzufügen' })).toHaveAttribute('href', '/app/fields-beds?action=add-parcel');
+    expect(screen.queryByRole('link', { name: 'Standort hinzufügen' })).not.toBeInTheDocument();
     expect(screen.queryByText('Kultur fehlt')).not.toBeInTheDocument();
     expect(screen.queryByText('Beet fehlt')).not.toBeInTheDocument();
     expect(screen.queryByText('Anbauplan fehlt')).not.toBeInTheDocument();
@@ -167,6 +168,29 @@ describe('GanttChartPage', () => {
 
     await waitFor(() => expect(screen.getByText('Anbauplan fehlt')).toBeInTheDocument());
     expect(screen.getByRole('link', { name: 'Anbauplan hinzufügen' })).toBeInTheDocument();
+  });
+
+  it('shows culture-specific guidance when land hierarchy exists but no cultures exist', async () => {
+    mocks.planList.mockResolvedValue({ data: { results: [] } });
+    mocks.cultureList.mockResolvedValue({ data: { results: [] } });
+    mocks.locationList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hofstelle' }] } });
+    mocks.fieldList.mockResolvedValue({ data: { results: [{ id: 10, name: 'Nordfeld', location: 1 }] } });
+    mocks.bedList.mockResolvedValue({ data: { results: [{ id: 20, name: 'Beet 1', field: 10 }] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText('Noch keine Kulturen vorhanden')).toBeInTheDocument());
+    expect(screen.getByText('Lege jetzt deine erste Kultur an oder importiere eine Kultur aus der Kulturbibliothek. Danach kannst du Anbaupläne erstellen.')).toBeInTheDocument();
+    expect(screen.getByText('Kultur fehlt')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Kulturbibliothek öffnen' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Kultur hinzufügen' })).toBeInTheDocument();
+    expect(screen.queryByText('Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu. Danach kannst du Beete, Kulturen und Anbaupläne erfassen.')).not.toBeInTheDocument();
   });
 
   it('shows project-required info instead of a red load error when no project is active', async () => {
@@ -273,14 +297,14 @@ describe('GanttChartPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Jungpflanzen' }));
 
     await waitFor(() => expect(screen.getAllByText('Tomate').length).toBeGreaterThan(0));
-    expect(screen.getByText('Standort: Hof / Feld')).toBeInTheDocument();
-    expect(screen.getByText('Beet: Beet 1')).toBeInTheDocument();
+    expect(screen.queryByText('Standort: Hof / Feld')).not.toBeInTheDocument();
+    expect(screen.queryByText('Beet: Beet 1')).not.toBeInTheDocument();
     expect(screen.getByText('Anzuchtbeginn: 19.4.2026')).toBeInTheDocument();
     expect(screen.getByText('Auspflanzung: 10.5.2026')).toBeInTheDocument();
     expect(screen.getByText('Anzuchtdauer: 21 Tage')).toBeInTheDocument();
-    expect(screen.getByText('Fläche: 8,00 m²')).toBeInTheDocument();
-    expect(screen.getByText('Pflanzenanzahl: 24')).toBeInTheDocument();
-    expect(screen.queryByText(/Anbauplan/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Fläche: 8,00 m²')).not.toBeInTheDocument();
+    expect(screen.getByText('Gesamtpflanzen: 24')).toBeInTheDocument();
+    expect(screen.getByText('Anzahl Anbaupläne: 1')).toBeInTheDocument();
     const seedlingViewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { hidden?: boolean } | undefined;
     const seedlingEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { hidden?: boolean } | undefined;
     expect(seedlingViewAction?.hidden).toBe(true);

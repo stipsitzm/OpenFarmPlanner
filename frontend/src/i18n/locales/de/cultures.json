@@ -56,6 +56,14 @@
     "required": "Dieses Feld ist erforderlich.",
     "cultureNameUnique": "Eine Kultur mit diesem Namen existiert bereits."
   },
+  "errors": {
+    "supplierDataDuplicate": "Für diesen Lieferanten sind bereits Daten für diese Kultur vorhanden.",
+    "supplierDataMissingSupplier": "Bitte einen Lieferanten auswählen oder die Lieferantendaten entfernen.",
+    "supplierSpecificTkgUnsupported": "Lieferantenspezifische Tausendkorngewichte werden nicht mehr unterstützt.",
+    "supplierProjectMismatch": "Der Lieferant gehört nicht zum aktiven Projekt.",
+    "selectedSupplierProjectMismatch": "Der ausgewählte Saatgutlieferant gehört nicht zum aktiven Projekt.",
+    "cultureProjectMismatch": "Die Kultur gehört nicht zum aktiven Projekt."
+  },
   "sections": {
     "growthHarvest": "Wachstum & Ernte",
     "additionalInfo": "Weitere Informationen"
@@ -93,20 +101,18 @@
     "supplierPlaceholder": "Lieferant auswählen",
     "supplierRequired": "Saatgutlieferant ist erforderlich",
     "supplierHelp": "Lieferant aus der Liste auswählen",
-    "noSuppliers": "Keine Lieferanten vorhanden",
-    "createSuppliers": "Lieferanten hinzufügen",
-    "newSupplierOption": "+ Neuer Lieferant",
-    "createNewSupplierInline": "Lieferant hinzufügen",
-    "noSuppliersHint": "Bitte legen Sie zuerst einen Lieferanten an.",
+    "noSuppliers": "Es sind noch keine Lieferanten vorhanden.",
+    "createSuppliers": "Lieferant anlegen",
     "supplierHomepage": "Lieferanten-Homepage",
     "generalInfoSectionTitle": "Allgemeine Informationen",
     "generalInfoSectionDescription": "Diese Angaben gelten allgemein für die Sorte und sind nicht vom Saatgutlieferanten abhängig.",
-    "supplierDataSectionTitle": "Saatgutdaten je Lieferant",
-    "supplierDataSectionDescription": "Diese Angaben beziehen sich nur auf den ausgewählten Saatgutlieferanten.",
-    "noSupplierDataRows": "Noch keine Saatgutdaten für Lieferanten vorhanden.",
+    "supplierDataSectionTitle": "Kulturspezifische Lieferantendaten",
+    "supplierDataSectionDescription": "Die folgenden Angaben gelten nur für den ausgewählten Lieferanten dieser Kultur.",
+    "noSupplierDataRows": "Noch keine kulturspezifischen Lieferanteninformationen vorhanden.",
     "supplierProductNameLabel": "Artikelbezeichnung beim Lieferanten",
-    "addSupplierData": "Lieferantendaten hinzufügen",
-    "removeSupplierData": "Lieferantendaten löschen",
+    "supplierDataMissingSupplier": "Bitte einen Lieferanten auswählen oder die Lieferantendaten entfernen.",
+    "addSupplierData": "Lieferanteninformation hinzufügen",
+    "removeSupplierData": "Lieferantendaten entfernen",
     "removeSeedPackageAriaLabel": "Packungsgröße entfernen",
     "cropFamily": "Pflanzenfamilie",
     "cropFamilyPlaceholder": "z.B. Solanaceae",
@@ -164,12 +170,13 @@
     "seedRateHelp": "Saatgutmenge und -einheit für die Bedarfsplanung",
     "seedAmountLabel": "Menge",
     "seedUnitLabel": "Einheit",
+    "seedUnitPlaceholder": "Einheit auswählen",
     "seedRateValue": "Saatgutmenge",
     "seedRateUnit": "Einheit der Saatgutmenge",
     "seedRateUnitRequired": "Wenn eine Menge angegeben wird, muss auch eine Einheit gewählt werden.",
     "seedRateValueRequired": "Die Menge muss größer als 0 sein.",
     "thousandKernelWeightLabel": "1000-Korn-Gewicht (g)",
-    "seedPackagesLabel": "Packungsgrößen",
+    "seedPackagesLabel": "Verpackungsgrößen beim Lieferanten",
     "thousandKernelWeightHelp": "Gewicht von 1000 Körnern in Gramm.",
     "thousandKernelWeightError": "Tausendkorngewicht muss > 0 sein",
     "thousandKernelWeightInvalidNumber": "Bitte gib einen gültigen Zahlenwert ein, z. B. 3,9",
@@ -201,6 +208,7 @@
     "createError": "Fehler beim Erstellen der Kultur",
     "updateError": "Fehler beim Aktualisieren der Kultur",
     "deleteError": "Fehler beim Löschen der Kultur",
+    "restoreDeleteError": "Kultur konnte nicht wiederhergestellt werden",
     "fetchError": "Fehler beim Laden der Kulturen",
     "loadingCultures": "Kulturen werden geladen…",
     "saving": "Speichern...",
@@ -211,9 +219,7 @@
   },
   "deleteDialog": {
     "title": "Kultur löschen?",
-    "description": "Diese Kultur wird nach der Bestätigung aus der Liste entfernt. Du kannst sie anschließend 8 Sekunden lang rückgängig machen.",
-    "variety": "Sorte",
-    "cultivationType": "Anbauart"
+    "confirmation": "„{{name}}“ löschen?"
   },
   "seedDemand": {
     "title": "Saatgutbedarf",
@@ -242,11 +248,6 @@
       }
     },
     "progressive": {
-      "locations": {
-        "title": "Noch kein Saatgutbedarf berechenbar",
-        "description": "Lege zuerst einen Standort an. Danach kannst du auf der Seite Anbauflächen eine Parzelle hinzufügen.",
-        "action": "Parzelle hinzufügen"
-      },
       "fields": {
         "title": "Noch kein Saatgutbedarf berechenbar",
         "description": "Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu.",
@@ -281,6 +282,7 @@
     "noSupplierAvailable": "Keine Lieferantendaten hinterlegt",
     "noPackagesAvailable": "Keine Packungsgrößen verfügbar",
     "noPackageCalculationPossible": "Nicht berechenbar (Daten fehlen)",
+    "requiredAmountMissingTkg": "Nicht berechenbar (TKG fehlt)",
     "unitSeeds": "Korn",
     "unitGrams": "g",
     "columns": {
@@ -363,7 +365,6 @@
     "goToFieldsBeds": "Zu Anbauflächen",
     "createField": "Parzelle hinzufügen",
     "createPlantingPlanDisabled": {
-      "locations": "Du brauchst zuerst mindestens einen Standort, um einen Anbauplan zu erstellen.",
       "fields": "Du brauchst zuerst mindestens eine Parzelle, um einen Anbauplan zu erstellen.",
       "beds": "Du brauchst zuerst mindestens ein Beet. Beete werden innerhalb einer Parzelle auf der Seite Anbauflächen hinzugefügt.",
       "cultures": "Du brauchst zuerst mindestens eine Kultur, um einen Anbauplan zu erstellen.",

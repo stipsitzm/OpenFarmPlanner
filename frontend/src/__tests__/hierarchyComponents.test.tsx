@@ -188,6 +188,35 @@ describe('hierarchy components and behaviors', () => {
     fireEvent.contextMenu(screen.getByTestId('hierarchy-name-text'));
     expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 100 }));
     expect(deleteBed).not.toHaveBeenCalled();
+
+    const touchColumns = createHierarchyColumns(
+      toggleExpand,
+      addBed,
+      deleteBed,
+      addField,
+      deleteField,
+      deleteLocation,
+      createPlan,
+      openContextMenu,
+      openNotes,
+      mockT as never,
+      undefined,
+      { disablePlantingPlanHoverAction: true },
+    );
+    const touchNameColumn = touchColumns.find((column) => column.field === 'name');
+    rerender(
+      <>
+        {touchNameColumn?.renderCell?.({
+          id: 101,
+          field: 'name',
+          value: 'Beet 101',
+          row: { id: 101, type: 'bed', bedId: 101, level: 2 },
+        } as never)}
+      </>
+    );
+    expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
+    fireEvent.contextMenu(screen.getByTestId('hierarchy-name-text'));
+    expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 101 }));
   }, 15000);
 
 

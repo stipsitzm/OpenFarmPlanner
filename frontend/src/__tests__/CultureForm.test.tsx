@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CultureForm } from '../cultures/CultureForm';
 import type { Culture } from '../api/types';
@@ -39,7 +40,17 @@ vi.mock('../api/api', async () => {
 });
 
 vi.mock('../cultures/sections/BasicInfoSection', () => ({
-  BasicInfoSection: ({ formData, errors, onChange }: { formData: Partial<Culture>; errors: Record<string, string>; onChange: <K extends keyof Culture>(name: K, value: Culture[K]) => void }) => (
+  BasicInfoSection: ({
+    formData,
+    errors,
+    identityHint,
+    onChange,
+  }: {
+    formData: Partial<Culture>;
+    errors: Record<string, string>;
+    identityHint?: ReactNode;
+    onChange: <K extends keyof Culture>(name: K, value: Culture[K]) => void;
+  }) => (
     <div>
       <input
         aria-label="name-input"
@@ -53,6 +64,7 @@ vi.mock('../cultures/sections/BasicInfoSection', () => ({
         onChange={(event) => onChange('variety', event.target.value)}
       />
       {errors.variety ? <span>{errors.variety}</span> : null}
+      {identityHint}
     </div>
   ),
 }));
@@ -118,13 +130,13 @@ describe('CultureForm', () => {
     );
 
     await waitFor(() => expect(supplierListMock).toHaveBeenCalled());
-    expect(screen.getByRole('combobox')).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByText('form.noSuppliersHint')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getByText('form.noSuppliers')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
     expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
   });
 
-  it('does not show create-supplier helper link when supplier options are available', async () => {
+  it('shows only real suppliers in the supplier dropdown when supplier options are available', async () => {
     supplierListMock.mockResolvedValueOnce({ data: { results: [{ id: 99, name: 'New Supplier' }] } });
 
     render(
@@ -136,7 +148,10 @@ describe('CultureForm', () => {
     );
 
     await waitFor(() => expect(screen.getByRole('combobox')).toBeInTheDocument());
-    expect(screen.queryByRole('button', { name: 'form.createNewSupplierInline' })).not.toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole('combobox'));
+    expect(screen.getByRole('option', { name: 'New Supplier' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'form.supplierPlaceholder' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'form.newSupplierOption' })).not.toBeInTheDocument();
   });
 
   it('falls back to empty supplier selection when saved supplier is not in options', async () => {
@@ -155,6 +170,54 @@ describe('CultureForm', () => {
 
     await waitFor(() => expect(screen.getByRole('combobox')).toBeInTheDocument());
     expect(screen.getByRole('combobox')).toHaveTextContent('form.supplierPlaceholder');
+  });
+
+  it('saves the newly selected supplier in supplier data rows', async () => {
+    supplierListMock.mockResolvedValueOnce({
+      data: {
+        results: [
+          { id: 10, name: 'Lieferant2' },
+          { id: 11, name: 'Reinsaat' },
+        ],
+      },
+    });
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <CultureForm
+        culture={{
+          ...CULTURE_A,
+          supplier_data: [
+            {
+              id: 77,
+              supplier: { id: 10, name: 'Lieferant2' },
+              supplier_id: 10,
+              supplier_name: 'Lieferant2',
+              packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
+            },
+          ],
+        }}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByText('Lieferant2')).toBeInTheDocument());
+    fireEvent.mouseDown(screen.getByText('Lieferant2'));
+    fireEvent.click(screen.getByRole('option', { name: 'Reinsaat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      supplier_data: [
+        expect.objectContaining({
+          id: 77,
+          supplier: { id: 11, name: 'Reinsaat' },
+          supplier_id: 11,
+          supplier_name: 'Reinsaat',
+        }),
+      ],
+    }));
   });
 
   it('loads all existing supplier rows when editing a culture', async () => {
@@ -214,6 +277,61 @@ describe('CultureForm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'form.create' }));
     expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('shows public library match hint only when creating a culture', async () => {
+    cultureDuplicateCheckMock.mockResolvedValue({ data: { exists: false } });
+    publicCultureMatchMock.mockResolvedValue({
+      data: {
+        exists: true,
+        culture: { id: 42, name: 'Karotte', variety: 'Nantaise' },
+      },
+    });
+
+    render(
+      <CultureForm
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onCancel={() => {}}
+        onViewPublicLibraryMatch={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Karotte' } });
+    fireEvent.change(screen.getByLabelText('variety-input'), { target: { value: 'Nantaise' } });
+
+    await waitFor(() => expect(publicCultureMatchMock).toHaveBeenCalledWith(
+      { name: 'Karotte', variety: 'Nantaise' },
+      expect.any(AbortSignal),
+    ));
+    expect(await screen.findByText('form.publicLibraryMatchHint')).toBeInTheDocument();
+  });
+
+  it('does not check or show public library match hint when editing a culture', async () => {
+    cultureDuplicateCheckMock.mockResolvedValue({ data: { exists: false } });
+    publicCultureMatchMock.mockResolvedValue({
+      data: {
+        exists: true,
+        culture: { id: 42, name: 'Neue Karotte', variety: 'Nantaise' },
+      },
+    });
+
+    render(
+      <CultureForm
+        culture={CULTURE_A}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onCancel={() => {}}
+        onViewPublicLibraryMatch={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Neue Karotte' } });
+
+    await waitFor(() => expect(cultureDuplicateCheckMock).toHaveBeenCalledWith(
+      { name: 'Neue Karotte', variety: 'Nantaise', exclude_id: 1 },
+      expect.any(AbortSignal),
+    ));
+    expect(publicCultureMatchMock).not.toHaveBeenCalled();
+    expect(screen.queryByText('form.publicLibraryMatchHint')).not.toBeInTheDocument();
   });
 
   it('saves changed form data when editing a culture', async () => {
@@ -318,6 +436,40 @@ describe('CultureForm', () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(await screen.findByText('messages.updateError')).toBeInTheDocument();
+  });
+
+  it('ignores empty supplier information rows when saving', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ packaging_sizes: [] }] }}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText('form.supplierDataMissingSupplier')).not.toBeInTheDocument();
+  });
+
+  it('blocks partially filled supplier information rows without a supplier', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ supplier_product_name: 'Artikel ohne Lieferant', packaging_sizes: [] }] }}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    expect(await screen.findByText('form.supplierDataMissingSupplier')).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it('keeps focus inside the dialog when opened', async () => {

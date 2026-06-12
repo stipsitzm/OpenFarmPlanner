@@ -703,6 +703,64 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(existing.supplier_product_name, 'After')
         self.assertEqual(existing.packaging_sizes, [{'size_value': 25, 'size_unit': 'g'}])
 
+    def test_culture_update_changes_existing_supplier_data_supplier(self):
+        """Changing the supplier on an existing supplier-data row should persist."""
+        supplier_a = Supplier.objects.create(name='Lieferant2', homepage_url='https://supplier-a.example', project=self.project)
+        supplier_b = Supplier.objects.create(name='Reinsaat', homepage_url='https://reinsaat.example', project=self.project)
+        culture = Culture.objects.create(
+            name='Supplier Switch',
+            variety='A to B',
+            growth_duration_days=10,
+            harvest_duration_days=3,
+            harvest_method='per_plant',
+            project=self.project,
+        )
+        existing = CultureSupplierData.objects.create(
+            culture=culture,
+            supplier=supplier_a,
+            project=self.project,
+            supplier_product_name='Before',
+            packaging_sizes=[{'size_value': 10, 'size_unit': 'g'}],
+        )
+        payload = {
+            'id': culture.id,
+            'name': culture.name,
+            'variety': culture.variety,
+            'growth_duration_days': culture.growth_duration_days,
+            'harvest_duration_days': culture.harvest_duration_days,
+            'harvest_method': culture.harvest_method,
+            'project': self.project.id,
+            'supplier_data_input': [
+                {
+                    'id': existing.id,
+                    'supplier_id': supplier_b.id,
+                    'supplier_product_name': 'After',
+                    'packaging_sizes': [{'size_value': 25, 'size_unit': 'g'}],
+                }
+            ],
+        }
+
+        response = self.client.put(f'/openfarmplanner/api/cultures/{culture.id}/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(CultureSupplierData.objects.filter(culture=culture).count(), 1)
+        existing.refresh_from_db()
+        self.assertEqual(existing.supplier_id, supplier_b.id)
+        self.assertEqual(existing.supplier_product_name, 'After')
+        self.assertEqual(response.data['supplier_data'][0]['supplier']['name'], 'Reinsaat')
+
+        payload['supplier_data_input'][0]['supplier_id'] = supplier_a.id
+        payload['supplier_data_input'][0]['supplier_product_name'] = 'Back to A'
+
+        response = self.client.put(f'/openfarmplanner/api/cultures/{culture.id}/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(CultureSupplierData.objects.filter(culture=culture).count(), 1)
+        existing.refresh_from_db()
+        self.assertEqual(existing.supplier_id, supplier_a.id)
+        self.assertEqual(existing.supplier_product_name, 'Back to A')
+        self.assertEqual(response.data['supplier_data'][0]['supplier']['name'], 'Lieferant2')
+
     def test_culture_update_supplier_data_without_culture_field_regression(self):
         """Regression: nested supplier rows must not fail with culture required 400."""
         supplier = Supplier.objects.create(name='Regression Supplier', homepage_url='https://regression-supplier.example', project=self.project)
@@ -725,6 +783,48 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertNotIn('culture', response.data)
         self.assertEqual(CultureSupplierData.objects.filter(culture=self.culture, supplier=supplier).count(), 1)
+
+    def test_culture_update_ignores_empty_supplier_data_rows(self):
+        payload = {
+            'id': self.culture.id,
+            'name': self.culture.name,
+            'growth_duration_days': self.culture.growth_duration_days,
+            'harvest_duration_days': self.culture.harvest_duration_days,
+            'project': self.project.id,
+            'supplier_data_input': [
+                {
+                    'packaging_sizes': [],
+                    'supplier_product_name': '',
+                    'notes': '',
+                }
+            ],
+        }
+
+        response = self.client.put(f'/openfarmplanner/api/cultures/{self.culture.id}/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(CultureSupplierData.objects.filter(culture=self.culture).count(), 0)
+
+    def test_culture_update_rejects_supplier_data_without_supplier(self):
+        payload = {
+            'id': self.culture.id,
+            'name': self.culture.name,
+            'growth_duration_days': self.culture.growth_duration_days,
+            'harvest_duration_days': self.culture.harvest_duration_days,
+            'project': self.project.id,
+            'supplier_data_input': [
+                {
+                    'supplier_product_name': 'Product without supplier',
+                    'packaging_sizes': [{'size_value': 25, 'size_unit': 'g'}],
+                }
+            ],
+        }
+
+        response = self.client.put(f'/openfarmplanner/api/cultures/{self.culture.id}/', payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('supplier_data_input', response.data)
+        self.assertEqual(CultureSupplierData.objects.filter(culture=self.culture).count(), 0)
 
     def test_seed_demand_uses_supplier_specific_packages_for_existing_cultures(self):
         """Supplier-scoped package sizes should appear in seed demand for existing cultures."""

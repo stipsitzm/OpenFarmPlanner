@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 import Cultures from '../pages/Cultures';
+import { buildCultureSavePayload } from '../pages/culturesSaveUtils';
 import { CommandProvider } from '../commands/CommandProvider';
 import type { Culture } from '../api/types';
 
@@ -168,6 +169,21 @@ describe('Cultures save payload', () => {
     expect(payload.seed_rate_unit).toBe('g_per_m2');
   });
 
+  it('normalizes legacy dash seed rate units to empty values', () => {
+    const payload = buildCultureSavePayload({
+      id: 1,
+      name: 'Karotte',
+      variety: 'Nantaise',
+      seed_rate_unit: '-' as unknown as Culture['seed_rate_unit'],
+      seed_rate_direct_unit: '-' as unknown as Culture['seed_rate_direct_unit'],
+      seed_rate_pre_cultivation_unit: '-' as unknown as Culture['seed_rate_pre_cultivation_unit'],
+    } as Culture);
+
+    expect(payload.seed_rate_unit).toBeNull();
+    expect(payload.seed_rate_direct_unit).toBeNull();
+    expect(payload.seed_rate_pre_cultivation_unit).toBeNull();
+  });
+
   it('includes supplier_data row ids so nested records update instead of duplicate create', async () => {
     saveCultureMock.mockReturnValue({
       id: 1,
@@ -198,6 +214,30 @@ describe('Cultures save payload', () => {
     await waitFor(() => expect(updateMock).toHaveBeenCalledTimes(1));
     const payload = updateMock.mock.calls[0][1] as { supplier_data_input?: Array<{ id?: number }> };
     expect(payload.supplier_data_input?.[0]?.id).toBe(77);
+  });
+
+  it('prefers edited supplier_id over stale nested supplier data in supplier rows', () => {
+    const payload = buildCultureSavePayload({
+      id: 1,
+      name: 'Karotte',
+      variety: 'Nantaise',
+      supplier_data: [
+        {
+          id: 77,
+          supplier: { id: 10, name: 'Lieferant2' },
+          supplier_id: 11,
+          supplier_name: 'Reinsaat',
+          packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
+        },
+      ],
+    } as unknown as Culture);
+
+    expect(payload.supplier_data_input).toHaveLength(1);
+    expect(payload.supplier_data_input?.[0]).toEqual(expect.objectContaining({
+      id: 77,
+      supplier_id: 11,
+      supplier_name: 'Reinsaat',
+    }));
   });
 
   it('sends all supplier rows in supplier_data_input when saving', async () => {
@@ -241,6 +281,25 @@ describe('Cultures save payload', () => {
     expect(payload.supplier_data_input).toHaveLength(2);
     expect(payload.supplier_data_input?.map((row) => row.id)).toEqual([77, 78]);
     expect(payload.thousand_kernel_weight_g).toBe(3.5);
+  });
+
+  it('omits empty supplier information rows from the save payload', () => {
+    const payload = buildCultureSavePayload({
+      id: 1,
+      name: 'Karotte',
+      variety: 'Nantaise',
+      supplier_data: [
+        { packaging_sizes: [] },
+        {
+          supplier_id: 10,
+          supplier_name: 'Bingenheimer',
+          packaging_sizes: [{ size_value: 25, size_unit: 'g' }],
+        },
+      ],
+    } as unknown as Culture);
+
+    expect(payload.supplier_data_input).toHaveLength(1);
+    expect(payload.supplier_data_input?.[0]).toEqual(expect.objectContaining({ supplier_id: 10 }));
   });
 
   it('shows and selects newly created culture immediately after save', async () => {

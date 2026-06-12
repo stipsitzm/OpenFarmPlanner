@@ -9,7 +9,6 @@ import {
 describe('getFirstMissingCultivationPlanRequirement', () => {
   it('returns beds when beds are missing but location and field exist', () => {
     expect(getFirstMissingCultivationPlanRequirement({
-      hasLocations: true,
       hasFields: true,
       hasBeds: false,
       hasCultures: true,
@@ -18,7 +17,6 @@ describe('getFirstMissingCultivationPlanRequirement', () => {
 
   it('returns null when all prerequisites are fulfilled', () => {
     expect(getFirstMissingCultivationPlanRequirement({
-      hasLocations: true,
       hasFields: true,
       hasBeds: true,
       hasCultures: true,
@@ -27,9 +25,8 @@ describe('getFirstMissingCultivationPlanRequirement', () => {
 });
 
 describe('project setup actions', () => {
-  it('returns the first missing setup step including fields before beds', () => {
+  it('starts setup with fields before beds', () => {
     expect(getFirstMissingProjectSetupStep({
-      hasLocations: true,
       hasFields: false,
       hasBeds: false,
       hasCultures: false,
@@ -40,21 +37,8 @@ describe('project setup actions', () => {
   it('uses the shared add-field route that opens the fields-beds page', () => {
     expect(getProjectSetupAction('fields')).toEqual({
       labelKey: 'common:setupActions.createField',
-      to: '/app/fields-beds',
+      to: '/app/fields-beds?action=add-parcel',
     });
-  });
-
-  it('uses the location create flow as the location setup action', () => {
-    expect(getProjectSetupAction('locations')).toEqual({
-      labelKey: 'common:setupActions.createLocation',
-      to: '/app/locations?create=true',
-    });
-    expect(getProjectSetupActions('locations')).toEqual([
-      {
-        labelKey: 'common:setupActions.createLocation',
-        to: '/app/locations?create=true',
-      },
-    ]);
   });
 
   it('uses the shared beds step action that opens the fields-beds page', () => {

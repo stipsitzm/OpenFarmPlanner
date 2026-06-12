@@ -28,7 +28,6 @@
     "projects": "Projects",
     "createDialogTitle": "Create project",
     "createNameLabel": "Project name",
-    "createDescriptionLabel": "Description",
     "createCancel": "Cancel",
     "createSubmit": "Create project",
     "createError": "Project could not be created."

@@ -7,8 +7,8 @@
  * @returns The Gantt Chart page component
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import {
   Alert,
@@ -45,12 +45,14 @@ import { extractApiErrorMessage } from '../api/errors';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
+import { AuthContext } from '../auth/authContextShared';
 import {
   buildFieldOccupancyTaskGroups,
   buildOccupancyTooltipDetails,
   buildSeedlingTaskGroups,
   buildSeedlingTooltipDetails,
   formatSeedlingTooltipTitle,
+  formatPlantCount,
   parseDateString,
   type GanttTask,
   type GanttTaskGroup,
@@ -76,6 +78,33 @@ interface WeeklyYieldChartColumn {
 }
 
 type CalendarMode = 'occupancy' | 'seedlings';
+
+const CALENDAR_VIEW_STORAGE_KEY = 'openFarmPlanner.ganttChart.view';
+
+function getCalendarModeFromViewParam(viewParam: string | null): CalendarMode {
+  return viewParam === 'seedlings' ? 'seedlings' : 'occupancy';
+}
+
+function getViewParamFromCalendarMode(mode: CalendarMode): string {
+  return mode === 'seedlings' ? 'seedlings' : 'field';
+}
+
+function isCalendarViewParam(value: string | null): value is 'field' | 'seedlings' {
+  return value === 'field' || value === 'seedlings';
+}
+
+function getCalendarViewStorageKey(activeProjectId: number | null): string {
+  return activeProjectId ? `${CALENDAR_VIEW_STORAGE_KEY}.${activeProjectId}` : CALENDAR_VIEW_STORAGE_KEY;
+}
+
+function getStoredCalendarMode(storageKey: string): CalendarMode | null {
+  const storedValue = window.localStorage.getItem(storageKey);
+  return isCalendarViewParam(storedValue) ? getCalendarModeFromViewParam(storedValue) : null;
+}
+
+function storeCalendarMode(storageKey: string, mode: CalendarMode): void {
+  window.localStorage.setItem(storageKey, getViewParamFromCalendarMode(mode));
+}
 
 class GanttRenderBoundary extends React.Component<
   { fallback: React.ReactNode; children: React.ReactNode },
@@ -120,6 +149,11 @@ function formatIsoWeek(date: Date): string {
 
 function GanttChartPage() {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const authContext = useContext(AuthContext);
+  const activeProjectId = authContext?.activeProjectId ?? null;
+  const isAuthLoading = authContext?.isLoading ?? false;
+  const canUseStoredCalendarView = Boolean(authContext);
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   useCommandContextTag('calendar');
   const [loading, setLoading] = useState(true);
@@ -133,10 +167,64 @@ function GanttChartPage() {
   const [weeklyYield, setWeeklyYield] = useState<YieldCalendarWeek[]>([]);
   const [ganttRenderKey, setGanttRenderKey] = useState(0);
 
-  const [calendarMode, setCalendarMode] = useState<CalendarMode>('occupancy');
+  const calendarViewStorageKey = useMemo(
+    () => (canUseStoredCalendarView ? getCalendarViewStorageKey(activeProjectId) : null),
+    [activeProjectId, canUseStoredCalendarView],
+  );
+  const [calendarMode, setCalendarMode] = useState<CalendarMode>(() => {
+    const viewParam = searchParams.get('view');
+    return isCalendarViewParam(viewParam)
+      ? getCalendarModeFromViewParam(viewParam)
+      : calendarViewStorageKey
+        ? getStoredCalendarMode(calendarViewStorageKey) ?? 'occupancy'
+        : 'occupancy';
+  });
   const [editMode, setEditMode] = useState(false);
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
   const setTopbarContextActions = outletContext?.setTopbarContextActions;
+
+  useEffect(() => {
+    const viewParam = searchParams.get('view');
+    if (!isCalendarViewParam(viewParam) && isAuthLoading) {
+      return;
+    }
+
+    const nextMode = isCalendarViewParam(viewParam)
+      ? getCalendarModeFromViewParam(viewParam)
+      : calendarViewStorageKey
+        ? getStoredCalendarMode(calendarViewStorageKey) ?? 'occupancy'
+        : 'occupancy';
+
+    setCalendarMode((currentMode) => (currentMode === nextMode ? currentMode : nextMode));
+
+    if (isCalendarViewParam(viewParam)) {
+      if (calendarViewStorageKey) {
+        storeCalendarMode(calendarViewStorageKey, nextMode);
+      }
+      return;
+    }
+
+    setSearchParams((currentSearchParams) => {
+      const nextSearchParams = new URLSearchParams(currentSearchParams);
+      nextSearchParams.set('view', getViewParamFromCalendarMode(nextMode));
+      return nextSearchParams;
+    }, { replace: true });
+  }, [calendarViewStorageKey, isAuthLoading, searchParams, setSearchParams]);
+
+  const handleCalendarModeChange = useCallback((nextMode: CalendarMode) => {
+    setCalendarMode(nextMode);
+    if (calendarViewStorageKey) {
+      storeCalendarMode(calendarViewStorageKey, nextMode);
+    }
+    setSearchParams((currentSearchParams) => {
+      if (currentSearchParams.get('view') === getViewParamFromCalendarMode(nextMode)) {
+        return currentSearchParams;
+      }
+      const nextSearchParams = new URLSearchParams(currentSearchParams);
+      nextSearchParams.set('view', getViewParamFromCalendarMode(nextMode));
+      return nextSearchParams;
+    });
+  }, [calendarViewStorageKey, setSearchParams]);
 
   const calendarCommands = useMemo<CommandSpec[]>(() => [
     {
@@ -164,7 +252,7 @@ function GanttChartPage() {
       groupId: 'calendar-mode',
       tooltip: 'Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.',
       onClick: () => {
-        setCalendarMode('occupancy');
+        handleCalendarModeChange('occupancy');
         setEditMode(false);
       },
     },
@@ -177,11 +265,11 @@ function GanttChartPage() {
       groupId: 'calendar-mode',
       tooltip: 'Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.',
       onClick: () => {
-        setCalendarMode('occupancy');
+        handleCalendarModeChange('occupancy');
         setEditMode(true);
       },
     },
-  ], [calendarMode, editMode, t]);
+  ], [calendarMode, editMode, handleCalendarModeChange, t]);
   useTopbarContextActions(setTopbarContextActions, topbarActions);
 
   const currentYear = new Date().getFullYear();
@@ -310,13 +398,13 @@ function GanttChartPage() {
   }), [beds, cultures, displayYear, fields, locations, plantingPlans]);
 
   const seedlingTaskGroups = useMemo<GanttTaskGroup[]>(() => buildSeedlingTaskGroups({
-    locations,
-    fields,
-    beds,
+    locations: [],
+    fields: [],
+    beds: [],
     plantingPlans,
     cultures,
     displayYear,
-  }), [beds, cultures, displayYear, fields, locations, plantingPlans]);
+  }), [cultures, displayYear, plantingPlans]);
 
   const startDate = useMemo(() => new Date(displayYear, 0, 1), [displayYear]);
   const endDate = useMemo(() => new Date(displayYear, 11, 31), [displayYear]);
@@ -350,13 +438,11 @@ function GanttChartPage() {
   }), [calendarMode, t]);
 
   const activeTaskGroups = calendarMode === 'occupancy' ? occupancyTaskGroups : seedlingTaskGroups;
-  const hasLocations = locations.length > 0;
   const hasFields = fields.length > 0;
   const hasCultures = cultures.length > 0;
   const hasBeds = beds.length > 0;
   const hasPlantingPlans = plantingPlans.length > 0;
   const firstMissingPrerequisite = getFirstMissingCultivationPlanRequirement({
-    hasLocations,
     hasFields,
     hasBeds,
     hasCultures,
@@ -366,6 +452,12 @@ function GanttChartPage() {
   const requirementActions = firstMissingRequirement
     ? getProjectSetupActions(firstMissingRequirement)
     : [];
+  const requirementEmptyStateTitleKey = firstMissingRequirement === 'cultures'
+    ? 'ganttChart:emptyStates.states.cultures.title'
+    : 'ganttChart:emptyStates.requirementsTitle';
+  const requirementEmptyStateDescriptionKey = firstMissingRequirement === 'cultures'
+    ? 'ganttChart:emptyStates.states.cultures.description'
+    : 'ganttChart:emptyStates.requirementsDescription';
 
   const renderOccupancyTooltip = useCallback(({ task }: { task: GanttTask }) => (
     <Box sx={{ p: 0.5 }}>
@@ -496,7 +588,7 @@ function GanttChartPage() {
               aria-label={t('ganttChart:viewSelectorAriaLabel')}
             >
               <Button
-                onClick={() => setCalendarMode('occupancy')}
+                onClick={() => handleCalendarModeChange('occupancy')}
                 aria-pressed={calendarMode === 'occupancy'}
                 variant={calendarMode === 'occupancy' ? 'contained' : 'outlined'}
                 color={calendarMode === 'occupancy' ? 'success' : 'inherit'}
@@ -505,7 +597,7 @@ function GanttChartPage() {
                 {t('ganttChart:modes.occupancy')}
               </Button>
               <Button
-                onClick={() => setCalendarMode('seedlings')}
+                onClick={() => handleCalendarModeChange('seedlings')}
                 aria-pressed={calendarMode === 'seedlings'}
                 variant={calendarMode === 'seedlings' ? 'contained' : 'outlined'}
                 color={calendarMode === 'seedlings' ? 'success' : 'inherit'}
@@ -522,11 +614,9 @@ function GanttChartPage() {
           <Box className="gantt-container-wrapper" sx={{ border: '1px solid', borderColor: 'surface.surfaceSoftBorder', borderRadius: 2, bgcolor: 'surface.surfaceBackground' }}>
             <Box sx={{ p: 2 }}>
               <EmptyStateCard
-                title={t('ganttChart:emptyStates.requirementsTitle')}
-                description={t('ganttChart:emptyStates.requirementsDescription')}
+                title={t(requirementEmptyStateTitleKey)}
+                description={t(requirementEmptyStateDescriptionKey)}
                 checklist={[
-                  ...(firstMissingRequirement === 'locations' ? [{ label: t('ganttChart:requirements.location.label'), done: false, missingLabel: t('ganttChart:requirements.location.missing') }] : []),
-                  ...(firstMissingRequirement === 'fields' ? [{ label: t('ganttChart:requirements.field.label'), done: false, missingLabel: t('ganttChart:requirements.field.missing') }] : []),
                   ...(firstMissingRequirement === 'beds' ? [{ label: t('ganttChart:requirements.bed.label'), done: false, missingLabel: t('ganttChart:requirements.bed.missing') }] : []),
                   ...(firstMissingRequirement === 'cultures' ? [{ label: t('ganttChart:requirements.culture.label'), done: false, missingLabel: t('ganttChart:requirements.culture.missing') }] : []),
                   ...(firstMissingRequirement === 'plans' ? [{ label: t('ganttChart:requirements.plan.label'), done: false, missingLabel: t('ganttChart:requirements.plan.missing') }] : []),
@@ -538,10 +628,18 @@ function GanttChartPage() {
           </PageSurface>
         ) : (
           <PageSurface variant="fullWorkspace" sx={{ mt: 0.5 }}>
-          <Box className="gantt-container-wrapper" sx={{ border: '1px solid', borderColor: 'surface.surfaceSoftBorder', borderRadius: 2, bgcolor: 'surface.surfaceBackground' }}>
+          <Box
+            className={`gantt-container-wrapper gantt-container-wrapper--${calendarMode}`}
+            sx={{
+              border: '1px solid',
+              borderColor: 'surface.surfaceSoftBorder',
+              borderRadius: 2,
+              bgcolor: 'surface.surfaceBackground',
+            }}
+          >
             <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
               <GanttChart
-                key={ganttRenderKey}
+                key={`${calendarMode}-${ganttRenderKey}`}
                 tasks={activeTaskGroups}
                 locale={resolvedLocale}
                 localeText={ganttLocaleText}
@@ -581,7 +679,9 @@ function GanttChartPage() {
                         }}
                       >
                         <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {task.name}
+                          {typeof task.plantsCount === 'number' && task.plantsCount > 0
+                            ? `${task.name} · ${formatPlantCount(task.plantsCount)} ${t('ganttChart:seedlings.plantsUnit')}`
+                            : task.name}
                         </Typography>
                       </Box>
                     )

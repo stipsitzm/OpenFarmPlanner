@@ -11,6 +11,7 @@ import { initReactI18next } from 'react-i18next';
 
 // Import translation files
 import commonDE from './locales/de/common.json';
+import commonEN from './locales/en/common.json';
 import navigationDE from './locales/de/navigation.json';
 import navigationEN from './locales/en/navigation.json';
 import homeDE from './locales/de/home.json';
@@ -18,6 +19,7 @@ import homeEN from './locales/en/home.json';
 import dashboardDE from './locales/de/dashboard.json';
 import locationsDE from './locales/de/locations.json';
 import culturesDE from './locales/de/cultures.json';
+import culturesEN from './locales/en/cultures.json';
 import plantingPlansDE from './locales/de/plantingPlans.json';
 import fieldsDE from './locales/de/fields.json';
 import fieldsEN from './locales/en/fields.json';
@@ -68,8 +70,10 @@ i18n
         projectInvitations: projectInvitationsDE,
       },
       en: {
+        common: commonEN,
         navigation: navigationEN,
         home: homeEN,
+        cultures: culturesEN,
         fields: fieldsEN,
         help: helpEN,
         projectInvitations: projectInvitationsEN,

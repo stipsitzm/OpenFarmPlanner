@@ -15,6 +15,33 @@
   color: #999;
 }
 
+.gantt-container-wrapper--seedlings .rmg-task-group,
+.gantt-container-wrapper--seedlings .rmg-task-row {
+  box-sizing: border-box;
+}
+
+.gantt-container-wrapper--seedlings .rmg-task-group {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.gantt-container-wrapper--seedlings .rmg-task-group-content,
+.gantt-container-wrapper--seedlings .rmg-task-group-hierarchy {
+  min-width: 0;
+  width: 100%;
+}
+
+.gantt-container-wrapper--seedlings .rmg-task-group-name,
+.gantt-container-wrapper--seedlings .rmg-task-group-level,
+.gantt-container-wrapper--seedlings .rmg-task-group-description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
 /* Override React-Modern-Gantt default styles if needed */
 /* Keep the green theme consistent with the app */
 :root {

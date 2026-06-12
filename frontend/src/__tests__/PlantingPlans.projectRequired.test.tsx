@@ -89,7 +89,7 @@ describe("PlantingPlans project requirement state", () => {
     expect(apiMocks.bedList).not.toHaveBeenCalled();
   });
 
-  it("shows the location setup entry when no locations exist", async () => {
+  it("shows the field setup entry when no locations exist", async () => {
     render(
       <MemoryRouter>
         <PlantingPlans />
@@ -97,13 +97,12 @@ describe("PlantingPlans project requirement state", () => {
     );
 
     expect(await screen.findByText("Du kannst noch keinen Anbauplan hinzufügen.")).toBeInTheDocument();
-    expect(screen.getByText("Lege zuerst einen Standort an. Danach kannst du auf der Seite Anbauflächen eine Parzelle hinzufügen.")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Parzelle hinzufügen" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Standort hinzufügen" })).toHaveAttribute(
+    expect(screen.getByText("Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Parzelle hinzufügen" })).toHaveAttribute(
       "href",
-      "/app/locations?create=true",
+      "/app/fields-beds?action=add-parcel",
     );
-    expect(screen.queryByText("Standort fehlt")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Standort hinzufügen" })).not.toBeInTheDocument();
     expect(screen.queryByText("Kultur fehlt")).not.toBeInTheDocument();
     expect(screen.queryByText("Beet fehlt")).not.toBeInTheDocument();
   });
@@ -120,7 +119,7 @@ describe("PlantingPlans project requirement state", () => {
     expect(await screen.findByText("Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Parzelle hinzufügen" })).toHaveAttribute(
       "href",
-      "/app/fields-beds",
+      "/app/fields-beds?action=add-parcel",
     );
     expect(screen.queryByRole("link", { name: "Zu Anbauflächen" })).not.toBeInTheDocument();
   });

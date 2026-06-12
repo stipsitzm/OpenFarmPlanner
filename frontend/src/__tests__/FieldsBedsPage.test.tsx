@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import FieldsBedsPage from '../pages/FieldsBedsPage';
 import { MemoryRouter } from 'react-router-dom';
@@ -120,10 +121,10 @@ describe('FieldsBedsPage', () => {
   });
 
 
-  it('starts inline add-field editing via query parameter instead of native prompt', async () => {
+  it('starts inline add-field editing via route action instead of native prompt', async () => {
     const promptSpy = vi.spyOn(window, 'prompt');
     render(
-      <MemoryRouter initialEntries={['/app/fields-beds?create=true']}>
+      <MemoryRouter initialEntries={['/app/fields-beds?action=add-parcel']}>
         <FieldsBedsPage />
       </MemoryRouter>
     );
@@ -141,26 +142,42 @@ describe('FieldsBedsPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Noch keine Anbauflächen vorhanden')).toBeInTheDocument();
+    expect(await screen.findByText('Standort fehlt')).toBeInTheDocument();
+    expect(screen.getByText('Der Hauptstandort ist für dieses Projekt noch nicht verfügbar.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Standort hinzufügen' })).toBeInTheDocument();
     expect(screen.queryByText('Keine Einträge vorhanden')).not.toBeInTheDocument();
-    expect(screen.getByText('Standort fehlt')).toBeInTheDocument();
+    expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
   });
 
   it('shows missing field requirement when location exists but no fields exist', async () => {
+    const user = userEvent.setup();
     locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hofstelle' }] } });
     fieldListMock.mockResolvedValue({ data: { results: [] } });
     bedListMock.mockResolvedValue({ data: { results: [] } });
 
     renderPage();
     expect(await screen.findByText('Parzelle fehlt')).toBeInTheDocument();
-    expect(screen.getByText((content) => (
-      content.includes('Füge Parzellen in der sichtbaren Tabelle über das')
-      && content.includes('Symbol beim jeweiligen Standort hinzu.')
-    ))).toBeInTheDocument();
-    expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
-    expect(screen.getByText('Tipp: Rechtsklick auf eine Tabellenzeile öffnet weitere Aktionen.')).toBeInTheDocument();
+    expect(screen.getByText('Lege zuerst eine Parzelle an, um deine Anbauflächen zu strukturieren.')).toBeInTheDocument();
+    expect(screen.queryByText('Tipp: Rechtsklick auf eine Tabellenzeile öffnet weitere Aktionen.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Parzelle hinzufügen' }));
+
+    expect(await screen.findByText('Hierarchieansicht')).toBeInTheDocument();
+    expect(screen.getByTestId('create-field-request')).toHaveTextContent('1');
+  });
+
+  it('shows missing field guidance without an action when multiple locations exist', async () => {
+    locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hofstelle' }, { id: 2, name: 'Außenfeld' }] } });
+    fieldListMock.mockResolvedValue({ data: { results: [] } });
+    bedListMock.mockResolvedValue({ data: { results: [] } });
+
+    renderPage();
+
+    expect(await screen.findByText('Parzelle fehlt')).toBeInTheDocument();
+    expect(screen.getByText('Füge beim gewünschten Standort über das ➕-Symbol eine Parzelle hinzu.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
-    expect(screen.getByTestId('create-field-request')).toHaveTextContent('0');
+    expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
   });
 
   it('shows missing bed requirement when fields exist but no beds exist', async () => {
@@ -173,5 +190,24 @@ describe('FieldsBedsPage', () => {
     expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu.'))).toBeInTheDocument();
     expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
     expect(screen.queryByText('Noch keine Anbauflächen vorhanden')).not.toBeInTheDocument();
+  });
+
+  it('keeps the missing bed requirement visible while an additional field draft exists', async () => {
+    locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hofstelle' }] } });
+    fieldListMock.mockResolvedValue({
+      data: {
+        results: [
+          { id: -1, name: '', location: 1 },
+          { id: 3, name: 'Nord', location: 1 },
+        ],
+      },
+    });
+    bedListMock.mockResolvedValue({ data: { results: [] } });
+
+    renderPage();
+
+    expect(await screen.findByText('Es sind noch keine Beete vorhanden.')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu.'))).toBeInTheDocument();
+    expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
   });
 });

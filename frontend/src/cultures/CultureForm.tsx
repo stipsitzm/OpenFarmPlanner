@@ -26,6 +26,8 @@ import {
   Button,
   Typography,
   TextField,
+  FormControl,
+  InputLabel,
   Select,
   MenuItem,
   IconButton,
@@ -35,6 +37,7 @@ import { cultureAPI, publicCultureAPI, supplierAPI } from '../api/api';
 import { useDialogKeyboardScroll } from '../hooks/useDialogKeyboardScroll';
 import { useNavigate } from 'react-router-dom';
 import { validateCulture } from './validation';
+import { normalizeSeedRateUnit } from './enumNormalization';
 import { BasicInfoSection } from './sections/BasicInfoSection';
 import { TimingSection } from './sections/TimingSection';
 import { HarvestSection } from './sections/HarvestSection';
@@ -42,6 +45,7 @@ import { SpacingSection } from './sections/SpacingSection';
 import { SeedingSection } from './sections/SeedingSection';
 import { ColorSection } from './sections/ColorSection';
 import { NotesSection } from './sections/NotesSection';
+import { hasSupplierDataRowMissingSupplier, hasSupplierInformation } from './supplierDataRows';
 
 interface CultureFormProps {
   culture?: Culture;
@@ -52,6 +56,33 @@ interface CultureFormProps {
 
 // Default color for display color picker
 const DEFAULT_DISPLAY_COLOR = '#3498db';
+const FOCUSABLE_DIALOG_ELEMENT_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[role="button"]:not([aria-disabled="true"])',
+  '[role="combobox"]:not([aria-disabled="true"])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+const isElementVisible = (element: HTMLElement): boolean => (
+  element.offsetParent !== null || element.getClientRects().length > 0
+);
+
+const getDialogFocusableElements = (dialogElement: HTMLElement): HTMLElement[] => (
+  Array.from(dialogElement.querySelectorAll<HTMLElement>(FOCUSABLE_DIALOG_ELEMENT_SELECTOR))
+    .filter((element) => (
+      isElementVisible(element)
+      && element.tabIndex >= 0
+      && element.getAttribute('aria-hidden') !== 'true'
+    ))
+);
+
+const isFloatingSelectMenuOpen = (): boolean => (
+  Boolean(document.querySelector('.MuiPopover-paper [role="listbox"], .MuiMenu-paper [role="listbox"]'))
+);
 
 // Empty culture template
 const EMPTY_CULTURE: Partial<Culture> = {
@@ -125,16 +156,24 @@ const buildInitialFormData = (culture?: Culture): Partial<Culture> => {
         : culture.row_spacing_cm,
   };
 
+  const normalizedSeedRateUnits: Partial<Culture> = {
+    seed_rate_unit: normalizeSeedRateUnit(culture.seed_rate_unit),
+    seed_rate_direct_unit: normalizeSeedRateUnit(culture.seed_rate_direct_unit),
+    seed_rate_pre_cultivation_unit: normalizeSeedRateUnit(culture.seed_rate_pre_cultivation_unit),
+  };
+
   if (culture.supplier || !culture.seed_supplier) {
     return {
       ...culture,
       ...normalizedSpacingValues,
+      ...normalizedSeedRateUnits,
     };
   }
 
   return {
     ...culture,
     ...normalizedSpacingValues,
+    ...normalizedSeedRateUnits,
     supplier: {
       name: culture.seed_supplier,
       allowed_domains: [],
@@ -181,7 +220,9 @@ export function CultureForm({
   const [supplierOptions, setSupplierOptions] = useState<Supplier[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const dialogContentRef = useDialogKeyboardScroll(true);
+  const formRef = useRef<HTMLFormElement | null>(null);
   const supplierOptionsRef = useRef<Supplier[]>([]);
   const duplicateCheckSequenceRef = useRef(0);
   const publicLibraryMatchSequenceRef = useRef(0);
@@ -204,7 +245,7 @@ export function CultureForm({
           let hasChanges = false;
           const nextRows = rows.map((row) => {
             const hasSupplier = typeof row.supplier_id === 'number' || typeof row.supplier?.id === 'number';
-            if (hasSupplier) {
+            if (hasSupplier || !hasSupplierInformation(row)) {
               return row;
             }
             hasChanges = true;
@@ -241,6 +282,7 @@ export function CultureForm({
     setPublicLibraryMatch(null);
     setIsDirty(false);
     setIsValid(true);
+    setHasSubmitted(false);
     setSaveError('');
   }, [culture]);
 
@@ -256,8 +298,8 @@ export function CultureForm({
   }, [loadSuppliers]);
 
   // Validate on every change
-  const validateAndSet = (draft: Partial<Culture>) => {
-    const result = validateCulture(draft, t);
+  const validateAndSet = (draft: Partial<Culture>, mode: 'live' | 'submit' = hasSubmitted ? 'submit' : 'live') => {
+    const result = validateCulture(draft, t, mode);
     setErrors(result.errors);
     setIsValid(result.isValid);
     return result.isValid;
@@ -337,6 +379,10 @@ export function CultureForm({
     publicLibraryMatchSequenceRef.current = currentSequence;
     setPublicLibraryMatch(null);
 
+    if (isEdit) {
+      return;
+    }
+
     if (!identityKey || projectDuplicateClearedKey !== identityKey) {
       return;
     }
@@ -379,7 +425,7 @@ export function CultureForm({
       window.clearTimeout(timeoutId);
       abortController.abort();
     };
-  }, [formData.name, formData.variety, projectDuplicateClearedKey]);
+  }, [formData.name, formData.variety, isEdit, projectDuplicateClearedKey]);
 
   // Handle field changes
   // Strongly typed change handler
@@ -387,6 +433,7 @@ export function CultureForm({
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
       setIsDirty(true);
+      setSaveError('');
       if (name === 'name' || name === 'variety') {
         setDuplicateErrorKey('');
         setProjectDuplicateClearedKey(null);
@@ -397,16 +444,67 @@ export function CultureForm({
     });
   };
 
+  useEffect(() => {
+    const handleDialogTabKeyDown = (event: globalThis.KeyboardEvent): void => {
+      if (
+        event.key !== 'Tab'
+        || event.altKey
+        || event.ctrlKey
+        || event.metaKey
+        || isFloatingSelectMenuOpen()
+      ) {
+        return;
+      }
+
+      const dialogElement = formRef.current?.closest('[role="dialog"]') as HTMLElement | null;
+      const activeElement = document.activeElement as HTMLElement | null;
+      if (!dialogElement || !activeElement || !dialogElement.contains(activeElement)) {
+        return;
+      }
+
+      const focusableElements = getDialogFocusableElements(dialogElement);
+      if (focusableElements.length === 0) {
+        return;
+      }
+
+      const currentIndex = focusableElements.findIndex((element) => (
+        element === activeElement || element.contains(activeElement)
+      ));
+      const nextIndex = currentIndex >= 0
+        ? event.shiftKey
+          ? (currentIndex - 1 + focusableElements.length) % focusableElements.length
+          : (currentIndex + 1) % focusableElements.length
+        : 0;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+
+      requestAnimationFrame(() => {
+        focusableElements[nextIndex]?.focus();
+      });
+    };
+
+    document.addEventListener('keydown', handleDialogTabKeyDown, true);
+    return () => document.removeEventListener('keydown', handleDialogTabKeyDown, true);
+  }, []);
+
   // Handle manual save (for Save button)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateAndSet(formData)) return;
+    setHasSubmitted(true);
+    if (!validateAndSet(formData, 'submit')) return;
+    if (hasSupplierDataRowMissingSupplier(formData.supplier_data)) {
+      setSaveError(t('form.supplierDataMissingSupplier'));
+      return;
+    }
     if (duplicateErrorKey || isDuplicateChecking) return;
     setIsSaving(true);
     try {
       await saveCulture(formData);
       setSaveError('');
       setIsDirty(false);
+      setHasSubmitted(false);
     } catch (error) {
       setSaveError(extractApiErrorMessage(error, t, t('messages.updateError')));
     } finally {
@@ -453,7 +551,7 @@ export function CultureForm({
       maxWidth="md"
       fullWidth
     >
-      <form onSubmit={handleSubmit}>
+      <form ref={formRef} onSubmit={handleSubmit}>
         <DialogTitle id="culture-form-dialog-title">
           {isEdit ? t('form.editTitle') : t('form.createTitle')}
         </DialogTitle>
@@ -479,7 +577,7 @@ export function CultureForm({
               errors={displayErrors}
               onChange={handleChange}
               t={t}
-              identityHint={publicLibraryMatch && currentIdentityKey !== null && projectDuplicateClearedKey === currentIdentityKey && !duplicateErrorKey && !isDuplicateChecking ? (
+              identityHint={!isEdit && publicLibraryMatch && currentIdentityKey !== null && projectDuplicateClearedKey === currentIdentityKey && !duplicateErrorKey && !isDuplicateChecking ? (
                 <Box
                   sx={(theme) => ({
                     display: 'flex',
@@ -539,64 +637,71 @@ export function CultureForm({
                   const hasSelectedSupplier = typeof selectedSupplierId === 'number';
                   const isSelectedSupplierAvailable = hasSelectedSupplier && availableSupplierIds.has(selectedSupplierId);
                   const selectValue = isSelectedSupplierAvailable ? String(selectedSupplierId) : '';
-                  const showUnavailableSelectedSupplier = hasSelectedSupplier && !isSelectedSupplierAvailable;
-                  const unavailableSupplierLabel = row.supplier_name || row.supplier?.name || `${t('seedDemand.columns.supplier')} #${selectedSupplierId}`;
+                  if (supplierOptions.length === 0) {
+                    return (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: { xs: 'stretch', sm: 'center' },
+                          justifyContent: 'space-between',
+                          gap: 1,
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          border: '1px solid',
+                          borderColor: 'surface.surfaceSoftBorder',
+                          borderRadius: 1,
+                          bgcolor: 'surface.surfaceSubtleBackground',
+                          px: 1.5,
+                          py: 1.25,
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          {t('form.noSuppliers')}
+                        </Typography>
+                        <Button variant="outlined" size="small" onClick={() => navigate('/app/suppliers?create=1')}>
+                          {t('form.createSuppliers')}
+                        </Button>
+                      </Box>
+                    );
+                  }
 
                   return (
-                    <Select
-                      value={selectValue}
-                      onChange={(event) => {
-                        const selectedValue = String(event.target.value ?? '');
+                    <FormControl fullWidth size="small">
+                      <InputLabel shrink>{t('form.supplier')}</InputLabel>
+                      <Select
+                        value={selectValue}
+                        label={t('form.supplier')}
+                        renderValue={(selected) => {
+                          if (!selected) {
+                            return (
+                              <Typography component="span" color="text.secondary">
+                                {t('form.supplierPlaceholder')}
+                              </Typography>
+                            );
+                          }
+                          const selectedSupplier = supplierOptions.find((supplier) => String(supplier.id) === String(selected));
+                          return selectedSupplier?.name ?? '';
+                        }}
+                        onChange={(event) => {
+                          const selectedValue = String(event.target.value ?? '');
 
-                        if (selectedValue === '') {
+                          const parsedSupplierId = Number(selectedValue);
+                          const selectedSupplier = supplierOptions.find((supplier) => supplier.id === parsedSupplierId);
                           updateSupplierRow(supplierIndex, {
-                            supplier_id: null,
-                            supplier_name: undefined,
-                            supplier_name_input: undefined,
+                            supplier_id: parsedSupplierId,
+                            supplier: selectedSupplier,
+                            supplier_name_input: selectedSupplier ? undefined : row.supplier_name_input,
+                            supplier_name: selectedSupplier?.name ?? row.supplier_name,
                           });
-                          return;
-                        }
-
-                        if (selectedValue === '-1') {
-                          navigate('/app/suppliers?create=1');
-                          return;
-                        }
-
-                        const parsedSupplierId = Number(selectedValue);
-                        const selectedSupplier = supplierOptions.find((supplier) => supplier.id === parsedSupplierId);
-                        updateSupplierRow(supplierIndex, {
-                          supplier_id: parsedSupplierId,
-                          supplier_name_input: selectedSupplier ? undefined : row.supplier_name_input,
-                          supplier_name: selectedSupplier?.name ?? row.supplier_name,
-                        });
-                      }}
-                      displayEmpty
-                      size="small"
-                      disabled={supplierOptions.length === 0}
-                    >
-                      <MenuItem value="">{supplierOptions.length > 0 ? t('form.supplierPlaceholder') : t('form.noSuppliers')}</MenuItem>
-                      {supplierOptions.map((supplier) => (
-                        <MenuItem key={supplier.id} value={String(supplier.id)}>{supplier.name}</MenuItem>
-                      ))}
-                      {showUnavailableSelectedSupplier ? (
-                        <MenuItem value={String(selectedSupplierId)} disabled>
-                          {unavailableSupplierLabel}
-                        </MenuItem>
-                      ) : null}
-                      <MenuItem value="-1">{t('form.newSupplierOption')}</MenuItem>
-                    </Select>
+                        }}
+                        displayEmpty
+                      >
+                        {supplierOptions.map((supplier) => (
+                          <MenuItem key={supplier.id} value={String(supplier.id)}>{supplier.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                   );
                 })()}
-                {supplierOptions.length === 0 ? (
-                  <>
-                    <Typography variant="body2" color="warning.main">
-                      {t('form.noSuppliersHint')}
-                    </Typography>
-                    <Button variant="outlined" onClick={() => navigate('/app/suppliers?create=1')}>
-                      {t('form.createSuppliers')}
-                    </Button>
-                  </>
-                ) : null}
                 <TextField
                   label={t('form.supplierProductNameLabel') }
                   value={row.supplier_product_name ?? ''}
@@ -620,7 +725,11 @@ export function CultureForm({
                       <MenuItem value="g">{t('form.packageUnitGram')}</MenuItem>
                       <MenuItem value="seeds">{t('form.packageUnitSeeds')}</MenuItem>
                     </Select>
-                    <IconButton onClick={() => removePackageRow(supplierIndex, packageIndex)} aria-label={t('form.removeSeedPackageAriaLabel')}>
+                    <IconButton
+                      color="error"
+                      onClick={() => removePackageRow(supplierIndex, packageIndex)}
+                      aria-label={t('form.removeSeedPackageAriaLabel')}
+                    >
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </div>

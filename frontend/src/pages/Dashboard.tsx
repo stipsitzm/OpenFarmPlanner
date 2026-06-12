@@ -53,7 +53,6 @@ export default function Dashboard() {
   }, [shouldShowProjectRequiredState, t]);
 
   const firstMissingChecklistStep = getFirstMissingProjectSetupStep({
-    hasLocations: locations.length > 0,
     hasFields: fields.length > 0,
     hasBeds: beds.length > 0,
     hasCultures: cultures.length > 0,
@@ -62,7 +61,6 @@ export default function Dashboard() {
   const locale = i18n.resolvedLanguage === 'de' ? 'de-DE' : 'en-US';
 
   const checklistItems = [
-    { key: 'locations', label: t('dashboard:checklist.location'), done: locations.length > 0 },
     { key: 'fields', label: t('dashboard:checklist.field'), done: fields.length > 0 },
     { key: 'beds', label: t('dashboard:checklist.bed'), done: beds.length > 0 },
     { key: 'cultures', label: t('dashboard:checklist.culture'), done: cultures.length > 0 },

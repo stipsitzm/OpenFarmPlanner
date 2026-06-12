@@ -46,6 +46,10 @@ interface NameCellCallbacks {
   onOpenContextMenu: (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>, row: HierarchyRow) => void;
 }
 
+interface HierarchyColumnOptions {
+  disablePlantingPlanHoverAction?: boolean;
+}
+
 function renderHierarchyAddIconButton({
   label,
   onClick,
@@ -110,7 +114,8 @@ function renderPlantingPlanActionButton(
 function renderInlineActions(
   row: HierarchyRow,
   callbacks: NameCellCallbacks,
-  t: TFunction
+  t: TFunction,
+  options: HierarchyColumnOptions,
 ): ReactElement | null {
   if (row.type === 'location') {
     return (
@@ -135,6 +140,10 @@ function renderInlineActions(
   }
 
   if (row.type === 'bed') {
+    if (options.disablePlantingPlanHoverAction) {
+      return null;
+    }
+
     return (
       <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
         {renderPlantingPlanActionButton(row, callbacks, t)}
@@ -148,13 +157,15 @@ function renderInlineActions(
 function renderNameCell(
   params: GridRenderCellParams<HierarchyRow>,
   callbacks: NameCellCallbacks,
-  t: TFunction
+  t: TFunction,
+  options: HierarchyColumnOptions,
 ) {
   const row = params.row;
   const baseIndent = row.level * 24;
   const hasChildren = row.hasChildren === true;
   const hasExpandToggle = (row.type === 'location' || row.type === 'field') && hasChildren;
   const isStandaloneRender = params.api === undefined;
+  const inlineActions = renderInlineActions(row, callbacks, t, options);
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', pl: `${baseIndent}px`, width: '100%', gap: 0.5 }}>
@@ -233,53 +244,55 @@ function renderNameCell(
           {params.value}
         </Box>
 
-        <Box
-          data-testid="hierarchy-name-actions-overlay"
-          sx={{
-            position: 'absolute',
-            right: 0,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            py: 0.25,
-            pl: 0.25,
-            pr: 0.25,
-            borderRadius: 1,
-            bgcolor: 'background.paper',
-            opacity: isStandaloneRender ? 1 : 0,
-            pointerEvents: isStandaloneRender ? 'auto' : 'none',
-            transition: 'background-color 120ms ease-in-out, opacity 120ms ease-in-out',
-            '&::before': {
-              content: '""',
+        {inlineActions ? (
+          <Box
+            data-testid="hierarchy-name-actions-overlay"
+            sx={{
               position: 'absolute',
-              top: 0,
-              bottom: 0,
-              right: '100%',
-              width: 16,
-              pointerEvents: 'none',
-              background: (theme) =>
-                `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 100%)`,
-            },
-            '.MuiDataGrid-row:hover &': {
-              bgcolor: 'surface.surfaceHoverBackground',
-              opacity: 1,
-              pointerEvents: 'auto',
-            },
-            '.MuiDataGrid-row:hover &::before': {
-              background: (theme) => {
-                const hoverBackground = theme.palette.surface?.surfaceHoverBackground ?? theme.palette.action.hover;
-                return `linear-gradient(90deg, ${alpha(hoverBackground, 0)} 0%, ${hoverBackground} 100%)`;
+              right: 0,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              py: 0.25,
+              pl: 0.25,
+              pr: 0.25,
+              borderRadius: 1,
+              bgcolor: 'background.paper',
+              opacity: isStandaloneRender ? 1 : 0,
+              pointerEvents: isStandaloneRender ? 'auto' : 'none',
+              transition: 'background-color 120ms ease-in-out, opacity 120ms ease-in-out',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                right: '100%',
+                width: 16,
+                pointerEvents: 'none',
+                background: (theme) =>
+                  `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 100%)`,
               },
-            },
-            '.MuiDataGrid-row:focus-within &': {
-              opacity: 1,
-              pointerEvents: 'auto',
-            },
-          }}
-        >
-          {renderInlineActions(row, callbacks, t)}
-        </Box>
+              '.MuiDataGrid-row:hover &': {
+                bgcolor: 'surface.surfaceHoverBackground',
+                opacity: 1,
+                pointerEvents: 'auto',
+              },
+              '.MuiDataGrid-row:hover &::before': {
+                background: (theme) => {
+                  const hoverBackground = theme.palette.surface?.surfaceHoverBackground ?? theme.palette.action.hover;
+                  return `linear-gradient(90deg, ${alpha(hoverBackground, 0)} 0%, ${hoverBackground} 100%)`;
+                },
+              },
+              '.MuiDataGrid-row:focus-within &': {
+                opacity: 1,
+                pointerEvents: 'auto',
+              },
+            }}
+          >
+            {inlineActions}
+          </Box>
+        ) : null}
       </Box>
     </Box>
   );
@@ -414,7 +427,8 @@ export function createHierarchyColumns(
   onOpenContextMenuOrT: ((event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>, row: HierarchyRow) => void) | TFunction,
   onOpenNotesOrColumnWidths?: ((rowId: string | number, field: string) => void) | Partial<HierarchyColumnWidths>,
   tOrColumnWidths?: TFunction | Partial<HierarchyColumnWidths>,
-  columnWidths?: Partial<HierarchyColumnWidths>
+  columnWidths?: Partial<HierarchyColumnWidths>,
+  options: HierarchyColumnOptions = {},
 ): GridColDef<HierarchyRow>[] {
   const usesLegacySignature = typeof onOpenNotesOrColumnWidths !== 'function' && typeof tOrColumnWidths !== 'function';
   const onDeleteLocation = usesLegacySignature
@@ -453,7 +467,7 @@ export function createHierarchyColumns(
       headerName: t('hierarchy:columns.name'),
       width: widths.name,
       editable: true,
-      renderCell: (params) => renderNameCell(params, callbacks, t),
+      renderCell: (params) => renderNameCell(params, callbacks, t, options),
       preProcessEditCellProps: (params) => {
         const hasError = !params.props.value || params.props.value.trim() === '';
         return { ...params.props, error: hasError };

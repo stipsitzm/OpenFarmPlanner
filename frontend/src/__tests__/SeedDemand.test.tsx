@@ -70,9 +70,11 @@ describe('SeedDemandPage', () => {
     bedListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Beet 1' }] } });
   });
 
-  it('shows location-first progressive requirement and no table header when no locations exist', async () => {
+  it('shows field-first progressive requirement and no table header when no locations exist', async () => {
     listMock.mockResolvedValue({ data: { count: 0, next: null, previous: null, results: [] } });
     locationListMock.mockResolvedValue({ data: { results: [] } });
+    fieldListMock.mockResolvedValue({ data: { results: [] } });
+    bedListMock.mockResolvedValue({ data: { results: [] } });
 
     render(
       <MemoryRouter>
@@ -83,15 +85,14 @@ describe('SeedDemandPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('seedDemand.progressive.locations.title')).toBeInTheDocument();
+      expect(screen.getByText('seedDemand.progressive.fields.title')).toBeInTheDocument();
     });
     expect(screen.queryByText('seedDemand.columns.culture')).not.toBeInTheDocument();
     expect(screen.queryByText('Keine Einträge vorhanden')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'common:setupActions.createLocation' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'common:setupActions.createField' })).toHaveAttribute(
       'href',
-      '/app/locations?create=true',
+      '/app/fields-beds?action=add-parcel',
     );
-    expect(screen.queryByRole('link', { name: 'common:setupActions.createField' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'common:setupActions.createBed' })).not.toBeInTheDocument();
   });
 
@@ -113,7 +114,7 @@ describe('SeedDemandPage', () => {
     });
     expect(screen.getByRole('link', { name: 'common:setupActions.createField' })).toHaveAttribute(
       'href',
-      '/app/fields-beds',
+      '/app/fields-beds?action=add-parcel',
     );
     expect(screen.queryByRole('link', { name: 'common:setupActions.createBed' })).not.toBeInTheDocument();
   });
@@ -320,9 +321,13 @@ describe('SeedDemandPage', () => {
     const row = cultureLink.closest('tr');
     expect(row).not.toBeNull();
 
-    fireEvent.contextMenu(row as HTMLTableRowElement);
+    const contextMenuEvent = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    const stopPropagationSpy = vi.spyOn(contextMenuEvent, 'stopPropagation');
+    fireEvent(row as HTMLTableRowElement, contextMenuEvent);
     expect(screen.getByRole('menuitem', { name: 'seedDemand.contextMenu.openCulture' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'seedDemand.contextMenu.editCulture' })).toBeInTheDocument();
+    expect(contextMenuEvent.defaultPrevented).toBe(true);
+    expect(stopPropagationSpy).toHaveBeenCalled();
     fireEvent.click(screen.getByRole('menuitem', { name: 'common:actions.copyRow' }));
 
     await waitFor(() => {
@@ -418,6 +423,65 @@ describe('SeedDemandPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('seedDemand.noPackagesAvailable')).toBeInTheDocument();
+    });
+  });
+
+  it('shows missing TKG guidance instead of a seed total', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 2,
+            culture_name: 'Kresse',
+            supplier: 'Reinsaat',
+            supplier_options: [{ supplier_id: 10, supplier_name: 'Reinsaat' }],
+            selected_supplier_id: 10,
+            required_amount_value: null,
+            required_amount_unit: 'g',
+            required_amount_warning: 'missing_tkg',
+            total_grams: null,
+            package_suggestion: {
+              selection: [{ size_value: 1000, size_unit: 'seeds', count: 2 }],
+              total_amount: 2000,
+              overage: 0,
+              pack_count: 2,
+              unit: 'seeds',
+            },
+            warning: null,
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    const cultureLink = await screen.findByRole('link', { name: 'Kresse' });
+    expect(screen.getByText('seedDemand.requiredAmountMissingTkg')).toBeInTheDocument();
+    expect(screen.queryByText(/2.000,00 seedDemand.unitSeeds/)).not.toBeInTheDocument();
+
+    const row = cultureLink.closest('tr');
+    expect(row).not.toBeNull();
+    fireEvent.contextMenu(row as HTMLTableRowElement);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'common:actions.copyRow' }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(
+        'Kresse\tReinsaat\tseedDemand.requiredAmountMissingTkg\t1.000 seedDemand.unitSeeds × 2',
+      );
     });
   });
 
@@ -577,6 +641,10 @@ describe('SeedDemandPage', () => {
       expect(screen.getByRole('link', { name: 'seedDemand.editCultureAction' })).toBeInTheDocument();
     });
 
+    expect(screen.getByRole('link', { name: 'seedDemand.editCultureAction' })).toHaveAttribute(
+      'href',
+      '/app/cultures?cultureId=4&action=edit',
+    );
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 

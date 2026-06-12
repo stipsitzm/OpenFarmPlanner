@@ -7,7 +7,7 @@
  * @returns The Planting Plans page component
  */
 
-import { useCallback, useState, useEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type {
   GridCellParams,
@@ -132,6 +132,12 @@ interface MobileCreateFormState {
   plants_count: string;
   notes: string;
 }
+
+interface CultivationTypeSelectOption {
+  value: CultivationType;
+  label: string;
+}
+
 interface AreaValidationDialogState {
   rowId: number;
   requestedArea: number;
@@ -158,6 +164,7 @@ const CULTIVATION_TYPE_OPTIONS = [
 
 const CULTURE_COLUMN_MAX_WIDTH = 280;
 const BED_COLUMN_MAX_WIDTH = 220;
+const DATE_COLUMN_WIDTH = 142;
 const PLANTING_PLANS_CONTEXT_MENU_HINT_STORAGE_KEY = "ofp.plantingPlansContextMenuHintSeen";
 
 const estimateColumnWidth = (
@@ -192,45 +199,54 @@ const toIsoDateString = (value: unknown): string | null => {
   return null;
 };
 
-function PlantingDateEditCell(params: GridRenderEditCellParams) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const inputValue = toIsoDateString(params.value) ?? "";
+interface CultivationTypeEditCellProps extends GridRenderEditCellParams {
+  options: CultivationTypeSelectOption[];
+}
 
-  useEffect(() => {
-    if (!params.hasFocus) {
-      return;
-    }
-
-    requestAnimationFrame(() => {
-      inputRef.current?.focus();
-    });
-  }, [params.hasFocus]);
+const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
+  id,
+  field,
+  value,
+  hasFocus,
+  api,
+  options,
+}: CultivationTypeEditCellProps) {
+  const selectedValue = normalizeCultivationType(value) ?? "";
 
   return (
     <TextField
-      type="date"
+      select
       fullWidth
       size="small"
-      inputRef={inputRef}
-      value={inputValue}
+      autoFocus={hasFocus}
+      value={selectedValue}
       slotProps={{
         htmlInput: {
-          tabIndex: params.hasFocus ? 0 : -1,
+          tabIndex: hasFocus ? 0 : -1,
         },
       }}
       onChange={async (event) => {
-        const nextValue = event.target.value
-          ? new Date(`${event.target.value}T00:00:00`)
-          : null;
-        await params.api.setEditCellValue({
-          id: params.id,
-          field: params.field,
-          value: nextValue,
+        await api.setEditCellValue({
+          id,
+          field,
+          value: event.target.value,
         });
       }}
-    />
+    >
+      {options.map((option) => (
+        <MenuItem key={option.value} value={option.value}>
+          {option.label}
+        </MenuItem>
+      ))}
+    </TextField>
   );
-}
+}, (previous, next) => (
+  previous.id === next.id
+  && previous.field === next.field
+  && previous.value === next.value
+  && previous.hasFocus === next.hasFocus
+  && previous.options === next.options
+));
 
 const toDateKey = (value: unknown): number | null => {
   const buildDateKey = (year: number, month: number, day: number): number | null => {
@@ -489,16 +505,9 @@ const areRowsSemanticallyEqual = (
 };
 
 export const buildMobileCreateForm = (
-  locale: string,
-  beds: Bed[],
   prefill?: { cultureId?: number | null; bedId?: number | null },
 ): MobileCreateFormState => {
   const baseForm = createEmptyMobileCreateForm();
-  const prefilledBed =
-    typeof prefill?.bedId === "number"
-      ? beds.find((bed) => bed.id === prefill.bedId)
-      : undefined;
-  const prefilledArea = toNumericValue(prefilledBed?.area_sqm);
 
   return {
     ...baseForm,
@@ -506,14 +515,6 @@ export const buildMobileCreateForm = (
       typeof prefill?.cultureId === "number" ? String(prefill.cultureId) : "",
     bed: typeof prefill?.bedId === "number" ? String(prefill.bedId) : "",
     cultivation_type: "pre_cultivation",
-    area_m2:
-      prefilledArea !== null
-        ? formatLocalizedNumber(prefilledArea, locale, {
-            useGrouping: false,
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
-          })
-        : "",
   };
 };
 
@@ -731,6 +732,23 @@ function PlantingPlans() {
     [t],
   );
 
+  const cultivationTypeOptionsByCultureId = useMemo(() => {
+    const optionsByCultureId = new Map<number, CultivationTypeSelectOption[]>();
+    cultures.forEach((culture) => {
+      if (culture.id === undefined) {
+        return;
+      }
+      const allowedTypes = getAllowedCultivationTypesForCulture(culture);
+      optionsByCultureId.set(
+        culture.id,
+        cultivationTypeOptions.filter((option) =>
+          allowedTypes.includes(option.value as CultivationType),
+        ),
+      );
+    });
+    return optionsByCultureId;
+  }, [cultivationTypeOptions, cultures]);
+
   const fieldBedColumnLabel = useMemo(
     () =>
       t("plantingPlans:columns.fieldBed", {
@@ -768,14 +786,9 @@ function PlantingPlans() {
 
   const getCultivationTypeOptionsForRow = useMemo(
     () => (row: PlantingPlanRow) => {
-      const selectedCulture = cultures.find((culture) => culture.id === row.culture);
-      const allowedTypes = getAllowedCultivationTypesForCulture(selectedCulture);
-
-      return cultivationTypeOptions.filter((option) =>
-        allowedTypes.includes(option.value as CultivationType),
-      );
+      return cultivationTypeOptionsByCultureId.get(row.culture) ?? cultivationTypeOptions;
     },
-    [cultivationTypeOptions, cultures],
+    [cultivationTypeOptions, cultivationTypeOptionsByCultureId],
   );
 
   const dynamicWidths = useMemo(() => {
@@ -808,21 +821,9 @@ function PlantingPlans() {
         110,
         150,
       ),
-      plantingDate: estimateColumnWidth(
-        [t("plantingPlans:columns.plantingDate"), "2026-12-31"],
-        110,
-        130,
-      ),
-      harvestDate: estimateColumnWidth(
-        [t("plantingPlans:columns.harvestStartDate"), "2026-12-31"],
-        112,
-        135,
-      ),
-      harvestEndDate: estimateColumnWidth(
-        [t("plantingPlans:columns.harvestEndDate"), "2026-12-31"],
-        112,
-        135,
-      ),
+      plantingDate: DATE_COLUMN_WIDTH,
+      harvestDate: DATE_COLUMN_WIDTH,
+      harvestEndDate: DATE_COLUMN_WIDTH,
       area: estimateColumnWidth(
         [
           t("plantingPlans:columns.areaM2"),
@@ -1078,34 +1079,12 @@ function PlantingPlans() {
         renderEditCell: (params) => {
           const row = params.row as PlantingPlanRow;
           const options = getCultivationTypeOptionsForRow(row);
-          const selectedValue = normalizeCultivationType(params.value) ?? "";
 
           return (
-            <TextField
-              select
-              fullWidth
-              size="small"
-              autoFocus={params.hasFocus}
-              value={selectedValue}
-              slotProps={{
-                htmlInput: {
-                  tabIndex: params.hasFocus ? 0 : -1,
-                },
-              }}
-              onChange={async (event) => {
-                await params.api.setEditCellValue({
-                  id: params.id,
-                  field: params.field,
-                  value: event.target.value,
-                });
-              }}
-            >
-              {options.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </TextField>
+            <CultivationTypeEditCell
+              {...params}
+              options={options}
+            />
           );
         },
         valueSetter: (value, row) => {
@@ -1168,6 +1147,7 @@ function PlantingPlans() {
               locale={numberLocale}
               compactLabel={label}
               hasFocus={params.hasFocus}
+              memoKey={`${String(params.id)}:${params.field}`}
               onApply={async (nextBedId) => {
                 await params.api.setEditCellValue({
                   id: params.id,
@@ -1201,10 +1181,11 @@ function PlantingPlans() {
         headerName: t("plantingPlans:columns.plantingDate"),
         flex: 0,
         minWidth: dynamicWidths.plantingDate,
+        width: dynamicWidths.plantingDate,
+        maxWidth: dynamicWidths.plantingDate,
         type: "date",
         editable: true,
         valueGetter: (value) => (value ? new Date(value) : null),
-        renderEditCell: (params) => <PlantingDateEditCell {...params} />,
         preProcessEditCellProps: (params) => {
           const hasError = !params.props.value;
           return { ...params.props, error: hasError };
@@ -1215,6 +1196,8 @@ function PlantingPlans() {
         headerName: t("plantingPlans:columns.harvestStartDate"),
         flex: 0,
         minWidth: dynamicWidths.harvestDate,
+        width: dynamicWidths.harvestDate,
+        maxWidth: dynamicWidths.harvestDate,
         ...getCalculatedColumnProps<PlantingPlanRow>({
           headerName: t("plantingPlans:columns.harvestStartDate"),
           tooltip: t("plantingPlans:tooltips.calculatedHarvestDate"),
@@ -1227,6 +1210,8 @@ function PlantingPlans() {
         headerName: t("plantingPlans:columns.harvestEndDate"),
         flex: 0,
         minWidth: dynamicWidths.harvestEndDate,
+        width: dynamicWidths.harvestEndDate,
+        maxWidth: dynamicWidths.harvestEndDate,
         ...getCalculatedColumnProps<PlantingPlanRow>({
           headerName: t("plantingPlans:columns.harvestEndDate"),
           tooltip: t("plantingPlans:tooltips.calculatedHarvestDate"),
@@ -1243,7 +1228,18 @@ function PlantingPlans() {
         maxWidth: dynamicWidths.area,
         editable: true,
         renderHeader: () => (
-          <Tooltip title={t("plantingPlans:tooltips.areaInput")}>
+          <Tooltip
+            title={(
+              <Box component="span" sx={{ display: "block" }}>
+                <Box component="span" sx={{ display: "block", fontWeight: 600 }}>
+                  {t("plantingPlans:tooltips.areaInputTitle")}
+                </Box>
+                <Box component="span" sx={{ display: "block" }}>
+                  {t("plantingPlans:tooltips.areaInputDescription")}
+                </Box>
+              </Box>
+            )}
+          >
             <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>
               {t("plantingPlans:columns.areaM2")}
             </Box>
@@ -1519,10 +1515,10 @@ function PlantingPlans() {
   ): void => {
     setMobileCreateError("");
     setMobileEditId(null);
-    setMobileCreateForm(buildMobileCreateForm(numberLocale, beds, prefill));
+    setMobileCreateForm(buildMobileCreateForm(prefill));
     setMobileLastEditedField(null);
     setIsMobileCreateOpen(true);
-  }, [beds, numberLocale]);
+  }, []);
 
   const closeMobileCreateDialog = (): void => {
     setIsMobileCreateOpen(false);
@@ -1687,37 +1683,37 @@ function PlantingPlans() {
     };
   };
 
-  const applyAreaAndPlants = async (
-    rowId: number,
-    nextArea: number,
-    fallbackCultureId?: number,
-    fallbackPlantsCount?: number | null,
-  ): Promise<void> => {
-    const row = mobileRows.find((item) => item.id === rowId);
-    const draftValues = buildAreaAndPlantsDraft(row, nextArea, fallbackCultureId, fallbackPlantsCount);
+  const buildAvailableAreaDraft = (
+    row: PlantingPlanRow,
+  ): Pick<PlantingPlanRow, "area_m2" | "plants_count"> | null => {
+    const capacity = getCapacityForRow(row);
+    if (!capacity || capacity.availableArea <= 0) {
+      return null;
+    }
+
+    return buildAreaAndPlantsDraft(row, capacity.availableArea);
+  };
+
+  const commitAreaValidationDialogValue = async (dialog: AreaValidationDialogState): Promise<void> => {
+    const nextArea = dialog.mode === "bedLimit" ? dialog.bedArea : dialog.availableArea;
+    const row = mobileRows.find((item) => item.id === dialog.rowId);
+    const draftValues = buildAreaAndPlantsDraft(row, nextArea, dialog.cultureId, dialog.plantsCount);
+
     lastEditedFieldRef.current = "area_m2";
-    await gridCommandApiRef.current?.setDraftValues(rowId, {
-      ...draftValues,
-    });
+    areaValidationDialogRef.current = null;
+    clearAreaValidationCloseTimer();
+    suppressAreaValidationSaveRef.current = false;
+
+    await gridCommandApiRef.current?.commitDraftValues(dialog.rowId, draftValues);
     setMobileRows((previousRows) => previousRows.map((item) =>
-      item.id === rowId
+      item.id === dialog.rowId
         ? {
           ...item,
           ...draftValues,
         }
         : item,
     ));
-  };
-
-  const applyAreaValidationDialogValue = async (dialog: AreaValidationDialogState): Promise<void> => {
-    await applyAreaAndPlants(
-      dialog.rowId,
-      dialog.mode === "bedLimit"
-        ? dialog.bedArea
-        : dialog.availableArea,
-      dialog.cultureId,
-      dialog.plantsCount,
-    );
+    setAreaValidationDialog(null);
   };
 
   const validateMobileForm = (): boolean => {
@@ -1854,13 +1850,11 @@ function PlantingPlans() {
       );
     }
   };
-  const hasLocations = locations.length > 0;
   const hasFields = fields.length > 0;
   const hasCultures = cultures.length > 0;
   const hasBeds = beds.length > 0;
   const hasPlans = mobileRows.length > 0;
   const firstMissingRequirement = getFirstMissingCultivationPlanRequirement({
-    hasLocations,
     hasFields,
     hasBeds,
     hasCultures,
@@ -2160,23 +2154,22 @@ function PlantingPlans() {
 
             // Determine which field to send based on last edit
             const source = lastEditedFieldRef.current || "area_m2";
+            const autoAreaDraft = source === "area_m2" && isAutoAreaRequest(row.area_m2, t("plantingPlans:placeholders.maxKeyword"))
+              ? buildAvailableAreaDraft(row)
+              : null;
+            const areaInputValue = autoAreaDraft?.area_m2 ?? toAreaNumericValue(row.area_m2, numberLocale);
+            const plantsInputValue = autoAreaDraft?.plants_count ?? toAreaNumericValue(row.plants_count, numberLocale);
 
-            if (source === "area_m2" && isAutoAreaRequest(row.area_m2, t("plantingPlans:placeholders.maxKeyword"))) {
-              const capacity = getCapacityForRow(row);
-              if (capacity && capacity.availableArea > 0) {
-                apiData.area_input_value = Number(capacity.availableArea.toFixed(2));
-                apiData.area_input_unit = "M2";
-              }
-            } else if (source === "area_m2" && typeof row.area_m2 === "number") {
-              // User edited area directly - send as M2
-              apiData.area_input_value = row.area_m2;
+            if (source === "area_m2" && typeof areaInputValue === "number") {
+              // Persist direct and automatically applied area values through the same m² payload.
+              apiData.area_input_value = areaInputValue;
               apiData.area_input_unit = "M2";
             } else if (
               source === "plants_count" &&
-              typeof row.plants_count === "number"
+              typeof plantsInputValue === "number"
             ) {
               // User edited plants count - send as PLANTS
-              apiData.area_input_value = row.plants_count;
+              apiData.area_input_value = plantsInputValue;
               apiData.area_input_unit = "PLANTS";
             }
 
@@ -2235,13 +2228,14 @@ function PlantingPlans() {
             }
             const maxKeyword = t("plantingPlans:placeholders.maxKeyword");
             if (isAutoAreaRequest(row.area_m2, maxKeyword)) {
-              if (capacity.availableArea > 0) {
+              const availableAreaDraft = buildAvailableAreaDraft(row);
+              if (availableAreaDraft) {
                 setAreaNotice({
                   severity: "info",
                   message: t("plantingPlans:areaValidation.maxAreaApplied", { area: formatAreaM2(capacity.availableArea, numberLocale) }),
                 });
                 lastEditedFieldRef.current = "area_m2";
-                return buildAreaAndPlantsDraft(row, capacity.availableArea);
+                return availableAreaDraft;
               }
               return false;
             }
@@ -2501,8 +2495,7 @@ function PlantingPlans() {
                 variant="contained"
                 color="success"
                 onClick={async () => {
-                  await applyAreaValidationDialogValue(areaValidationDialog);
-                  closeAreaValidationDialog();
+                  await commitAreaValidationDialogValue(areaValidationDialog);
                 }}
               >
                 {areaValidationDialog.mode === "bedLimit"
@@ -2521,6 +2514,7 @@ function PlantingPlans() {
         onChange={setMobileNotesDraft}
         onSave={saveMobileNotes}
         onClose={closeMobileNotesDialog}
+        hasUnsavedChanges={Boolean(mobileNotesTarget && mobileNotesDraft !== (mobileNotesTarget.notes || ""))}
         loading={isMobileNotesSaving}
         noteId={mobileNotesTarget?.id}
         focusAttachments

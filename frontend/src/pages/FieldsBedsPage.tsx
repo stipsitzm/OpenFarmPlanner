@@ -24,12 +24,25 @@ import AddIcon from '@mui/icons-material/Add';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
+const ADD_PARCEL_ACTION = 'add-parcel';
 const CONTENT_ALIGNED_EMPTY_STATE_SX: SxProps<Theme> = {
-  maxWidth: '100%',
+  maxWidth: 560,
+  my: { xs: 3, md: 5 },
+  p: { xs: 2.5, sm: 3 },
+  textAlign: 'center',
+  '& > .MuiBox-root:first-of-type': {
+    justifyContent: 'center',
+  },
+  '& > .MuiBox-root:last-of-type': {
+    justifyContent: 'center',
+  },
 };
 
 type ViewMode = 'table' | 'graphical';
 type InteractionMode = 'view' | 'edit';
+
+const hasPersistedEntityId = (id: number | undefined): id is number =>
+  typeof id === 'number' && id > 0;
 
 export default function FieldsBedsPage() {
   const { t } = useTranslation(['fields', 'hierarchy', 'common']);
@@ -103,6 +116,7 @@ export default function FieldsBedsPage() {
 
   const hasAddFieldTarget = locations.some((item) => item.id !== undefined);
   const canUseGlobalAddField = locations.length === 1 && locations[0]?.id !== undefined;
+  const hasActiveFieldDraft = fields.some((field) => !hasPersistedEntityId(field.id));
 
   const requestInlineFieldCreation = useCallback((): void => {
     if (!hasAddFieldTarget) {
@@ -111,8 +125,11 @@ export default function FieldsBedsPage() {
     }
 
     setViewMode('table');
+    if (hasActiveFieldDraft || createFieldRequest > 0) {
+      return;
+    }
     setCreateFieldRequest((currentRequest) => currentRequest + 1);
-  }, [hasAddFieldTarget, t]);
+  }, [createFieldRequest, hasActiveFieldDraft, hasAddFieldTarget, t]);
 
   const openAddLocationDialog = useCallback((): void => {
     setNewLocationName('');
@@ -150,7 +167,10 @@ export default function FieldsBedsPage() {
       return;
     }
     const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get('create') !== 'true') {
+    const shouldAddParcel =
+      searchParams.get('action') === ADD_PARCEL_ACTION ||
+      searchParams.get('create') === 'true';
+    if (!shouldAddParcel) {
       return;
     }
 
@@ -160,6 +180,7 @@ export default function FieldsBedsPage() {
 
     requestInlineFieldCreation();
 
+    searchParams.delete('action');
     searchParams.delete('create');
     const nextSearch = searchParams.toString();
     navigate(
@@ -185,28 +206,37 @@ export default function FieldsBedsPage() {
   }, [viewMode]);
 
   const hasLocations = locations.length > 0;
-  const hasFields = fields.length > 0;
-  const hasBeds = beds.length > 0;
+  const persistedFieldIds = useMemo(
+    () => new Set(fields.map((field) => field.id).filter(hasPersistedEntityId)),
+    [fields],
+  );
+  const hasFields = persistedFieldIds.size > 0;
+  const hasUnsavedFields = fields.some((field) => !hasPersistedEntityId(field.id));
+  const hasUnsavedBeds = beds.some((bed) => !hasPersistedEntityId(bed.id));
+  const hasBeds = beds.some((bed) => hasPersistedEntityId(bed.id) && persistedFieldIds.has(bed.field));
+  const hasHierarchyRows = fields.length > 0 || beds.length > 0;
   const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && !hasLocations;
-  const shouldShowMissingFieldsState = hasLocations && !hasFields;
-  const shouldShowMissingBedsHint = hasFields && !hasBeds;
-  const shouldRenderHierarchy = hasLocations || pendingHierarchyDeletionCount > 0;
+  const shouldShowMissingFieldsState = hasLocations && !hasFields && !hasUnsavedFields && createFieldRequest <= 0;
+  const shouldShowMissingBedsHint = hasFields && !hasBeds && !hasUnsavedBeds;
+  const shouldRenderHierarchy = hasHierarchyRows || createFieldRequest > 0 || pendingHierarchyDeletionCount > 0;
   const createBedAction = getProjectSetupAction('beds');
   const emptyAreasDescription = shouldShowMissingFieldsState
-    ? (
-      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-        {t('hierarchy:emptyAreas.missingFieldDescriptionBeforeIcon')}
-        <HierarchyAddIcon interactive={false} ariaHidden sx={{ bgcolor: 'transparent' }} />
-        {t('hierarchy:emptyAreas.missingFieldDescriptionAfterIcon')}
-      </Box>
-    )
-    : t('hierarchy:emptyAreas.description');
+    ? t(locations.length === 1
+      ? 'hierarchy:emptyAreas.missingFieldSingleLocationDescription'
+      : 'hierarchy:emptyAreas.missingFieldMultipleLocationsDescription')
+    : t('hierarchy:emptyAreas.missingLocationDescription');
   const emptyAreaActions = useMemo<EmptyStateAction[]>(() => {
     if (shouldShowMissingFieldsState) {
-      return [];
+      return locations.length === 1
+        ? [{
+            label: t('hierarchy:actions.addField'),
+            onClick: requestInlineFieldCreation,
+            icon: <HierarchyAddIcon interactive={false} ariaHidden sx={{ bgcolor: 'transparent' }} />,
+          }]
+        : [];
     }
     return [{ label: t('hierarchy:actions.createLocation'), onClick: openAddLocationDialog, icon: <AddIcon fontSize="small" /> }];
-  }, [openAddLocationDialog, shouldShowMissingFieldsState, t]);
+  }, [locations.length, openAddLocationDialog, requestInlineFieldCreation, shouldShowMissingFieldsState, t]);
 
   useEffect(() => {
     if (viewMode === 'graphical') {
@@ -313,7 +343,7 @@ export default function FieldsBedsPage() {
           <EmptyStateCard
             title={t('hierarchy:messages.noBedsHintTitle')}
             description={(
-              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
                 {t('hierarchy:messages.noBedsHintBeforeIcon')}
                 <AddBedIcon interactive={false} ariaHidden />
                 {t('hierarchy:messages.noBedsHintAfterIcon')}
@@ -332,13 +362,8 @@ export default function FieldsBedsPage() {
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && (shouldShowAreasEmptyState || shouldShowMissingFieldsState) ? (
           <EmptyStateCard
-            title={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldTitle') : t('hierarchy:emptyAreas.title')}
+            title={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldTitle') : t('hierarchy:emptyAreas.missingLocationTitle')}
             description={emptyAreasDescription}
-            checklist={!hasLocations ? [{
-              label: t('hierarchy:columns.location'),
-              done: false,
-              missingLabel: t('hierarchy:emptyAreas.missingLocationLabel'),
-            }] : []}
             actions={emptyAreaActions}
             containerSx={CONTENT_ALIGNED_EMPTY_STATE_SX}
           />
@@ -421,7 +446,7 @@ export default function FieldsBedsPage() {
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy && viewMode !== 'graphical' ? (
           <>
-            {hasLocations && !shouldShowMissingBedsHint ? (
+            {hasFields && !shouldShowMissingBedsHint ? (
               <Box sx={{ mb: 1.25 }}>
                 <ContextMenuHint
                   message={t('hierarchy:messages.contextMenuTableHint')}
