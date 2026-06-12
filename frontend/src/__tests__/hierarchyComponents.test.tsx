@@ -201,7 +201,7 @@ describe('hierarchy components and behaviors', () => {
       openNotes,
       mockT as never,
       undefined,
-      { disablePlantingPlanHoverAction: true },
+      { disableInlineHoverActions: true },
     );
     const touchNameColumn = touchColumns.find((column) => column.field === 'name');
     rerender(
@@ -215,8 +215,21 @@ describe('hierarchy components and behaviors', () => {
       </>
     );
     expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
+
+    rerender(
+      <>
+        {touchNameColumn?.renderCell?.({
+          id: 'field-10',
+          field: 'name',
+          value: 'Parzelle 10',
+          row: { id: 'field-10', type: 'field', fieldId: 10, level: 1 },
+        } as never)}
+      </>
+    );
+    expect(screen.queryByLabelText('Beet hinzufügen')).not.toBeInTheDocument();
+
     fireEvent.contextMenu(screen.getByTestId('hierarchy-name-text'));
-    expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 101 }));
+    expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 'field-10' }));
   }, 15000);
 
 

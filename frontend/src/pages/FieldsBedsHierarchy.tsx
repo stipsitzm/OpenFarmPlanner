@@ -1725,7 +1725,7 @@ function FieldsBedsHierarchy({
         name: nameColumnWidth,
       },
       {
-        disablePlantingPlanHoverAction: isTouchLikePointer || isMobileViewport,
+        disableInlineHoverActions: isTouchLikePointer || isMobileViewport,
       },
     );
   }, [
