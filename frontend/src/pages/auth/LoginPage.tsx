@@ -1,4 +1,6 @@
-import { Alert, Box, Button, Container, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Container, IconButton, InputAdornment, Stack, TextField, Typography } from '@mui/material';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -17,6 +19,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [pendingDeletionAt, setPendingDeletionAt] = useState<string | null>(null);
   const [pendingInvitation, setPendingInvitation] = useState<InvitationPublicStatus | null>(null);
   const nextPath = getNextFromSearch(location.search);
@@ -98,7 +101,29 @@ export default function LoginPage() {
             </Alert>
           ) : null}
           <TextField label={t('auth:login.email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <TextField label={t('auth:login.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <TextField
+            label={t('auth:login.password')}
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      edge="end"
+                      onClick={() => setShowPassword((current) => !current)}
+                      onMouseDown={(event) => event.preventDefault()}
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
           <Button type="submit" variant="contained" disabled={submitting}>{submitting ? t('auth:login.submitting') : t('auth:login.submit')}</Button>
           {pendingDeletionAt ? (
             <Button variant="outlined" disabled={submitting} onClick={() => void handleRestore()}>
