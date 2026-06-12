@@ -24,7 +24,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { supplierAPI } from '../api/api';
@@ -605,7 +604,7 @@ export default function Suppliers() {
                         aria-label={t('deleteAction')}
                         onClick={() => void deleteSupplier(supplier)}
                       >
-                        <CloseIcon fontSize="small" />
+                        <DeleteIcon fontSize="small" />
                       </IconButton>
                       </Box>
                     </TableCell>
