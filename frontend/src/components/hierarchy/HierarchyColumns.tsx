@@ -47,7 +47,7 @@ interface NameCellCallbacks {
 }
 
 interface HierarchyColumnOptions {
-  disablePlantingPlanHoverAction?: boolean;
+  disableInlineHoverActions?: boolean;
 }
 
 function renderHierarchyAddIconButton({
@@ -117,6 +117,10 @@ function renderInlineActions(
   t: TFunction,
   options: HierarchyColumnOptions,
 ): ReactElement | null {
+  if (options.disableInlineHoverActions) {
+    return null;
+  }
+
   if (row.type === 'location') {
     return (
       <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
@@ -140,10 +144,6 @@ function renderInlineActions(
   }
 
   if (row.type === 'bed') {
-    if (options.disablePlantingPlanHoverAction) {
-      return null;
-    }
-
     return (
       <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
         {renderPlantingPlanActionButton(row, callbacks, t)}

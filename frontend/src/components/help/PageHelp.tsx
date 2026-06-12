@@ -46,6 +46,7 @@ import { useTheme } from '@mui/material/styles';
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactElement } from 'react';
 import { useTranslation } from '../../i18n';
 import HelpIconRow from './HelpIconRow';
+import { HierarchyAddIcon } from '../hierarchy/HierarchyAddIcon';
 
 export type HelpPageKey =
   | 'dashboard'
@@ -245,15 +246,61 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
     setMobileOpen(false);
   };
 
+  const renderHelpTextContent = (text: string): ReactElement | string => {
+    const tokens = text.split(/({{addIcon}}|{{moreIcon}})/);
+    if (tokens.length === 1) {
+      return text;
+    }
+
+    return (
+      <>
+        {tokens.map((token, index) => {
+          if (token === '{{addIcon}}') {
+            return (
+              <HierarchyAddIcon
+                key={`${token}-${index}`}
+                interactive={false}
+                ariaHidden
+                sx={{
+                  mx: 0.25,
+                  verticalAlign: 'text-bottom',
+                }}
+              />
+            );
+          }
+          if (token === '{{moreIcon}}') {
+            return (
+              <MoreVertIcon
+                key={`${token}-${index}`}
+                aria-hidden
+                fontSize="small"
+                sx={{
+                  mx: 0.25,
+                  color: 'text.secondary',
+                  verticalAlign: 'text-bottom',
+                }}
+              />
+            );
+          }
+          return token;
+        })}
+      </>
+    );
+  };
+
   const renderIntro = (): ReactElement | null => {
     if (!intro) {
       return null;
     }
 
     return (
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-        {intro}
-      </Typography>
+      <Stack spacing={1} sx={{ mb: 1.5 }}>
+        {intro.split(/\n{2,}/).map((paragraph) => (
+          <Typography key={paragraph} variant="body2">
+            {renderHelpTextContent(paragraph)}
+          </Typography>
+        ))}
+      </Stack>
     );
   };
 
@@ -265,7 +312,15 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
       <List dense disablePadding>
         {section.points.map((point, pointIndex) => (
           <ListItem key={`${key}-${pointIndex}`} sx={{ py: 0.15, px: 0 }}>
-            <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${point}`} />
+            <ListItemText
+              slotProps={{ primary: { variant: 'body2' } }}
+              primary={(
+                <>
+                  {'• '}
+                  {renderHelpTextContent(point)}
+                </>
+              )}
+            />
           </ListItem>
         ))}
       </List>

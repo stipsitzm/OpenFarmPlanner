@@ -2,7 +2,7 @@
   "landing": {
     "title": "OpenFarmPlanner",
     "betaBadge": "Beta",
-    "subtitle": "Gemüse-Anbauplaner für CSA (Community Supported Agriculture), Solidarische Landwirtschaften und Marktgärtnereien.",
+    "subtitle": "Open-Source-Anbauplaner für den Gemüsebau.",
     "description": "Verwalte Kulturen, Anbauflächen und Anbauzeiträume übersichtlich an einem Ort.",
     "actions": {
       "openApp": "Anmelden",
