@@ -454,10 +454,14 @@ function GanttChartPage() {
     : [];
   const requirementEmptyStateTitleKey = firstMissingRequirement === 'cultures'
     ? 'ganttChart:emptyStates.states.cultures.title'
-    : 'ganttChart:emptyStates.requirementsTitle';
+    : firstMissingRequirement === 'plans'
+      ? 'ganttChart:emptyStates.states.plans.title'
+      : 'ganttChart:emptyStates.requirementsTitle';
   const requirementEmptyStateDescriptionKey = firstMissingRequirement === 'cultures'
     ? 'ganttChart:emptyStates.states.cultures.description'
-    : 'ganttChart:emptyStates.requirementsDescription';
+    : firstMissingRequirement === 'plans'
+      ? 'ganttChart:emptyStates.states.plans.description'
+      : 'ganttChart:emptyStates.requirementsDescription';
 
   const renderOccupancyTooltip = useCallback(({ task }: { task: GanttTask }) => (
     <Box sx={{ p: 0.5 }}>
@@ -619,7 +623,6 @@ function GanttChartPage() {
                 checklist={[
                   ...(firstMissingRequirement === 'beds' ? [{ label: t('ganttChart:requirements.bed.label'), done: false, missingLabel: t('ganttChart:requirements.bed.missing') }] : []),
                   ...(firstMissingRequirement === 'cultures' ? [{ label: t('ganttChart:requirements.culture.label'), done: false, missingLabel: t('ganttChart:requirements.culture.missing') }] : []),
-                  ...(firstMissingRequirement === 'plans' ? [{ label: t('ganttChart:requirements.plan.label'), done: false, missingLabel: t('ganttChart:requirements.plan.missing') }] : []),
                 ]}
                 actions={requirementActions.map((action) => ({ label: t(action.labelKey), to: action.to }))}
               />

@@ -154,7 +154,7 @@ describe('GanttChartPage', () => {
     expect(screen.queryByTestId('mock-gantt')).not.toBeInTheDocument();
   });
 
-  it('shows "Anbauplan fehlt" when cultures and beds exist but no plan exists', async () => {
+  it('shows plan guidance without a redundant missing-plan badge when areas and cultures exist', async () => {
     mocks.planList.mockResolvedValue({ data: { results: [] } });
     mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
 
@@ -166,8 +166,11 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(screen.getByText('Anbauplan fehlt')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Noch keine Anbaupläne vorhanden')).toBeInTheDocument());
+    expect(screen.getByText('Für die vorhandenen Anbauflächen wurden noch keine Anbaupläne erstellt. Lege einen Anbauplan an, um Kulturen und Termine im Anbaukalender darzustellen.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Anbauplan hinzufügen' })).toBeInTheDocument();
+    expect(screen.queryByText('Anbauplan fehlt')).not.toBeInTheDocument();
+    expect(screen.queryByText('Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu. Danach kannst du Beete, Kulturen und Anbaupläne erfassen.')).not.toBeInTheDocument();
   });
 
   it('shows culture-specific guidance when land hierarchy exists but no cultures exist', async () => {
