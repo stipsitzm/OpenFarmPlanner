@@ -8,7 +8,7 @@
  * @returns The main App component with routing
  */
 
-import { createBrowserRouter, RouterProvider, Outlet, Link as RouterLink, redirect, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, Link as RouterLink, redirect, useLocation, useNavigate, Navigate, useRouteError } from 'react-router-dom';
 import {
   Alert,
   AppBar,
@@ -101,6 +101,8 @@ import {
   navigationTooltipSx,
 } from './navigation/navigationStyles';
 import { PanelLeft } from 'lucide-react';
+import RuntimeErrorState from './components/runtime/RuntimeErrorState';
+import { isDynamicImportLoadError, reloadOnceForDynamicImportError } from './runtime/chunkLoadErrors';
 
 const CONTENT_ALIGNMENT_MODE = 'centered';
 const ACTION_MENU_ITEM_ICON_SX = { minWidth: 32, color: 'text.secondary' } as const;
@@ -1734,84 +1736,167 @@ function withLazyFallback(element: React.ReactElement): React.ReactElement {
   return <Suspense fallback={null}>{element}</Suspense>;
 }
 
+function RouteErrorBoundary() {
+  const error = useRouteError();
+  const isApplicationUpdateError = isDynamicImportLoadError(error);
+
+  useEffect(() => {
+    if (isApplicationUpdateError) {
+      reloadOnceForDynamicImportError(error);
+    }
+  }, [error, isApplicationUpdateError]);
+
+  return <RuntimeErrorState variant={isApplicationUpdateError ? 'applicationUpdated' : 'routeError'} />;
+}
+
+interface GlobalRuntimeErrorHandlerProps {
+  children: React.ReactNode;
+}
+
+function GlobalRuntimeErrorHandler({ children }: GlobalRuntimeErrorHandlerProps) {
+  const [hasApplicationUpdateError, setHasApplicationUpdateError] = useState(false);
+
+  const handleDynamicImportError = useCallback((error: unknown) => {
+    if (!isDynamicImportLoadError(error)) {
+      return;
+    }
+
+    if (!reloadOnceForDynamicImportError(error)) {
+      setHasApplicationUpdateError(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      const error = event.error ?? event.message;
+      if (!isDynamicImportLoadError(error)) {
+        return;
+      }
+
+      event.preventDefault();
+      handleDynamicImportError(error);
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (!isDynamicImportLoadError(event.reason)) {
+        return;
+      }
+
+      event.preventDefault();
+      handleDynamicImportError(event.reason);
+    };
+
+    const handleVitePreloadError = (event: Event) => {
+      event.preventDefault();
+      const payload = (event as CustomEvent<unknown>).detail
+        ?? (event as Event & { payload?: unknown }).payload
+        ?? 'vite:preloadError';
+      handleDynamicImportError(payload);
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('vite:preloadError', handleVitePreloadError);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('vite:preloadError', handleVitePreloadError);
+    };
+  }, [handleDynamicImportError]);
+
+  if (hasApplicationUpdateError) {
+    return <RuntimeErrorState variant="applicationUpdated" />;
+  }
+
+  return children;
+}
+
 function createAppRouter(basename: string) {
   return createBrowserRouter([
     {
       path: '/',
-      element: withLazyFallback(<HomePage />),
-    },
-    {
-      path: '/impressum',
-      element: withLazyFallback(<ImprintPage />),
-    },
-    {
-      path: '/datenschutz',
-      element: withLazyFallback(<PrivacyPolicyPage />),
-    },
-    {
-      path: '/login',
-      element: withLazyFallback(<LoginPage />),
-    },
-    {
-      path: '/register',
-      element: withLazyFallback(<RegisterPage />),
-    },
-    {
-      path: '/activate',
-      element: withLazyFallback(<ActivatePage />),
-    },
-    {
-      path: '/activate/:uid/:token',
-      element: withLazyFallback(<ActivatePage />),
-    },
-    {
-      path: '/forgot-password',
-      element: withLazyFallback(<ForgotPasswordPage />),
-    },
-    {
-      path: '/reset-password',
-      element: withLazyFallback(<ResetPasswordPage />),
-    },
-    {
-      path: '/confirm-email-change',
-      element: withLazyFallback(<ConfirmEmailChangePage />),
-    },
-    {
-      path: '/invitation',
-      element: <LegacyInvitationRedirect />,
-    },
-    {
-      path: '/invite/accept',
-      element: withLazyFallback(<InvitationAcceptPage />),
-    },
-    {
-      path: '/invite/:token',
-      element: <TokenInvitationRedirect />,
-    },
-    {
-      path: '/app',
-      element: <ProtectedRoute />,
+      element: <Outlet />,
+      errorElement: <RouteErrorBoundary />,
       children: [
         {
-          path: '',
-          element: <RootLayout />,
+          index: true,
+          element: withLazyFallback(<HomePage />),
+        },
+        {
+          path: 'impressum',
+          element: withLazyFallback(<ImprintPage />),
+        },
+        {
+          path: 'datenschutz',
+          element: withLazyFallback(<PrivacyPolicyPage />),
+        },
+        {
+          path: 'login',
+          element: withLazyFallback(<LoginPage />),
+        },
+        {
+          path: 'register',
+          element: withLazyFallback(<RegisterPage />),
+        },
+        {
+          path: 'activate',
+          element: withLazyFallback(<ActivatePage />),
+        },
+        {
+          path: 'activate/:uid/:token',
+          element: withLazyFallback(<ActivatePage />),
+        },
+        {
+          path: 'forgot-password',
+          element: withLazyFallback(<ForgotPasswordPage />),
+        },
+        {
+          path: 'reset-password',
+          element: withLazyFallback(<ResetPasswordPage />),
+        },
+        {
+          path: 'confirm-email-change',
+          element: withLazyFallback(<ConfirmEmailChangePage />),
+        },
+        {
+          path: 'invitation',
+          element: <LegacyInvitationRedirect />,
+        },
+        {
+          path: 'invite/accept',
+          element: withLazyFallback(<InvitationAcceptPage />),
+        },
+        {
+          path: 'invite/:token',
+          element: <TokenInvitationRedirect />,
+        },
+        {
+          path: 'app',
+          element: <ProtectedRoute />,
           children: [
             {
-              index: true,
-              loader: () => redirect('/app/dashboard'),
+              path: '',
+              element: <RootLayout />,
+              children: [
+                {
+                  index: true,
+                  loader: () => redirect('/app/dashboard'),
+                },
+                { path: 'dashboard', element: withLazyFallback(<Dashboard />) },
+                { path: 'locations', element: withLazyFallback(<Locations />) },
+                { path: 'fields-beds', element: withLazyFallback(<FieldsBedsPage />) },
+                { path: 'cultures', element: withLazyFallback(<Cultures />) },
+                { path: 'anbauplaene', element: withLazyFallback(<PlantingPlans />) },
+                { path: 'suppliers', element: withLazyFallback(<Suppliers />) },
+                { path: 'planting-plans', element: withLazyFallback(<PlantingPlans />) },
+                { path: 'gantt-chart', element: withLazyFallback(<GanttChart />) },
+                { path: 'seed-demand', element: withLazyFallback(<SeedDemandPage />) },
+                { path: 'project-selection', element: withLazyFallback(<ProjectSelectionPage />) },
+                { path: 'account-settings', element: withLazyFallback(<AccountSettingsPage />) },
+                { path: 'project-settings', element: withLazyFallback(<ProjectSettingsPage />) },
+              ],
             },
-            { path: 'dashboard', element: withLazyFallback(<Dashboard />) },
-            { path: 'locations', element: withLazyFallback(<Locations />) },
-            { path: 'fields-beds', element: withLazyFallback(<FieldsBedsPage />) },
-            { path: 'cultures', element: withLazyFallback(<Cultures />) },
-            { path: 'anbauplaene', element: withLazyFallback(<PlantingPlans />) },
-            { path: 'suppliers', element: withLazyFallback(<Suppliers />) },
-            { path: 'planting-plans', element: withLazyFallback(<PlantingPlans />) },
-            { path: 'gantt-chart', element: withLazyFallback(<GanttChart />) },
-            { path: 'seed-demand', element: withLazyFallback(<SeedDemandPage />) },
-            { path: 'project-selection', element: withLazyFallback(<ProjectSelectionPage />) },
-            { path: 'account-settings', element: withLazyFallback(<AccountSettingsPage />) },
-            { path: 'project-settings', element: withLazyFallback(<ProjectSettingsPage />) },
           ],
         },
       ],
@@ -1829,7 +1914,11 @@ function App() {
 
   const router = useMemo(() => createAppRouter(basename), [basename]);
 
-  return <RouterProvider router={router} />;
+  return (
+    <GlobalRuntimeErrorHandler>
+      <RouterProvider router={router} />
+    </GlobalRuntimeErrorHandler>
+  );
 }
 
 export default App;
