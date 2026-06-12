@@ -73,13 +73,13 @@ vi.mock('react-router-dom', async () => {
 });
 
 describe('FieldsBedsPage', () => {
-  const renderPage = (): void => {
+  const renderPage = (): ReturnType<typeof render> => (
     render(
       <MemoryRouter>
         <FieldsBedsPage />
       </MemoryRouter>
-    );
-  };
+    )
+  );
 
   beforeEach(() => {
     locationListMock.mockReset();
@@ -135,6 +135,22 @@ describe('FieldsBedsPage', () => {
     promptSpy.mockRestore();
   });
 
+  it('shows the table context-menu hint only on the first visit with existing data', async () => {
+    const firstRender = renderPage();
+
+    expect(await screen.findByText('Hierarchieansicht')).toBeInTheDocument();
+    expect(await screen.findByText('Tipp: Rechtsklick auf eine Tabellenzeile öffnet weitere Aktionen.')).toBeInTheDocument();
+    expect(window.localStorage.getItem('ofp.hierarchyContextMenuHintSeen')).toBe('1');
+
+    firstRender.unmount();
+    renderPage();
+
+    expect(await screen.findByText('Hierarchieansicht')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Tipp: Rechtsklick auf eine Tabellenzeile öffnet weitere Aktionen.')).not.toBeInTheDocument();
+    });
+  });
+
   it('shows onboarding empty-state when no area hierarchy exists', async () => {
     locationListMock.mockResolvedValue({ data: { results: [] } });
     fieldListMock.mockResolvedValue({ data: { results: [] } });
@@ -181,6 +197,7 @@ describe('FieldsBedsPage', () => {
   });
 
   it('shows missing bed requirement when fields exist but no beds exist', async () => {
+    window.localStorage.setItem('ofp.hierarchyContextMenuHintSeen', '1');
     locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hofstelle' }] } });
     fieldListMock.mockResolvedValue({ data: { results: [{ id: 3, name: 'Nord' }] } });
     bedListMock.mockResolvedValue({ data: { results: [] } });
@@ -188,6 +205,7 @@ describe('FieldsBedsPage', () => {
     renderPage();
     expect(await screen.findByText('Es sind noch keine Beete vorhanden.')).toBeInTheDocument();
     expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu.'))).toBeInTheDocument();
+    expect(screen.getByText('Tipp: Rechtsklick auf eine Tabellenzeile öffnet weitere Aktionen.')).toBeInTheDocument();
     expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
     expect(screen.queryByText('Noch keine Anbauflächen vorhanden')).not.toBeInTheDocument();
   });

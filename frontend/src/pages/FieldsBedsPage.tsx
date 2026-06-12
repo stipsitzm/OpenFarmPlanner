@@ -19,11 +19,12 @@ import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { getSegmentedActionButtonSx, segmentedButtonGroupSx } from '../components/buttons/segmentedControlStyles';
 import { useTheme, type SxProps, type Theme } from '@mui/material/styles';
 import ContentViewControls from '../components/layout/ContentViewControls';
-import { ContextMenuHint } from '../components/data-grid';
+import { ContextMenuHint, useContextMenuHint } from '../components/data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
+const HIERARCHY_CONTEXT_MENU_HINT_STORAGE_KEY = 'ofp.hierarchyContextMenuHintSeen';
 const ADD_PARCEL_ACTION = 'add-parcel';
 const CONTENT_ALIGNED_EMPTY_STATE_SX: SxProps<Theme> = {
   maxWidth: 560,
@@ -219,6 +220,15 @@ export default function FieldsBedsPage() {
   const shouldShowMissingFieldsState = hasLocations && !hasFields && !hasUnsavedFields && createFieldRequest <= 0;
   const shouldShowMissingBedsHint = hasFields && !hasBeds && !hasUnsavedBeds;
   const shouldRenderHierarchy = hasHierarchyRows || createFieldRequest > 0 || pendingHierarchyDeletionCount > 0;
+  const { showContextMenuHint, closeContextMenuHint } = useContextMenuHint({
+    storageKey: HIERARCHY_CONTEXT_MENU_HINT_STORAGE_KEY,
+    enabled: !shouldShowProjectRequiredState
+      && !isAreaDataLoading
+      && shouldRenderHierarchy
+      && viewMode !== 'graphical'
+      && hasFields
+      && !shouldShowMissingBedsHint,
+  });
   const createBedAction = getProjectSetupAction('beds');
   const emptyAreasDescription = shouldShowMissingFieldsState
     ? t(locations.length === 1
@@ -446,11 +456,12 @@ export default function FieldsBedsPage() {
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy && viewMode !== 'graphical' ? (
           <>
-            {hasFields && !shouldShowMissingBedsHint ? (
+            {showContextMenuHint ? (
               <Box sx={{ mb: 1.25 }}>
                 <ContextMenuHint
                   message={t('hierarchy:messages.contextMenuTableHint')}
                   secondary={t('hierarchy:messages.contextMenuHintKeyboard')}
+                  onClose={closeContextMenuHint}
                 />
               </Box>
             ) : null}
