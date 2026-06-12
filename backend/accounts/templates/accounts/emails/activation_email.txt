@@ -6,7 +6,7 @@ Bitte bestätige deine Registrierung über den folgenden Link:
 
 {{ activation_link|safe }}
 
-OpenFarmPlanner ist eine Open-Source-Webanwendung zur Planung von Gemüsebau und CSA-Anbau.
+OpenFarmPlanner ist eine Open-Source-Webanwendung für die Planung von Gemüseanbau.
 
 Falls du kein Konto erstellt hast, kannst du diese E-Mail ignorieren.
 
