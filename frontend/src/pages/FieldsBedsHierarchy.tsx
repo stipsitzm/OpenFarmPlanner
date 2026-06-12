@@ -31,6 +31,7 @@ import type {
   GridRowId,
   GridRowsProp,
   GridRowModesModel,
+  MuiEvent,
 } from "@mui/x-data-grid";
 import { Box, Alert, useMediaQuery } from "@mui/material";
 import Divider from "@mui/material/Divider";
@@ -1951,8 +1952,8 @@ function FieldsBedsHierarchy({
                 setTreeActive(true);
                 handleEditableCellClick(params, rowModesModel, setRowModesModel);
               }}
-              onCellKeyDown={(params: GridCellParams<HierarchyRow>, event: React.KeyboardEvent) => {
-                const keyboardEvent = event as React.KeyboardEvent & { defaultMuiPrevented?: boolean };
+              onCellKeyDown={(params: GridCellParams<HierarchyRow>, event) => {
+                const keyboardEvent = event as MuiEvent<React.KeyboardEvent>;
                 if (
                   keyboardEvent.key === "Escape" &&
                   rowModesModel[params.id]?.mode === GridRowModes.Edit
