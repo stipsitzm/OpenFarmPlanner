@@ -84,7 +84,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
-          mui: ['@mui/material', '@mui/icons-material', '@mui/x-data-grid'],
+          mui: ['@mui/material'],
+          muiIcons: ['@mui/icons-material'],
           i18n: ['i18next', 'react-i18next'],
         },
       },
