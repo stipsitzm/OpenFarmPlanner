@@ -8,7 +8,9 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
-import { useOutletContext, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useTranslation } from '../i18n';
 import {
   Alert,
@@ -42,9 +44,7 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import type { CommandSpec } from '../commands/types';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import { extractApiErrorMessage } from '../api/errors';
-import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import EmptyStateCard from '../components/project/EmptyStateCard';
-import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { AuthContext } from '../auth/authContextShared';
 import {
   buildFieldOccupancyTaskGroups,
@@ -80,6 +80,13 @@ interface WeeklyYieldChartColumn {
 type CalendarMode = 'occupancy' | 'seedlings';
 
 const CALENDAR_VIEW_STORAGE_KEY = 'openFarmPlanner.ganttChart.view';
+const GANTT_HEADER_VIEW_MODES = [
+  ViewMode.DAY,
+  ViewMode.WEEK,
+  ViewMode.MONTH,
+  ViewMode.QUARTER,
+  ViewMode.YEAR,
+] as const;
 
 function getCalendarModeFromViewParam(viewParam: string | null): CalendarMode {
   return viewParam === 'seedlings' ? 'seedlings' : 'occupancy';
@@ -180,8 +187,6 @@ function GanttChartPage() {
         : 'occupancy';
   });
   const [editMode, setEditMode] = useState(false);
-  const outletContext = useOutletContext<RootLayoutOutletContext | null>();
-  const setTopbarContextActions = outletContext?.setTopbarContextActions;
 
   useEffect(() => {
     const viewParam = searchParams.get('view');
@@ -241,36 +246,6 @@ function GanttChartPage() {
   ], [calendarMode, editMode]);
 
   useRegisterCommands('calendar-page', calendarCommands);
-
-  const topbarActions = useMemo<TopbarContextAction[]>(() => [
-    {
-      id: 'calendar-mode-view',
-      label: t('ganttChart:modeViewOption', { defaultValue: 'Ansicht' }),
-      icon: '👁️',
-      active: calendarMode === 'occupancy' && !editMode,
-      hidden: calendarMode !== 'occupancy',
-      groupId: 'calendar-mode',
-      tooltip: 'Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.',
-      onClick: () => {
-        handleCalendarModeChange('occupancy');
-        setEditMode(false);
-      },
-    },
-    {
-      id: 'calendar-mode-edit',
-      label: t('ganttChart:modeEditOption', { defaultValue: 'Bearbeiten' }),
-      icon: '✏️',
-      active: calendarMode === 'occupancy' && editMode,
-      hidden: calendarMode !== 'occupancy',
-      groupId: 'calendar-mode',
-      tooltip: 'Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.',
-      onClick: () => {
-        handleCalendarModeChange('occupancy');
-        setEditMode(true);
-      },
-    },
-  ], [calendarMode, editMode, handleCalendarModeChange, t]);
-  useTopbarContextActions(setTopbarContextActions, topbarActions);
 
   const currentYear = new Date().getFullYear();
   const [displayYear] = useState(currentYear);
@@ -436,6 +411,89 @@ function GanttChartPage() {
       [ViewMode.YEAR]: t('ganttChart:chartLocaleText.viewModes.year'),
     },
   }), [calendarMode, t]);
+  const renderGanttHeader = useCallback(({
+    title,
+    viewMode,
+    onViewModeChange,
+    showViewModeSelector,
+  }: {
+    title: string;
+    viewMode: ViewMode;
+    onViewModeChange: (mode: ViewMode) => void;
+    showViewModeSelector: boolean;
+  }) => (
+    <Box className="rmg-header">
+      <Box
+        className="rmg-header-content"
+        sx={{
+          gap: 1.5,
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          flexDirection: { xs: 'column', sm: 'row' },
+        }}
+      >
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+          <Typography component="h1" className="rmg-title" sx={{ minWidth: 0 }}>
+            {title}
+          </Typography>
+          {calendarMode === 'occupancy' ? (
+            <Tooltip title={editMode ? t('ganttChart:modeEditActiveTooltip') : t('ganttChart:modeEditTooltip')}>
+              <Button
+                size="small"
+                variant={editMode ? 'contained' : 'outlined'}
+                color={editMode ? 'success' : 'inherit'}
+                aria-pressed={editMode}
+                onClick={() => setEditMode((value) => !value)}
+                startIcon={
+                  editMode
+                    ? <CheckCircleOutlineIcon fontSize="small" />
+                    : <EditOutlinedIcon fontSize="small" />
+                }
+                sx={{
+                  flexShrink: 0,
+                  textTransform: 'none',
+                  whiteSpace: 'nowrap',
+                  ...(editMode
+                    ? {}
+                    : {
+                      borderColor: 'success.main',
+                      color: 'success.dark',
+                      bgcolor: 'background.paper',
+                      '&:hover': {
+                        borderColor: 'success.dark',
+                        bgcolor: 'success.50',
+                      },
+                    }),
+                }}
+              >
+                {editMode ? t('ganttChart:modeEditActiveOption') : t('ganttChart:modeEditOption')}
+              </Button>
+            </Tooltip>
+          ) : null}
+        </Box>
+        {showViewModeSelector ? (
+          <ButtonGroup
+            size="small"
+            variant="outlined"
+            sx={segmentedButtonGroupSx}
+            aria-label={t('ganttChart:chartLocaleText.titleOccupancy')}
+          >
+            {GANTT_HEADER_VIEW_MODES.map((mode) => (
+              <Button
+                key={mode}
+                onClick={() => onViewModeChange(mode)}
+                aria-pressed={viewMode === mode}
+                variant={viewMode === mode ? 'contained' : 'outlined'}
+                color={viewMode === mode ? 'success' : 'inherit'}
+                sx={getSegmentedActionButtonSx({ active: viewMode === mode })}
+              >
+                {t(`ganttChart:chartLocaleText.viewModes.${mode}`)}
+              </Button>
+            ))}
+          </ButtonGroup>
+        ) : null}
+      </Box>
+    </Box>
+  ), [calendarMode, editMode, t]);
 
   const activeTaskGroups = calendarMode === 'occupancy' ? occupancyTaskGroups : seedlingTaskGroups;
   const hasFields = fields.length > 0;
@@ -651,10 +709,11 @@ function GanttChartPage() {
                 endDate={endDate}
                 editMode={calendarMode === 'occupancy' ? editMode : false}
                 allowTaskResize={false}
-                allowTaskMove={calendarMode === 'occupancy'}
+                allowTaskMove={calendarMode === 'occupancy' && editMode}
                 showProgress={false}
                 darkMode={false}
-                onTaskUpdate={calendarMode === 'occupancy' ? handleTaskUpdate : undefined}
+                onTaskUpdate={calendarMode === 'occupancy' && editMode ? handleTaskUpdate : undefined}
+                renderHeader={renderGanttHeader}
                 renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
                   ? renderSeedlingTooltip({ task })
                   : renderOccupancyTooltip({ task }))}

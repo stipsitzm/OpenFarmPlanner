@@ -61,14 +61,31 @@ vi.mock('react-modern-gantt', () => ({
     tasks: Array<{ name: string; tasks: Array<Record<string, unknown> & { id: string; name: string }> }>;
     renderTooltip?: ({ task }: { task: Record<string, unknown> }) => ReactNode;
     onTaskUpdate?: (groupId: string, task: { id: string; startDate: Date }) => void | Promise<void>;
+    editMode?: boolean;
+    allowTaskMove?: boolean;
+    renderHeader?: (props: {
+      title: string;
+      darkMode: boolean;
+      viewMode: string;
+      onViewModeChange: (mode: string) => void;
+      showViewModeSelector: boolean;
+    }) => ReactNode;
+    viewMode?: string;
     locale?: string;
-    localeText?: Record<string, unknown>;
+    localeText?: { title?: string } & Record<string, unknown>;
   }) => {
     mocks.ganttProps(props);
     const firstTask = props.tasks[0]?.tasks[0];
     const firstGroupName = props.tasks[0]?.name ?? '';
     return (
       <div data-testid="mock-gantt">
+        {props.renderHeader?.({
+          title: props.localeText?.title ?? 'Project Timeline',
+          darkMode: false,
+          viewMode: props.viewMode ?? 'month',
+          onViewModeChange: vi.fn(),
+          showViewModeSelector: true,
+        })}
         {firstTask && props.onTaskUpdate ? (
           <button
             type="button"
@@ -241,11 +258,8 @@ describe('GanttChartPage', () => {
 
     await waitFor(() => expect(screen.getByText('Feldbelegung')).toBeInTheDocument());
     expect(screen.queryByText(/Belegung von Parzellen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
-    await waitFor(() => expect(topbarContext.latestActions.length).toBeGreaterThan(0));
-    const viewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { hidden?: boolean } | undefined;
-    const editAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { hidden?: boolean } | undefined;
-    expect(viewAction?.hidden).toBe(false);
-    expect(editAction?.hidden).toBe(false);
+    expect(topbarContext.latestActions).toEqual([]);
+    expect(screen.getByRole('button', { name: 'Bearbeiten' })).toBeInTheDocument();
     expect(screen.getByText('Feld / Beet 1')).toBeInTheDocument();
     expect(screen.queryByText('Hof / Feld / Beet 1')).not.toBeInTheDocument();
     expect(mocks.ganttProps).toHaveBeenCalled();
@@ -256,6 +270,9 @@ describe('GanttChartPage', () => {
       resources: 'Beete',
       today: 'Heute',
     });
+    expect(latestProps?.editMode).toBe(false);
+    expect(latestProps?.allowTaskMove).toBe(false);
+    expect(latestProps?.onTaskUpdate).toBeUndefined();
   });
 
   it('switches to the seedling view and shows the seedling rows', async () => {
@@ -308,10 +325,7 @@ describe('GanttChartPage', () => {
     expect(screen.queryByText('Fläche: 8,00 m²')).not.toBeInTheDocument();
     expect(screen.getByText('Gesamtpflanzen: 24')).toBeInTheDocument();
     expect(screen.getByText('Anzahl Anbaupläne: 1')).toBeInTheDocument();
-    const seedlingViewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { hidden?: boolean } | undefined;
-    const seedlingEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { hidden?: boolean } | undefined;
-    expect(seedlingViewAction?.hidden).toBe(true);
-    expect(seedlingEditAction?.hidden).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
     expect(latestProps?.localeText).toMatchObject({
       title: 'Anzuchtplanung',
@@ -345,16 +359,16 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(topbarContext.latestActions.length).toBeGreaterThan(0));
-    const beforeEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { active?: boolean } | undefined;
-    expect(beforeEditAction?.active).toBe(false);
+    expect(await screen.findByRole('button', { name: 'Bearbeiten' })).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.keyDown(window, { key: 'e', altKey: true });
 
     await waitFor(() => {
-      const afterEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { active?: boolean } | undefined;
-      expect(afterEditAction?.active).toBe(true);
+      expect(screen.getByRole('button', { name: 'Bearbeiten aktiv' })).toHaveAttribute('aria-pressed', 'true');
     });
+    const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
+    expect(latestProps?.editMode).toBe(true);
+    expect(latestProps?.allowTaskMove).toBe(true);
   });
 
   it('fills empty yield weeks between available week entries', async () => {
@@ -445,12 +459,7 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(topbarContext.latestActions.length).toBeGreaterThan(0));
-    const viewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { tooltip?: string } | undefined;
-    const editAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { tooltip?: string } | undefined;
-
-    expect(viewAction?.tooltip).toBe('Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.');
-    expect(editAction?.tooltip).toBe('Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.');
+    expect(await screen.findByRole('button', { name: 'Bearbeiten' })).toBeInTheDocument();
   });
 
   it('shows backend validation errors and reloads plans after failed task update', async () => {
@@ -489,6 +498,9 @@ describe('GanttChartPage', () => {
     );
 
     await screen.findByText('Feld / Beet 1');
+    expect(screen.queryByTestId('mock-update-task')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    await screen.findByTestId('mock-update-task');
     fireEvent.click(screen.getByTestId('mock-update-task'));
 
     expect(await screen.findByText('Fläche (m²): Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten.')).toBeInTheDocument();
@@ -522,6 +534,9 @@ describe('GanttChartPage', () => {
     );
 
     await screen.findByText('Feld / Beet 1');
+    expect(screen.queryByTestId('mock-update-task')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Bearbeiten' }));
+    await screen.findByTestId('mock-update-task');
     fireEvent.click(screen.getByTestId('mock-update-task'));
 
     await waitFor(() => expect(mocks.planUpdate).toHaveBeenCalledTimes(1));
