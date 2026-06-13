@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import { useTranslation } from '../i18n';
@@ -46,7 +46,9 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import type { CommandSpec } from '../commands/types';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import { extractApiErrorMessage } from '../api/errors';
+import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import EmptyStateCard from '../components/project/EmptyStateCard';
+import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { AuthContext } from '../auth/authContextShared';
 import {
   buildFieldOccupancyTaskGroups,
@@ -189,6 +191,8 @@ function GanttChartPage() {
         : 'occupancy';
   });
   const [editMode, setEditMode] = useState(false);
+  const outletContext = useOutletContext<RootLayoutOutletContext | null>();
+  const setTopbarContextActions = outletContext?.setTopbarContextActions;
 
   useEffect(() => {
     const viewParam = searchParams.get('view');
@@ -578,6 +582,26 @@ function GanttChartPage() {
   const requirementActions = firstMissingRequirement
     ? getProjectSetupActions(firstMissingRequirement)
     : [];
+  const viewModeActions = useMemo<TopbarContextAction[]>(() => (hasCalendarRequirements ? [
+    {
+      id: 'calendar-view-mode-occupancy',
+      label: t('ganttChart:modes.occupancy'),
+      ariaLabel: t('ganttChart:modes.occupancy'),
+      onClick: () => handleCalendarModeChange('occupancy'),
+      active: calendarMode === 'occupancy',
+      groupId: 'calendar-view-mode',
+      tooltip: t('ganttChart:modeTooltips.occupancy'),
+    },
+    {
+      id: 'calendar-view-mode-seedlings',
+      label: t('ganttChart:modes.seedlings'),
+      ariaLabel: t('ganttChart:modes.seedlings'),
+      onClick: () => handleCalendarModeChange('seedlings'),
+      active: calendarMode === 'seedlings',
+      groupId: 'calendar-view-mode',
+      tooltip: t('ganttChart:modeTooltips.seedlings'),
+    },
+  ] : []), [calendarMode, handleCalendarModeChange, hasCalendarRequirements, t]);
   const requirementEmptyStateTitleKey = firstMissingRequirement === 'cultures'
     ? 'ganttChart:emptyStates.states.cultures.title'
     : firstMissingRequirement === 'plans'
@@ -673,6 +697,8 @@ function GanttChartPage() {
   }, [weeklyYield]);
   const hasYieldData = chartData.length > 0;
 
+  useTopbarContextActions(setTopbarContextActions, viewModeActions);
+
   const yAxisTicks = useMemo(() => {
     const tickCount = 5;
     if (maxTotalYield <= 0) {
@@ -708,45 +734,6 @@ function GanttChartPage() {
   return (
     <PageContainer variant="workspacePage">
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-        {hasCalendarRequirements ? (
-          <Box sx={{ mb: 1, display: 'flex', justifyContent: 'flex-start' }}>
-            <ButtonGroup
-              size="small"
-              variant="outlined"
-              sx={segmentedButtonGroupSx}
-              aria-label={t('ganttChart:modeAriaLabel')}
-            >
-              {([
-                {
-                  mode: 'occupancy' as const,
-                  label: t('ganttChart:modes.occupancy'),
-                  tooltip: t('ganttChart:modeTooltips.occupancy'),
-                },
-                {
-                  mode: 'seedlings' as const,
-                  label: t('ganttChart:modes.seedlings'),
-                  tooltip: t('ganttChart:modeTooltips.seedlings'),
-                },
-              ]).map(({ mode, label, tooltip }) => {
-                const active = calendarMode === mode;
-                return (
-                  <Tooltip key={mode} title={tooltip} arrow describeChild enterTouchDelay={0}>
-                    <Button
-                      onClick={() => handleCalendarModeChange(mode)}
-                      aria-pressed={active}
-                      variant={active ? 'contained' : 'outlined'}
-                      color={active ? 'success' : 'inherit'}
-                      sx={getSegmentedActionButtonSx({ active })}
-                    >
-                      {label}
-                    </Button>
-                  </Tooltip>
-                );
-              })}
-            </ButtonGroup>
-          </Box>
-        ) : null}
 
         {!hasCalendarRequirements ? (
           <PageSurface variant="fullWorkspace" sx={{ mt: 0.5 }}>

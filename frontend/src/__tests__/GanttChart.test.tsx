@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act } from 'react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -27,6 +28,23 @@ const OCCUPANCY_MODE_TOOLTIP =
   'Zeigt die Belegung der Beete über das Jahr. Die dargestellten Zeiträume werden aus den Anbauplänen und den kulturspezifischen Zeitangaben (z. B. Aussaat, Pflanzung und Ernte) berechnet.';
 const PROPAGATION_MODE_TOOLTIP =
   'Zeigt die Anzuchtphase der Kulturen vor der Pflanzung. Die dargestellten Zeiträume werden aus den Anbauplänen sowie den kulturspezifischen Angaben zur Anzuchtdauer berechnet.';
+
+interface TestTopbarAction {
+  id: string;
+  label: string;
+  active?: boolean;
+  groupId?: string;
+  tooltip?: string;
+  onClick: () => void;
+}
+
+const getTopbarAction = (id: string): TestTopbarAction => {
+  const action = topbarContext.latestActions.find((item) => item.id === id) as TestTopbarAction | undefined;
+  if (!action) {
+    throw new Error(`Missing topbar action: ${id}`);
+  }
+  return action;
+};
 
 vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
@@ -260,9 +278,21 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(screen.getByText('Feldbelegung')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Feldplanung')).toBeInTheDocument());
     expect(screen.queryByText(/Belegung von Parzellen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
-    expect(topbarContext.latestActions).toEqual([]);
+    await waitFor(() => expect(topbarContext.latestActions).toHaveLength(2));
+    expect(getTopbarAction('calendar-view-mode-occupancy')).toMatchObject({
+      label: 'Feldbelegung',
+      active: true,
+      groupId: 'calendar-view-mode',
+      tooltip: OCCUPANCY_MODE_TOOLTIP,
+    });
+    expect(getTopbarAction('calendar-view-mode-seedlings')).toMatchObject({
+      label: 'Anzucht',
+      active: false,
+      groupId: 'calendar-view-mode',
+      tooltip: PROPAGATION_MODE_TOOLTIP,
+    });
     expect(screen.getByRole('button', { name: 'Zeitraum verschieben' })).toBeInTheDocument();
     expect(screen.getByText('Feld / Beet 1')).toBeInTheDocument();
     expect(screen.queryByText('Hof / Feld / Beet 1')).not.toBeInTheDocument();
@@ -317,8 +347,10 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(screen.getByText('Anzucht')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'Anzucht' }));
+    await waitFor(() => expect(topbarContext.latestActions).toHaveLength(2));
+    act(() => {
+      getTopbarAction('calendar-view-mode-seedlings').onClick();
+    });
 
     await waitFor(() => expect(screen.getAllByText('Tomate').length).toBeGreaterThan(0));
     expect(screen.queryByText('Standort: Hof / Feld')).not.toBeInTheDocument();
@@ -438,7 +470,7 @@ describe('GanttChartPage', () => {
     expect(await screen.findByText('Fehler beim Laden der Daten')).toBeInTheDocument();
   });
 
-  it('shows helpful mode tooltips from the mode tabs', async () => {
+  it('registers helpful mode tooltips for the topbar mode actions', async () => {
     mocks.planList.mockResolvedValue({
       data: {
         results: [
@@ -465,14 +497,9 @@ describe('GanttChartPage', () => {
 
     expect(await screen.findByRole('button', { name: 'Zeitraum verschieben' })).toBeInTheDocument();
 
-    const occupancyTab = screen.getByRole('button', { name: 'Feldbelegung' });
-    fireEvent.mouseOver(occupancyTab);
-    expect(await screen.findByText(OCCUPANCY_MODE_TOOLTIP)).toBeInTheDocument();
-
-    const seedlingTab = screen.getByRole('button', { name: 'Anzucht' });
-    fireEvent.mouseLeave(occupancyTab);
-    fireEvent.mouseOver(seedlingTab);
-    expect(await screen.findByText(PROPAGATION_MODE_TOOLTIP)).toBeInTheDocument();
+    await waitFor(() => expect(topbarContext.latestActions).toHaveLength(2));
+    expect(getTopbarAction('calendar-view-mode-occupancy').tooltip).toBe(OCCUPANCY_MODE_TOOLTIP);
+    expect(getTopbarAction('calendar-view-mode-seedlings').tooltip).toBe(PROPAGATION_MODE_TOOLTIP);
   });
 
   it('shows backend validation errors and reloads plans after failed task update', async () => {
