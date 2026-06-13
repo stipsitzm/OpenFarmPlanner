@@ -259,7 +259,7 @@ describe('GanttChartPage', () => {
     await waitFor(() => expect(screen.getByText('Feldbelegung')).toBeInTheDocument());
     expect(screen.queryByText(/Belegung von Parzellen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
     expect(topbarContext.latestActions).toEqual([]);
-    expect(screen.getByRole('button', { name: 'Verschieben' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Zeitraum verschieben' })).toBeInTheDocument();
     expect(screen.getByText('Feld / Beet 1')).toBeInTheDocument();
     expect(screen.queryByText('Hof / Feld / Beet 1')).not.toBeInTheDocument();
     expect(mocks.ganttProps).toHaveBeenCalled();
@@ -325,7 +325,7 @@ describe('GanttChartPage', () => {
     expect(screen.queryByText('Fläche: 8,00 m²')).not.toBeInTheDocument();
     expect(screen.getByText('Gesamtpflanzen: 24')).toBeInTheDocument();
     expect(screen.getByText('Anzahl Anbaupläne: 1')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Verschieben' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Zeitraum verschieben' })).not.toBeInTheDocument();
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
     expect(latestProps?.localeText).toMatchObject({
       title: 'Anzuchtplanung',
@@ -359,12 +359,12 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('button', { name: 'Verschieben' })).toHaveAttribute('aria-pressed', 'false');
+    expect(await screen.findByRole('button', { name: 'Zeitraum verschieben' })).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.keyDown(window, { key: 'e', altKey: true });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Verschieben aktiv' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Zeitraum verschieben aktiv' })).toHaveAttribute('aria-pressed', 'true');
     });
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
     expect(latestProps?.editMode).toBe(true);
@@ -459,7 +459,7 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('button', { name: 'Verschieben' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Zeitraum verschieben' })).toBeInTheDocument();
   });
 
   it('shows backend validation errors and reloads plans after failed task update', async () => {
@@ -499,7 +499,7 @@ describe('GanttChartPage', () => {
 
     await screen.findByText('Feld / Beet 1');
     expect(screen.queryByTestId('mock-update-task')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Verschieben' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zeitraum verschieben' }));
     await screen.findByTestId('mock-update-task');
     fireEvent.click(screen.getByTestId('mock-update-task'));
 
@@ -535,7 +535,7 @@ describe('GanttChartPage', () => {
 
     await screen.findByText('Feld / Beet 1');
     expect(screen.queryByTestId('mock-update-task')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Verschieben' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zeitraum verschieben' }));
     await screen.findByTestId('mock-update-task');
     fireEvent.click(screen.getByTestId('mock-update-task'));
 

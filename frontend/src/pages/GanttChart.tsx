@@ -10,7 +10,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import OpenWithIcon from '@mui/icons-material/OpenWith';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import { useTranslation } from '../i18n';
 import {
   Alert,
@@ -448,7 +448,7 @@ function GanttChartPage() {
                 startIcon={
                   editMode
                     ? <CheckCircleOutlineIcon fontSize="small" />
-                    : <OpenWithIcon fontSize="small" />
+                    : <SwapHorizIcon fontSize="small" />
                 }
                 sx={{
                   flexShrink: 0,
