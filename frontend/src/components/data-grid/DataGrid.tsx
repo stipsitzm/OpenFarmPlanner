@@ -76,6 +76,7 @@ export interface EditableDataGridCommandApi {
   addRow: () => void;
   editSelectedRow: () => void;
   deleteSelectedRow: () => void;
+  deleteRow: (rowId: GridRowId) => void;
   getSelectedRowId: () => GridRowId | null;
   setDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => Promise<void>;
   commitDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => Promise<void>;
@@ -387,6 +388,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const rowActionMenuOriginRef = useRef<HTMLElement | null>(null);
   const [pendingDeleteWithUndo, setPendingDeleteWithUndo] = useState<PendingDeleteWithUndo<T>[]>([]);
   const pendingDeleteTimersRef = useRef<Map<string, number>>(new Map());
+  const deleteRowCommandRef = useRef<(rowId: GridRowId) => void>(() => undefined);
   const rowActionLongPressTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const rowSnapshotRef = useRef<Map<string, T>>(new Map());
   const canceledRowIdsRef = useRef<Set<string>>(new Set());
@@ -1303,6 +1305,7 @@ export function EditableDataGrid<T extends EditableRow>({
       addRow: handleAddClick,
       editSelectedRow: handleEditSelectedRow,
       deleteSelectedRow: handleDeleteSelectedRow,
+      deleteRow: (rowId) => deleteRowCommandRef.current(rowId),
       getSelectedRowId: () => selectedRowIds[0] ?? null,
       setDraftValues: async (rowId, values) => {
         await applyDraftValues(rowId, values as Partial<T>);
@@ -1412,6 +1415,10 @@ export function EditableDataGrid<T extends EditableRow>({
     rowsById,
     stableRowOrder,
   ]);
+
+  useEffect(() => {
+    deleteRowCommandRef.current = (rowId) => handleDeleteClick(rowId)();
+  }, [handleDeleteClick]);
 
   const handleStartRowEdit = useCallback((rowId: GridRowId, field?: string): void => {
     const rowKey = String(rowId);

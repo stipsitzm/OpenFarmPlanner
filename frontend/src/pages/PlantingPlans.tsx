@@ -7,8 +7,8 @@
  * @returns The Planting Plans page component
  */
 
-import { memo, useCallback, useState, useEffect, useMemo, useRef } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { memo, useCallback, useState, useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from "react";
+import { useLocation, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import type {
   GridCellParams,
   GridColDef,
@@ -24,8 +24,13 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
+  IconButton,
   InputLabel,
+  ListItemIcon,
+  ListItemText,
+  Menu,
   MenuItem,
   Select,
   Snackbar,
@@ -37,6 +42,9 @@ import {
   useTheme,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import DeleteIcon from "@mui/icons-material/Delete";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTranslation } from "../i18n";
 import {
@@ -73,7 +81,11 @@ import {
   type DataGridAPI,
   type SearchableSelectOption,
   type EditableDataGridCommandApi,
+  buildTsv,
+  copyTextToClipboard,
+  formatClipboardValue,
   getPlainExcerpt,
+  showClipboardSnackbar,
 } from "../components/data-grid";
 import { MobileCardList } from "../components/mobile/MobileCardList";
 import { NotesDrawer } from "../components/data-grid/NotesDrawer";
@@ -90,6 +102,8 @@ import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmen
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
 import { collectHierarchyAvailability } from "../components/planting-plans/areaHierarchySelection";
 import EmptyStateCard from "../components/project/EmptyStateCard";
+import type { RootLayoutOutletContext, TopbarContextAction } from "../App";
+import { useTopbarContextActions } from "../hooks/useTopbarContextActions";
 
 export {
   collectHierarchyAvailability,
@@ -528,6 +542,8 @@ function PlantingPlans() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const outletContext = useOutletContext<RootLayoutOutletContext | null>();
+  const setTopbarContextActions = outletContext?.setTopbarContextActions;
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
@@ -561,6 +577,8 @@ function PlantingPlans() {
   const [mobileNotesTarget, setMobileNotesTarget] = useState<PlantingPlanRow | null>(null);
   const [mobileNotesDraft, setMobileNotesDraft] = useState("");
   const [isMobileNotesSaving, setIsMobileNotesSaving] = useState(false);
+  const [mobileActionMenuAnchor, setMobileActionMenuAnchor] = useState<HTMLElement | null>(null);
+  const [mobileActionMenuRow, setMobileActionMenuRow] = useState<PlantingPlanRow | null>(null);
   const [showContextMenuHint, setShowContextMenuHint] = useState(false);
   const mobilePrefillHandledRef = useRef(false);
   const createIntentHandledRef = useRef(false);
@@ -1488,6 +1506,49 @@ function PlantingPlans() {
     t,
   ]);
 
+  const getClipboardRowValues = useCallback((row: PlantingPlanRow): string[] => (
+    clipboardColumns.map((column) => (
+      column.getValue
+        ? column.getValue(row)
+        : formatClipboardValue(row[column.field as keyof PlantingPlanRow])
+    ))
+  ), [clipboardColumns]);
+
+  const getClipboardTableRows = useCallback((): string[][] => [
+    clipboardColumns.map((column) => column.headerName),
+    ...getVisibleMobileRows(mobileRows).map(getClipboardRowValues),
+  ], [clipboardColumns, getClipboardRowValues, mobileRows]);
+
+  const copyClipboardRows = useCallback(async (
+    rows: readonly string[][],
+    successMessage: string,
+  ): Promise<void> => {
+    try {
+      await copyTextToClipboard(buildTsv(rows));
+      showClipboardSnackbar({ message: successMessage, severity: "success" });
+    } catch (error) {
+      console.error("Error copying planting plan data", error);
+      showClipboardSnackbar({
+        message: t("common:messages.copyError"),
+        severity: "error",
+      });
+    }
+  }, [t]);
+
+  const handleCopyPlantingPlan = useCallback((row: PlantingPlanRow): void => {
+    void copyClipboardRows(
+      [getClipboardRowValues(row)],
+      t("plantingPlans:messages.plantingPlanCopied"),
+    );
+  }, [copyClipboardRows, getClipboardRowValues, t]);
+
+  const handleCopyAllPlantingPlans = useCallback((): void => {
+    void copyClipboardRows(
+      getClipboardTableRows(),
+      t("plantingPlans:messages.allPlantingPlansCopied"),
+    );
+  }, [copyClipboardRows, getClipboardTableRows, t]);
+
   const formatNumberForInput = (
     value: number,
     options?: Intl.NumberFormatOptions,
@@ -1548,6 +1609,20 @@ function PlantingPlans() {
     setMobileNotesTarget(row);
     setMobileNotesDraft(row.notes || "");
     setIsMobileNotesOpen(true);
+  };
+
+  const openMobileActionMenu = (
+    event: ReactMouseEvent<HTMLElement>,
+    row: PlantingPlanRow,
+  ): void => {
+    event.stopPropagation();
+    setMobileActionMenuAnchor(event.currentTarget);
+    setMobileActionMenuRow(row);
+  };
+
+  const closeMobileActionMenu = (): void => {
+    setMobileActionMenuAnchor(null);
+    setMobileActionMenuRow(null);
   };
 
   const closeMobileNotesDialog = (): void => {
@@ -1812,6 +1887,31 @@ function PlantingPlans() {
     setIsMobileCreateOpen(true);
   };
 
+  const openMobileDuplicateDialog = (row: PlantingPlanRow): void => {
+    const derivedArea = getDerivedAreaFromRow(row);
+    setMobileCreateError("");
+    setMobileEditId(null);
+    setMobileCreateForm({
+      culture: String(row.culture ?? ""),
+      bed: String(row.bed ?? ""),
+      cultivation_type: (row.cultivation_type as CultivationType) || "",
+      planting_date: row.planting_date || "",
+      area_m2:
+        derivedArea !== null
+          ? formatNumberForInput(derivedArea, { maximumFractionDigits: 2 })
+          : "",
+      plants_count:
+        typeof row.plants_count === "number"
+          ? formatNumberForInput(Math.round(row.plants_count), {
+              maximumFractionDigits: 0,
+            })
+          : "",
+      notes: row.notes || "",
+    });
+    setMobileLastEditedField(null);
+    setIsMobileCreateOpen(true);
+  };
+
   const handleMobileUpdate = async (): Promise<void> => {
     if (!mobileEditId || !validateMobileForm()) {
       return;
@@ -1875,6 +1975,18 @@ function PlantingPlans() {
     }
     gridCommandApiRef.current?.addRow();
   }, [isMobile, openMobileCreateDialog]);
+
+  const contextActions = useMemo<TopbarContextAction[]>(() => ([
+    {
+      id: "planting-plans-copy-all",
+      label: t("plantingPlans:actions.copyAllPlantingPlans"),
+      ariaLabel: t("plantingPlans:actions.copyAllPlantingPlans"),
+      onClick: handleCopyAllPlantingPlans,
+      disabled: !hasPlans,
+    },
+  ]), [handleCopyAllPlantingPlans, hasPlans, t]);
+
+  useTopbarContextActions(setTopbarContextActions, contextActions);
 
   const createActions = useMemo(() => [
     {
@@ -1982,6 +2094,23 @@ function PlantingPlans() {
               onToggleExpanded={toggleCardExpanded}
               renderPrimary={(item) => getCultureLabel(item)}
               renderSecondary={(item) => `${formatDateForDisplay(item.planting_date)} · ${getBedLabel(item)}`}
+              renderHeaderAction={(item) => (
+                <Tooltip title={t("common:actions.actions")}>
+                  <IconButton
+                    size="small"
+                    aria-label={t("plantingPlans:mobile.actionsAria", {
+                      plan: getCultureLabel(item),
+                    })}
+                    aria-controls={mobileActionMenuAnchor ? "planting-plan-mobile-actions-menu" : undefined}
+                    aria-haspopup="menu"
+                    aria-expanded={Boolean(mobileActionMenuAnchor && mobileActionMenuRow?.id === item.id)}
+                    onClick={(event) => openMobileActionMenu(event, item)}
+                    sx={{ width: 36, height: 36 }}
+                  >
+                    <MoreVertIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
               renderDetails={(item) => (
                 <Stack spacing={0.75}>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.cultivationType")}:</strong> {t(`plantingPlans:cultivationTypes.${item.cultivation_type === "direct_sowing" ? "directSowing" : "preCultivation"}`)}</Typography>
@@ -1996,16 +2125,6 @@ function PlantingPlans() {
               )}
               renderActions={(item) => (
                 <Stack direction="row" spacing={1} flexWrap="wrap">
-                  <Button
-                    variant="outlined"
-                    startIcon={<EditIcon />}
-                    size="small"
-                    onClick={() => openMobileEditDialog(item)}
-                    aria-label={t("plantingPlans:mobile.editAria")}
-                    sx={{ minWidth: "auto" }}
-                  >
-                    {t("common:actions.edit")}
-                  </Button>
                   <Button
                     variant="outlined"
                     startIcon={<PhotoCameraOutlinedIcon />}
@@ -2034,6 +2153,69 @@ function PlantingPlans() {
                 </Box>
               )}
             />
+            <Menu
+              id="planting-plan-mobile-actions-menu"
+              anchorEl={mobileActionMenuAnchor}
+              open={Boolean(mobileActionMenuAnchor)}
+              onClose={closeMobileActionMenu}
+            >
+              <MenuItem
+                onClick={() => {
+                  if (mobileActionMenuRow) {
+                    openMobileEditDialog(mobileActionMenuRow);
+                  }
+                  closeMobileActionMenu();
+                }}
+              >
+                <ListItemIcon>
+                  <EditIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary={t("common:actions.edit")} />
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  if (mobileActionMenuRow) {
+                    openMobileDuplicateDialog(mobileActionMenuRow);
+                  }
+                  closeMobileActionMenu();
+                }}
+              >
+                <ListItemIcon>
+                  <ContentCopyIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary={t("common:actions.duplicate")} />
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  if (mobileActionMenuRow) {
+                    handleCopyPlantingPlan(mobileActionMenuRow);
+                  }
+                  closeMobileActionMenu();
+                }}
+              >
+                <ListItemIcon>
+                  <ContentCopyIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary={t("plantingPlans:actions.copyPlantingPlan")} />
+              </MenuItem>
+              <Divider role="separator" />
+              <MenuItem
+                onClick={() => {
+                  if (mobileActionMenuRow) {
+                    gridCommandApiRef.current?.deleteRow(mobileActionMenuRow.id);
+                  }
+                  closeMobileActionMenu();
+                }}
+              >
+                <ListItemIcon sx={{ color: "error.main" }}>
+                  <DeleteIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText
+                  primary={t("common:actions.delete")}
+                  primaryTypographyProps={{ color: "error.main" }}
+                />
+              </MenuItem>
+            </Menu>
           </Box>
         ) : null}
 

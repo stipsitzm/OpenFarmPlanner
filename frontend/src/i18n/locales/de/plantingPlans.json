@@ -20,7 +20,9 @@
   },
   "actions": {
     "useAvailableArea": "Restfläche übernehmen",
-    "useBedArea": "Beetfläche übernehmen"
+    "useBedArea": "Beetfläche übernehmen",
+    "copyPlantingPlan": "Anbauplan kopieren",
+    "copyAllPlantingPlans": "Alle Anbaupläne kopieren"
   },
   "feedback": {
     "areaAutoFilled": "Verfügbare Restfläche automatisch verwendet: {{area}}"
@@ -56,7 +58,9 @@
     "delete": "Fehler beim Löschen des Anbauplans"
   },
   "messages": {
-    "deleted": "Anbauplan gelöscht"
+    "deleted": "Anbauplan gelöscht",
+    "plantingPlanCopied": "Anbauplan kopiert.",
+    "allPlantingPlansCopied": "Alle Anbaupläne kopiert."
   },
   "validation": {
     "plantingDateRequired": "Pflanzdatum ist ein Pflichtfeld",
@@ -99,6 +103,7 @@
     "createTitle": "Anbauplan hinzufügen",
     "editTitle": "Anbauplan bearbeiten",
     "editAria": "Anbauplan bearbeiten",
+    "actionsAria": "Aktionen für Anbauplan {{plan}}",
     "notesPhotos": "Fotos",
     "notesPhotosAria": "Notizen und Fotos öffnen"
   },
