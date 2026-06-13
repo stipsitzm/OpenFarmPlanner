@@ -516,15 +516,15 @@ describe("GraphicalFields", () => {
     act(() => {
       fireEvent.click(
         screen.getByRole("button", {
-          name: "Ansicht für Standort „Hof Nord“ bearbeiten",
+          name: "Grafik bearbeiten",
         }),
       );
     });
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bearbeitungsmodus aktiv: Parzellen und Beete dieses Standorts können verschoben werden.",
+      "Grafikbearbeitung aktiv: Parzellen und Beete dieses Standorts können verschoben werden.",
     );
-    expect(screen.getByText("Bearbeitung aktiv")).toBeInTheDocument();
+    expect(screen.getByText("Grafikbearbeitung aktiv")).toBeInTheDocument();
     expect(await screen.findByTestId("field-rect-10")).toHaveAttribute(
       "draggable",
       "true",
@@ -535,7 +535,7 @@ describe("GraphicalFields", () => {
     );
     expect(
       screen.getByRole("button", {
-        name: "Bearbeitung für Standort „Hof Nord“ beenden",
+        name: "Grafikbearbeitung für Standort „Hof Nord“ beenden",
       }),
     ).toHaveAttribute("aria-pressed", "true");
   }, 15000);

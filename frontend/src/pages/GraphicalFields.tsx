@@ -1346,23 +1346,13 @@ export default function GraphicalFields({
                         </Box>
                       </Tooltip>
                       <Tooltip
-                        title={t(
-                          locationIsEditable
-                            ? "fields:graphical.disableLocationEditMode"
-                            : "fields:graphical.enableLocationEditMode",
-                          { name: location.name },
-                        )}
+                        title={t("fields:graphical.locationEditModeAction")}
                       >
                         <Box
                           component="span"
                           role="button"
                           tabIndex={0}
-                          aria-label={t(
-                            locationIsEditable
-                              ? "fields:graphical.disableLocationEditMode"
-                              : "fields:graphical.enableLocationEditMode",
-                            { name: location.name },
-                          )}
+                          aria-label={t("fields:graphical.locationEditModeAction")}
                           aria-pressed={locationIsEditable}
                           onClick={(event) => {
                             event.stopPropagation();
