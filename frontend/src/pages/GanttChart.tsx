@@ -10,7 +10,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import OpenWithIcon from '@mui/icons-material/OpenWith';
 import { useTranslation } from '../i18n';
 import {
   Alert,
@@ -234,16 +234,18 @@ function GanttChartPage() {
   const calendarCommands = useMemo<CommandSpec[]>(() => [
     {
       id: 'calendar.toggleEdit',
-      label: editMode ? 'Bearbeitungsmodus deaktivieren' : 'Bearbeitungsmodus aktivieren',
+      label: editMode
+        ? t('ganttChart:moveModeCommandDeactivate')
+        : t('ganttChart:moveModeCommandActivate'),
       group: 'navigation',
-      keywords: ['kalender', 'bearbeiten', 'toggle'],
+      keywords: ['kalender', 'verschieben', 'drag-and-drop'],
       shortcutHint: 'Alt+E',
       keys: { alt: true, key: 'e' },
       contextTags: ['calendar'],
       isEnabled: () => calendarMode === 'occupancy',
       action: () => setEditMode((value) => !value),
     },
-  ], [calendarMode, editMode]);
+  ], [calendarMode, editMode, t]);
 
   useRegisterCommands('calendar-page', calendarCommands);
 
@@ -431,12 +433,12 @@ function GanttChartPage() {
           flexDirection: { xs: 'column', sm: 'row' },
         }}
       >
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: { xs: 1.5, sm: 2.5 }, minWidth: 0 }}>
           <Typography component="h1" className="rmg-title" sx={{ minWidth: 0 }}>
             {title}
           </Typography>
           {calendarMode === 'occupancy' ? (
-            <Tooltip title={editMode ? t('ganttChart:modeEditActiveTooltip') : t('ganttChart:modeEditTooltip')}>
+            <Tooltip title={editMode ? t('ganttChart:moveModeActiveTooltip') : t('ganttChart:moveModeTooltip')}>
               <Button
                 size="small"
                 variant={editMode ? 'contained' : 'outlined'}
@@ -446,7 +448,7 @@ function GanttChartPage() {
                 startIcon={
                   editMode
                     ? <CheckCircleOutlineIcon fontSize="small" />
-                    : <EditOutlinedIcon fontSize="small" />
+                    : <OpenWithIcon fontSize="small" />
                 }
                 sx={{
                   flexShrink: 0,
@@ -465,7 +467,7 @@ function GanttChartPage() {
                     }),
                 }}
               >
-                {editMode ? t('ganttChart:modeEditActiveOption') : t('ganttChart:modeEditOption')}
+                {editMode ? t('ganttChart:moveModeActiveOption') : t('ganttChart:moveModeOption')}
               </Button>
             </Tooltip>
           ) : null}
