@@ -557,6 +557,7 @@ function RootLayout() {
   };
   const isCulturesPage = location.pathname.startsWith('/app/cultures');
   const isFieldsBedsPage = location.pathname.startsWith('/app/fields-beds');
+  const isCalendarPage = location.pathname.startsWith('/app/gantt-chart');
   const cultureLibraryAction = useMemo(
     () => topbarContextActions.find((action) => action.id === 'cultures-open-library'),
     [topbarContextActions],
@@ -590,7 +591,7 @@ function RootLayout() {
   const showIconOnlyCultureLibrary = isCulturesPage && (isPhone || isTabletOrNarrowDesktop);
   const showCultureImportExportButton = isCulturesPage;
   const showDesktopCultureActionsOverflow = isCulturesPage && !isPhone && !isLargeDesktop;
-  const mobileFieldsViewActions = useMemo(
+  const mobileTopbarViewActions = useMemo(
     () => topbarModeControls.filter((action) => !action.hidden),
     [topbarModeControls],
   );
@@ -598,10 +599,10 @@ function RootLayout() {
     () => topbarOverflowActions.find((action) => action.id === HIERARCHY_CREATE_LOCATION_ACTION_ID && !action.hidden) ?? null,
     [topbarOverflowActions],
   );
-  const activeMobileFieldsViewActionId = mobileFieldsViewActions.find((action) => action.active)?.id ?? null;
-  const showMobileFieldsTopbarActions = isCompactTopbar
-    && isFieldsBedsPage
-    && (mobileFieldsViewActions.length > 0 || Boolean(mobileFieldsAddLocationAction));
+  const activeMobileTopbarViewActionId = mobileTopbarViewActions.find((action) => action.active)?.id ?? null;
+  const showMobileTopbarViewActions = isCompactTopbar
+    && (isFieldsBedsPage || isCalendarPage)
+    && (mobileTopbarViewActions.length > 0 || (isFieldsBedsPage && Boolean(mobileFieldsAddLocationAction)));
   const hasVisibleMobileContextActions = useMemo(
     () => [...topbarModeControls, ...topbarOverflowActions].some((action) => !action.hidden),
     [topbarModeControls, topbarOverflowActions],
@@ -609,12 +610,13 @@ function RootLayout() {
   const hasMobileSecondaryRow = useMemo(
     () => (
       !isFieldsBedsPage
+      && !isCalendarPage
       && (
         (isCulturesPage && (Boolean(cultureLibraryAction) || showCultureImportExportButton))
         || hasVisibleMobileContextActions
       )
     ),
-    [cultureLibraryAction, hasVisibleMobileContextActions, isCulturesPage, isFieldsBedsPage, showCultureImportExportButton],
+    [cultureLibraryAction, hasVisibleMobileContextActions, isCalendarPage, isCulturesPage, isFieldsBedsPage, showCultureImportExportButton],
   );
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
@@ -1187,14 +1189,14 @@ function RootLayout() {
           </Box>
           ) : (
             <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP }}>
-              {showMobileFieldsTopbarActions ? (
+              {showMobileTopbarViewActions ? (
                 <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP, flexShrink: 0 }}>
-                  {mobileFieldsViewActions.length > 0 ? (
+                  {mobileTopbarViewActions.length > 0 ? (
                     <ToggleButtonGroup
                       exclusive
                       size="small"
-                      value={activeMobileFieldsViewActionId}
-                      aria-label={t('fields:representation.ariaLabel')}
+                      value={activeMobileTopbarViewActionId}
+                      aria-label={isCalendarPage ? t('ganttChart:modeAriaLabel') : t('fields:representation.ariaLabel')}
                       sx={{
                         flexShrink: 0,
                         '& .MuiToggleButton-root': {
@@ -1216,27 +1218,34 @@ function RootLayout() {
                         },
                       }}
                     >
-                      {mobileFieldsViewActions.map((action) => {
+                      {mobileTopbarViewActions.map((action) => {
                         const isListViewAction = action.id === 'fields-view-mode-list';
                         const isGraphicalViewAction = action.id === 'fields-view-mode-graphical';
+                        const isCalendarOccupancyAction = action.id === 'calendar-view-mode-occupancy';
+                        const isCalendarSeedlingsAction = action.id === 'calendar-view-mode-seedlings';
                         const icon = isListViewAction
                           ? <ViewListOutlinedIcon fontSize="small" />
                           : isGraphicalViewAction
                             ? <MapOutlinedIcon fontSize="small" />
-                            : null;
+                            : isCalendarOccupancyAction
+                              ? <EventNoteOutlinedIcon fontSize="small" />
+                              : isCalendarSeedlingsAction
+                                ? <LocalFloristOutlinedIcon fontSize="small" />
+                                : null;
                         if (!icon) {
                           return null;
                         }
                         return (
-                          <ToggleButton
-                            key={action.id}
-                            value={action.id}
-                            aria-label={action.label}
-                            onClick={action.onClick}
-                            disabled={action.disabled}
-                          >
-                            {icon}
-                          </ToggleButton>
+                          <Tooltip key={action.id} title={action.tooltip ?? action.label} describeChild enterTouchDelay={0}>
+                            <ToggleButton
+                              value={action.id}
+                              aria-label={action.ariaLabel ?? action.label}
+                              onClick={action.onClick}
+                              disabled={action.disabled}
+                            >
+                              {icon}
+                            </ToggleButton>
+                          </Tooltip>
                         );
                       })}
                     </ToggleButtonGroup>
@@ -1269,7 +1278,7 @@ function RootLayout() {
                   ) : null}
                 </Box>
               ) : null}
-              {topbarPrimaryAction && !showMobileFieldsTopbarActions ? (
+              {topbarPrimaryAction && !showMobileTopbarViewActions ? (
                 <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
                   <Button
                     size="small"
