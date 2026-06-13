@@ -21,8 +21,7 @@
   "actions": {
     "useAvailableArea": "Restfläche übernehmen",
     "useBedArea": "Beetfläche übernehmen",
-    "copyPlantingPlan": "Anbauplan kopieren",
-    "copyAllPlantingPlans": "Alle Anbaupläne kopieren"
+    "copyPlantingPlan": "Anbauplan kopieren"
   },
   "feedback": {
     "areaAutoFilled": "Verfügbare Restfläche automatisch verwendet: {{area}}"
@@ -59,8 +58,7 @@
   },
   "messages": {
     "deleted": "Anbauplan gelöscht",
-    "plantingPlanCopied": "Anbauplan kopiert.",
-    "allPlantingPlansCopied": "Alle Anbaupläne kopiert."
+    "plantingPlanCopied": "Anbauplan kopiert."
   },
   "validation": {
     "plantingDateRequired": "Pflanzdatum ist ein Pflichtfeld",

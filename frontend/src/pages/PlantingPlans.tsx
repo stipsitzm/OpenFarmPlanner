@@ -8,7 +8,7 @@
  */
 
 import { memo, useCallback, useState, useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from "react";
-import { useLocation, useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type {
   GridCellParams,
   GridColDef,
@@ -102,8 +102,6 @@ import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmen
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
 import { collectHierarchyAvailability } from "../components/planting-plans/areaHierarchySelection";
 import EmptyStateCard from "../components/project/EmptyStateCard";
-import type { RootLayoutOutletContext, TopbarContextAction } from "../App";
-import { useTopbarContextActions } from "../hooks/useTopbarContextActions";
 
 export {
   collectHierarchyAvailability,
@@ -542,8 +540,6 @@ function PlantingPlans() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const outletContext = useOutletContext<RootLayoutOutletContext | null>();
-  const setTopbarContextActions = outletContext?.setTopbarContextActions;
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
@@ -1514,11 +1510,6 @@ function PlantingPlans() {
     ))
   ), [clipboardColumns]);
 
-  const getClipboardTableRows = useCallback((): string[][] => [
-    clipboardColumns.map((column) => column.headerName),
-    ...getVisibleMobileRows(mobileRows).map(getClipboardRowValues),
-  ], [clipboardColumns, getClipboardRowValues, mobileRows]);
-
   const copyClipboardRows = useCallback(async (
     rows: readonly string[][],
     successMessage: string,
@@ -1541,13 +1532,6 @@ function PlantingPlans() {
       t("plantingPlans:messages.plantingPlanCopied"),
     );
   }, [copyClipboardRows, getClipboardRowValues, t]);
-
-  const handleCopyAllPlantingPlans = useCallback((): void => {
-    void copyClipboardRows(
-      getClipboardTableRows(),
-      t("plantingPlans:messages.allPlantingPlansCopied"),
-    );
-  }, [copyClipboardRows, getClipboardTableRows, t]);
 
   const formatNumberForInput = (
     value: number,
@@ -1975,18 +1959,6 @@ function PlantingPlans() {
     }
     gridCommandApiRef.current?.addRow();
   }, [isMobile, openMobileCreateDialog]);
-
-  const contextActions = useMemo<TopbarContextAction[]>(() => ([
-    {
-      id: "planting-plans-copy-all",
-      label: t("plantingPlans:actions.copyAllPlantingPlans"),
-      ariaLabel: t("plantingPlans:actions.copyAllPlantingPlans"),
-      onClick: handleCopyAllPlantingPlans,
-      disabled: !hasPlans,
-    },
-  ]), [handleCopyAllPlantingPlans, hasPlans, t]);
-
-  useTopbarContextActions(setTopbarContextActions, contextActions);
 
   const createActions = useMemo(() => [
     {
