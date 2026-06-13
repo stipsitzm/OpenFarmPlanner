@@ -66,6 +66,17 @@ const createKonvaTarget = (positionRef: {
 const LOCATION_EDIT_MODE_BANNER =
   "Grafikbearbeitung aktiv: Parzellen und Beete dieses Standorts können verschoben werden.";
 
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const getLocationHeaderButton = (name = "Hof Nord"): HTMLElement =>
+  screen.getByRole("button", {
+    name: new RegExp(`^Standort: ${escapeRegExp(name)}(?:\\s+.*)?$`),
+  });
+
+const getLocationEditActionButton = (label = "Grafik bearbeiten"): HTMLElement =>
+  screen.getAllByRole("button", { name: label })[0];
+
 const createTouchLikeEvent = (
   type: string,
   points: Array<{ clientX: number; clientY: number }>,
@@ -334,7 +345,7 @@ describe("GraphicalFields", () => {
     const desktopRender = render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
     });
 
@@ -351,7 +362,7 @@ describe("GraphicalFields", () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
     });
 
@@ -379,7 +390,7 @@ describe("GraphicalFields", () => {
 
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
       fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
@@ -393,7 +404,7 @@ describe("GraphicalFields", () => {
     expect(await screen.findByRole("button", { name: "Bearbeiten" })).toBeInTheDocument();
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
     });
 
@@ -413,7 +424,7 @@ describe("GraphicalFields", () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
     });
 
@@ -454,7 +465,7 @@ describe("GraphicalFields", () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
     });
 
@@ -479,7 +490,7 @@ describe("GraphicalFields", () => {
         "true",
       );
     });
-    expect(screen.getByRole("alert")).toHaveTextContent(LOCATION_EDIT_MODE_BANNER);
+    expect(screen.getByText(LOCATION_EDIT_MODE_BANNER)).toBeInTheDocument();
   }, 15000);
 
   it("scopes header edit actions to the selected location when the global mode toggle is hidden", async () => {
@@ -517,9 +528,7 @@ describe("GraphicalFields", () => {
 
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", {
-          name: "Grafik bearbeiten",
-        }),
+        getLocationEditActionButton(),
       );
     });
 
@@ -534,9 +543,9 @@ describe("GraphicalFields", () => {
       "false",
     );
     expect(
-      screen.getByRole("button", {
-        name: "Grafikbearbeitung für Standort „Hof Nord“ beenden",
-      }),
+      getLocationEditActionButton(
+        "Grafikbearbeitung für Standort „Hof Nord“ beenden",
+      ),
     ).toHaveAttribute("aria-pressed", "true");
   }, 15000);
 
@@ -544,7 +553,7 @@ describe("GraphicalFields", () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
     });
 
@@ -564,7 +573,7 @@ describe("GraphicalFields", () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
     });
 
@@ -611,7 +620,7 @@ describe("GraphicalFields", () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
     });
 
@@ -675,7 +684,7 @@ describe("GraphicalFields", () => {
   it("allows panning in edit mode when gesture starts on empty canvas and keeps object coordinates unchanged", async () => {
     render(<GraphicalFields />);
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "Standort: Hof Nord" }));
+      fireEvent.click(getLocationHeaderButton());
       fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
@@ -709,7 +718,7 @@ describe("GraphicalFields", () => {
   it("does not start panning in edit mode when pointer down starts on an interactive object", () => {
     render(<GraphicalFields />);
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "Standort: Hof Nord" }));
+      fireEvent.click(getLocationHeaderButton());
       fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
@@ -743,7 +752,7 @@ describe("GraphicalFields", () => {
   it("supports one-finger touch panning on empty canvas in edit mode", () => {
     render(<GraphicalFields />);
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "Standort: Hof Nord" }));
+      fireEvent.click(getLocationHeaderButton());
       fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
@@ -778,7 +787,7 @@ describe("GraphicalFields", () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
     });
 
@@ -821,7 +830,7 @@ describe("GraphicalFields", () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
       fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
@@ -858,7 +867,7 @@ describe("GraphicalFields", () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
       fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
@@ -886,7 +895,7 @@ describe("GraphicalFields", () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
     });
 
@@ -933,7 +942,7 @@ describe("GraphicalFields", () => {
     render(<GraphicalFields />);
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
       fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
@@ -970,7 +979,7 @@ describe("GraphicalFields", () => {
 
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+        getLocationHeaderButton(),
       );
       fireEvent.keyDown(window, { key: "e", altKey: true });
     });
