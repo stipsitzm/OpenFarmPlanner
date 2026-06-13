@@ -23,6 +23,10 @@ const projectRequirementState = vi.hoisted(() => ({
   shouldShowProjectRequiredState: false,
   missingProjectReason: null as null | 'no_projects' | 'no_active_project',
 }));
+const OCCUPANCY_MODE_TOOLTIP =
+  'Zeigt die Belegung der Beete über das Jahr. Die dargestellten Zeiträume werden aus den Anbauplänen und den kulturspezifischen Zeitangaben (z. B. Aussaat, Pflanzung und Ernte) berechnet.';
+const PROPAGATION_MODE_TOOLTIP =
+  'Zeigt die Anzuchtphase der Kulturen vor der Pflanzung. Die dargestellten Zeiträume werden aus den Anbauplänen sowie den kulturspezifischen Angaben zur Anzuchtdauer berechnet.';
 
 vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
@@ -313,8 +317,8 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(screen.getByText('Jungpflanzen')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'Jungpflanzen' }));
+    await waitFor(() => expect(screen.getByText('Anzucht')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Anzucht' }));
 
     await waitFor(() => expect(screen.getAllByText('Tomate').length).toBeGreaterThan(0));
     expect(screen.queryByText('Standort: Hof / Feld')).not.toBeInTheDocument();
@@ -434,7 +438,7 @@ describe('GanttChartPage', () => {
     expect(await screen.findByText('Fehler beim Laden der Daten')).toBeInTheDocument();
   });
 
-  it('shows helpful mode tooltips on hover in occupancy mode', async () => {
+  it('shows helpful mode tooltips from the mode info icons', async () => {
     mocks.planList.mockResolvedValue({
       data: {
         results: [
@@ -460,6 +464,15 @@ describe('GanttChartPage', () => {
     );
 
     expect(await screen.findByRole('button', { name: 'Zeitraum verschieben' })).toBeInTheDocument();
+
+    const occupancyInfo = screen.getByRole('button', { name: 'Information zu Feldbelegung' });
+    fireEvent.mouseOver(occupancyInfo);
+    expect(await screen.findByText(OCCUPANCY_MODE_TOOLTIP)).toBeInTheDocument();
+
+    const seedlingInfo = screen.getByRole('button', { name: 'Information zu Anzucht' });
+    fireEvent.mouseLeave(occupancyInfo);
+    fireEvent.mouseOver(seedlingInfo);
+    expect(await screen.findByText(PROPAGATION_MODE_TOOLTIP)).toBeInTheDocument();
   });
 
   it('shows backend validation errors and reloads plans after failed task update', async () => {

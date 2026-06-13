@@ -10,6 +10,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import { useTranslation } from '../i18n';
 import {
@@ -17,6 +18,7 @@ import {
   Box,
   Button,
   ButtonGroup,
+  IconButton,
   MenuItem,
   Select,
   Tooltip,
@@ -702,31 +704,81 @@ function GanttChartPage() {
 
         {hasCalendarRequirements ? (
           <Box sx={{ mb: 1, display: 'flex', justifyContent: 'flex-start' }}>
-            <ButtonGroup
-              size="small"
-              variant="outlined"
-              sx={segmentedButtonGroupSx}
-              aria-label={t('ganttChart:viewSelectorAriaLabel')}
+            <Box
+              role="group"
+              aria-label={t('ganttChart:modeAriaLabel')}
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'stretch',
+                gap: 0.5,
+                maxWidth: '100%',
+                flexWrap: 'wrap',
+              }}
             >
-              <Button
-                onClick={() => handleCalendarModeChange('occupancy')}
-                aria-pressed={calendarMode === 'occupancy'}
-                variant={calendarMode === 'occupancy' ? 'contained' : 'outlined'}
-                color={calendarMode === 'occupancy' ? 'success' : 'inherit'}
-                sx={getSegmentedActionButtonSx({ active: calendarMode === 'occupancy' })}
-              >
-                {t('ganttChart:modes.occupancy')}
-              </Button>
-              <Button
-                onClick={() => handleCalendarModeChange('seedlings')}
-                aria-pressed={calendarMode === 'seedlings'}
-                variant={calendarMode === 'seedlings' ? 'contained' : 'outlined'}
-                color={calendarMode === 'seedlings' ? 'success' : 'inherit'}
-                sx={getSegmentedActionButtonSx({ active: calendarMode === 'seedlings' })}
-              >
-                {t('ganttChart:modes.seedlings')}
-              </Button>
-            </ButtonGroup>
+              {([
+                {
+                  mode: 'occupancy' as const,
+                  label: t('ganttChart:modes.occupancy'),
+                  tooltip: t('ganttChart:modeTooltips.occupancy'),
+                },
+                {
+                  mode: 'seedlings' as const,
+                  label: t('ganttChart:modes.seedlings'),
+                  tooltip: t('ganttChart:modeTooltips.seedlings'),
+                },
+              ]).map(({ mode, label, tooltip }) => {
+                const active = calendarMode === mode;
+                return (
+                  <Box key={mode} sx={{ display: 'inline-flex', minWidth: 0 }}>
+                    <Button
+                      onClick={() => handleCalendarModeChange(mode)}
+                      aria-pressed={active}
+                      variant={active ? 'contained' : 'outlined'}
+                      color={active ? 'success' : 'inherit'}
+                      sx={[
+                        getSegmentedActionButtonSx({ active }),
+                        {
+                          borderTopRightRadius: 0,
+                          borderBottomRightRadius: 0,
+                          pr: 0.75,
+                        },
+                      ]}
+                    >
+                      {label}
+                    </Button>
+                    <Tooltip title={tooltip} arrow enterTouchDelay={0}>
+                      <IconButton
+                        size="small"
+                        aria-label={t('ganttChart:modeInfoAriaLabel', { mode: label })}
+                        sx={{
+                          width: 30,
+                          minWidth: 30,
+                          border: '1px solid',
+                          borderLeft: 0,
+                          borderColor: active ? 'success.dark' : 'divider',
+                          borderRadius: 1,
+                          borderTopLeftRadius: 0,
+                          borderBottomLeftRadius: 0,
+                          color: active ? 'success.contrastText' : 'text.secondary',
+                          bgcolor: active ? 'success.main' : 'background.paper',
+                          '&:hover': {
+                            bgcolor: active ? 'success.dark' : 'action.hover',
+                            borderColor: active ? 'success.dark' : 'divider',
+                          },
+                          '&.Mui-focusVisible': {
+                            outline: '2px solid',
+                            outlineColor: 'success.light',
+                            outlineOffset: -1,
+                          },
+                        }}
+                      >
+                        <InfoOutlinedIcon fontSize="inherit" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                );
+              })}
+            </Box>
           </Box>
         ) : null}
 
