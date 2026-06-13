@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act } from 'react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,6 +24,27 @@ const projectRequirementState = vi.hoisted(() => ({
   shouldShowProjectRequiredState: false,
   missingProjectReason: null as null | 'no_projects' | 'no_active_project',
 }));
+const OCCUPANCY_MODE_TOOLTIP =
+  'Zeigt die Belegung der Beete über das Jahr. Die dargestellten Zeiträume werden aus den Anbauplänen und den kulturspezifischen Zeitangaben (z. B. Aussaat, Pflanzung und Ernte) berechnet.';
+const PROPAGATION_MODE_TOOLTIP =
+  'Zeigt die Anzuchtphase der Kulturen vor der Pflanzung. Die dargestellten Zeiträume werden aus den Anbauplänen sowie den kulturspezifischen Angaben zur Anzuchtdauer berechnet.';
+
+interface TestTopbarAction {
+  id: string;
+  label: string;
+  active?: boolean;
+  groupId?: string;
+  tooltip?: string;
+  onClick: () => void;
+}
+
+const getTopbarAction = (id: string): TestTopbarAction => {
+  const action = topbarContext.latestActions.find((item) => item.id === id) as TestTopbarAction | undefined;
+  if (!action) {
+    throw new Error(`Missing topbar action: ${id}`);
+  }
+  return action;
+};
 
 vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
@@ -61,14 +83,31 @@ vi.mock('react-modern-gantt', () => ({
     tasks: Array<{ name: string; tasks: Array<Record<string, unknown> & { id: string; name: string }> }>;
     renderTooltip?: ({ task }: { task: Record<string, unknown> }) => ReactNode;
     onTaskUpdate?: (groupId: string, task: { id: string; startDate: Date }) => void | Promise<void>;
+    editMode?: boolean;
+    allowTaskMove?: boolean;
+    renderHeader?: (props: {
+      title: string;
+      darkMode: boolean;
+      viewMode: string;
+      onViewModeChange: (mode: string) => void;
+      showViewModeSelector: boolean;
+    }) => ReactNode;
+    viewMode?: string;
     locale?: string;
-    localeText?: Record<string, unknown>;
+    localeText?: { title?: string } & Record<string, unknown>;
   }) => {
     mocks.ganttProps(props);
     const firstTask = props.tasks[0]?.tasks[0];
     const firstGroupName = props.tasks[0]?.name ?? '';
     return (
       <div data-testid="mock-gantt">
+        {props.renderHeader?.({
+          title: props.localeText?.title ?? 'Project Timeline',
+          darkMode: false,
+          viewMode: props.viewMode ?? 'month',
+          onViewModeChange: vi.fn(),
+          showViewModeSelector: true,
+        })}
         {firstTask && props.onTaskUpdate ? (
           <button
             type="button"
@@ -239,13 +278,22 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(screen.getByText('Feldbelegung')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Feldplanung')).toBeInTheDocument());
     expect(screen.queryByText(/Belegung von Parzellen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
-    await waitFor(() => expect(topbarContext.latestActions.length).toBeGreaterThan(0));
-    const viewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { hidden?: boolean } | undefined;
-    const editAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { hidden?: boolean } | undefined;
-    expect(viewAction?.hidden).toBe(false);
-    expect(editAction?.hidden).toBe(false);
+    await waitFor(() => expect(topbarContext.latestActions).toHaveLength(2));
+    expect(getTopbarAction('calendar-view-mode-occupancy')).toMatchObject({
+      label: 'Feldbelegung',
+      active: true,
+      groupId: 'calendar-view-mode',
+      tooltip: OCCUPANCY_MODE_TOOLTIP,
+    });
+    expect(getTopbarAction('calendar-view-mode-seedlings')).toMatchObject({
+      label: 'Anzucht',
+      active: false,
+      groupId: 'calendar-view-mode',
+      tooltip: PROPAGATION_MODE_TOOLTIP,
+    });
+    expect(screen.getByRole('button', { name: 'Zeitraum verschieben' })).toBeInTheDocument();
     expect(screen.getByText('Feld / Beet 1')).toBeInTheDocument();
     expect(screen.queryByText('Hof / Feld / Beet 1')).not.toBeInTheDocument();
     expect(mocks.ganttProps).toHaveBeenCalled();
@@ -256,6 +304,9 @@ describe('GanttChartPage', () => {
       resources: 'Beete',
       today: 'Heute',
     });
+    expect(latestProps?.editMode).toBe(false);
+    expect(latestProps?.allowTaskMove).toBe(false);
+    expect(latestProps?.onTaskUpdate).toBeUndefined();
   });
 
   it('switches to the seedling view and shows the seedling rows', async () => {
@@ -296,8 +347,10 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(screen.getByText('Jungpflanzen')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'Jungpflanzen' }));
+    await waitFor(() => expect(topbarContext.latestActions).toHaveLength(2));
+    act(() => {
+      getTopbarAction('calendar-view-mode-seedlings').onClick();
+    });
 
     await waitFor(() => expect(screen.getAllByText('Tomate').length).toBeGreaterThan(0));
     expect(screen.queryByText('Standort: Hof / Feld')).not.toBeInTheDocument();
@@ -308,10 +361,7 @@ describe('GanttChartPage', () => {
     expect(screen.queryByText('Fläche: 8,00 m²')).not.toBeInTheDocument();
     expect(screen.getByText('Gesamtpflanzen: 24')).toBeInTheDocument();
     expect(screen.getByText('Anzahl Anbaupläne: 1')).toBeInTheDocument();
-    const seedlingViewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { hidden?: boolean } | undefined;
-    const seedlingEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { hidden?: boolean } | undefined;
-    expect(seedlingViewAction?.hidden).toBe(true);
-    expect(seedlingEditAction?.hidden).toBe(true);
+    expect(screen.queryByRole('button', { name: 'Zeitraum verschieben' })).not.toBeInTheDocument();
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
     expect(latestProps?.localeText).toMatchObject({
       title: 'Anzuchtplanung',
@@ -345,16 +395,16 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(topbarContext.latestActions.length).toBeGreaterThan(0));
-    const beforeEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { active?: boolean } | undefined;
-    expect(beforeEditAction?.active).toBe(false);
+    expect(await screen.findByRole('button', { name: 'Zeitraum verschieben' })).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.keyDown(window, { key: 'e', altKey: true });
 
     await waitFor(() => {
-      const afterEditAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { active?: boolean } | undefined;
-      expect(afterEditAction?.active).toBe(true);
+      expect(screen.getByRole('button', { name: 'Zeitraum verschieben' })).toHaveAttribute('aria-pressed', 'true');
     });
+    const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
+    expect(latestProps?.editMode).toBe(true);
+    expect(latestProps?.allowTaskMove).toBe(true);
   });
 
   it('fills empty yield weeks between available week entries', async () => {
@@ -420,7 +470,7 @@ describe('GanttChartPage', () => {
     expect(await screen.findByText('Fehler beim Laden der Daten')).toBeInTheDocument();
   });
 
-  it('shows helpful mode tooltips on hover in occupancy mode', async () => {
+  it('registers helpful mode tooltips for the topbar mode actions', async () => {
     mocks.planList.mockResolvedValue({
       data: {
         results: [
@@ -445,12 +495,11 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(topbarContext.latestActions.length).toBeGreaterThan(0));
-    const viewAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-view') as { tooltip?: string } | undefined;
-    const editAction = topbarContext.latestActions.find((action) => action.id === 'calendar-mode-edit') as { tooltip?: string } | undefined;
+    expect(await screen.findByRole('button', { name: 'Zeitraum verschieben' })).toBeInTheDocument();
 
-    expect(viewAction?.tooltip).toBe('Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.');
-    expect(editAction?.tooltip).toBe('Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.');
+    await waitFor(() => expect(topbarContext.latestActions).toHaveLength(2));
+    expect(getTopbarAction('calendar-view-mode-occupancy').tooltip).toBe(OCCUPANCY_MODE_TOOLTIP);
+    expect(getTopbarAction('calendar-view-mode-seedlings').tooltip).toBe(PROPAGATION_MODE_TOOLTIP);
   });
 
   it('shows backend validation errors and reloads plans after failed task update', async () => {
@@ -489,6 +538,9 @@ describe('GanttChartPage', () => {
     );
 
     await screen.findByText('Feld / Beet 1');
+    expect(screen.queryByTestId('mock-update-task')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Zeitraum verschieben' }));
+    await screen.findByTestId('mock-update-task');
     fireEvent.click(screen.getByTestId('mock-update-task'));
 
     expect(await screen.findByText('Fläche (m²): Die Fläche dieses Beets wird im überlappenden Zeitraum überschritten.')).toBeInTheDocument();
@@ -522,6 +574,9 @@ describe('GanttChartPage', () => {
     );
 
     await screen.findByText('Feld / Beet 1');
+    expect(screen.queryByTestId('mock-update-task')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Zeitraum verschieben' }));
+    await screen.findByTestId('mock-update-task');
     fireEvent.click(screen.getByTestId('mock-update-task'));
 
     await waitFor(() => expect(mocks.planUpdate).toHaveBeenCalledTimes(1));

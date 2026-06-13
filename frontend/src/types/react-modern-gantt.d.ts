@@ -44,6 +44,14 @@ declare module 'react-modern-gantt' {
     showProgress?: boolean;
   }
 
+  export interface GanttHeaderRenderProps {
+    title: string;
+    darkMode: boolean;
+    viewMode: ViewMode;
+    onViewModeChange: (mode: ViewMode) => void;
+    showViewModeSelector: boolean;
+  }
+
   export interface GanttLocaleText {
     title?: string;
     resources?: string;
@@ -66,6 +74,7 @@ declare module 'react-modern-gantt' {
     onTaskUpdate?: (groupId: string, task: GanttTaskLike) => void | Promise<void>;
     renderTooltip?: (props: GanttTooltipProps) => ReactNode;
     renderTask?: (props: GanttTaskRenderProps) => ReactNode;
+    renderHeader?: (props: GanttHeaderRenderProps) => ReactNode;
   }
 
   const GanttChart: ComponentType<GanttChartProps>;

@@ -27,7 +27,7 @@ vi.mock('../pages/FieldsBedsHierarchy', () => ({
 
 vi.mock('../pages/GraphicalFields', () => ({
   default: ({ interactionMode }: { interactionMode?: 'view' | 'edit' }) => (
-    <div>{`Editiermodus-${interactionMode ?? 'none'}`}</div>
+    <div>{`EditMode-${interactionMode ?? 'location-scoped'}`}</div>
   ),
 }));
 
@@ -104,7 +104,7 @@ describe('FieldsBedsPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Editiermodus-view')).toBeInTheDocument();
+    expect(await screen.findByText('EditMode-location-scoped')).toBeInTheDocument();
     expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
   });
 

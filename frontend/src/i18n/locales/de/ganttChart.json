@@ -57,11 +57,14 @@
   "modeLabel": "Modus",
   "modeAriaLabel": "Modus auswählen",
   "modeViewOption": "Ansicht",
-  "modeEditOption": "Bearbeiten",
+  "moveModeOption": "Zeitraum verschieben",
+  "moveModeActiveOption": "Zeitraum verschieben aktiv",
+  "moveModeCommandActivate": "Zeitraum verschieben aktivieren",
+  "moveModeCommandDeactivate": "Zeitraum verschieben deaktivieren",
   "modeViewTooltip": "Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.",
-  "modeEditTooltip": "Bearbeitungsmodus: Anbaupläne können per Drag & Drop direkt im Kalender verschoben und angepasst werden.",
+  "moveModeTooltip": "Verschiebemodus aktivieren: Anbauzeiträume können per Drag-and-Drop verschoben werden.",
+  "moveModeActiveTooltip": "Verschiebemodus aktiv: Anbauzeiträume können per Drag-and-Drop verschoben werden.",
   "viewMode": "Ansichtsmodus",
-  "editMode": "Bearbeitungsmodus",
   "viewSelectorAriaLabel": "Kalenderansicht auswählen",
   "chartLocaleText": {
     "titleOccupancy": "Feldplanung",
@@ -84,14 +87,18 @@
   "noYieldData": "Keine erwarteten Erträge für dieses Jahr vorhanden.",
   "modes": {
     "occupancy": "Feldbelegung",
-    "seedlings": "Jungpflanzen"
+    "seedlings": "Anzucht"
+  },
+  "modeTooltips": {
+    "occupancy": "Zeigt die Belegung der Beete über das Jahr. Die dargestellten Zeiträume werden aus den Anbauplänen und den kulturspezifischen Zeitangaben (z. B. Aussaat, Pflanzung und Ernte) berechnet.",
+    "seedlings": "Zeigt die Anzuchtphase der Kulturen vor der Pflanzung. Die dargestellten Zeiträume werden aus den Anbauplänen sowie den kulturspezifischen Angaben zur Anzuchtdauer berechnet."
   },
   "modeDescriptions": {
     "occupancy": "Belegung von Parzellen und Beeten im Jahresverlauf. Diese Ansicht unterstützt weiterhin das Verschieben bestehender Anbaupläne.",
-    "seedlings": "Anzuchtzeiträume für Jungpflanzen nach Kultur. Diese Ansicht ist schreibgeschützt und zeigt nur relevante Voranzuchten im aktuellen Jahr."
+    "seedlings": "Anzuchtzeiträume nach Kultur. Diese Ansicht ist schreibgeschützt und zeigt nur relevante Voranzuchten im aktuellen Jahr."
   },
   "seedlings": {
-    "emptyState": "Keine Jungpflanzen-Anzuchtzeiträume für dieses Jahr vorhanden.",
+    "emptyState": "Keine Anzuchtzeiträume für dieses Jahr vorhanden.",
     "plantsUnit": "Pflanzen"
   },
   "requirements": {

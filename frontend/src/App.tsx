@@ -36,6 +36,8 @@ import {
   ListItemIcon,
   Toolbar,
   Tooltip,
+  ToggleButton,
+  ToggleButtonGroup,
   Typography,
   Box,
   useMediaQuery,
@@ -50,6 +52,8 @@ import MenuIcon from '@mui/icons-material/Menu';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import ViewListOutlinedIcon from '@mui/icons-material/ViewListOutlined';
+import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
 import LocalFloristOutlinedIcon from '@mui/icons-material/LocalFloristOutlined';
 import EventNoteOutlinedIcon from '@mui/icons-material/EventNoteOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
@@ -552,6 +556,8 @@ function RootLayout() {
     setMobileActionsOverflowAnchor(null);
   };
   const isCulturesPage = location.pathname.startsWith('/app/cultures');
+  const isFieldsBedsPage = location.pathname.startsWith('/app/fields-beds');
+  const isCalendarPage = location.pathname.startsWith('/app/gantt-chart');
   const cultureLibraryAction = useMemo(
     () => topbarContextActions.find((action) => action.id === 'cultures-open-library'),
     [topbarContextActions],
@@ -585,16 +591,32 @@ function RootLayout() {
   const showIconOnlyCultureLibrary = isCulturesPage && (isPhone || isTabletOrNarrowDesktop);
   const showCultureImportExportButton = isCulturesPage;
   const showDesktopCultureActionsOverflow = isCulturesPage && !isPhone && !isLargeDesktop;
+  const mobileTopbarViewActions = useMemo(
+    () => topbarModeControls.filter((action) => !action.hidden),
+    [topbarModeControls],
+  );
+  const mobileFieldsAddLocationAction = useMemo(
+    () => topbarOverflowActions.find((action) => action.id === HIERARCHY_CREATE_LOCATION_ACTION_ID && !action.hidden) ?? null,
+    [topbarOverflowActions],
+  );
+  const activeMobileTopbarViewActionId = mobileTopbarViewActions.find((action) => action.active)?.id ?? null;
+  const showMobileTopbarViewActions = isCompactTopbar
+    && (isFieldsBedsPage || isCalendarPage)
+    && (mobileTopbarViewActions.length > 0 || (isFieldsBedsPage && Boolean(mobileFieldsAddLocationAction)));
   const hasVisibleMobileContextActions = useMemo(
     () => [...topbarModeControls, ...topbarOverflowActions].some((action) => !action.hidden),
     [topbarModeControls, topbarOverflowActions],
   );
   const hasMobileSecondaryRow = useMemo(
     () => (
-      (isCulturesPage && (Boolean(cultureLibraryAction) || showCultureImportExportButton))
-      || hasVisibleMobileContextActions
+      !isFieldsBedsPage
+      && !isCalendarPage
+      && (
+        (isCulturesPage && (Boolean(cultureLibraryAction) || showCultureImportExportButton))
+        || hasVisibleMobileContextActions
+      )
     ),
-    [cultureLibraryAction, hasVisibleMobileContextActions, isCulturesPage, showCultureImportExportButton],
+    [cultureLibraryAction, hasVisibleMobileContextActions, isCalendarPage, isCulturesPage, isFieldsBedsPage, showCultureImportExportButton],
   );
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
@@ -1167,7 +1189,96 @@ function RootLayout() {
           </Box>
           ) : (
             <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP }}>
-              {topbarPrimaryAction ? (
+              {showMobileTopbarViewActions ? (
+                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP, flexShrink: 0 }}>
+                  {mobileTopbarViewActions.length > 0 ? (
+                    <ToggleButtonGroup
+                      exclusive
+                      size="small"
+                      value={activeMobileTopbarViewActionId}
+                      aria-label={isCalendarPage ? t('ganttChart:modeAriaLabel') : t('fields:representation.ariaLabel')}
+                      sx={{
+                        flexShrink: 0,
+                        '& .MuiToggleButton-root': {
+                          width: 32,
+                          height: 32,
+                          p: 0,
+                          borderColor: 'divider',
+                          color: 'text.primary',
+                          '&.Mui-selected': {
+                            bgcolor: 'success.main',
+                            color: 'success.contrastText',
+                            borderColor: 'success.dark',
+                            borderWidth: 2,
+                            boxShadow: 1,
+                          },
+                          '&.Mui-selected:hover': {
+                            bgcolor: 'success.dark',
+                          },
+                        },
+                      }}
+                    >
+                      {mobileTopbarViewActions.map((action) => {
+                        const isListViewAction = action.id === 'fields-view-mode-list';
+                        const isGraphicalViewAction = action.id === 'fields-view-mode-graphical';
+                        const isCalendarOccupancyAction = action.id === 'calendar-view-mode-occupancy';
+                        const isCalendarSeedlingsAction = action.id === 'calendar-view-mode-seedlings';
+                        const icon = isListViewAction
+                          ? <ViewListOutlinedIcon fontSize="small" />
+                          : isGraphicalViewAction
+                            ? <MapOutlinedIcon fontSize="small" />
+                            : isCalendarOccupancyAction
+                              ? <EventNoteOutlinedIcon fontSize="small" />
+                              : isCalendarSeedlingsAction
+                                ? <LocalFloristOutlinedIcon fontSize="small" />
+                                : null;
+                        if (!icon) {
+                          return null;
+                        }
+                        return (
+                          <Tooltip key={action.id} title={action.tooltip ?? action.label} describeChild enterTouchDelay={0}>
+                            <ToggleButton
+                              value={action.id}
+                              aria-label={action.ariaLabel ?? action.label}
+                              onClick={action.onClick}
+                              disabled={action.disabled}
+                            >
+                              {icon}
+                            </ToggleButton>
+                          </Tooltip>
+                        );
+                      })}
+                    </ToggleButtonGroup>
+                  ) : null}
+                  {mobileFieldsAddLocationAction ? (
+                    <Tooltip title={mobileFieldsAddLocationAction.label}>
+                      <IconButton
+                        size="small"
+                        aria-label={mobileFieldsAddLocationAction.ariaLabel ?? mobileFieldsAddLocationAction.label}
+                        onClick={mobileFieldsAddLocationAction.onClick}
+                        disabled={mobileFieldsAddLocationAction.disabled}
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          bgcolor: 'success.main',
+                          color: 'success.contrastText',
+                          boxShadow: 1,
+                          '&:hover': {
+                            bgcolor: 'success.dark',
+                          },
+                          '&.Mui-disabled': {
+                            bgcolor: 'action.disabledBackground',
+                            color: 'action.disabled',
+                          },
+                        }}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  ) : null}
+                </Box>
+              ) : null}
+              {topbarPrimaryAction && !showMobileTopbarViewActions ? (
                 <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
                   <Button
                     size="small"

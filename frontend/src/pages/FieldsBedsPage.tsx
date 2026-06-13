@@ -1,4 +1,4 @@
-import { Alert, Box, Button, ButtonGroup, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, TextField, useMediaQuery } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
@@ -16,9 +16,7 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard, { type EmptyStateAction } from '../components/project/EmptyStateCard';
 import { getProjectSetupAction } from './requirementFlow';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
-import { getSegmentedActionButtonSx, segmentedButtonGroupSx } from '../components/buttons/segmentedControlStyles';
-import { useTheme, type SxProps, type Theme } from '@mui/material/styles';
-import ContentViewControls from '../components/layout/ContentViewControls';
+import { type SxProps, type Theme } from '@mui/material/styles';
 import { ContextMenuHint } from '../components/data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
@@ -39,22 +37,18 @@ const CONTENT_ALIGNED_EMPTY_STATE_SX: SxProps<Theme> = {
 };
 
 type ViewMode = 'table' | 'graphical';
-type InteractionMode = 'view' | 'edit';
 
 const hasPersistedEntityId = (id: number | undefined): id is number =>
   typeof id === 'number' && id > 0;
 
 export default function FieldsBedsPage() {
   const { t } = useTranslation(['fields', 'hierarchy', 'common']);
-  const theme = useTheme();
-  const isXs = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const location = useLocation();
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
     return stored === 'graphical' ? 'graphical' : 'table';
   });
-  const [interactionMode, setInteractionMode] = useState<InteractionMode>('view');
   const [globalActionError, setGlobalActionError] = useState<string>('');
   const [globalActionSuccess, setGlobalActionSuccess] = useState<string>('');
   const [createFieldRequest, setCreateFieldRequest] = useState(0);
@@ -238,12 +232,6 @@ export default function FieldsBedsPage() {
     return [{ label: t('hierarchy:actions.createLocation'), onClick: openAddLocationDialog, icon: <AddIcon fontSize="small" /> }];
   }, [locations.length, openAddLocationDialog, requestInlineFieldCreation, shouldShowMissingFieldsState, t]);
 
-  useEffect(() => {
-    if (viewMode === 'graphical') {
-      setInteractionMode('view');
-    }
-  }, [viewMode]);
-
   const viewModeActions = useMemo<TopbarContextAction[]>(() => ([
     {
       id: 'fields-view-mode-list',
@@ -263,27 +251,6 @@ export default function FieldsBedsPage() {
     },
   ]), [t, viewMode]);
 
-  const interactionModeActions = useMemo<TopbarContextAction[]>(() => ([
-    {
-      id: 'fields-interaction-mode-view',
-      label: t('fields:graphical.viewModeOption'),
-      onClick: () => setInteractionMode('view'),
-      active: interactionMode === 'view',
-      hidden: viewMode !== 'graphical',
-      ariaLabel: t('fields:graphical.modeAriaLabel'),
-      groupId: 'fields-interaction-mode',
-    },
-    {
-      id: 'fields-interaction-mode-edit',
-      label: t('fields:graphical.editModeOption'),
-      onClick: () => setInteractionMode('edit'),
-      active: interactionMode === 'edit',
-      hidden: viewMode !== 'graphical',
-      ariaLabel: t('fields:graphical.modeAriaLabel'),
-      groupId: 'fields-interaction-mode',
-    },
-  ]), [interactionMode, t, viewMode]);
-
   const contextActions = useMemo<TopbarContextAction[]>(() => {
     const globalActions: TopbarContextAction[] = shouldShowProjectRequiredState
       ? []
@@ -301,15 +268,10 @@ export default function FieldsBedsPage() {
           ariaLabel: t('hierarchy:actions.createLocation'),
         },
       ];
-    if (isXs) {
-      return globalActions;
-    }
-    return [...globalActions, ...interactionModeActions, ...viewModeActions];
+    return [...globalActions, ...viewModeActions];
   }, [
     canUseGlobalAddField,
     requestInlineFieldCreation,
-    interactionModeActions,
-    isXs,
     openAddLocationDialog,
     shouldShowProjectRequiredState,
     t,
@@ -371,75 +333,9 @@ export default function FieldsBedsPage() {
       </PageContainer>
 
       <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
-        {isXs && !shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy ? (
-          <ContentViewControls
-            primaryControls={(
-              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.375, flexWrap: 'nowrap', minWidth: 0, whiteSpace: 'nowrap' }}>
-                <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
-                  <Button
-                    aria-label={viewModeActions[0].ariaLabel ?? viewModeActions[0].label}
-                    aria-pressed={viewModeActions[0].active}
-                    variant={viewModeActions[0].active ? 'contained' : 'outlined'}
-                    color={viewModeActions[0].active ? 'success' : 'inherit'}
-                    onClick={viewModeActions[0].onClick}
-                    sx={{ ...getSegmentedActionButtonSx({ active: Boolean(viewModeActions[0].active) }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
-                  >
-                    {viewModeActions[0].label}
-                  </Button>
-                  <Button
-                    aria-label={viewModeActions[1].ariaLabel ?? viewModeActions[1].label}
-                    aria-pressed={viewModeActions[1].active}
-                    variant={viewModeActions[1].active ? 'contained' : 'outlined'}
-                    color={viewModeActions[1].active ? 'success' : 'inherit'}
-                    onClick={viewModeActions[1].onClick}
-                    sx={{ ...getSegmentedActionButtonSx({ active: Boolean(viewModeActions[1].active) }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
-                  >
-                    {viewModeActions[1].label}
-                  </Button>
-                </ButtonGroup>
-                {interactionModeActions.every((action) => !action.hidden) ? (
-                  <ButtonGroup size="small" variant="outlined" sx={{ ...segmentedButtonGroupSx, flexShrink: 0, minWidth: 0 }}>
-                    <Button
-                      aria-label={interactionModeActions[0].ariaLabel ?? interactionModeActions[0].label}
-                      aria-pressed={interactionModeActions[0].active}
-                      variant={interactionModeActions[0].active ? 'contained' : 'outlined'}
-                      color={interactionModeActions[0].active ? 'success' : 'inherit'}
-                      onClick={interactionModeActions[0].onClick}
-                      sx={{ ...getSegmentedActionButtonSx({ active: Boolean(interactionModeActions[0].active) }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
-                    >
-                      {interactionModeActions[0].label}
-                    </Button>
-                    <Button
-                      aria-label={interactionModeActions[1].ariaLabel ?? interactionModeActions[1].label}
-                      aria-pressed={interactionModeActions[1].active}
-                      variant={interactionModeActions[1].active ? 'contained' : 'outlined'}
-                      color={interactionModeActions[1].active ? 'success' : 'inherit'}
-                      onClick={interactionModeActions[1].onClick}
-                      sx={{ ...getSegmentedActionButtonSx({ active: Boolean(interactionModeActions[1].active) }), px: 0.875, minHeight: 40, fontSize: '0.8rem', whiteSpace: 'nowrap' }}
-                    >
-                      {interactionModeActions[1].label}
-                    </Button>
-                  </ButtonGroup>
-                ) : null}
-              </Box>
-            )}
-            sx={{
-              mb: 0.75,
-              '& > div': {
-                flexWrap: 'nowrap',
-                minWidth: 0,
-                gap: 0.375,
-                overflowX: 'auto',
-                whiteSpace: 'nowrap',
-              },
-            }}
-          />
-        ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy && viewMode === 'graphical' ? (
           <GraphicalFields
             showTitle={false}
-            interactionMode={interactionMode}
-            onInteractionModeChange={setInteractionMode}
             showModeToggle={false}
             hierarchyData={hierarchyData}
           />
