@@ -546,7 +546,10 @@ function GanttChartPage() {
           <ButtonGroup
             size="small"
             variant="outlined"
-            sx={[segmentedButtonGroupSx, { display: { xs: 'none', md: 'inline-flex' } }]}
+            sx={{
+              ...segmentedButtonGroupSx,
+              display: { xs: 'none', md: 'inline-flex' },
+            }}
             aria-label={t('ganttChart:chartLocaleText.titleOccupancy')}
           >
             {GANTT_HEADER_VIEW_MODES.map((mode) => (
@@ -556,7 +559,7 @@ function GanttChartPage() {
                 aria-pressed={viewMode === mode}
                 variant={viewMode === mode ? 'contained' : 'outlined'}
                 color={viewMode === mode ? 'success' : 'inherit'}
-                sx={getSegmentedActionButtonSx({ active: viewMode === mode })}
+                sx={{ ...getSegmentedActionButtonSx({ active: viewMode === mode }) }}
               >
                 {t(`ganttChart:chartLocaleText.viewModes.${mode}`)}
               </Button>
