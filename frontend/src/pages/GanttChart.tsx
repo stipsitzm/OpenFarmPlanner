@@ -433,25 +433,44 @@ function GanttChartPage() {
           flexDirection: { xs: 'column', sm: 'row' },
         }}
       >
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: { xs: 1.5, sm: 2.5 }, minWidth: 0 }}>
-          <Typography component="h1" className="rmg-title" sx={{ minWidth: 0 }}>
+        <Box
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: { xs: 'space-between', sm: 'flex-start' },
+            gap: { xs: 1.5, sm: 2.5 },
+            minWidth: 0,
+            width: { xs: '100%', sm: 'auto' },
+          }}
+        >
+          <Typography
+            component="h1"
+            className="rmg-title"
+            sx={{
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {title}
           </Typography>
           {calendarMode === 'occupancy' ? (
-            <Tooltip title={editMode ? t('ganttChart:moveModeActiveTooltip') : t('ganttChart:moveModeTooltip')}>
+            <Tooltip title={t('ganttChart:moveModeOption')}>
               <Button
                 size="small"
                 variant={editMode ? 'contained' : 'outlined'}
                 color={editMode ? 'success' : 'inherit'}
+                aria-label={t('ganttChart:moveModeOption')}
                 aria-pressed={editMode}
                 onClick={() => setEditMode((value) => !value)}
-                startIcon={
-                  editMode
-                    ? <CheckCircleOutlineIcon fontSize="small" />
-                    : <SwapHorizIcon fontSize="small" />
-                }
                 sx={{
                   flexShrink: 0,
+                  gap: { xs: 0, sm: 0.75 },
+                  minWidth: { xs: 34, sm: 'auto' },
+                  width: { xs: 34, sm: 'auto' },
+                  height: { xs: 34, sm: 'auto' },
+                  px: { xs: 0, sm: 1.25 },
                   textTransform: 'none',
                   whiteSpace: 'nowrap',
                   ...(editMode
@@ -467,7 +486,19 @@ function GanttChartPage() {
                     }),
                 }}
               >
-                {editMode ? t('ganttChart:moveModeActiveOption') : t('ganttChart:moveModeOption')}
+                <SwapHorizIcon
+                  sx={{ display: { xs: 'inline-flex', sm: editMode ? 'none' : 'inline-flex' } }}
+                  fontSize="small"
+                />
+                {editMode ? (
+                  <CheckCircleOutlineIcon
+                    sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+                    fontSize="small"
+                  />
+                ) : null}
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  {editMode ? t('ganttChart:moveModeActiveOption') : t('ganttChart:moveModeOption')}
+                </Box>
               </Button>
             </Tooltip>
           ) : null}

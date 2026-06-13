@@ -364,7 +364,7 @@ describe('GanttChartPage', () => {
     fireEvent.keyDown(window, { key: 'e', altKey: true });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Zeitraum verschieben aktiv' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Zeitraum verschieben' })).toHaveAttribute('aria-pressed', 'true');
     });
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
     expect(latestProps?.editMode).toBe(true);
