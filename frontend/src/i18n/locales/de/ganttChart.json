@@ -93,7 +93,6 @@
     "occupancy": "Zeigt die Belegung der Beete über das Jahr. Die dargestellten Zeiträume werden aus den Anbauplänen und den kulturspezifischen Zeitangaben (z. B. Aussaat, Pflanzung und Ernte) berechnet.",
     "seedlings": "Zeigt die Anzuchtphase der Kulturen vor der Pflanzung. Die dargestellten Zeiträume werden aus den Anbauplänen sowie den kulturspezifischen Angaben zur Anzuchtdauer berechnet."
   },
-  "modeInfoAriaLabel": "Information zu {{mode}}",
   "modeDescriptions": {
     "occupancy": "Belegung von Parzellen und Beeten im Jahresverlauf. Diese Ansicht unterstützt weiterhin das Verschieben bestehender Anbaupläne.",
     "seedlings": "Anzuchtzeiträume nach Kultur. Diese Ansicht ist schreibgeschützt und zeigt nur relevante Voranzuchten im aktuellen Jahr."

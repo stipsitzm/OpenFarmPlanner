@@ -438,7 +438,7 @@ describe('GanttChartPage', () => {
     expect(await screen.findByText('Fehler beim Laden der Daten')).toBeInTheDocument();
   });
 
-  it('shows helpful mode tooltips from the mode info icons', async () => {
+  it('shows helpful mode tooltips from the mode tabs', async () => {
     mocks.planList.mockResolvedValue({
       data: {
         results: [
@@ -465,13 +465,13 @@ describe('GanttChartPage', () => {
 
     expect(await screen.findByRole('button', { name: 'Zeitraum verschieben' })).toBeInTheDocument();
 
-    const occupancyInfo = screen.getByRole('button', { name: 'Information zu Feldbelegung' });
-    fireEvent.mouseOver(occupancyInfo);
+    const occupancyTab = screen.getByRole('button', { name: 'Feldbelegung' });
+    fireEvent.mouseOver(occupancyTab);
     expect(await screen.findByText(OCCUPANCY_MODE_TOOLTIP)).toBeInTheDocument();
 
-    const seedlingInfo = screen.getByRole('button', { name: 'Information zu Anzucht' });
-    fireEvent.mouseLeave(occupancyInfo);
-    fireEvent.mouseOver(seedlingInfo);
+    const seedlingTab = screen.getByRole('button', { name: 'Anzucht' });
+    fireEvent.mouseLeave(occupancyTab);
+    fireEvent.mouseOver(seedlingTab);
     expect(await screen.findByText(PROPAGATION_MODE_TOOLTIP)).toBeInTheDocument();
   });
 
