@@ -50,6 +50,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import ViewListOutlinedIcon from '@mui/icons-material/ViewListOutlined';
 import LocalFloristOutlinedIcon from '@mui/icons-material/LocalFloristOutlined';
 import EventNoteOutlinedIcon from '@mui/icons-material/EventNoteOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
@@ -552,6 +553,7 @@ function RootLayout() {
     setMobileActionsOverflowAnchor(null);
   };
   const isCulturesPage = location.pathname.startsWith('/app/cultures');
+  const isFieldsBedsPage = location.pathname.startsWith('/app/fields-beds');
   const cultureLibraryAction = useMemo(
     () => topbarContextActions.find((action) => action.id === 'cultures-open-library'),
     [topbarContextActions],
@@ -585,16 +587,27 @@ function RootLayout() {
   const showIconOnlyCultureLibrary = isCulturesPage && (isPhone || isTabletOrNarrowDesktop);
   const showCultureImportExportButton = isCulturesPage;
   const showDesktopCultureActionsOverflow = isCulturesPage && !isPhone && !isLargeDesktop;
+  const mobileFieldsTopbarActions = useMemo(
+    () => [
+      ...topbarModeControls,
+      ...topbarOverflowActions.filter((action) => action.id === HIERARCHY_CREATE_LOCATION_ACTION_ID),
+    ].filter((action) => !action.hidden),
+    [topbarModeControls, topbarOverflowActions],
+  );
+  const showMobileFieldsTopbarActions = isCompactTopbar && isFieldsBedsPage && mobileFieldsTopbarActions.length > 0;
   const hasVisibleMobileContextActions = useMemo(
     () => [...topbarModeControls, ...topbarOverflowActions].some((action) => !action.hidden),
     [topbarModeControls, topbarOverflowActions],
   );
   const hasMobileSecondaryRow = useMemo(
     () => (
-      (isCulturesPage && (Boolean(cultureLibraryAction) || showCultureImportExportButton))
-      || hasVisibleMobileContextActions
+      !isFieldsBedsPage
+      && (
+        (isCulturesPage && (Boolean(cultureLibraryAction) || showCultureImportExportButton))
+        || hasVisibleMobileContextActions
+      )
     ),
-    [cultureLibraryAction, hasVisibleMobileContextActions, isCulturesPage, showCultureImportExportButton],
+    [cultureLibraryAction, hasVisibleMobileContextActions, isCulturesPage, isFieldsBedsPage, showCultureImportExportButton],
   );
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
@@ -1167,7 +1180,54 @@ function RootLayout() {
           </Box>
           ) : (
             <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP }}>
-              {topbarPrimaryAction ? (
+              {showMobileFieldsTopbarActions ? (
+                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
+                  {mobileFieldsTopbarActions.map((action) => {
+                    const isHierarchyCreateLocationAction = action.id === HIERARCHY_CREATE_LOCATION_ACTION_ID;
+                    const isListViewAction = action.id === 'fields-view-mode-list';
+                    const isGraphicalViewAction = action.id === 'fields-view-mode-graphical';
+                    const icon = isHierarchyCreateLocationAction
+                      ? <AddIcon fontSize="small" />
+                      : isListViewAction
+                        ? <ViewListOutlinedIcon fontSize="small" />
+                        : isGraphicalViewAction
+                          ? <GridViewOutlinedIcon fontSize="small" />
+                          : null;
+                    if (!icon) {
+                      return null;
+                    }
+                    return (
+                      <Tooltip key={action.id} title={action.label}>
+                        <IconButton
+                          size="small"
+                          aria-label={action.ariaLabel ?? action.label}
+                          aria-pressed={action.active}
+                          onClick={action.onClick}
+                          disabled={action.disabled}
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            border: '1px solid',
+                            borderColor: action.active ? 'success.dark' : 'divider',
+                            bgcolor: action.active ? 'success.main' : 'transparent',
+                            color: action.active ? 'success.contrastText' : 'text.primary',
+                            boxShadow: action.active ? 1 : 0,
+                            '&:hover': {
+                              bgcolor: action.active ? 'success.dark' : 'action.hover',
+                            },
+                            '&[aria-pressed="true"]': {
+                              borderWidth: 2,
+                            },
+                          }}
+                        >
+                          {icon}
+                        </IconButton>
+                      </Tooltip>
+                    );
+                  })}
+                </Box>
+              ) : null}
+              {topbarPrimaryAction && !showMobileFieldsTopbarActions ? (
                 <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
                   <Button
                     size="small"
