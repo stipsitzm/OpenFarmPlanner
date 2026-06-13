@@ -451,6 +451,7 @@ function GanttChartPage() {
             component="h1"
             className="rmg-title"
             sx={{
+              flex: { xs: '1 1 auto', md: '0 1 auto' },
               minWidth: 0,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -459,98 +460,106 @@ function GanttChartPage() {
           >
             {title}
           </Typography>
-          {calendarMode === 'occupancy' ? (
-            <Tooltip title={t('ganttChart:moveModeOption')}>
-              <Button
-                size="small"
-                variant={editMode ? 'contained' : 'outlined'}
-                color={editMode ? 'success' : 'inherit'}
-                aria-label={t('ganttChart:moveModeOption')}
-                aria-pressed={editMode}
-                onClick={() => setEditMode((value) => !value)}
-                sx={{
-                  flexShrink: 0,
-                  gap: { xs: 0, md: 0.75 },
-                  minWidth: { xs: 34, md: 'auto' },
-                  width: { xs: 34, md: 'auto' },
-                  height: { xs: 34, md: 'auto' },
-                  px: { xs: 0, md: 1.25 },
-                  textTransform: 'none',
-                  whiteSpace: 'nowrap',
-                  ...(editMode
-                    ? {}
-                    : {
-                      borderColor: 'success.main',
-                      color: 'success.dark',
-                      bgcolor: 'background.paper',
-                      '&:hover': {
-                        borderColor: 'success.dark',
-                        bgcolor: 'success.50',
-                      },
-                    }),
-                }}
-              >
-                <SwapHorizIcon
-                  sx={{ display: { xs: 'inline-flex', md: editMode ? 'none' : 'inline-flex' } }}
-                  fontSize="small"
-                />
-                {editMode ? (
-                  <CheckCircleOutlineIcon
-                    sx={{ display: { xs: 'none', md: 'inline-flex' } }}
-                    fontSize="small"
-                  />
-                ) : null}
-                <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
-                  {editMode ? t('ganttChart:moveModeActiveOption') : t('ganttChart:moveModeOption')}
-                </Box>
-              </Button>
-            </Tooltip>
+          {showViewModeSelector || calendarMode === 'occupancy' ? (
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
+              {showViewModeSelector ? (
+                <Select
+                  size="small"
+                  value={viewMode}
+                  onChange={(event) => onViewModeChange(event.target.value as ViewMode)}
+                  inputProps={{ 'aria-label': t('ganttChart:viewSelectorAriaLabel') }}
+                  sx={{
+                    display: { xs: 'inline-flex', md: 'none' },
+                    width: 'auto',
+                    minWidth: 0,
+                    bgcolor: 'background.paper',
+                    color: 'text.primary',
+                    '& .MuiSelect-select': {
+                      width: 'auto',
+                      minWidth: 0,
+                      py: 0.75,
+                      pl: 1,
+                      pr: '26px !important',
+                    },
+                  }}
+                >
+                  {GANTT_HEADER_VIEW_MODES.map((mode) => (
+                    <MenuItem key={mode} value={mode}>
+                      {t(`ganttChart:chartLocaleText.viewModes.${mode}`)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              ) : null}
+              {calendarMode === 'occupancy' ? (
+                <Tooltip title={t('ganttChart:moveModeOption')}>
+                  <Button
+                    size="small"
+                    variant={editMode ? 'contained' : 'outlined'}
+                    color={editMode ? 'success' : 'inherit'}
+                    aria-label={t('ganttChart:moveModeOption')}
+                    aria-pressed={editMode}
+                    onClick={() => setEditMode((value) => !value)}
+                    sx={{
+                      flexShrink: 0,
+                      gap: { xs: 0, md: 0.75 },
+                      minWidth: { xs: 34, md: 'auto' },
+                      width: { xs: 34, md: 'auto' },
+                      height: { xs: 34, md: 'auto' },
+                      px: { xs: 0, md: 1.25 },
+                      textTransform: 'none',
+                      whiteSpace: 'nowrap',
+                      ...(editMode
+                        ? {}
+                        : {
+                          borderColor: 'success.main',
+                          color: 'success.dark',
+                          bgcolor: 'background.paper',
+                          '&:hover': {
+                            borderColor: 'success.dark',
+                            bgcolor: 'success.50',
+                          },
+                        }),
+                    }}
+                  >
+                    <SwapHorizIcon
+                      sx={{ display: { xs: 'inline-flex', md: editMode ? 'none' : 'inline-flex' } }}
+                      fontSize="small"
+                    />
+                    {editMode ? (
+                      <CheckCircleOutlineIcon
+                        sx={{ display: { xs: 'none', md: 'inline-flex' } }}
+                        fontSize="small"
+                      />
+                    ) : null}
+                    <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                      {editMode ? t('ganttChart:moveModeActiveOption') : t('ganttChart:moveModeOption')}
+                    </Box>
+                  </Button>
+                </Tooltip>
+              ) : null}
+            </Box>
           ) : null}
         </Box>
         {showViewModeSelector ? (
-          <>
-            <Select
-              size="small"
-              value={viewMode}
-              onChange={(event) => onViewModeChange(event.target.value as ViewMode)}
-              inputProps={{ 'aria-label': t('ganttChart:viewSelectorAriaLabel') }}
-              sx={{
-                display: { xs: 'inline-flex', md: 'none' },
-                minWidth: 116,
-                maxWidth: '100%',
-                bgcolor: 'background.paper',
-                color: 'text.primary',
-                '& .MuiSelect-select': {
-                  py: 0.75,
-                },
-              }}
-            >
-              {GANTT_HEADER_VIEW_MODES.map((mode) => (
-                <MenuItem key={mode} value={mode}>
-                  {t(`ganttChart:chartLocaleText.viewModes.${mode}`)}
-                </MenuItem>
-              ))}
-            </Select>
-            <ButtonGroup
-              size="small"
-              variant="outlined"
-              sx={[segmentedButtonGroupSx, { display: { xs: 'none', md: 'inline-flex' } }]}
-              aria-label={t('ganttChart:chartLocaleText.titleOccupancy')}
-            >
-              {GANTT_HEADER_VIEW_MODES.map((mode) => (
-                <Button
-                  key={mode}
-                  onClick={() => onViewModeChange(mode)}
-                  aria-pressed={viewMode === mode}
-                  variant={viewMode === mode ? 'contained' : 'outlined'}
-                  color={viewMode === mode ? 'success' : 'inherit'}
-                  sx={getSegmentedActionButtonSx({ active: viewMode === mode })}
-                >
-                  {t(`ganttChart:chartLocaleText.viewModes.${mode}`)}
-                </Button>
-              ))}
-            </ButtonGroup>
-          </>
+          <ButtonGroup
+            size="small"
+            variant="outlined"
+            sx={[segmentedButtonGroupSx, { display: { xs: 'none', md: 'inline-flex' } }]}
+            aria-label={t('ganttChart:chartLocaleText.titleOccupancy')}
+          >
+            {GANTT_HEADER_VIEW_MODES.map((mode) => (
+              <Button
+                key={mode}
+                onClick={() => onViewModeChange(mode)}
+                aria-pressed={viewMode === mode}
+                variant={viewMode === mode ? 'contained' : 'outlined'}
+                color={viewMode === mode ? 'success' : 'inherit'}
+                sx={getSegmentedActionButtonSx({ active: viewMode === mode })}
+              >
+                {t(`ganttChart:chartLocaleText.viewModes.${mode}`)}
+              </Button>
+            ))}
+          </ButtonGroup>
         ) : null}
       </Box>
     </Box>
