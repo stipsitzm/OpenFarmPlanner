@@ -17,6 +17,8 @@ import {
   Box,
   Button,
   ButtonGroup,
+  MenuItem,
+  Select,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -504,25 +506,49 @@ function GanttChartPage() {
           ) : null}
         </Box>
         {showViewModeSelector ? (
-          <ButtonGroup
-            size="small"
-            variant="outlined"
-            sx={segmentedButtonGroupSx}
-            aria-label={t('ganttChart:chartLocaleText.titleOccupancy')}
-          >
-            {GANTT_HEADER_VIEW_MODES.map((mode) => (
-              <Button
-                key={mode}
-                onClick={() => onViewModeChange(mode)}
-                aria-pressed={viewMode === mode}
-                variant={viewMode === mode ? 'contained' : 'outlined'}
-                color={viewMode === mode ? 'success' : 'inherit'}
-                sx={getSegmentedActionButtonSx({ active: viewMode === mode })}
-              >
-                {t(`ganttChart:chartLocaleText.viewModes.${mode}`)}
-              </Button>
-            ))}
-          </ButtonGroup>
+          <>
+            <Select
+              size="small"
+              value={viewMode}
+              onChange={(event) => onViewModeChange(event.target.value as ViewMode)}
+              inputProps={{ 'aria-label': t('ganttChart:viewSelectorAriaLabel') }}
+              sx={{
+                display: { xs: 'inline-flex', md: 'none' },
+                minWidth: 116,
+                maxWidth: '100%',
+                bgcolor: 'background.paper',
+                color: 'text.primary',
+                '& .MuiSelect-select': {
+                  py: 0.75,
+                },
+              }}
+            >
+              {GANTT_HEADER_VIEW_MODES.map((mode) => (
+                <MenuItem key={mode} value={mode}>
+                  {t(`ganttChart:chartLocaleText.viewModes.${mode}`)}
+                </MenuItem>
+              ))}
+            </Select>
+            <ButtonGroup
+              size="small"
+              variant="outlined"
+              sx={[segmentedButtonGroupSx, { display: { xs: 'none', md: 'inline-flex' } }]}
+              aria-label={t('ganttChart:chartLocaleText.titleOccupancy')}
+            >
+              {GANTT_HEADER_VIEW_MODES.map((mode) => (
+                <Button
+                  key={mode}
+                  onClick={() => onViewModeChange(mode)}
+                  aria-pressed={viewMode === mode}
+                  variant={viewMode === mode ? 'contained' : 'outlined'}
+                  color={viewMode === mode ? 'success' : 'inherit'}
+                  sx={getSegmentedActionButtonSx({ active: viewMode === mode })}
+                >
+                  {t(`ganttChart:chartLocaleText.viewModes.${mode}`)}
+                </Button>
+              ))}
+            </ButtonGroup>
+          </>
         ) : null}
       </Box>
     </Box>
