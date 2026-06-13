@@ -63,6 +63,9 @@ const createKonvaTarget = (positionRef: {
   y: () => positionRef.current.y,
 });
 
+const LOCATION_EDIT_MODE_BANNER =
+  "Grafikbearbeitung aktiv: Parzellen und Beete dieses Standorts können verschoben werden.";
+
 const createTouchLikeEvent = (
   type: string,
   points: Array<{ clientX: number; clientY: number }>,
@@ -369,19 +372,20 @@ describe("GraphicalFields", () => {
     expect(await screen.findByRole("button", { name: "Bearbeiten" })).toBeInTheDocument();
     expect(
       screen.queryByText(
-        "Editiermodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
+        LOCATION_EDIT_MODE_BANNER,
       ),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "false");
 
     act(() => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+      );
       fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
     });
 
     expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bearbeitungsmodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent(LOCATION_EDIT_MODE_BANNER);
   }, 15000);
 
   it("renders fit-to-view and zoom controls", async () => {
@@ -475,9 +479,7 @@ describe("GraphicalFields", () => {
         "true",
       );
     });
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bearbeitungsmodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent(LOCATION_EDIT_MODE_BANNER);
   }, 15000);
 
   it("scopes header edit actions to the selected location when the global mode toggle is hidden", async () => {
@@ -521,9 +523,7 @@ describe("GraphicalFields", () => {
       );
     });
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Grafikbearbeitung aktiv: Parzellen und Beete dieses Standorts können verschoben werden.",
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent(LOCATION_EDIT_MODE_BANNER);
     expect(screen.getByText("Grafikbearbeitung aktiv")).toBeInTheDocument();
     expect(await screen.findByTestId("field-rect-10")).toHaveAttribute(
       "draggable",
@@ -969,13 +969,14 @@ describe("GraphicalFields", () => {
     expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "false");
 
     act(() => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Standort: Hof Nord" }),
+      );
       fireEvent.keyDown(window, { key: "e", altKey: true });
     });
 
     expect(screen.getByRole("button", { name: "Bearbeiten" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bearbeitungsmodus aktiv – Parzellen und Beete können jetzt verschoben werden.",
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent(LOCATION_EDIT_MODE_BANNER);
 
     const input = document.createElement("input");
     document.body.appendChild(input);
