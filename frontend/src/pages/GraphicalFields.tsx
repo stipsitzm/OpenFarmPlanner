@@ -28,6 +28,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import { Group, Layer, Rect, Stage, Text } from "react-konva";
 import type Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
@@ -458,10 +459,6 @@ export default function GraphicalFields({
       stopKonvaDragging();
     });
   }, [editableLocationId, interactionMode]);
-
-  const activeEditLocationName = globalEditMode
-    ? null
-    : locations.find((location) => location.id === editableLocationId)?.name ?? null;
 
   const isLocationEditMode = (locationId: number): boolean =>
     globalEditMode || editableLocationId === locationId;
@@ -1206,18 +1203,6 @@ export default function GraphicalFields({
         ) : null}
       </Stack>
 
-      {globalEditMode ? (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          {t("fields:graphical.editModeBanner")}
-        </Alert>
-      ) : null}
-      {activeEditLocationName ? (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          {t("fields:graphical.locationEditModeBanner", {
-            name: activeEditLocationName,
-          })}
-        </Alert>
-      ) : null}
       {error ? <Alert severity="error">{error}</Alert> : null}
 
       {locationLayouts.map(
@@ -1251,8 +1236,27 @@ export default function GraphicalFields({
               onChange={(_, isExpanded) =>
                 setExpanded((prev) => ({ ...prev, [locationId]: isExpanded }))
               }
+              sx={{
+                ...(locationIsEditable
+                  ? {
+                    borderLeft: 4,
+                    borderLeftColor: "success.main",
+                    "&:before": { display: "none" },
+                  }
+                  : {}),
+              }}
             >
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon />}
+                sx={{
+                  ...(locationIsEditable
+                    ? {
+                      bgcolor: "success.50",
+                      "&:hover": { bgcolor: "success.100" },
+                    }
+                    : {}),
+                }}
+              >
                 <Box
                   sx={{
                     display: "flex",
@@ -1264,72 +1268,155 @@ export default function GraphicalFields({
                     pr: 1,
                   }}
                 >
-                  <Typography variant="h6" sx={{ minWidth: 0 }}>
+                  <Typography variant="h6" sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
                     {t("fields:graphical.locationTitle", { name: location.name })}
                   </Typography>
                   {!globalEditMode ? (
-                    <Tooltip
-                      title={t(
-                        locationIsEditable
-                          ? "fields:graphical.disableLocationEditMode"
-                          : "fields:graphical.enableLocationEditMode",
-                        { name: location.name },
-                      )}
-                    >
-                      <Box
-                        component="span"
-                        role="button"
-                        tabIndex={0}
-                        aria-label={t(
+                    <>
+                      <Tooltip
+                        title={t(
                           locationIsEditable
                             ? "fields:graphical.disableLocationEditMode"
                             : "fields:graphical.enableLocationEditMode",
                           { name: location.name },
                         )}
-                        aria-pressed={locationIsEditable}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleLocationEditToggle(locationId);
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key !== "Enter" && event.key !== " ") {
-                            return;
-                          }
-                          event.preventDefault();
-                          event.stopPropagation();
-                          handleLocationEditToggle(locationId);
-                        }}
-                        sx={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                          width: 32,
-                          height: 32,
-                          borderRadius: "50%",
-                          color: locationIsEditable ? "success.dark" : "text.secondary",
-                          bgcolor: locationIsEditable ? "success.50" : "transparent",
-                          border: "1px solid",
-                          borderColor: locationIsEditable ? "success.light" : "transparent",
-                          cursor: "pointer",
-                          "&:hover": {
-                            bgcolor: locationIsEditable ? "success.100" : "action.hover",
-                            color: locationIsEditable ? "success.dark" : "text.primary",
-                          },
-                          "&:focus-visible": {
-                            outline: "2px solid",
-                            outlineColor: "primary.main",
-                            outlineOffset: 2,
-                          },
-                        }}
                       >
-                        <EditOutlinedIcon fontSize="small" />
-                      </Box>
-                    </Tooltip>
+                        <Box
+                          component="span"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={t(
+                            locationIsEditable
+                              ? "fields:graphical.disableLocationEditMode"
+                              : "fields:graphical.enableLocationEditMode",
+                            { name: location.name },
+                          )}
+                          aria-pressed={locationIsEditable}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleLocationEditToggle(locationId);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key !== "Enter" && event.key !== " ") {
+                              return;
+                            }
+                            event.preventDefault();
+                            event.stopPropagation();
+                            handleLocationEditToggle(locationId);
+                          }}
+                          sx={{
+                            display: { xs: "none", sm: "inline-flex" },
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            gap: 0.75,
+                            minHeight: 32,
+                            px: 1.25,
+                            borderRadius: 1,
+                            typography: "button",
+                            textTransform: "none",
+                            color: locationIsEditable ? "success.contrastText" : "text.primary",
+                            bgcolor: locationIsEditable ? "success.main" : "background.paper",
+                            border: "1px solid",
+                            borderColor: locationIsEditable ? "success.dark" : "divider",
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            boxShadow: locationIsEditable ? 1 : 0,
+                            "&:hover": {
+                              bgcolor: locationIsEditable ? "success.dark" : "action.hover",
+                              borderColor: locationIsEditable ? "success.dark" : "text.secondary",
+                            },
+                            "&:focus-visible": {
+                              outline: "2px solid",
+                              outlineColor: "primary.main",
+                              outlineOffset: 2,
+                            },
+                          }}
+                        >
+                          {locationIsEditable ? (
+                            <CheckCircleOutlineIcon fontSize="small" />
+                          ) : (
+                            <EditOutlinedIcon fontSize="small" />
+                          )}
+                          {t(
+                            locationIsEditable
+                              ? "fields:graphical.locationEditModeActive"
+                              : "fields:graphical.locationEditModeAction",
+                          )}
+                        </Box>
+                      </Tooltip>
+                      <Tooltip
+                        title={t(
+                          locationIsEditable
+                            ? "fields:graphical.disableLocationEditMode"
+                            : "fields:graphical.enableLocationEditMode",
+                          { name: location.name },
+                        )}
+                      >
+                        <Box
+                          component="span"
+                          role="button"
+                          tabIndex={0}
+                          aria-label={t(
+                            locationIsEditable
+                              ? "fields:graphical.disableLocationEditMode"
+                              : "fields:graphical.enableLocationEditMode",
+                            { name: location.name },
+                          )}
+                          aria-pressed={locationIsEditable}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleLocationEditToggle(locationId);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key !== "Enter" && event.key !== " ") {
+                              return;
+                            }
+                            event.preventDefault();
+                            event.stopPropagation();
+                            handleLocationEditToggle(locationId);
+                          }}
+                          sx={{
+                            display: { xs: "inline-flex", sm: "none" },
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            width: 34,
+                            height: 34,
+                            borderRadius: "50%",
+                            color: locationIsEditable ? "success.contrastText" : "text.secondary",
+                            bgcolor: locationIsEditable ? "success.main" : "transparent",
+                            border: "1px solid",
+                            borderColor: locationIsEditable ? "success.dark" : "divider",
+                            boxShadow: locationIsEditable ? 1 : 0,
+                            cursor: "pointer",
+                            "&:hover": {
+                              bgcolor: locationIsEditable ? "success.dark" : "action.hover",
+                            },
+                            "&:focus-visible": {
+                              outline: "2px solid",
+                              outlineColor: "primary.main",
+                              outlineOffset: 2,
+                            },
+                          }}
+                        >
+                          {locationIsEditable ? (
+                            <CheckCircleOutlineIcon fontSize="small" />
+                          ) : (
+                            <EditOutlinedIcon fontSize="small" />
+                          )}
+                        </Box>
+                      </Tooltip>
+                    </>
                   ) : null}
                 </Box>
               </AccordionSummary>
               <AccordionDetails>
+                {locationIsEditable ? (
+                  <Alert severity="warning" sx={{ mb: 1.5 }}>
+                    {t("fields:graphical.locationEditModeBanner")}
+                  </Alert>
+                ) : null}
                 <Box
                   ref={(node: HTMLDivElement | null) => {
                     locationCanvasRefs.current[locationId] = node;

@@ -522,8 +522,9 @@ describe("GraphicalFields", () => {
     });
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Bearbeitungsmodus für Standort „Hof Nord“ aktiv",
+      "Bearbeitungsmodus aktiv: Parzellen und Beete dieses Standorts können verschoben werden.",
     );
+    expect(screen.getByText("Bearbeitung aktiv")).toBeInTheDocument();
     expect(await screen.findByTestId("field-rect-10")).toHaveAttribute(
       "draggable",
       "true",
