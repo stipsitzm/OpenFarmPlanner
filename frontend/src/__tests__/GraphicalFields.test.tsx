@@ -480,6 +480,65 @@ describe("GraphicalFields", () => {
     );
   }, 15000);
 
+  it("scopes header edit actions to the selected location when the global mode toggle is hidden", async () => {
+    mockUseHierarchyData.mockReturnValue({
+      loading: false,
+      error: null,
+      locations: [
+        { id: 1, name: "Hof Nord" },
+        { id: 2, name: "Hof Süd" },
+      ],
+      fields: [
+        {
+          id: 10,
+          name: "Parzelle A",
+          location: 1,
+          area_sqm: 1200,
+          width_m: 20,
+          length_m: 40,
+        },
+        {
+          id: 20,
+          name: "Parzelle B",
+          location: 2,
+          area_sqm: 900,
+          width_m: 15,
+          length_m: 30,
+        },
+      ],
+      beds: [],
+    });
+
+    render(<GraphicalFields showModeToggle={false} />);
+
+    expect(screen.queryByRole("button", { name: "Bearbeiten" })).not.toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "Ansicht für Standort „Hof Nord“ bearbeiten",
+        }),
+      );
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Bearbeitungsmodus für Standort „Hof Nord“ aktiv",
+    );
+    expect(await screen.findByTestId("field-rect-10")).toHaveAttribute(
+      "draggable",
+      "true",
+    );
+    expect(screen.getByTestId("field-rect-20")).toHaveAttribute(
+      "draggable",
+      "false",
+    );
+    expect(
+      screen.getByRole("button", {
+        name: "Bearbeitung für Standort „Hof Nord“ beenden",
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+  }, 15000);
+
   it("renders compact overlay zoom controls inside the graphic container", async () => {
     render(<GraphicalFields />);
     act(() => {
