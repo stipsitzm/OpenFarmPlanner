@@ -308,6 +308,13 @@
       "project": "Projekt-Snapshots"
     },
     "restoreButton": "Zu dieser Version wechseln",
+    "currentVersion": "Aktuelle Version",
+    "changedFields": "Geändert:",
+    "emptyValue": "Nicht gesetzt",
+    "createdValue": "Erstellt",
+    "complexValue": "Details geändert",
+    "booleanYes": "Ja",
+    "booleanNo": "Nein",
     "closeButton": "Schließen",
     "unknownUser": "Unbekannter Nutzer",
     "meta": "Version vom {{timestamp}}",
@@ -324,6 +331,16 @@
       "updated": "bearbeitet",
       "deleted": "gelöscht",
       "restored": "wiederhergestellt"
+    },
+    "fieldLabels": {
+      "created": "Kultur",
+      "fallback": "Feld",
+      "sowingCalculationSafetyPercentDirect": "Sicherheitszuschlag Direktsaat",
+      "sowingCalculationSafetyPercentPreCultivation": "Sicherheitszuschlag Pflanzung",
+      "seedingRequirementType": "Saatgutbedarf-Typ",
+      "supplier": "Lieferant",
+      "image": "Bild",
+      "selectedSeedDemandSupplier": "Lieferant für Saatgutbedarf"
     },
     "objectTypes": {
       "culture": "Kultur",

@@ -11,6 +11,7 @@ from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import json
 import re
+from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import login
@@ -324,6 +325,55 @@ def _format_culture_display_name(name: str | None, variety: str | None) -> str |
     if normalized_variety:
         return normalized_variety
     return None
+
+
+_CULTURE_HISTORY_IGNORED_FIELDS = {
+    'id',
+    'created_at',
+    'updated_at',
+    'deleted_at',
+    'project_id',
+    'created_by_id',
+    'updated_by_id',
+    'name_normalized',
+    'variety_normalized',
+}
+
+
+def _build_culture_revision_changes(
+    snapshot: dict[str, Any],
+    previous_snapshot: dict[str, Any] | None,
+    changed_fields: list[str] | None,
+) -> list[dict[str, Any]]:
+    """Build displayable field changes from culture revision snapshots."""
+    if not isinstance(snapshot, dict):
+        return []
+
+    if not isinstance(changed_fields, list):
+        changed_fields = []
+
+    changes: list[dict[str, Any]] = []
+    for field in changed_fields:
+        if field in _CULTURE_HISTORY_IGNORED_FIELDS:
+            continue
+        if field == 'created':
+            changes.append({
+                'field': field,
+                'old_value': None,
+                'new_value': True,
+            })
+            continue
+        if field not in snapshot:
+            continue
+
+        old_value = previous_snapshot.get(field) if isinstance(previous_snapshot, dict) else None
+        changes.append({
+            'field': field,
+            'old_value': old_value,
+            'new_value': snapshot.get(field),
+        })
+
+    return changes
 
 
 def _find_snapshot_row(snapshot: dict, key: str, object_id: int) -> dict | None:
@@ -1563,7 +1613,8 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
     def history(self, request, pk=None):
         culture = self.get_object()
         since = timezone.now() - timedelta(days=30)
-        rows = culture.revisions.filter(created_at__gte=since).order_by('-created_at')
+        rows = list(culture.revisions.filter(created_at__gte=since).order_by('-created_at'))
+        current_revision_id = rows[0].id if rows else None
         payload = [
             {
                 'history_id': row.id,
@@ -1579,8 +1630,14 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
                 ),
                 'action': 'created' if isinstance(row.changed_fields, list) and 'created' in row.changed_fields else 'updated',
                 'actor_label': row.user_name or None,
+                'is_current_version': row.id == current_revision_id,
+                'changes': _build_culture_revision_changes(
+                    row.snapshot,
+                    rows[index + 1].snapshot if index + 1 < len(rows) else None,
+                    row.changed_fields,
+                ),
             }
-            for row in rows
+            for index, row in enumerate(rows)
         ]
         return Response(CultureHistoryEntrySerializer(payload, many=True).data)
 
@@ -2075,6 +2132,8 @@ class GlobalHistoryListView(APIView):
             .filter(culture__project=active_project, created_at__gte=since)
             .order_by('-created_at')
         )
+        rows = list(rows)
+        current_revision_id = rows[0].id if rows else None
         payload = [
             {
                 'history_id': row.id,
@@ -2090,8 +2149,17 @@ class GlobalHistoryListView(APIView):
                 ),
                 'action': 'created' if isinstance(row.changed_fields, list) and 'created' in row.changed_fields else 'updated',
                 'actor_label': row.user_name or None,
+                'is_current_version': row.id == current_revision_id,
+                'changes': _build_culture_revision_changes(
+                    row.snapshot,
+                    next(
+                        (candidate.snapshot for candidate in rows[index + 1:] if candidate.culture_id == row.culture_id),
+                        None,
+                    ),
+                    row.changed_fields,
+                ),
             }
-            for row in rows
+            for index, row in enumerate(rows)
         ]
         return Response(CultureHistoryEntrySerializer(payload, many=True).data)
 

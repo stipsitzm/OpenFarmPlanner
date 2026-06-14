@@ -440,6 +440,14 @@ export interface CultureHistoryEntry {
   object_display_name?: string | null;
   action?: string;
   actor_label?: string | null;
+  is_current_version?: boolean;
+  changes?: CultureHistoryChange[];
+}
+
+export interface CultureHistoryChange {
+  field: string;
+  old_value: unknown;
+  new_value: unknown;
 }
 
 export interface EnrichmentUsage {

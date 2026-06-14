@@ -13,5 +13,24 @@
   },
   "messages": {
     "restoreDeleteError": "Culture could not be restored."
+  },
+  "history": {
+    "currentVersion": "Current version",
+    "changedFields": "Changed:",
+    "emptyValue": "Not set",
+    "createdValue": "Created",
+    "complexValue": "Details changed",
+    "booleanYes": "Yes",
+    "booleanNo": "No",
+    "fieldLabels": {
+      "created": "Culture",
+      "fallback": "Field",
+      "sowingCalculationSafetyPercentDirect": "Direct sowing safety surcharge",
+      "sowingCalculationSafetyPercentPreCultivation": "Transplanting safety surcharge",
+      "seedingRequirementType": "Seed requirement type",
+      "supplier": "Supplier",
+      "image": "Image",
+      "selectedSeedDemandSupplier": "Seed demand supplier"
+    }
   }
 }

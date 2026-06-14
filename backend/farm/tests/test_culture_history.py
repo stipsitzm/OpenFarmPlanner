@@ -30,6 +30,12 @@ class CultureHistoryTests(TestCase):
         self.assertEqual(entry.get('object_type'), 'culture')
         self.assertIn('object_display_name', entry)
         self.assertIn('action', entry)
+        self.assertTrue(entry.get('is_current_version'))
+        self.assertFalse(response.json()[1].get('is_current_version'))
+        self.assertIn(
+            {'field': 'name', 'old_value': 'Carrot', 'new_value': 'Carrot Updated'},
+            entry.get('changes'),
+        )
 
     def test_restore_endpoint(self):
         original_revision = self.culture.revisions.first()
@@ -67,6 +73,7 @@ class CultureHistoryTests(TestCase):
         response = self.client.get('/openfarmplanner/api/history/global/')
         self.assertEqual(response.status_code, 200)
         self.assertGreaterEqual(len(response.json()), 1)
+        self.assertTrue(response.json()[0].get('is_current_version'))
 
     def test_global_history_restore_undeletes_culture(self):
         delete_response = self.client.delete(f'/openfarmplanner/api/cultures/{self.culture.id}/')

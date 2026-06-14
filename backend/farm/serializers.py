@@ -1577,6 +1577,8 @@ class CultureHistoryEntrySerializer(serializers.Serializer):
     object_display_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     action = serializers.CharField(required=False, allow_blank=True)
     actor_label = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    is_current_version = serializers.BooleanField(required=False)
+    changes = serializers.ListField(child=serializers.DictField(), required=False)
 
 
 class CultureRestoreSerializer(serializers.Serializer):
