@@ -1,5 +1,11 @@
 import type { Culture } from '../api/api';
-import type { CultureSupplierData, CultureSupplierDataInput, SeedRateByCultivation, SeedRateUnit } from '../api/types';
+import type {
+  CultivationType,
+  CultureSupplierData,
+  CultureSupplierDataInput,
+  SeedRateByCultivation,
+  SeedRateUnit,
+} from '../api/types';
 import { isEmptySupplierDataRow } from '../cultures/supplierDataRows';
 import {
   normalizeCultivationType,
@@ -35,9 +41,13 @@ const isSetSeedRateValue = (value: unknown): value is number => (
 
 const hasValue = (value: unknown): boolean => value !== null && value !== undefined;
 
+const isSeedRateCultivationType = (value: unknown): value is CultivationType => (
+  value === 'pre_cultivation' || value === 'direct_sowing'
+);
+
 const buildSeedRateByCultivation = (
   culture: Culture,
-  cultivationTypes: Array<'pre_cultivation' | 'direct_sowing'>,
+  cultivationTypes: CultivationType[],
   legacyUnit: SeedRateUnit | null,
   directUnit: SeedRateUnit | null,
   preCultivationUnit: SeedRateUnit | null,
@@ -114,15 +124,18 @@ export function buildCultureSavePayload(culture: Culture): CultureSavePayload {
     });
   }
 
-  const cultivationTypes = (culture.cultivation_types && culture.cultivation_types.length > 0)
-    ? culture.cultivation_types.filter((ct): ct is 'pre_cultivation' | 'direct_sowing' => ct === 'pre_cultivation' || ct === 'direct_sowing')
-    : (culture.cultivation_type ? [normalizeCultivationType(culture.cultivation_type)].filter((ct): ct is 'pre_cultivation' | 'direct_sowing' => ct === 'pre_cultivation' || ct === 'direct_sowing') : ['pre_cultivation']);
-  const seedRateDirectUnit = normalizeSeedRateUnit(culture.seed_rate_direct_unit);
-  const seedRatePreCultivationUnit = normalizeSeedRateUnit(culture.seed_rate_pre_cultivation_unit);
+  const cultivationTypes: CultivationType[] = (culture.cultivation_types && culture.cultivation_types.length > 0)
+    ? culture.cultivation_types.filter(isSeedRateCultivationType)
+    : (culture.cultivation_type
+      ? [normalizeCultivationType(culture.cultivation_type)].filter(isSeedRateCultivationType)
+      : ['pre_cultivation']);
+  const seedRateUnit = normalizeSeedRateUnit(culture.seed_rate_unit) ?? null;
+  const seedRateDirectUnit = normalizeSeedRateUnit(culture.seed_rate_direct_unit) ?? null;
+  const seedRatePreCultivationUnit = normalizeSeedRateUnit(culture.seed_rate_pre_cultivation_unit) ?? null;
   const seedRateFallbackFields = buildSeedRateByCultivation(
     culture,
     cultivationTypes,
-    normalizeSeedRateUnit(culture.seed_rate_unit),
+    seedRateUnit,
     seedRateDirectUnit,
     seedRatePreCultivationUnit,
   );
