@@ -940,24 +940,28 @@ class Culture(TimestampedModel):
 
         if self.seed_rate_direct_value is not None and self.seed_rate_direct_value <= 0:
             errors['seed_rate_direct_value'] = 'Direct sowing seed rate value must be greater than zero.'
-        if self.seed_rate_direct_unit and self.seed_rate_direct_unit not in self.DIRECT_SOWING_SEED_RATE_UNITS:
+        if (
+            self.seed_rate_direct_value is not None
+            and self.seed_rate_direct_unit
+            and self.seed_rate_direct_unit not in self.DIRECT_SOWING_SEED_RATE_UNITS
+        ):
             errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is unsupported.'
         has_direct = 'direct_sowing' in (self.cultivation_types or [])
         has_pre = 'pre_cultivation' in (self.cultivation_types or [])
 
-        if has_direct and self.seed_rate_direct_value is None and self.seed_rate_direct_unit:
-            errors['seed_rate_direct_value'] = 'Direct sowing seed rate value is required when direct sowing unit is set.'
         if has_direct and self.seed_rate_direct_value is not None and not self.seed_rate_direct_unit:
             errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is required when direct sowing value is set.'
 
         if self.seed_rate_pre_cultivation_value is not None and self.seed_rate_pre_cultivation_value <= 0:
             errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value must be greater than zero.'
-        if self.seed_rate_pre_cultivation_unit and self.seed_rate_pre_cultivation_unit not in self.PRE_CULTIVATION_AUTO_SEED_RATE_UNITS:
+        if (
+            self.seed_rate_pre_cultivation_value is not None
+            and self.seed_rate_pre_cultivation_unit
+            and self.seed_rate_pre_cultivation_unit not in self.PRE_CULTIVATION_AUTO_SEED_RATE_UNITS
+        ):
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is unsupported.'
         if has_pre and self.seed_rate_pre_cultivation_value is not None and not self.seed_rate_pre_cultivation_unit:
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is required when pre-cultivation value is set.'
-        if has_pre and self.seed_rate_pre_cultivation_value is None and self.seed_rate_pre_cultivation_unit:
-            errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value is required when pre-cultivation unit is set.'
 
         if self.thousand_kernel_weight_g is not None and self.thousand_kernel_weight_g <= 0:
             errors['thousand_kernel_weight_g'] = 'Thousand kernel weight must be greater than zero.'

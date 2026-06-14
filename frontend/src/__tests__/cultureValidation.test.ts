@@ -29,11 +29,47 @@ describe('validateCulture', () => {
     );
     expect(nonPositive.errors.seed_rate_direct_value).toBe('form.seedRateValueRequired');
     
-    const unitWithoutValue = validateCulture(
-      { name: 'Karotte', variety: 'Nantaise', supplier: { id: 1, name: 'Test' } as unknown, cultivation_types: ['pre_cultivation'], growth_duration_days: 10, harvest_duration_days: 5, propagation_duration_days: 2, seed_rate_pre_cultivation_unit: 'g_per_m2' },
+  });
+
+  it('allows clearing seed rate amount while keeping unit and safety values', () => {
+    const result = validateCulture(
+      {
+        name: 'Karotte',
+        variety: 'Nantaise',
+        cultivation_types: ['direct_sowing', 'pre_cultivation'],
+        seed_rate_direct_value: null,
+        seed_rate_direct_unit: 'g_per_m2',
+        sowing_calculation_safety_percent_direct: 10,
+        seed_rate_pre_cultivation_value: null,
+        seed_rate_pre_cultivation_unit: 'g_per_m2',
+        sowing_calculation_safety_percent_pre_cultivation: 10,
+        thousand_kernel_weight_g: 3.5,
+      },
       t
     );
-    expect(unitWithoutValue.errors.seed_rate_pre_cultivation_value).toBe('form.seedRateValueRequired');
+
+    expect(result.errors.seed_rate_direct_value).toBeUndefined();
+    expect(result.errors.seed_rate_direct_unit).toBeUndefined();
+    expect(result.errors.seed_rate_pre_cultivation_value).toBeUndefined();
+    expect(result.errors.seed_rate_pre_cultivation_unit).toBeUndefined();
+  });
+
+  it('accepts small seed rate values with three decimal places', () => {
+    const result = validateCulture(
+      {
+        name: 'Karotte',
+        variety: 'Nantaise',
+        cultivation_types: ['direct_sowing', 'pre_cultivation'],
+        seed_rate_direct_value: 0.014,
+        seed_rate_direct_unit: 'g_per_m2',
+        seed_rate_pre_cultivation_value: 0.125,
+        seed_rate_pre_cultivation_unit: 'g_per_m2',
+      },
+      t
+    );
+
+    expect(result.errors.seed_rate_direct_value).toBeUndefined();
+    expect(result.errors.seed_rate_pre_cultivation_value).toBeUndefined();
   });
 
   it('keeps empty seed rate partner fields neutral during live validation', () => {

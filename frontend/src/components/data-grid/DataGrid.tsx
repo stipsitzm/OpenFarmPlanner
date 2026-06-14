@@ -56,6 +56,8 @@ import { TableCopyMenuItems } from './TableCopyMenuItems';
 import { formatClipboardValue, type TableClipboardRow } from './tableClipboard';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../../utils/contextMenu';
 import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from './contextMenuFocus';
+import { ContextMenuHint } from './ContextMenuHint';
+import { useContextMenuHint } from './useContextMenuHint';
 
 export interface EditableRow {
   id: number;
@@ -406,6 +408,9 @@ export function EditableDataGrid<T extends EditableRow>({
     () => orderRowsByStableIds(rows as T[], stableRowOrder),
     [rows, stableRowOrder],
   );
+  const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
+    enabled: dataFetched && !loading && !error && rowsForGrid.length > 0,
+  });
   const refreshStableRowOrder = useCallback((sourceRows: readonly T[], model: GridSortModel = sortModel): void => {
     setStableRowOrder(getSortedRowIds(sourceRows, model));
   }, [sortModel]);
@@ -1505,10 +1510,11 @@ export function EditableDataGrid<T extends EditableRow>({
 
   const openRowActionContextMenu = useCallback((rowId: GridRowId, event: React.MouseEvent): void => {
     suppressNativeContextMenu(event);
+    markContextMenuHintUsed();
     setSelectedRowIds([rowId]);
     rowActionMenuOriginRef.current = event.currentTarget as HTMLElement;
     setRowActionMenuState({ rowId, mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
-  }, []);
+  }, [markContextMenuHintUsed]);
 
   const closeRowActionMenu = useCallback((): void => {
     setRowActionMenuState(null);
@@ -1811,6 +1817,14 @@ export function EditableDataGrid<T extends EditableRow>({
   return (
     <>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {showContextMenuHint ? (
+        <ContextMenuHint
+          message={t('messages.contextMenuTableHint')}
+          secondary={t('messages.contextMenuHintKeyboard')}
+          onClose={closeContextMenuHint}
+          sx={{ mb: 1.25 }}
+        />
+      ) : null}
       
       <Box
         sx={{

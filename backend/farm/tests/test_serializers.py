@@ -154,18 +154,21 @@ class SerializerBranchCoverageTest(TestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
-    def test_rejects_pre_cultivation_unit_without_value(self):
+    def test_allows_seed_rate_units_without_values(self):
         serializer = CultureSerializer(
             data={
                 'name': 'Mangold',
                 'variety': 'X',
-                'cultivation_types': ['pre_cultivation'],
+                'cultivation_types': ['direct_sowing', 'pre_cultivation'],
+                'seed_rate_direct_unit': 'g_per_m2',
+                'sowing_calculation_safety_percent_direct': 10,
                 'seed_rate_pre_cultivation_unit': 'g_per_m2',
+                'sowing_calculation_safety_percent_pre_cultivation': 10,
+                'thousand_kernel_weight_g': '3.50',
                 'project': self.project.id,
             }
         )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('seed_rate_pre_cultivation_value', serializer.errors)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_normalizes_legacy_empty_seed_rate_unit_placeholder(self):
         serializer = CultureSerializer(
@@ -233,6 +236,25 @@ class SerializerBranchCoverageTest(TestCase):
             }
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_accepts_small_method_seed_rate_values(self):
+        serializer = CultureSerializer(
+            data={
+                'name': 'Karotte',
+                'variety': 'Nantaise',
+                'cultivation_types': ['direct_sowing', 'pre_cultivation'],
+                'seed_rate_direct_value': 0.014,
+                'seed_rate_direct_unit': 'g_per_m2',
+                'seed_rate_pre_cultivation_value': 1.357,
+                'seed_rate_pre_cultivation_unit': 'g_per_m2',
+                'project': self.project.id,
+            }
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        culture = serializer.save()
+        self.assertEqual(culture.seed_rate_direct_value, 0.014)
+        self.assertEqual(culture.seed_rate_pre_cultivation_value, 1.357)
 
     def test_notes_without_quellen_section_are_allowed(self):
         serializer = CultureSerializer(

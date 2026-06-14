@@ -76,7 +76,6 @@ import {
   EditableDataGrid,
   createSingleSelectColumn,
   getCalculatedColumnProps,
-  ContextMenuHint,
   type EditableRow,
   type DataGridAPI,
   type SearchableSelectOption,
@@ -177,7 +176,6 @@ const CULTIVATION_TYPE_OPTIONS = [
 const CULTURE_COLUMN_MAX_WIDTH = 280;
 const BED_COLUMN_MAX_WIDTH = 220;
 const DATE_COLUMN_WIDTH = 142;
-const PLANTING_PLANS_CONTEXT_MENU_HINT_STORAGE_KEY = "ofp.plantingPlansContextMenuHintSeen";
 
 const estimateColumnWidth = (
   values: string[],
@@ -575,7 +573,6 @@ function PlantingPlans() {
   const [isMobileNotesSaving, setIsMobileNotesSaving] = useState(false);
   const [mobileActionMenuAnchor, setMobileActionMenuAnchor] = useState<HTMLElement | null>(null);
   const [mobileActionMenuRow, setMobileActionMenuRow] = useState<PlantingPlanRow | null>(null);
-  const [showContextMenuHint, setShowContextMenuHint] = useState(false);
   const mobilePrefillHandledRef = useRef(false);
   const createIntentHandledRef = useRef(false);
 
@@ -611,17 +608,6 @@ function PlantingPlans() {
       document.body.classList.remove("hide-version-footer");
     };
   }, [isMobile]);
-
-  useEffect(() => {
-    if (isMobile || shouldShowProjectRequiredState) {
-      return;
-    }
-    if (window.localStorage.getItem(PLANTING_PLANS_CONTEXT_MENU_HINT_STORAGE_KEY) === "1") {
-      return;
-    }
-    window.localStorage.setItem(PLANTING_PLANS_CONTEXT_MENU_HINT_STORAGE_KEY, "1");
-    setShowContextMenuHint(true);
-  }, [isMobile, shouldShowProjectRequiredState]);
 
   useCommandContextTag("plans");
 
@@ -2037,25 +2023,8 @@ function PlantingPlans() {
           <EmptyStateCard
             title={t("plantingPlans:emptyStates.states.plans.title")}
             description={t("plantingPlans:emptyStates.states.plans.description")}
-            supplement={(
-              <ContextMenuHint
-                compact
-                message={t("plantingPlans:contextMenuHint")}
-                secondary={t("plantingPlans:contextMenuHintKeyboard")}
-              />
-            )}
             actions={[{ label: t(createPlanAction.labelKey), to: createPlanAction.to }]}
           />
-        ) : null}
-
-        {!isInitialLoading && showContextMenuHint && !isMobile && !shouldShowPrerequisiteState && hasPlans ? (
-          <Box sx={{ mb: 1.25 }}>
-            <ContextMenuHint
-              message={t("plantingPlans:contextMenuHint")}
-              secondary={t("plantingPlans:contextMenuHintKeyboard")}
-              onClose={() => setShowContextMenuHint(false)}
-            />
-          </Box>
         ) : null}
 
         {isMobile && hasPlans ? (

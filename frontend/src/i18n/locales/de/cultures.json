@@ -292,8 +292,6 @@
       "packages": "Packungsgrößen"
     },
     "contextMenu": {
-      "hint": "Tipp: Rechtsklick auf eine Zeile öffnet weitere Aktionen.",
-      "hintKeyboard": "Alternativ: Kontextmenütaste oder Shift+F10.",
       "openCulture": "Kultur öffnen",
       "editCulture": "Kultur bearbeiten",
       "copyRow": "Zeile kopieren",

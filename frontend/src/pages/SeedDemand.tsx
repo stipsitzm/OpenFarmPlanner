@@ -37,8 +37,6 @@ import { getFirstMissingProjectSetupStep, getProjectSetupAction, getProjectSetup
 import { formatLocalizedNumber } from '../utils/numberLocalization';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
 
-const SEED_DEMAND_CONTEXT_MENU_HINT_STORAGE_KEY = 'ofp.seedDemandContextMenuHintSeen';
-
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
 );
@@ -84,8 +82,7 @@ export default function SeedDemandPage() {
   const hasPlans = planCount > 0;
   const hasSeedData = hasCulturesWithSeedData;
   const canCalculateSeedDemand = locationCount > 0 && fieldCount > 0 && bedCount > 0 && cultureCount > 0 && hasPlans && hasSeedData;
-  const { showContextMenuHint, closeContextMenuHint } = useContextMenuHint({
-    storageKey: SEED_DEMAND_CONTEXT_MENU_HINT_STORAGE_KEY,
+  const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
     enabled: !shouldShowProjectRequiredState && !isLoading && canCalculateSeedDemand && rows.length > 0,
   });
   const firstMissingSetupStep = getFirstMissingProjectSetupStep({
@@ -252,13 +249,14 @@ export default function SeedDemandPage() {
       return;
     }
     suppressNativeContextMenu(event);
+    markContextMenuHintUsed();
     contextMenuOriginRef.current = event.currentTarget;
     setContextMenuState({
       row,
       mouseX: event.clientX + 2,
       mouseY: event.clientY - 6,
     });
-  }, []);
+  }, [markContextMenuHintUsed]);
 
   const openKeyboardContextMenu = useCallback((
     event: KeyboardEvent<HTMLTableRowElement>,
@@ -270,6 +268,7 @@ export default function SeedDemandPage() {
     }
 
     suppressNativeContextMenu(event);
+    markContextMenuHintUsed();
     contextMenuOriginRef.current = event.currentTarget;
     const rowRect = event.currentTarget.getBoundingClientRect();
     setContextMenuState({
@@ -277,7 +276,7 @@ export default function SeedDemandPage() {
       mouseX: rowRect.left + Math.min(240, rowRect.width),
       mouseY: rowRect.top + 12,
     });
-  }, []);
+  }, [markContextMenuHintUsed]);
 
   const openCulture = useCallback((row: SeedDemand): void => {
     navigate(`/app/cultures?cultureId=${row.culture_id}`);
@@ -343,13 +342,12 @@ export default function SeedDemandPage() {
         )}
 
         {!isLoading && !error && canCalculateSeedDemand && showContextMenuHint ? (
-          <Box sx={{ mb: 1.25 }}>
-            <ContextMenuHint
-              message={t('seedDemand.contextMenu.hint')}
-              secondary={t('seedDemand.contextMenu.hintKeyboard')}
-              onClose={closeContextMenuHint}
-            />
-          </Box>
+          <ContextMenuHint
+            message={t('common:messages.contextMenuTableHint')}
+            secondary={t('common:messages.contextMenuHintKeyboard')}
+            onClose={closeContextMenuHint}
+            sx={{ mb: 1.25 }}
+          />
         ) : null}
 
         {!isLoading && !error && canCalculateSeedDemand && (
@@ -461,13 +459,6 @@ export default function SeedDemandPage() {
                 <EmptyStateCard
                   title={t('seedDemand.emptyStates.noResultsTitle')}
                   description={t('seedDemand.emptyStates.noResultsDescription')}
-                  supplement={(
-                    <ContextMenuHint
-                      compact
-                      message={t('seedDemand.contextMenu.hint')}
-                      secondary={t('seedDemand.contextMenu.hintKeyboard')}
-                    />
-                  )}
                 />
               </Box>
             ) : null}

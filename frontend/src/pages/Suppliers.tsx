@@ -37,7 +37,7 @@ import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { useRegisterCreateActions } from '../commands/useCommandContext';
-import { DELETE_UNDO_DURATION_MS, DeleteUndoSnackbar, TableCopyMenuItems } from '../components/data-grid';
+import { ContextMenuHint, DELETE_UNDO_DURATION_MS, DeleteUndoSnackbar, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
 import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from '../components/data-grid/contextMenuFocus';
 import { extractApiErrorMessage } from '../api/errors';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
@@ -114,6 +114,9 @@ export default function Suppliers() {
   const [deleteUsageDialog, setDeleteUsageDialog] = useState<SupplierDeleteUsageDialogState | null>(null);
   const [unlinkDeletingSupplierId, setUnlinkDeletingSupplierId] = useState<number | null>(null);
   const pendingSupplierDeleteTimersRef = useRef<Map<string, number>>(new Map());
+  const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
+    enabled: !shouldShowProjectRequiredState && supplierLoadStatus === 'success' && suppliers.length > 0,
+  });
 
   const loadSuppliers = useCallback(async (): Promise<void> => {
     setSupplierLoadStatus('loading');
@@ -463,13 +466,14 @@ export default function Suppliers() {
       return;
     }
     suppressNativeContextMenu(event);
+    markContextMenuHintUsed();
     contextMenuOriginRef.current = event.currentTarget;
     setContextMenuState({
       supplier,
       mouseX: event.clientX + 2,
       mouseY: event.clientY - 6,
     });
-  }, []);
+  }, [markContextMenuHintUsed]);
 
   const openSupplierKeyboardContextMenu = useCallback((
     event: KeyboardEvent<HTMLTableRowElement>,
@@ -481,6 +485,7 @@ export default function Suppliers() {
     }
 
     suppressNativeContextMenu(event);
+    markContextMenuHintUsed();
     contextMenuOriginRef.current = event.currentTarget;
     const rowRect = event.currentTarget.getBoundingClientRect();
     setContextMenuState({
@@ -488,7 +493,7 @@ export default function Suppliers() {
       mouseX: rowRect.left + Math.min(240, rowRect.width),
       mouseY: rowRect.top + 12,
     });
-  }, []);
+  }, [markContextMenuHintUsed]);
 
   const handleContextMenuEdit = useCallback((): void => {
     if (!contextMenuState) {
@@ -558,6 +563,14 @@ export default function Suppliers() {
               actions={[{ label: t('create'), to: '/app/suppliers?create=true' }]}
             />
           </Box>
+        ) : null}
+        {showContextMenuHint ? (
+          <ContextMenuHint
+            message={t('common:messages.contextMenuTableHint')}
+            secondary={t('common:messages.contextMenuHintKeyboard')}
+            onClose={closeContextMenuHint}
+            sx={{ mb: 1.25, width: '100%', maxWidth: 880 }}
+          />
         ) : null}
         {supplierLoadStatus === 'success' && suppliers.length > 0 ? (
           <TableSurface sizingMode="compact">

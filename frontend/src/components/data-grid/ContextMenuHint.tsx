@@ -7,7 +7,6 @@ import { useTranslation } from '../../i18n';
 interface ContextMenuHintProps {
   message: ReactNode;
   secondary?: ReactNode;
-  touchMessage?: ReactNode;
   onClose?: () => void;
   compact?: boolean;
   sx?: SxProps<Theme>;
@@ -16,7 +15,6 @@ interface ContextMenuHintProps {
 export function ContextMenuHint({
   message,
   secondary,
-  touchMessage,
   onClose,
   compact = false,
   sx,
@@ -24,11 +22,11 @@ export function ContextMenuHint({
   const { t } = useTranslation('common');
   const isTouchLikePointer = useMediaQuery('(pointer: coarse)');
   const isMobileViewport = useMediaQuery('(max-width:900px)');
-  const shouldUseTouchHint = isTouchLikePointer || isMobileViewport;
-  const displayMessage = shouldUseTouchHint
-    ? touchMessage ?? t('messages.contextMenuTouchHint')
-    : message;
-  const displaySecondary = shouldUseTouchHint ? null : secondary;
+  const shouldHideHint = isTouchLikePointer || isMobileViewport;
+
+  if (shouldHideHint) {
+    return null;
+  }
 
   return (
     <Box
@@ -67,11 +65,11 @@ export function ContextMenuHint({
       </Box>
       <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 0.75, flexWrap: 'wrap' }}>
         <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500, lineHeight: 1.35 }}>
-          {displayMessage}
+          {message}
         </Typography>
-        {displaySecondary ? (
+        {secondary ? (
           <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.35 }}>
-            {displaySecondary}
+            {secondary}
           </Typography>
         ) : null}
       </Box>

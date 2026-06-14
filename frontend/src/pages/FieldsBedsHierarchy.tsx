@@ -46,6 +46,7 @@ import {
   useNotesEditor,
   NotesDrawer,
   getPlainExcerpt,
+  useContextMenuHint,
 } from "../components/data-grid";
 import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from "../components/data-grid/contextMenuFocus";
 import {
@@ -82,6 +83,7 @@ interface FieldsBedsHierarchyProps {
   onCreateFieldRequestHandled?: () => void;
   hierarchyData?: HierarchyDataState;
   onPendingDeletionCountChange?: (count: number) => void;
+  suppressContextMenuHint?: boolean;
 }
 
 interface HierarchyRowAction {
@@ -150,7 +152,6 @@ const NAME_COLUMN_EXPAND_CHROME_PX = 44;
 const NAME_COLUMN_CELL_HORIZONTAL_PADDING_PX = 20;
 const NAME_COLUMN_BED_TEXT_PADDING_PX = 8;
 const NAME_COLUMN_WIDTH_BUFFER_PX = 2;
-const HIERARCHY_CONTEXT_MENU_HINT_STORAGE_KEY = "ofp.hierarchyContextMenuHintSeen";
 export const NAME_COLUMN_MEASUREMENT_RESERVE_PX = 14;
 export const calculateHierarchyNameColumnWidth = (
   entries: HierarchyNameMeasureEntry[],
@@ -308,13 +309,14 @@ function FieldsBedsHierarchy({
   onCreateFieldRequestHandled,
   hierarchyData,
   onPendingDeletionCountChange,
+  suppressContextMenuHint = false,
 }: FieldsBedsHierarchyProps) {
   const LOCATION_ROW_HEIGHT = 46;
   const FIELD_ROW_HEIGHT = 42;
   const BED_ROW_HEIGHT = 36;
   const HEADER_ROW_HEIGHT = 40;
 
-  const { t } = useTranslation("hierarchy");
+  const { t } = useTranslation(["hierarchy", "common"]);
   const navigate = useNavigate();
   const location = useLocation();
   const gridApiRef = useGridApiRef();
@@ -331,7 +333,6 @@ function FieldsBedsHierarchy({
     mouseY: number;
   } | null>(null);
   const [draftValidationWarning, setDraftValidationWarning] = useState("");
-  const [showContextMenuHint, setShowContextMenuHint] = useState(false);
   const [pendingDeletions, setPendingDeletions] = useState<PendingHierarchyDeletion[]>([]);
   const hasInitiallyExpandedRef = useRef(false);
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
@@ -344,19 +345,6 @@ function FieldsBedsHierarchy({
   useEffect(() => {
     onPendingDeletionCountChange?.(pendingDeletions.length);
   }, [onPendingDeletionCountChange, pendingDeletions.length]);
-
-  useEffect(() => {
-    if (!showTitle) {
-      return;
-    }
-
-    if (window.localStorage.getItem(HIERARCHY_CONTEXT_MENU_HINT_STORAGE_KEY) === "1") {
-      return;
-    }
-
-    window.localStorage.setItem(HIERARCHY_CONTEXT_MENU_HINT_STORAGE_KEY, "1");
-    setShowContextMenuHint(true);
-  }, [showTitle]);
 
   // Data fetching
   const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
@@ -417,6 +405,10 @@ function FieldsBedsHierarchy({
     () => projectRows(expandedRows),
     [projectRows, expandedRows],
   );
+  const shouldShowHierarchyTable = fields.length > 0 || createFieldRequest > 0;
+  const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
+    enabled: !suppressContextMenuHint && !loading && shouldShowHierarchyTable && rows.length > 0,
+  });
 
   const rowsById = useMemo(() => {
     const nextRowsById = new Map<string, HierarchyRow>();
@@ -1411,12 +1403,21 @@ function FieldsBedsHierarchy({
     t,
   ]);
 
-  const openContextMenuForRow = useCallback((row: HierarchyRow, mouseX: number, mouseY: number, origin?: HTMLElement | null): void => {
+  const openContextMenuForRow = useCallback((
+    row: HierarchyRow,
+    mouseX: number,
+    mouseY: number,
+    origin?: HTMLElement | null,
+    options?: { markHintUsed?: boolean },
+  ): void => {
+    if (options?.markHintUsed !== false) {
+      markContextMenuHintUsed();
+    }
     setSelectedRowId(row.id);
     setTreeActive(true);
     contextMenuOriginRef.current = origin ?? null;
     setContextMenuState({ row, mouseX, mouseY });
-  }, []);
+  }, [markContextMenuHintUsed]);
 
   const handleNameCellContextMenu = useCallback((event: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>, row: HierarchyRow): void => {
     suppressNativeContextMenu(event);
@@ -1481,7 +1482,7 @@ function FieldsBedsHierarchy({
     }
 
     touchLongPressTimeoutRef.current = window.setTimeout(() => {
-      openContextMenuForRow(targetRow, touch.clientX, touch.clientY, rowElement);
+      openContextMenuForRow(targetRow, touch.clientX, touch.clientY, rowElement, { markHintUsed: false });
     }, 550);
   }, [openContextMenuForRow, rows]);
 
@@ -1821,8 +1822,6 @@ function FieldsBedsHierarchy({
   const contextMenuActions = contextMenuState
     ? getHierarchyRowActions(contextMenuState.row)
     : [];
-  const shouldShowHierarchyTable = fields.length > 0 || createFieldRequest > 0;
-
   const formatHierarchyValue = useCallback((value: unknown): string => {
     if (value === null || value === undefined || value === "") {
       return "—";
@@ -1877,13 +1876,12 @@ function FieldsBedsHierarchy({
         )}
 
         {showContextMenuHint && (
-          <Box sx={{ mb: 1.25 }}>
-            <ContextMenuHint
-              message={t("messages.contextMenuHint")}
-              secondary={t("messages.contextMenuHintKeyboard")}
-              onClose={() => setShowContextMenuHint(false)}
-            />
-          </Box>
+          <ContextMenuHint
+            message={t("common:messages.contextMenuTableHint")}
+            secondary={t("common:messages.contextMenuHintKeyboard")}
+            onClose={closeContextMenuHint}
+            sx={{ mb: 1.25 }}
+          />
         )}
 
         {shouldShowMissingDimensionsHint && (
