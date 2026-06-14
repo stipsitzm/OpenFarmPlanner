@@ -83,7 +83,9 @@ export default function SeedDemandPage() {
   const hasSeedData = hasCulturesWithSeedData;
   const canCalculateSeedDemand = locationCount > 0 && fieldCount > 0 && bedCount > 0 && cultureCount > 0 && hasPlans && hasSeedData;
   const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
-    enabled: !shouldShowProjectRequiredState && !isLoading && canCalculateSeedDemand && rows.length > 0,
+    enabled: !shouldShowProjectRequiredState && canCalculateSeedDemand,
+    isLoading,
+    hasRows: rows.length > 0,
   });
   const firstMissingSetupStep = getFirstMissingProjectSetupStep({
     hasFields: fieldCount > 0,

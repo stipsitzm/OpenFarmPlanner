@@ -406,8 +406,16 @@ function FieldsBedsHierarchy({
     [projectRows, expandedRows],
   );
   const shouldShowHierarchyTable = fields.length > 0 || createFieldRequest > 0;
+  const hasUsableHierarchyRows = shouldShowHierarchyTable && (
+    rows.length > 0
+    || locations.length > 0
+    || fields.length > 0
+    || beds.length > 0
+  );
   const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
-    enabled: !suppressContextMenuHint && !loading && shouldShowHierarchyTable && rows.length > 0,
+    enabled: !suppressContextMenuHint,
+    isLoading: loading,
+    hasRows: hasUsableHierarchyRows,
   });
 
   const rowsById = useMemo(() => {

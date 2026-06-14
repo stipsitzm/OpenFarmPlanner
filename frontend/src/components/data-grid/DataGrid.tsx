@@ -408,8 +408,14 @@ export function EditableDataGrid<T extends EditableRow>({
     () => orderRowsByStableIds(rows as T[], stableRowOrder),
     [rows, stableRowOrder],
   );
+  const hasContextMenuHintRows = useMemo(
+    () => rowsForGrid.some((row) => !isUnsavedDraftRow(row)),
+    [rowsForGrid],
+  );
   const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
-    enabled: dataFetched && !loading && !error && rowsForGrid.length > 0,
+    enabled: dataFetched && !error,
+    isLoading: loading,
+    hasRows: hasContextMenuHintRows,
   });
   const refreshStableRowOrder = useCallback((sourceRows: readonly T[], model: GridSortModel = sortModel): void => {
     setStableRowOrder(getSortedRowIds(sourceRows, model));

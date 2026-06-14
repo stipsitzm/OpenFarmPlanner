@@ -115,7 +115,9 @@ export default function Suppliers() {
   const [unlinkDeletingSupplierId, setUnlinkDeletingSupplierId] = useState<number | null>(null);
   const pendingSupplierDeleteTimersRef = useRef<Map<string, number>>(new Map());
   const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
-    enabled: !shouldShowProjectRequiredState && supplierLoadStatus === 'success' && suppliers.length > 0,
+    enabled: !shouldShowProjectRequiredState && supplierLoadStatus !== 'error',
+    isLoading: supplierLoadStatus === 'loading',
+    hasRows: supplierLoadStatus === 'success' && suppliers.length > 0,
   });
 
   const loadSuppliers = useCallback(async (): Promise<void> => {
