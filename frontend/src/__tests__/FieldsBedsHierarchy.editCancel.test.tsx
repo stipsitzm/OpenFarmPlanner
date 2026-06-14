@@ -270,6 +270,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockDrafts.clear();
+    window.sessionStorage.clear();
     vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
     locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hofstelle' }] } });
     fieldListMock.mockResolvedValue({ data: { results: [{ id: 10, name: 'Nordfeld', location: 1, area_sqm: 20 }] } });
