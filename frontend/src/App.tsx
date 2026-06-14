@@ -85,7 +85,7 @@ import {
   segmentedButtonGroupSx,
 } from './components/buttons/segmentedControlStyles';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
-import { getHistoryEntryTarget, getHistoryEntryTitle } from './pages/culturesHistoryUtils';
+import { getHistoryEntryTarget, getHistoryEntryTitle, isCurrentHistoryEntry } from './pages/culturesHistoryUtils';
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { useGlobalOverlayKeyboardScroll } from './hooks/useDialogKeyboardScroll';
@@ -1528,7 +1528,7 @@ function RootLayout() {
         <DialogContent sx={{ py: isPhonePortrait ? 1 : 2 }}>
           <List>
             {historyItems.map((item, index) => {
-              const isCurrentVersion = index === 0;
+              const isCurrentVersion = isCurrentHistoryEntry(item, index);
               const historyTarget = getHistoryEntryTarget(item);
               const title = getHistoryEntryTitle(item, tCultures);
               const actorLabel = item.actor_label?.trim()

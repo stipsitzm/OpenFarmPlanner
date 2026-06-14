@@ -97,6 +97,8 @@ describe('culture form UI sections', () => {
     );
 
     const amountInput = screen.getByLabelText('Menge');
+    expect(amountInput).toHaveAttribute('min', '0.001');
+    expect(amountInput).toHaveAttribute('step', '0.001');
     fireEvent.change(amountInput, { target: { value: '12.5' } });
     expect(onChange).toHaveBeenCalledWith('seed_rate_direct_value', 12.5);
 

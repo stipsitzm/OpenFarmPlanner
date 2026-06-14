@@ -88,7 +88,15 @@ import { analyzeCultureImportJson, readFileAsText } from './culturesImportUtils'
 import { createCulturesCommandSpecs } from './culturesCommandSpecs';
 import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
-import { getHistoryEntryMeta, getHistoryEntryTarget, getHistoryEntryTitle } from './culturesHistoryUtils';
+import {
+  formatHistoryChangeValue,
+  getHistoryChangeFieldLabel,
+  getHistoryEntryMeta,
+  getHistoryEntryTarget,
+  getHistoryEntryTitle,
+  isCurrentHistoryEntry,
+  type HistoryScope,
+} from './culturesHistoryUtils';
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
 import { useAuth } from '../auth/useAuth';
@@ -151,7 +159,7 @@ function Cultures() {
   const [pendingCultureDeletions, setPendingCultureDeletions] = useState<PendingCultureDeletion[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
-  const [historyScope, setHistoryScope] = useState<'culture' | 'global' | 'project'>('culture');
+  const [historyScope, setHistoryScope] = useState<HistoryScope>('culture');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [aiMenuAnchor, setAiMenuAnchor] = useState<null | HTMLElement>(null);
   const aiEnrichmentEnabled = FEATURES.AI_ENRICHMENT;
@@ -195,11 +203,46 @@ function Cultures() {
   } = useEnrichmentLoadingProgress(enrichmentLoading);
 
 
-  const fetchCultures = useCallback(async () => {
+  const replaceSavedCulture = useCallback((savedCulture: Culture): void => {
+    setCultures((currentCultures) => {
+      const savedCultureId = savedCulture.id;
+      if (savedCultureId === undefined) {
+        return currentCultures;
+      }
+
+      const cultureExists = currentCultures.some((culture) => culture.id === savedCultureId);
+      if (!cultureExists) {
+        return [...currentCultures, savedCulture];
+      }
+
+      return currentCultures.map((culture) => (
+        culture.id === savedCultureId ? savedCulture : culture
+      ));
+    });
+  }, []);
+
+  const fetchCultures = useCallback(async (preservedCulture?: Culture) => {
     setIsCulturesLoading(true);
     try {
       const response = await cultureAPI.list();
-      setCultures(response.data.results);
+      const fetchedCultures = response.data.results;
+      if (!preservedCulture?.id) {
+        setCultures(fetchedCultures);
+        return;
+      }
+
+      const preservedCultureId = preservedCulture.id;
+      const fetchedCultureIds = new Set(fetchedCultures.map((culture) => culture.id));
+      const nextCultures = fetchedCultures.map((culture) => (
+        culture.id === preservedCultureId
+          ? { ...culture, ...preservedCulture }
+          : culture
+      ));
+      setCultures(
+        fetchedCultureIds.has(preservedCultureId)
+          ? nextCultures
+          : [...nextCultures, preservedCulture],
+      );
     } catch (error) {
       console.error('Error fetching cultures:', error);
       showSnackbar(t('messages.fetchError'), 'error');
@@ -495,9 +538,10 @@ function Cultures() {
         // Auto-select the newly created culture
         updateSelectedCultureId(savedCulture.id, 'internal');
       }
-      await fetchCultures();
+      replaceSavedCulture(savedCulture);
       setShowForm(false);
       setEditingCulture(undefined);
+      void fetchCultures(savedCulture);
     } catch (error) {
       console.error('Error saving culture:', error);
       throw error; // Re-throw to prevent form from closing
@@ -1429,49 +1473,82 @@ function Cultures() {
             </Box>
           ) : (
             <List>
-              {historyItems.map((item) => {
+              {historyItems.map((item, index) => {
+                const isCurrentVersion = isCurrentHistoryEntry(item, index);
+                const isCultureHistory = historyScope === 'culture';
                 const historyTarget = getHistoryEntryTarget(item);
                 const mobileTitle = getHistoryEntryTitle(item, t);
                 const mobileMeta = getHistoryEntryMeta(item, t, fallbackHistoryActorLabel);
+                const changes = item.changes ?? [];
+                const changeList = changes.length > 0 ? (
+                  <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                      {t('history.changedFields')}
+                    </Typography>
+                    <Stack component="ul" spacing={0.25} sx={{ m: 0, pl: 2 }}>
+                      {changes.map((change) => (
+                        <Typography
+                          key={`${item.history_id}-${change.field}`}
+                          component="li"
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ lineHeight: 1.35 }}
+                        >
+                          <Typography component="span" variant="caption" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                            {getHistoryChangeFieldLabel(change, t)}
+                          </Typography>
+                          {': '}
+                          {change.field === 'created'
+                            ? formatHistoryChangeValue(change.new_value, change.field, t)
+                            : `${formatHistoryChangeValue(change.old_value, change.field, t)} → ${formatHistoryChangeValue(change.new_value, change.field, t)}`}
+                        </Typography>
+                      ))}
+                    </Stack>
+                  </Stack>
+                ) : null;
                 return (
                   <ListItem key={item.history_id} disableGutters sx={{ mb: isMobile ? 1 : 0 }}>
                     {isMobile ? (
                       <Paper variant="outlined" sx={{ width: '100%', p: 1.25, borderRadius: 1.5 }}>
                         <Stack spacing={1}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                            <Chip
-                              size="small"
-                              label={item.object_type === 'culture' ? t('history.objectTypes.culture') : t('history.objectTypes.plantingPlan')}
-                              variant="outlined"
-                            />
-                            {historyTarget ? (
-                              <Link
-                                component={RouterLink}
-                                to={historyTarget}
-                                underline="hover"
-                                onClick={() => setHistoryOpen(false)}
-                                sx={{ fontSize: '0.78rem', color: 'text.secondary', flexShrink: 0 }}
-                              >
-                                {t('history.objectTypes.openTarget')}
-                              </Link>
-                            ) : null}
-                          </Box>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontWeight: 600,
-                              lineHeight: 1.35,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              wordBreak: 'normal',
-                              overflowWrap: 'break-word',
-                            }}
-                          >
-                            {mobileTitle}
-                          </Typography>
+                          {!isCultureHistory ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                              <Chip
+                                size="small"
+                                label={item.object_type === 'culture' ? t('history.objectTypes.culture') : t('history.objectTypes.plantingPlan')}
+                                variant="outlined"
+                              />
+                              {historyTarget ? (
+                                <Link
+                                  component={RouterLink}
+                                  to={historyTarget}
+                                  underline="hover"
+                                  onClick={() => setHistoryOpen(false)}
+                                  sx={{ fontSize: '0.78rem', color: 'text.secondary', flexShrink: 0 }}
+                                >
+                                  {t('history.objectTypes.openTarget')}
+                                </Link>
+                              ) : null}
+                            </Box>
+                          ) : null}
+                          {!isCultureHistory ? (
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 600,
+                                lineHeight: 1.35,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'normal',
+                                overflowWrap: 'break-word',
+                              }}
+                            >
+                              {mobileTitle}
+                            </Typography>
+                          ) : null}
                           <Typography
                             variant="caption"
                             color="text.secondary"
@@ -1488,23 +1565,35 @@ function Cultures() {
                           >
                             {mobileMeta}
                           </Typography>
+                          {isCultureHistory ? changeList : null}
                           <Divider />
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => handleRestoreVersion(item.history_id)}
-                            sx={{ alignSelf: 'flex-start', minHeight: 34 }}
-                          >
-                            {t('history.restoreButton')}
-                          </Button>
+                          {isCurrentVersion ? (
+                            <Chip
+                              label={t('history.currentVersion')}
+                              size="small"
+                              color="success"
+                              variant="outlined"
+                              sx={{ alignSelf: 'flex-start' }}
+                            />
+                          ) : (
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => handleRestoreVersion(item.history_id)}
+                              sx={{ alignSelf: 'flex-start', minHeight: 34 }}
+                            >
+                              {t('history.restoreButton')}
+                            </Button>
+                          )}
                         </Stack>
                       </Paper>
                     ) : (
                       <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
                         <ListItemText
                           sx={{ mr: 1 }}
-                          primary={(
-                            <>
+                          disableTypography
+                          primary={!isCultureHistory ? (
+                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.35 }}>
                               {mobileTitle}
                               {historyTarget ? (
                                 <>
@@ -1514,13 +1603,30 @@ function Cultures() {
                                   </Link>
                                 </>
                               ) : null}
-                            </>
+                            </Typography>
+                          ) : (
+                            <Typography variant="caption" color="text.secondary">
+                              {mobileMeta}
+                            </Typography>
                           )}
-                          secondary={mobileMeta}
+                          secondary={isCultureHistory ? changeList : (
+                            <Typography variant="caption" color="text.secondary">
+                              {mobileMeta}
+                            </Typography>
+                          )}
                         />
-                        <Button onClick={() => handleRestoreVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
-                          {t('history.restoreButton')}
-                        </Button>
+                        {isCurrentVersion ? (
+                          <Chip
+                            label={t('history.currentVersion')}
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                          />
+                        ) : (
+                          <Button onClick={() => handleRestoreVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+                            {t('history.restoreButton')}
+                          </Button>
+                        )}
                       </Stack>
                     )}
                   </ListItem>

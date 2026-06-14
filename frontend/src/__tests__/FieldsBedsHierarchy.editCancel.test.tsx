@@ -231,6 +231,19 @@ const renderHierarchy = (initialPath = '/app/fields-beds') => (
   )
 );
 
+const renderHierarchyWithCreateFieldRequest = (
+  createFieldRequest: number,
+  onCreateFieldRequestHandled = vi.fn(),
+) => render(
+  <MemoryRouter initialEntries={['/app/fields-beds']}>
+    <FieldsBedsHierarchy
+      showTitle={false}
+      createFieldRequest={createFieldRequest}
+      onCreateFieldRequestHandled={onCreateFieldRequestHandled}
+    />
+  </MemoryRouter>,
+);
+
 const addNewBed = async (): Promise<void> => {
   fireEvent.click(await screen.findByRole('button', { name: 'Beet zu dieser Parzelle hinzufügen' }));
   await waitFor(() => expect(screen.getByTestId('row--1700000000000')).toBeInTheDocument());
@@ -257,6 +270,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockDrafts.clear();
+    window.sessionStorage.clear();
     vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
     locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hofstelle' }] } });
     fieldListMock.mockResolvedValue({ data: { results: [{ id: 10, name: 'Nordfeld', location: 1, area_sqm: 20 }] } });
@@ -287,6 +301,30 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     expect(isCompletelyEmptyNewHierarchyRow({ id: -1, type: 'bed', level: 1, isNew: true, name: '', field: 10 })).toBe(true);
     expect(isCompletelyEmptyNewHierarchyRow({ id: -1, type: 'bed', level: 1, isNew: true, name: '', field: 10, length_m: 2 })).toBe(false);
     expect(isPartiallyFilledNamelessNewHierarchyRow({ id: -1, type: 'bed', level: 1, isNew: true, name: '', field: 10, length_m: 2 })).toBe(true);
+  });
+
+  it('creates exactly one editable parcel row for one create request', async () => {
+    fieldListMock.mockResolvedValue({ data: { results: [] } });
+    const onCreateFieldRequestHandled = vi.fn();
+    const { rerender } = renderHierarchyWithCreateFieldRequest(1, onCreateFieldRequestHandled);
+
+    await waitFor(() => expect(screen.getByTestId('row-field--1700000000000')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('mode-field--1700000000000')).toHaveTextContent('edit'));
+    expect(screen.getByTestId('row-count')).toHaveTextContent('1');
+    expect(onCreateFieldRequestHandled).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <MemoryRouter initialEntries={['/app/fields-beds']}>
+        <FieldsBedsHierarchy
+          showTitle={false}
+          createFieldRequest={1}
+          onCreateFieldRequestHandled={onCreateFieldRequestHandled}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('row-count')).toHaveTextContent('1');
+    expect(screen.getAllByRole('row')).toHaveLength(1);
   });
 
   it('enters inline edit mode when a Standort name is clicked', async () => {

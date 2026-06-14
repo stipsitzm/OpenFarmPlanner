@@ -62,7 +62,7 @@ function SeedRateBlock({
             onChange={(e) => onChange(valueField, e.target.value ? parseFloat(e.target.value) : null)}
             error={Boolean(errors[valueField])}
             helperText={errors[valueField]}
-            slotProps={{ htmlInput: { min: 0.1, step: 0.1 } }}
+            slotProps={{ htmlInput: { min: 0.001, step: 0.001 } }}
           />
         </DropdownAwareTooltip>
 

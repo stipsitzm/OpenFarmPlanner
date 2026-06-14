@@ -56,6 +56,8 @@ import { TableCopyMenuItems } from './TableCopyMenuItems';
 import { formatClipboardValue, type TableClipboardRow } from './tableClipboard';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../../utils/contextMenu';
 import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from './contextMenuFocus';
+import { ContextMenuHint } from './ContextMenuHint';
+import { useContextMenuHint } from './useContextMenuHint';
 
 export interface EditableRow {
   id: number;
@@ -406,6 +408,15 @@ export function EditableDataGrid<T extends EditableRow>({
     () => orderRowsByStableIds(rows as T[], stableRowOrder),
     [rows, stableRowOrder],
   );
+  const hasContextMenuHintRows = useMemo(
+    () => rowsForGrid.some((row) => !isUnsavedDraftRow(row)),
+    [rowsForGrid],
+  );
+  const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
+    enabled: dataFetched && !error,
+    isLoading: loading,
+    hasRows: hasContextMenuHintRows,
+  });
   const refreshStableRowOrder = useCallback((sourceRows: readonly T[], model: GridSortModel = sortModel): void => {
     setStableRowOrder(getSortedRowIds(sourceRows, model));
   }, [sortModel]);
@@ -1503,12 +1514,28 @@ export function EditableDataGrid<T extends EditableRow>({
     return rowElement?.dataset.id ?? null;
   };
 
+  const openRowActionMenuAt = useCallback((
+    rowId: GridRowId,
+    originElement: HTMLElement | null,
+    mouseX: number,
+    mouseY: number,
+  ): void => {
+    markContextMenuHintUsed();
+    setSelectedRowIds([rowId]);
+    rowActionMenuOriginRef.current = originElement;
+    setRowActionMenuState({ rowId, mouseX, mouseY });
+  }, [markContextMenuHintUsed]);
+
   const openRowActionContextMenu = useCallback((rowId: GridRowId, event: React.MouseEvent): void => {
     suppressNativeContextMenu(event);
-    setSelectedRowIds([rowId]);
-    rowActionMenuOriginRef.current = event.currentTarget as HTMLElement;
-    setRowActionMenuState({ rowId, mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
-  }, []);
+    openRowActionMenuAt(rowId, event.currentTarget as HTMLElement, event.clientX + 2, event.clientY - 6);
+  }, [openRowActionMenuAt]);
+
+  const openRowActionKeyboardContextMenu = useCallback((rowId: GridRowId, originElement: HTMLElement): void => {
+    const rowElement = originElement.closest<HTMLElement>('[role="row"][data-id]') ?? originElement;
+    const rect = rowElement.getBoundingClientRect();
+    openRowActionMenuAt(rowId, rowElement, rect.left + Math.min(240, rect.width), rect.top + 12);
+  }, [openRowActionMenuAt]);
 
   const closeRowActionMenu = useCallback((): void => {
     setRowActionMenuState(null);
@@ -1569,13 +1596,14 @@ export function EditableDataGrid<T extends EditableRow>({
     const touch = event.touches[0];
     clearRowActionLongPressTimer();
     rowActionLongPressTimerRef.current = window.setTimeout(() => {
+      markContextMenuHintUsed();
       setSelectedRowIds([rowId]);
       setLongPressFeedbackRowId(rowId);
       rowActionMenuOriginRef.current = originElement;
       setRowActionMenuState({ rowId, mouseX: touch.clientX + 2, mouseY: touch.clientY - 6 });
       rowActionLongPressTimerRef.current = null;
     }, ROW_ACTION_LONG_PRESS_MS);
-  }, [clearRowActionLongPressTimer, hasContextualRowActions, rowsById]);
+  }, [clearRowActionLongPressTimer, hasContextualRowActions, markContextMenuHintUsed, rowsById]);
 
   const handleGridTouchMove = useCallback((): void => {
     clearRowActionLongPressTimer();
@@ -1811,6 +1839,14 @@ export function EditableDataGrid<T extends EditableRow>({
   return (
     <>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {showContextMenuHint ? (
+        <ContextMenuHint
+          message={t('messages.contextMenuTableHint')}
+          secondary={t('messages.contextMenuHintKeyboard')}
+          onClose={closeContextMenuHint}
+          sx={{ mb: 1.25 }}
+        />
+      ) : null}
       
       <Box
         sx={{
@@ -1940,6 +1976,18 @@ export function EditableDataGrid<T extends EditableRow>({
             handleEditableCellClick(params, rowModesModel, setRowModesModel);
           }}
           onCellKeyDown={(params: GridCellParams<T>, event) => {
+            if (
+              hasContextualRowActions &&
+              (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) &&
+              rowsById.has(String(params.id))
+            ) {
+              event.preventDefault();
+              event.stopPropagation();
+              event.defaultMuiPrevented = true;
+              openRowActionKeyboardContextMenu(params.id, event.currentTarget as HTMLElement);
+              return;
+            }
+
             const shouldOpenNotes =
               notesFieldNames.includes(params.field) &&
               (event.key === 'Enter' || event.key === ' ') &&

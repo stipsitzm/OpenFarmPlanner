@@ -52,6 +52,10 @@ const validateSeedRateFields = (
   const valueIsPresent = hasValue(value);
   const unitIsPresent = hasUnit(unit);
 
+  if (!valueIsPresent) {
+    return;
+  }
+
   if (valueIsPresent && Number(value) <= 0) {
     errors[valueField] = t('form.seedRateValueRequired');
   }
@@ -62,9 +66,6 @@ const validateSeedRateFields = (
 
   if (valueIsPresent && !unitIsPresent) {
     errors[unitField] = t('form.seedRateUnitRequired');
-  }
-  if (!valueIsPresent && unitIsPresent) {
-    errors[valueField] = t('form.seedRateValueRequired');
   }
 };
 

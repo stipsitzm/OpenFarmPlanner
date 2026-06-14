@@ -112,6 +112,17 @@ function formatNumber(value: number | null | undefined, t: (key: string) => stri
   }).format(rounded);
 }
 
+function formatSeedRateNumber(value: number | null | undefined, t: (key: string) => string): string {
+  if (value === null || value === undefined) {
+    return t('cultures:noData');
+  }
+
+  return new Intl.NumberFormat('de-DE', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  }).format(value);
+}
+
 /**
  * Formats a distance value (rounds to whole numbers since no one measures more precisely than 1cm)
  */
@@ -1080,20 +1091,20 @@ export function CultureDetail({
                     </Typography>
                   </Box>
                 )}
-                {(selectedCulture.cultivation_types && selectedCulture.cultivation_types.length > 0) && (
+                {activeCultivationTypes.length > 0 && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
-                      Anbauart
+                      {t('form.cultivationType')}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      {selectedCulture.cultivation_types.map((item) => (
-                        <Chip
-                          key={item}
-                          size="small"
-                          label={item === 'pre_cultivation' ? 'Pflanzung' : 'Direktsaat'}
-                        />
-                      ))}
-                    </Box>
+                    <Typography variant="body1">
+                      {activeCultivationTypes
+                        .map((item) => (
+                          item === 'pre_cultivation'
+                            ? t('form.cultivationTypePreCultivation')
+                            : t('form.cultivationTypeDirectSowing')
+                        ))
+                        .join(', ')}
+                    </Typography>
                   </Box>
                 )}
               </Box>
@@ -1189,7 +1200,7 @@ export function CultureDetail({
                   <Box>
                     <Typography variant="body2" color="text.secondary">Menge</Typography>
                     <Typography variant="body1">
-                      {formatNumber(seedRateRows[0].value, t)} {formatSeedUnitLabel(seedRateRows[0].unit)}
+                      {formatSeedRateNumber(seedRateRows[0].value, t)} {formatSeedUnitLabel(seedRateRows[0].unit)}
                     </Typography>
                   </Box>
                 )}
@@ -1219,7 +1230,7 @@ export function CultureDetail({
                         {seedRateRows.map((row) => (
                           <TableRow key={`${row.method}-${row.unit}-${row.value}`}>
                             <TableCell>{row.method === 'pre_cultivation' ? 'Pflanzung' : 'Direktsaat'}</TableCell>
-                            <TableCell>{formatNumber(row.value, t)}</TableCell>
+                            <TableCell>{formatSeedRateNumber(row.value, t)}</TableCell>
                             <TableCell>{formatSeedUnitLabel(row.unit)}</TableCell>
                             <TableCell>{row.safety !== null ? `${formatNumber(row.safety, t)} %` : '-'}</TableCell>
                           </TableRow>
@@ -1244,7 +1255,7 @@ export function CultureDetail({
                       Saatgutbedarf
                     </Typography>
                     <Typography variant="body1">
-                      {selectedCulture.seeding_requirement}
+                      {formatSeedRateNumber(selectedCulture.seeding_requirement, t)}
                       {selectedCulture.seeding_requirement_type === 'per_sqm'
                         ? ' / m²'
                         : selectedCulture.seeding_requirement_type === 'per_plant'

@@ -184,6 +184,53 @@ describe('Cultures save payload', () => {
     expect(payload.seed_rate_pre_cultivation_unit).toBeNull();
   });
 
+  it('clears seed rate fallback fields when method-specific amounts are removed', () => {
+    const payload = buildCultureSavePayload({
+      id: 1,
+      name: 'Karotte',
+      variety: 'Nantaise',
+      cultivation_types: ['direct_sowing', 'pre_cultivation'],
+      seed_rate_direct_value: null,
+      seed_rate_direct_unit: 'g_per_m2',
+      seed_rate_pre_cultivation_value: null,
+      seed_rate_pre_cultivation_unit: 'g_per_m2',
+      seed_rate_value: 150,
+      seed_rate_unit: 'g_per_m2',
+      seed_rate_by_cultivation: {
+        direct_sowing: { value: 150, unit: 'g_per_m2' },
+        pre_cultivation: { value: 20, unit: 'g_per_m2' },
+      },
+    } as Culture);
+
+    expect(payload.seed_rate_by_cultivation).toBeNull();
+    expect(payload.seed_rate_value).toBeNull();
+    expect(payload.seed_rate_unit).toBeNull();
+    expect(payload.seed_rate_direct_unit).toBe('g_per_m2');
+    expect(payload.seed_rate_pre_cultivation_unit).toBe('g_per_m2');
+  });
+
+  it('derives fallback seed rate fields from current method-specific amounts', () => {
+    const payload = buildCultureSavePayload({
+      id: 1,
+      name: 'Karotte',
+      variety: 'Nantaise',
+      cultivation_types: ['direct_sowing'],
+      seed_rate_direct_value: 0.125,
+      seed_rate_direct_unit: 'g_per_m2',
+      seed_rate_value: 150,
+      seed_rate_unit: 'g_per_m2',
+      seed_rate_by_cultivation: {
+        direct_sowing: { value: 150, unit: 'g_per_m2' },
+      },
+    } as Culture);
+
+    expect(payload.seed_rate_by_cultivation).toEqual({
+      direct_sowing: { value: 0.125, unit: 'g_per_m2' },
+    });
+    expect(payload.seed_rate_value).toBe(0.125);
+    expect(payload.seed_rate_unit).toBe('g_per_m2');
+  });
+
   it('includes supplier_data row ids so nested records update instead of duplicate create', async () => {
     saveCultureMock.mockReturnValue({
       id: 1,
@@ -300,6 +347,53 @@ describe('Cultures save payload', () => {
 
     expect(payload.supplier_data_input).toHaveLength(1);
     expect(payload.supplier_data_input?.[0]).toEqual(expect.objectContaining({ supplier_id: 10 }));
+  });
+
+  it('replaces the local culture entry with the saved API response after editing', async () => {
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          { id: 1, name: 'Karotte', variety: 'Nantaise', seed_rate_direct_value: 150 },
+        ],
+      },
+    });
+    updateMock.mockResolvedValue({
+      data: {
+        id: 1,
+        name: 'Karotte aktualisiert',
+        variety: 'Nantaise',
+        seed_rate_direct_value: null,
+        seed_rate_direct_unit: 'g_per_m2',
+        seed_rate_by_cultivation: null,
+        seed_rate_value: null,
+        seed_rate_unit: null,
+      },
+    });
+    saveCultureMock.mockReturnValue({
+      id: 1,
+      name: 'Karotte',
+      variety: 'Nantaise',
+      seed_rate_direct_value: null,
+      seed_rate_direct_unit: 'g_per_m2',
+    } as Culture);
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <Cultures />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'select-culture' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Kultur bearbeiten' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'submit-edit' }));
+
+    await waitFor(() => expect(updateMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByTestId('culture-list')).toHaveTextContent('Karotte aktualisiert'));
   });
 
   it('shows and selects newly created culture immediately after save', async () => {

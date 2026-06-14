@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatHistoryChangeValue,
+  getHistoryChangeFieldLabel,
   getHistoryActorLabel,
   getHistoryEntryMeta,
   getHistoryEntryTarget,
@@ -90,5 +92,17 @@ describe('culturesHistoryUtils', () => {
 
     expect(getHistoryEntryTarget(plantingPlanEntry)).toBe('/app/anbauplaene');
     expect(getHistoryEntryTarget(unsupportedEntry)).toBeNull();
+  });
+
+  it('formats culture history change labels and values', () => {
+    const change = {
+      field: 'expected_yield',
+      old_value: 2.5,
+      new_value: 3,
+    };
+
+    expect(getHistoryChangeFieldLabel(change, t)).toBe('Erwarteter Ertrag');
+    expect(formatHistoryChangeValue(change.old_value, change.field, t)).toBe('2,5 kg');
+    expect(formatHistoryChangeValue(change.new_value, change.field, t)).toBe('3 kg');
   });
 });

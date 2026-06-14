@@ -17,7 +17,6 @@ import EmptyStateCard, { type EmptyStateAction } from '../components/project/Emp
 import { getProjectSetupAction } from './requirementFlow';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { type SxProps, type Theme } from '@mui/material/styles';
-import { ContextMenuHint } from '../components/data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
 
@@ -311,13 +310,6 @@ export default function FieldsBedsPage() {
                 {t('hierarchy:messages.noBedsHintAfterIcon')}
               </Box>
             )}
-            supplement={viewMode !== 'graphical' ? (
-              <ContextMenuHint
-                compact
-                message={t('hierarchy:messages.contextMenuTableHint')}
-                secondary={t('hierarchy:messages.contextMenuHintKeyboard')}
-              />
-            ) : undefined}
             actions={[{ label: t(createBedAction.labelKey), to: createBedAction.to }]}
             containerSx={CONTENT_ALIGNED_EMPTY_STATE_SX}
           />
@@ -341,23 +333,14 @@ export default function FieldsBedsPage() {
           />
         ) : null}
         {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy && viewMode !== 'graphical' ? (
-          <>
-            {hasFields && !shouldShowMissingBedsHint ? (
-              <Box sx={{ mb: 1.25 }}>
-                <ContextMenuHint
-                  message={t('hierarchy:messages.contextMenuTableHint')}
-                  secondary={t('hierarchy:messages.contextMenuHintKeyboard')}
-                />
-              </Box>
-            ) : null}
-            <FieldsBedsHierarchy
-              showTitle={false}
-              createFieldRequest={createFieldRequest}
-              onCreateFieldRequestHandled={() => setCreateFieldRequest(0)}
-              hierarchyData={hierarchyData}
-              onPendingDeletionCountChange={setPendingHierarchyDeletionCount}
-            />
-          </>
+          <FieldsBedsHierarchy
+            showTitle={false}
+            createFieldRequest={createFieldRequest}
+            onCreateFieldRequestHandled={() => setCreateFieldRequest(0)}
+            hierarchyData={hierarchyData}
+            onPendingDeletionCountChange={setPendingHierarchyDeletionCount}
+            suppressContextMenuHint={shouldShowMissingBedsHint}
+          />
         ) : null}
       </PageContainer>
       <Dialog open={addLocationDialogOpen} onClose={() => setAddLocationDialogOpen(false)} fullWidth maxWidth="xs">

@@ -105,8 +105,6 @@
     "notesPhotos": "Fotos",
     "notesPhotosAria": "Notizen und Fotos öffnen"
   },
-  "contextMenuHint": "Tipp: Rechtsklick auf eine Zeile öffnet weitere Aktionen.",
-  "contextMenuHintKeyboard": "Alternativ: Kontextmenütaste oder Shift+F10.",
   "emptyStates": {
     "createBlockedTooltip": "Beete werden innerhalb von Parzellen auf der Seite Anbauflächen hinzugefügt.",
     "states": {

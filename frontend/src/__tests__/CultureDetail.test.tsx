@@ -434,17 +434,17 @@ describe('CultureDetail Component', () => {
     expect(screen.getByText('Cherry')).toBeInTheDocument();
   });
 
-  it('shows cultivation chips and per-method seed-rate table', () => {
+  it('shows cultivation types as text and per-method seed-rate table', () => {
     const mockOnSelect = vi.fn();
     const cultures: Culture[] = [
       {
         id: 11,
         name: 'Möhre',
         cultivation_types: ['pre_cultivation', 'direct_sowing'],
-        seed_rate_direct_value: 50,
+        seed_rate_direct_value: 0.014,
         seed_rate_direct_unit: 'seeds_per_lfm',
         sowing_calculation_safety_percent_direct: 5,
-        seed_rate_pre_cultivation_value: 2,
+        seed_rate_pre_cultivation_value: 1.357,
         seed_rate_pre_cultivation_unit: 'seeds_per_plant',
         sowing_calculation_safety_percent_pre_cultivation: 10,
       },
@@ -458,9 +458,10 @@ describe('CultureDetail Component', () => {
       />
     );
 
-    expect(screen.getAllByText('Pflanzung').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Direktsaat').length).toBeGreaterThan(0);
+    expect(screen.getByText('Pflanzung, Direktsaat')).toBeInTheDocument();
     expect(screen.getByText('Saatgutmenge nach Anbauart')).toBeInTheDocument();
+    expect(screen.getByText('1,357')).toBeInTheDocument();
+    expect(screen.getByText('0,014')).toBeInTheDocument();
     expect(screen.getByText('Korn / Pflanze')).toBeInTheDocument();
     expect(screen.getByText('Korn / lfm')).toBeInTheDocument();
     expect(screen.getByText('10 %')).toBeInTheDocument();
@@ -477,7 +478,7 @@ describe('CultureDetail Component', () => {
         seed_rate_direct_value: 20,
         seed_rate_direct_unit: 'seeds_per_lfm',
         sowing_calculation_safety_percent_direct: 9,
-        seed_rate_pre_cultivation_value: 4,
+        seed_rate_pre_cultivation_value: 0.125,
         seed_rate_pre_cultivation_unit: 'g_per_m2',
         sowing_calculation_safety_percent_pre_cultivation: 11,
       },
@@ -496,7 +497,7 @@ describe('CultureDetail Component', () => {
     expect(screen.queryByText('Saatgutmenge nach Anbauart')).not.toBeInTheDocument();
     expect(screen.queryByText('Methode')).not.toBeInTheDocument();
     expect(screen.getByText('Menge')).toBeInTheDocument();
-    expect(screen.getByText('4 g / m²')).toBeInTheDocument();
+    expect(screen.getByText('0,125 g / m²')).toBeInTheDocument();
     expect(screen.getByText('11 %')).toBeInTheDocument();
     expect(screen.queryByText('9 %')).not.toBeInTheDocument();
   });
