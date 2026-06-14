@@ -82,7 +82,7 @@ describe('useContextMenuHint', () => {
     })).toBe(false);
   });
 
-  it('stores dismissal globally when the hint is closed or used', async () => {
+  it('stores context menu usage without hiding the hint during the current mount', async () => {
     const { result } = renderHook(() => useContextMenuHint({
       isDesktop: true,
       isLoading: false,
@@ -92,6 +92,21 @@ describe('useContextMenuHint', () => {
     await waitFor(() => expect(result.current.showContextMenuHint).toBe(true));
 
     act(() => result.current.markContextMenuHintUsed());
+
+    expect(window.localStorage.getItem(CONTEXT_MENU_HINT_STORAGE_KEY)).toBe('1');
+    expect(result.current.showContextMenuHint).toBe(true);
+  });
+
+  it('hides the hint immediately when it is manually closed', async () => {
+    const { result } = renderHook(() => useContextMenuHint({
+      isDesktop: true,
+      isLoading: false,
+      hasRows: true,
+    }));
+
+    await waitFor(() => expect(result.current.showContextMenuHint).toBe(true));
+
+    act(() => result.current.closeContextMenuHint());
 
     expect(window.localStorage.getItem(CONTEXT_MENU_HINT_STORAGE_KEY)).toBe('1');
     await waitFor(() => expect(result.current.showContextMenuHint).toBe(false));

@@ -54,13 +54,15 @@ function hasStoredContextMenuHintDismissal(storageKey: string): boolean {
   return false;
 }
 
-function storeContextMenuHintDismissal(storageKey: string): void {
+function storeContextMenuHintDismissal(storageKey: string, notifyCurrentPage = true): void {
   if (typeof window === 'undefined') {
     return;
   }
 
   window.localStorage.setItem(storageKey, '1');
-  window.dispatchEvent(new Event(CONTEXT_MENU_HINT_STORAGE_EVENT));
+  if (notifyCurrentPage) {
+    window.dispatchEvent(new Event(CONTEXT_MENU_HINT_STORAGE_EVENT));
+  }
 }
 
 export function useContextMenuHint({
@@ -108,6 +110,10 @@ export function useContextMenuHint({
     setShowContextMenuHint(true);
   }, [enabled, hasDismissedHint, hasRows, isLoading, resolvedIsDesktop]);
 
+  const markContextMenuHintUsed = useCallback((): void => {
+    storeContextMenuHintDismissal(storageKey, false);
+  }, [storageKey]);
+
   const closeContextMenuHint = useCallback((): void => {
     storeContextMenuHintDismissal(storageKey);
     setHasDismissedHint(true);
@@ -117,6 +123,6 @@ export function useContextMenuHint({
   return {
     showContextMenuHint,
     closeContextMenuHint,
-    markContextMenuHintUsed: closeContextMenuHint,
+    markContextMenuHintUsed,
   };
 }
