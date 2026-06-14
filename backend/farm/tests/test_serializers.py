@@ -133,13 +133,13 @@ class SerializerBranchCoverageTest(TestCase):
                 'name': 'Fenchel',
                 'variety': 'X',
                 'cultivation_types': ['direct_sowing'],
-                'seed_rate_direct_unit': 'g_per_m2',
+                'seed_rate_direct_value': 0.14,
                 'project': self.project.id,
             }
         )
         self.assertFalse(serializer.is_valid())
-        self.assertIn('seed_rate_direct_value', serializer.errors)
-        self.assertNotIn('seed_rate_pre_cultivation_value', serializer.errors)
+        self.assertIn('seed_rate_direct_unit', serializer.errors)
+        self.assertNotIn('seed_rate_pre_cultivation_unit', serializer.errors)
 
     def test_accepts_pre_cultivation_only_without_direct_fields(self):
         serializer = CultureSerializer(
