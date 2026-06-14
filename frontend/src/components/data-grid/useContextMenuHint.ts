@@ -3,7 +3,6 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 
 export const CONTEXT_MENU_HINT_STORAGE_KEY = 'ofp.contextMenuHintDismissed';
 const CONTEXT_MENU_HINT_STORAGE_EVENT = 'ofp:context-menu-hint-dismissed';
-const LEGACY_CONTEXT_MENU_HINT_STORAGE_PREFIX = `${CONTEXT_MENU_HINT_STORAGE_KEY}:`;
 
 interface UseContextMenuHintOptions {
   enabled?: boolean;
@@ -41,17 +40,6 @@ function hasStoredContextMenuHintDismissal(): boolean {
 
   if (window.localStorage.getItem(CONTEXT_MENU_HINT_STORAGE_KEY) === '1') {
     return true;
-  }
-
-  for (let index = 0; index < window.localStorage.length; index += 1) {
-    const key = window.localStorage.key(index);
-    if (
-      key?.startsWith(LEGACY_CONTEXT_MENU_HINT_STORAGE_PREFIX)
-      && window.localStorage.getItem(key) === '1'
-    ) {
-      window.localStorage.setItem(CONTEXT_MENU_HINT_STORAGE_KEY, '1');
-      return true;
-    }
   }
 
   return false;

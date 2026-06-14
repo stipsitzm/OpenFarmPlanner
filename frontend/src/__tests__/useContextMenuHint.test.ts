@@ -59,7 +59,7 @@ describe('useContextMenuHint', () => {
     await waitFor(() => expect(result.current.showContextMenuHint).toBe(false));
   });
 
-  it('treats legacy project-scoped dismissals as globally dismissed', () => {
+  it('ignores legacy project-scoped dismissals when the global hint has not been dismissed', async () => {
     window.localStorage.setItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:project:123`, '1');
 
     const { result } = renderHook(() => useContextMenuHint({
@@ -68,7 +68,7 @@ describe('useContextMenuHint', () => {
       hasRows: true,
     }));
 
-    expect(window.localStorage.getItem(CONTEXT_MENU_HINT_STORAGE_KEY)).toBe('1');
-    expect(result.current.showContextMenuHint).toBe(false);
+    expect(window.localStorage.getItem(CONTEXT_MENU_HINT_STORAGE_KEY)).toBeNull();
+    await waitFor(() => expect(result.current.showContextMenuHint).toBe(true));
   });
 });
