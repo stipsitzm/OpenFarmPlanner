@@ -335,6 +335,7 @@ function FieldsBedsHierarchy({
   const [draftValidationWarning, setDraftValidationWarning] = useState("");
   const [pendingDeletions, setPendingDeletions] = useState<PendingHierarchyDeletion[]>([]);
   const hasInitiallyExpandedRef = useRef(false);
+  const handledCreateFieldRequestRef = useRef(0);
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
   const touchLongPressTimeoutRef = useRef<number | null>(null);
@@ -620,16 +621,24 @@ function FieldsBedsHierarchy({
   }, [fields, handleAddBed, loading, location.pathname, location.search, navigate]);
 
   useEffect(() => {
-    if (createFieldRequest <= 0 || loading) {
+    if (
+      createFieldRequest <= 0
+      || loading
+      || createFieldRequest <= handledCreateFieldRequestRef.current
+    ) {
       return;
     }
 
     const hasActiveFieldDraft = fields.some((field) => typeof field.id === "number" && field.id < 0);
-    if (!hasActiveFieldDraft) {
-      const firstLocation = locations.find((locationItem) => locationItem.id !== undefined);
-      if (firstLocation?.id !== undefined) {
-        handleAddField(firstLocation.id);
-      }
+    const firstLocation = locations.find((locationItem) => locationItem.id !== undefined);
+    const firstLocationId = firstLocation?.id;
+    if (!hasActiveFieldDraft && firstLocationId === undefined) {
+      return;
+    }
+
+    handledCreateFieldRequestRef.current = createFieldRequest;
+    if (!hasActiveFieldDraft && firstLocationId !== undefined) {
+      handleAddField(firstLocationId);
     }
     onCreateFieldRequestHandled?.();
   }, [createFieldRequest, fields, handleAddField, loading, locations, onCreateFieldRequestHandled]);

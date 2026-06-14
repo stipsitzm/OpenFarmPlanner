@@ -1514,13 +1514,28 @@ export function EditableDataGrid<T extends EditableRow>({
     return rowElement?.dataset.id ?? null;
   };
 
-  const openRowActionContextMenu = useCallback((rowId: GridRowId, event: React.MouseEvent): void => {
-    suppressNativeContextMenu(event);
+  const openRowActionMenuAt = useCallback((
+    rowId: GridRowId,
+    originElement: HTMLElement | null,
+    mouseX: number,
+    mouseY: number,
+  ): void => {
     markContextMenuHintUsed();
     setSelectedRowIds([rowId]);
-    rowActionMenuOriginRef.current = event.currentTarget as HTMLElement;
-    setRowActionMenuState({ rowId, mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
+    rowActionMenuOriginRef.current = originElement;
+    setRowActionMenuState({ rowId, mouseX, mouseY });
   }, [markContextMenuHintUsed]);
+
+  const openRowActionContextMenu = useCallback((rowId: GridRowId, event: React.MouseEvent): void => {
+    suppressNativeContextMenu(event);
+    openRowActionMenuAt(rowId, event.currentTarget as HTMLElement, event.clientX + 2, event.clientY - 6);
+  }, [openRowActionMenuAt]);
+
+  const openRowActionKeyboardContextMenu = useCallback((rowId: GridRowId, originElement: HTMLElement): void => {
+    const rowElement = originElement.closest<HTMLElement>('[role="row"][data-id]') ?? originElement;
+    const rect = rowElement.getBoundingClientRect();
+    openRowActionMenuAt(rowId, rowElement, rect.left + Math.min(240, rect.width), rect.top + 12);
+  }, [openRowActionMenuAt]);
 
   const closeRowActionMenu = useCallback((): void => {
     setRowActionMenuState(null);
@@ -1581,13 +1596,14 @@ export function EditableDataGrid<T extends EditableRow>({
     const touch = event.touches[0];
     clearRowActionLongPressTimer();
     rowActionLongPressTimerRef.current = window.setTimeout(() => {
+      markContextMenuHintUsed();
       setSelectedRowIds([rowId]);
       setLongPressFeedbackRowId(rowId);
       rowActionMenuOriginRef.current = originElement;
       setRowActionMenuState({ rowId, mouseX: touch.clientX + 2, mouseY: touch.clientY - 6 });
       rowActionLongPressTimerRef.current = null;
     }, ROW_ACTION_LONG_PRESS_MS);
-  }, [clearRowActionLongPressTimer, hasContextualRowActions, rowsById]);
+  }, [clearRowActionLongPressTimer, hasContextualRowActions, markContextMenuHintUsed, rowsById]);
 
   const handleGridTouchMove = useCallback((): void => {
     clearRowActionLongPressTimer();
@@ -1960,6 +1976,18 @@ export function EditableDataGrid<T extends EditableRow>({
             handleEditableCellClick(params, rowModesModel, setRowModesModel);
           }}
           onCellKeyDown={(params: GridCellParams<T>, event) => {
+            if (
+              hasContextualRowActions &&
+              (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) &&
+              rowsById.has(String(params.id))
+            ) {
+              event.preventDefault();
+              event.stopPropagation();
+              event.defaultMuiPrevented = true;
+              openRowActionKeyboardContextMenu(params.id, event.currentTarget as HTMLElement);
+              return;
+            }
+
             const shouldOpenNotes =
               notesFieldNames.includes(params.field) &&
               (event.key === 'Enter' || event.key === ' ') &&
