@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import { AuthContext } from '../../auth/authContextShared';
 
 export const CONTEXT_MENU_HINT_STORAGE_KEY = 'ofp.contextMenuHintDismissed';
 const CONTEXT_MENU_HINT_STORAGE_EVENT = 'ofp:context-menu-hint-dismissed';
@@ -33,24 +34,32 @@ export function shouldShowContextMenuHint({
   return isDesktop && !isLoading && hasRows && !hasDismissedHint;
 }
 
-function hasStoredContextMenuHintDismissal(): boolean {
+function getContextMenuHintStorageKey(userId?: number | null): string {
+  if (userId !== undefined && userId !== null) {
+    return `${CONTEXT_MENU_HINT_STORAGE_KEY}:user:${userId}`;
+  }
+
+  return CONTEXT_MENU_HINT_STORAGE_KEY;
+}
+
+function hasStoredContextMenuHintDismissal(storageKey: string): boolean {
   if (typeof window === 'undefined') {
     return false;
   }
 
-  if (window.localStorage.getItem(CONTEXT_MENU_HINT_STORAGE_KEY) === '1') {
+  if (window.localStorage.getItem(storageKey) === '1') {
     return true;
   }
 
   return false;
 }
 
-function storeContextMenuHintDismissal(): void {
+function storeContextMenuHintDismissal(storageKey: string): void {
   if (typeof window === 'undefined') {
     return;
   }
 
-  window.localStorage.setItem(CONTEXT_MENU_HINT_STORAGE_KEY, '1');
+  window.localStorage.setItem(storageKey, '1');
   window.dispatchEvent(new Event(CONTEXT_MENU_HINT_STORAGE_EVENT));
 }
 
@@ -60,23 +69,29 @@ export function useContextMenuHint({
   isLoading = false,
   hasRows,
 }: UseContextMenuHintOptions): UseContextMenuHintResult {
+  const authContext = useContext(AuthContext);
+  const storageKey = useMemo(
+    () => getContextMenuHintStorageKey(authContext?.user?.id),
+    [authContext?.user?.id],
+  );
   const [showContextMenuHint, setShowContextMenuHint] = useState(false);
-  const [hasDismissedHint, setHasDismissedHint] = useState(hasStoredContextMenuHintDismissal);
+  const [hasDismissedHint, setHasDismissedHint] = useState(() => hasStoredContextMenuHintDismissal(storageKey));
   const isDesktopPointer = useMediaQuery('(pointer: fine) and (min-width:901px)');
   const resolvedIsDesktop = isDesktop ?? isDesktopPointer;
 
   useEffect(() => {
     const syncDismissalState = (): void => {
-      setHasDismissedHint(hasStoredContextMenuHintDismissal());
+      setHasDismissedHint(hasStoredContextMenuHintDismissal(storageKey));
     };
 
+    syncDismissalState();
     window.addEventListener('storage', syncDismissalState);
     window.addEventListener(CONTEXT_MENU_HINT_STORAGE_EVENT, syncDismissalState);
     return () => {
       window.removeEventListener('storage', syncDismissalState);
       window.removeEventListener(CONTEXT_MENU_HINT_STORAGE_EVENT, syncDismissalState);
     };
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     const resolvedHasRows = hasRows ?? enabled;
@@ -94,10 +109,10 @@ export function useContextMenuHint({
   }, [enabled, hasDismissedHint, hasRows, isLoading, resolvedIsDesktop]);
 
   const closeContextMenuHint = useCallback((): void => {
-    storeContextMenuHintDismissal();
+    storeContextMenuHintDismissal(storageKey);
     setHasDismissedHint(true);
     setShowContextMenuHint(false);
-  }, []);
+  }, [storageKey]);
 
   return {
     showContextMenuHint,
