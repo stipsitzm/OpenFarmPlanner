@@ -69,10 +69,15 @@ export function getFieldRectSize(
 }
 
 export function getBedRectSize(bed: Pick<Bed, 'area_sqm' | 'length_m' | 'width_m'>, pxPerMeter: number): RectSize {
-  if (typeof bed.length_m === 'number' && typeof bed.width_m === 'number') {
+  if (
+    typeof bed.length_m === 'number' &&
+    bed.length_m > 0 &&
+    typeof bed.width_m === 'number' &&
+    bed.width_m > 0
+  ) {
     return {
-      width: Math.max(20, Math.round(bed.width_m * pxPerMeter)),
-      height: Math.max(20, Math.round(bed.length_m * pxPerMeter)),
+      width: bed.width_m * pxPerMeter,
+      height: bed.length_m * pxPerMeter,
     };
   }
 
@@ -95,8 +100,8 @@ export function getBedRectSizeWithinField(
     const pxPerMeterY = fieldInnerSize.height / fieldLengthM;
 
     return {
-      width: Math.max(20, Math.round(bedWidthM * pxPerMeterX)),
-      height: Math.max(20, Math.round(bedLengthM * pxPerMeterY)),
+      width: bedWidthM * pxPerMeterX,
+      height: bedLengthM * pxPerMeterY,
     };
   }
 
