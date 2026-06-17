@@ -26,6 +26,11 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    // Force a single copy of React even when nested node_modules (e.g. inside
+    // react-modern-gantt after its local npm ci) contain their own react copy.
+    // Without this, Vite picks up the nested React for that package's imports,
+    // producing two React instances and an "Invalid hook call" crash.
+    dedupe: ['react', 'react-dom'],
   },
   server: {
     watch: {
