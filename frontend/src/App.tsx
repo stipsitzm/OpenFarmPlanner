@@ -1847,15 +1847,88 @@ function withLazyFallback(element: React.ReactElement): React.ReactElement {
   return <Suspense fallback={null}>{element}</Suspense>;
 }
 
+function DevRouteError({ error }: { error: unknown }) {
+  const name = error instanceof Error ? error.name : 'Unknown Error';
+  const message = error instanceof Error ? error.message : String(error);
+  const stack = error instanceof Error ? (error.stack ?? '') : '';
+  const isDynamic = isDynamicImportLoadError(error);
+
+  return (
+    <Box sx={{ minHeight: '100vh', p: 3, bgcolor: '#1a1a1a', color: '#f5f5f5' }}>
+      <Box sx={{ maxWidth: 900, mx: 'auto' }}>
+        <Typography variant="h6" sx={{ color: '#ff6b6b', mb: 1, fontFamily: 'monospace' }}>
+          {isDynamic ? '⚠ Module load error' : '⚠ Route error'}{' '}
+          <Typography component="span" sx={{ color: '#888', fontSize: 13 }}>
+            (development only — production shows a user-friendly card)
+          </Typography>
+        </Typography>
+        <Typography sx={{ color: '#ffd93d', fontFamily: 'monospace', mb: 2, wordBreak: 'break-word' }}>
+          {name}: {message}
+        </Typography>
+        {isDynamic && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            A lazy module failed to load. In production this shows the "app updated" screen and
+            optionally auto-reloads. In development, check the Vite server output and browser
+            console for the underlying network or compilation error.
+          </Alert>
+        )}
+        {stack && (
+          <Box
+            component="pre"
+            sx={{
+              fontSize: 12,
+              overflowX: 'auto',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              color: '#aaa',
+              border: '1px solid #444',
+              borderRadius: 1,
+              p: 2,
+              mt: 1,
+            }}
+          >
+            {stack}
+          </Box>
+        )}
+        <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
+          <Button variant="outlined" onClick={() => window.location.reload()} sx={{ color: '#ccc', borderColor: '#555' }}>
+            Reload
+          </Button>
+          <Button variant="outlined" onClick={() => window.history.back()} sx={{ color: '#ccc', borderColor: '#555' }}>
+            Go back
+          </Button>
+        </Stack>
+      </Box>
+    </Box>
+  );
+}
+
 function RouteErrorBoundary() {
   const error = useRouteError();
-  const isApplicationUpdateError = isDynamicImportLoadError(error);
+  const isApplicationUpdateError = import.meta.env.PROD && isDynamicImportLoadError(error);
 
   useEffect(() => {
     if (isApplicationUpdateError) {
       reloadOnceForDynamicImportError(error);
     }
   }, [error, isApplicationUpdateError]);
+
+  // Always log in dev so the actual error is visible in the console even if
+  // the user misses the on-screen panel.
+  useEffect(() => {
+    if (!import.meta.env.PROD) {
+      console.error(
+        '[RouteErrorBoundary] Route error at',
+        window.location.pathname,
+        '\n',
+        error,
+      );
+    }
+  }, [error]);
+
+  if (!import.meta.env.PROD) {
+    return <DevRouteError error={error} />;
+  }
 
   return <RuntimeErrorState variant={isApplicationUpdateError ? 'applicationUpdated' : 'routeError'} />;
 }
@@ -1868,7 +1941,7 @@ function GlobalRuntimeErrorHandler({ children }: GlobalRuntimeErrorHandlerProps)
   const [hasApplicationUpdateError, setHasApplicationUpdateError] = useState(false);
 
   const handleDynamicImportError = useCallback((error: unknown) => {
-    if (!isDynamicImportLoadError(error)) {
+    if (!import.meta.env.PROD || !isDynamicImportLoadError(error)) {
       return;
     }
 
@@ -1883,7 +1956,12 @@ function GlobalRuntimeErrorHandler({ children }: GlobalRuntimeErrorHandlerProps)
       if (!isDynamicImportLoadError(error)) {
         return;
       }
-
+      if (!import.meta.env.PROD) {
+        // In dev, leave the event un-prevented so the browser console and
+        // Vite's overlay still receive it. RouteErrorBoundary will show details.
+        console.error('[GlobalRuntimeErrorHandler] Dynamic import load error:', error);
+        return;
+      }
       event.preventDefault();
       handleDynamicImportError(error);
     };
@@ -1892,16 +1970,25 @@ function GlobalRuntimeErrorHandler({ children }: GlobalRuntimeErrorHandlerProps)
       if (!isDynamicImportLoadError(event.reason)) {
         return;
       }
-
+      if (!import.meta.env.PROD) {
+        console.error('[GlobalRuntimeErrorHandler] Unhandled dynamic import rejection:', event.reason);
+        return;
+      }
       event.preventDefault();
       handleDynamicImportError(event.reason);
     };
 
     const handleVitePreloadError = (event: Event) => {
-      event.preventDefault();
       const payload = (event as CustomEvent<unknown>).detail
         ?? (event as Event & { payload?: unknown }).payload
         ?? 'vite:preloadError';
+      if (!import.meta.env.PROD) {
+        // Do not preventDefault in dev — lets Vite surface the underlying
+        // compilation/network error in the browser console and HMR overlay.
+        console.error('[GlobalRuntimeErrorHandler] vite:preloadError:', payload);
+        return;
+      }
+      event.preventDefault();
       handleDynamicImportError(payload);
     };
 
