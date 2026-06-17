@@ -18,7 +18,11 @@ import {
 } from '@mui/material';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import NotesIcon from '@mui/icons-material/Notes';
+import NotesOutlinedIcon from '@mui/icons-material/NotesOutlined';
 import { locationAPI, type Location } from '../api/api';
+import { NotesDrawer } from '../components/data-grid/NotesDrawer';
+import { getPlainExcerpt } from '../components/data-grid/markdown';
 import PageContainer from '../components/layout/PageContainer';
 import { useTranslation } from '../i18n';
 import { formatLocalizedNumber, resolveLocaleFromLanguage } from '../utils/numberLocalization';
@@ -127,6 +131,9 @@ function Locations() {
   const [formState, setFormState] = useState<LocationFormState>(emptyForm);
   const [formError, setFormError] = useState<string>('');
   const [formErrorField, setFormErrorField] = useState<'name' | 'coordinates' | null>(null);
+  const [notesDrawerOpen, setNotesDrawerOpen] = useState(false);
+  const [notesDraft, setNotesDraft] = useState('');
+  const [notesFocusId, setNotesFocusId] = useState(0);
 
   const loadData = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -205,6 +212,7 @@ function Locations() {
     setFormState(emptyForm);
     setFormError('');
     setFormErrorField(null);
+    setNotesDrawerOpen(false);
   };
 
   const validateForm = (): { latitude: number | null; longitude: number | null } | null => {
@@ -443,19 +451,86 @@ function Locations() {
               </MenuItem>
             ))}
           </TextField>
-          <TextField
-            label={t('common:fields.notes')}
-            value={formState.notes}
-            onChange={(event) => setFormState((prev) => ({ ...prev, notes: event.target.value }))}
-            multiline
-            minRows={3}
-          />
+          <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>{t('common:fields.notes')}</Typography>
+            <Box
+              role="button"
+              tabIndex={0}
+              aria-label={formState.notes.trim() ? t('common:notes.editWithContent') : t('common:notes.editEmpty')}
+              onClick={() => {
+                setNotesDraft(formState.notes);
+                setNotesFocusId((prev) => prev + 1);
+                setNotesDrawerOpen(true);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setNotesDraft(formState.notes);
+                  setNotesFocusId((prev) => prev + 1);
+                  setNotesDrawerOpen(true);
+                }
+              }}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                px: 1.5,
+                py: 1.25,
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: 1,
+                cursor: 'pointer',
+                minHeight: 48,
+                '&:hover': { bgcolor: 'action.hover' },
+                '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '2px' },
+              }}
+            >
+              {formState.notes.trim() ? (
+                <NotesIcon fontSize="small" color="primary" sx={{ flexShrink: 0 }} />
+              ) : (
+                <NotesOutlinedIcon fontSize="small" color="disabled" sx={{ flexShrink: 0 }} />
+              )}
+              <Typography
+                variant="body2"
+                sx={{
+                  color: formState.notes.trim() ? 'text.primary' : 'text.disabled',
+                  fontStyle: formState.notes.trim() ? 'normal' : 'italic',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  flexGrow: 1,
+                }}
+              >
+                {formState.notes.trim()
+                  ? (() => {
+                      const ex = getPlainExcerpt(formState.notes);
+                      const first = ex.split('\n')[0];
+                      return first.length > 60 ? `${first.slice(0, 57)}…` : first;
+                    })()
+                  : t('common:notes.empty')}
+              </Typography>
+            </Box>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={closeDialog}>{t('common:actions.cancel')}</Button>
           <Button variant="contained" onClick={() => void saveLocation()}>{t('common:actions.save')}</Button>
         </DialogActions>
       </Dialog>
+
+      <NotesDrawer
+        open={notesDrawerOpen}
+        title={t('common:fields.notes')}
+        value={notesDraft}
+        onChange={setNotesDraft}
+        onSave={() => {
+          setFormState((prev) => ({ ...prev, notes: notesDraft }));
+          setNotesDrawerOpen(false);
+        }}
+        onClose={() => setNotesDrawerOpen(false)}
+        hasUnsavedChanges={notesDraft !== formState.notes}
+        focusRequestId={notesFocusId}
+      />
     </PageContainer>
   );
 }

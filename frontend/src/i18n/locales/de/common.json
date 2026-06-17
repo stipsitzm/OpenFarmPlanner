@@ -64,7 +64,6 @@
     "selectFromGallery": "Aus Galerie wählen",
     "uploading": "Wird hochgeladen…",
     "attachmentAlt": "Anhang",
-    "markdownPlaceholder": "Notizen in Markdown…",
     "imageDialogTitle": "Foto",
     "attachmentPreviewAlt": "Anhangsvorschau",
     "cropDialogTitle": "Zuschneiden",
@@ -82,7 +81,8 @@
       "continueEditing": "Weiter bearbeiten",
       "discardAndClose": "Änderungen verwerfen und schließen"
     },
-    "markdownToolbar": {
+    "toolbar": {
+      "ariaLabel": "Formatierungsleiste",
       "bold": "Fettdruck",
       "boldTooltip": "Fettdruck (Strg+B)",
       "italic": "Kursiv",
@@ -92,14 +92,7 @@
       "bulletList": "Aufzählungsliste",
       "numberedList": "Nummerierte Liste",
       "link": "Link einfügen",
-      "quote": "Zitat"
-    },
-    "defaults": {
-      "bold": "fetter Text",
-      "italic": "kursiver Text",
-      "heading": "Überschrift",
-      "listItem": "Listeneintrag",
-      "linkText": "Linktext",
+      "linkPrompt": "Link-URL:",
       "quote": "Zitat"
     }
   },

@@ -46,6 +46,8 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
+import NotesIcon from "@mui/icons-material/Notes";
+import NotesOutlinedIcon from "@mui/icons-material/NotesOutlined";
 import { useTranslation } from "../i18n";
 import {
   getAllowedCultivationTypesForCulture,
@@ -571,6 +573,9 @@ function PlantingPlans() {
   const [mobileNotesTarget, setMobileNotesTarget] = useState<PlantingPlanRow | null>(null);
   const [mobileNotesDraft, setMobileNotesDraft] = useState("");
   const [isMobileNotesSaving, setIsMobileNotesSaving] = useState(false);
+  const [isMobileCreateNotesOpen, setIsMobileCreateNotesOpen] = useState(false);
+  const [mobileCreateNotesDraft, setMobileCreateNotesDraft] = useState("");
+  const [mobileCreateNotesFocusId, setMobileCreateNotesFocusId] = useState(0);
   const [mobileActionMenuAnchor, setMobileActionMenuAnchor] = useState<HTMLElement | null>(null);
   const [mobileActionMenuRow, setMobileActionMenuRow] = useState<PlantingPlanRow | null>(null);
   const mobilePrefillHandledRef = useRef(false);
@@ -1556,6 +1561,7 @@ function PlantingPlans() {
     setMobileCreateError("");
     setMobileEditId(null);
     setMobileLastEditedField(null);
+    setIsMobileCreateNotesOpen(false);
   };
 
   useEffect(() => {
@@ -2558,15 +2564,66 @@ function PlantingPlans() {
               }}
               slotProps={{ htmlInput: { inputMode: "numeric" } }}
             />
-            <TextField
-              label={t("common:fields.notes")}
-              multiline
-              minRows={3}
-              value={mobileCreateForm.notes}
-              onChange={(event) =>
-                setMobileCreateForm((previous) => ({ ...previous, notes: event.target.value }))
-              }
-            />
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>{t("common:fields.notes")}</Typography>
+              <Box
+                role="button"
+                tabIndex={0}
+                aria-label={mobileCreateForm.notes.trim() ? t("common:notes.editWithContent") : t("common:notes.editEmpty")}
+                onClick={() => {
+                  setMobileCreateNotesDraft(mobileCreateForm.notes);
+                  setMobileCreateNotesFocusId((prev) => prev + 1);
+                  setIsMobileCreateNotesOpen(true);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setMobileCreateNotesDraft(mobileCreateForm.notes);
+                    setMobileCreateNotesFocusId((prev) => prev + 1);
+                    setIsMobileCreateNotesOpen(true);
+                  }
+                }}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  px: 1.5,
+                  py: 1.25,
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  minHeight: 48,
+                  "&:hover": { bgcolor: "action.hover" },
+                  "&:focus-visible": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: "2px" },
+                }}
+              >
+                {mobileCreateForm.notes.trim() ? (
+                  <NotesIcon fontSize="small" color="primary" sx={{ flexShrink: 0 }} />
+                ) : (
+                  <NotesOutlinedIcon fontSize="small" color="disabled" sx={{ flexShrink: 0 }} />
+                )}
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: mobileCreateForm.notes.trim() ? "text.primary" : "text.disabled",
+                    fontStyle: mobileCreateForm.notes.trim() ? "normal" : "italic",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    flexGrow: 1,
+                  }}
+                >
+                  {mobileCreateForm.notes.trim()
+                    ? (() => {
+                        const ex = getPlainExcerpt(mobileCreateForm.notes);
+                        const first = ex.split("\n")[0];
+                        return first.length > 60 ? `${first.slice(0, 57)}…` : first;
+                      })()
+                    : t("common:notes.empty")}
+                </Typography>
+              </Box>
+            </Box>
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -2642,6 +2699,20 @@ function PlantingPlans() {
         noteId={mobileNotesTarget?.id}
         focusAttachments
         focusRequestId={mobileNotesTarget?.id ?? 0}
+      />
+
+      <NotesDrawer
+        open={isMobileCreateNotesOpen}
+        title={t("common:fields.notes")}
+        value={mobileCreateNotesDraft}
+        onChange={setMobileCreateNotesDraft}
+        onSave={() => {
+          setMobileCreateForm((prev) => ({ ...prev, notes: mobileCreateNotesDraft }));
+          setIsMobileCreateNotesOpen(false);
+        }}
+        onClose={() => setIsMobileCreateNotesOpen(false)}
+        hasUnsavedChanges={mobileCreateNotesDraft !== mobileCreateForm.notes}
+        focusRequestId={mobileCreateNotesFocusId}
       />
     </PageContainer>
   );

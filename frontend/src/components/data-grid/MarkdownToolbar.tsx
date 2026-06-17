@@ -35,19 +35,19 @@ export type MarkdownFormat =
   | 'quote';
 
 const TOOLBAR_ARIA_LABEL_KEYS: Record<MarkdownFormat, string> = {
-  bold: 'notesDrawer.markdownToolbar.bold',
-  italic: 'notesDrawer.markdownToolbar.italic',
-  code: 'notesDrawer.markdownToolbar.code',
-  heading: 'notesDrawer.markdownToolbar.heading',
-  'bullet-list': 'notesDrawer.markdownToolbar.bulletList',
-  'numbered-list': 'notesDrawer.markdownToolbar.numberedList',
-  link: 'notesDrawer.markdownToolbar.link',
-  quote: 'notesDrawer.markdownToolbar.quote',
+  bold: 'notesDrawer.toolbar.bold',
+  italic: 'notesDrawer.toolbar.italic',
+  code: 'notesDrawer.toolbar.code',
+  heading: 'notesDrawer.toolbar.heading',
+  'bullet-list': 'notesDrawer.toolbar.bulletList',
+  'numbered-list': 'notesDrawer.toolbar.numberedList',
+  link: 'notesDrawer.toolbar.link',
+  quote: 'notesDrawer.toolbar.quote',
 };
 
 const TOOLBAR_TOOLTIP_KEYS: Record<MarkdownFormat, string> = {
-  bold: 'notesDrawer.markdownToolbar.boldTooltip',
-  italic: 'notesDrawer.markdownToolbar.italicTooltip',
+  bold: 'notesDrawer.toolbar.boldTooltip',
+  italic: 'notesDrawer.toolbar.italicTooltip',
   code: TOOLBAR_ARIA_LABEL_KEYS.code,
   heading: TOOLBAR_ARIA_LABEL_KEYS.heading,
   'bullet-list': TOOLBAR_ARIA_LABEL_KEYS['bullet-list'],

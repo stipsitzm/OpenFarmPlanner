@@ -15,6 +15,13 @@ const basePath = normalizeBasePath(process.env.VITE_BASE_PATH)
 export default defineConfig({
   base: basePath,
   plugins: [react()],
+  optimizeDeps: {
+    // tiptap-markdown imports the CJS-only package markdown-it-task-lists.
+    // Vite must pre-bundle tiptap-markdown so esbuild can inline that CJS
+    // dependency; without this, the browser fails to fetch FieldsBedsPage
+    // because the raw ESM file contains a bare CJS import.
+    include: ['tiptap-markdown'],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

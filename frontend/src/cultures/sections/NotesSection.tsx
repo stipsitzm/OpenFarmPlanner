@@ -1,12 +1,11 @@
-/**
- * NotesSection: Notizen (multiline)
- * @remarks Presentational, no internal state
- */
-import { Typography, TextField } from '@mui/material';
+import { lazy, Suspense } from 'react';
+import { Typography, CircularProgress } from '@mui/material';
 import type { Culture } from '../../api/types';
 import type { TFunction } from 'i18next';
-// importiere FieldWrapper, falls benötigt
-// import { FieldWrapper } from '../styles.tsx';
+
+const RichTextEditor = lazy(() =>
+  import('../../components/data-grid/RichTextEditor').then((m) => ({ default: m.RichTextEditor }))
+);
 
 interface NotesSectionProps {
   formData: Partial<Culture>;
@@ -19,16 +18,13 @@ export function NotesSection({ formData, onChange, t }: NotesSectionProps) {
   return (
     <>
       <Typography variant="h6" sx={{ mt: 2 }}>{t('form.notes')}</Typography>
-      <TextField
-        fullWidth
-        multiline
-        minRows={3}
-        maxRows={30}
-        label={t('form.notes')}
-        placeholder={t('form.notesPlaceholder')}
-        value={formData.notes}
-        onChange={e => onChange('notes', e.target.value)}
-      />
+      <Suspense fallback={<CircularProgress size={24} sx={{ display: 'block', mx: 'auto', mt: 2 }} />}>
+        <RichTextEditor
+          value={formData.notes ?? ''}
+          onChange={(md) => onChange('notes', md as Culture['notes'])}
+          autoFocus={false}
+        />
+      </Suspense>
     </>
   );
 }
