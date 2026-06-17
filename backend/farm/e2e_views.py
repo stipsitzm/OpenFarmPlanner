@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from config.frontend_urls import build_public_frontend_url
 
-from farm.models import Project, ProjectInvitation, ProjectMembership
+from farm.models import Bed, Culture, Field, Location, Project, ProjectInvitation, ProjectMembership
 
 User = get_user_model()
 E2E_PASSWORD = 'Pass12345!'
@@ -58,6 +58,8 @@ class E2EInvitationFixtureView(APIView):
             return Response(self._setup(request, scenario))
         if action == 'remove_member':
             return Response(self._remove_member(scenario))
+        if action == 'seed_data':
+            return Response(self._seed_data(scenario))
         if action == 'revoke_invitation':
             return Response(self._revoke_invitation(request, scenario))
         raise PermissionDenied('Unsupported E2E action.')
@@ -135,6 +137,19 @@ class E2EInvitationFixtureView(APIView):
             user__email__iexact=invitee_email,
         ).delete()
         return {'ok': True, 'removedMembershipRows': membership_deleted}
+
+    def _seed_data(self, scenario: str) -> dict[str, object]:
+        project = Project.objects.get(slug=scenario)
+        location = Location.objects.create(name='E2E Standort', project=project)
+        field = Field.objects.create(name='E2E Parzelle', location=location, project=project)
+        bed = Bed.objects.create(name='E2E Beet', field=field, project=project, length_m=5.0, width_m=1.0)
+        culture = Culture.objects.create(name='E2E Kultur', variety='', project=project)
+        return {
+            'location': {'id': location.id, 'name': location.name},
+            'field': {'id': field.id, 'name': field.name},
+            'bed': {'id': bed.id, 'name': bed.name},
+            'culture': {'id': culture.id, 'name': culture.name},
+        }
 
     def _revoke_invitation(self, request: Request, scenario: str) -> dict[str, object]:
         invitation = ProjectInvitation.objects.get(project__slug=scenario, token=request.data['token'])

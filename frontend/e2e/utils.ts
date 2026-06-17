@@ -3,6 +3,13 @@ import { expect, type APIRequestContext, type Page } from '@playwright/test';
 const e2eApiBase = process.env.PLAYWRIGHT_E2E_API_BASE ?? 'http://127.0.0.1:8000/api/__e2e__/invite-flow/';
 const e2eToken = process.env.E2E_TEST_TOKEN || 'openfarmplanner-e2e-token';
 
+export type SeedData = {
+  location: { id: number; name: string };
+  field: { id: number; name: string };
+  bed: { id: number; name: string };
+  culture: { id: number; name: string };
+};
+
 export const VIEWPORTS = [
   { key: 'mobile', width: 375, height: 800 },
   { key: 'tablet', width: 768, height: 900 },
@@ -41,6 +48,20 @@ export async function loginWithDeterministicProject(page: Page, request: APIRequ
   await page.getByLabel('Passwort').fill(fixture.invitee.password);
   await page.getByRole('button', { name: 'Anmelden' }).click();
   await expect(page).toHaveURL(/\/app\//);
+}
+
+export async function seedProjectData(request: APIRequestContext, scenarioId: string): Promise<SeedData> {
+  const response = await request.post(e2eApiBase, {
+    headers: { 'X-E2E-Token': e2eToken },
+    data: { action: 'seed_data', scenario_id: scenarioId },
+  });
+  expect(response.ok()).toBeTruthy();
+  return (await response.json()) as SeedData;
+}
+
+export async function loginAndSeed(page: Page, request: APIRequestContext, scenarioId: string): Promise<SeedData> {
+  await loginWithDeterministicProject(page, request, scenarioId);
+  return seedProjectData(request, scenarioId);
 }
 
 export async function setViewportPreset(page: Page, preset: (typeof VIEWPORTS)[number]): Promise<void> {
