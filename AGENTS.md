@@ -72,6 +72,7 @@ Follow existing placement patterns before creating new directories.
 - Prefer extending an existing shared component over creating a page-specific variant.
 - If several similar implementations exist, prefer the one used most consistently across the app.
 - Keep wording, button order, severity levels, and interaction behavior consistent with comparable existing screens.
+- Prefer making behavior consistent across the application rather than optimizing a single page in isolation.
 
 ## Backend Rules
 - Backend packages are managed with PDM. Use `pdm` commands and do not introduce `pip install`, `requirements.txt`, or `setup.py`.
@@ -115,13 +116,45 @@ Follow existing placement patterns before creating new directories.
 - Prefer extending existing systems over creating alternatives.
 - Preserve existing UX behavior unless explicitly changing it.
 
+## Shared Components
+- When modifying shared components, assume the change can affect multiple pages.
+- Shared components include DataGrid wrappers, table components, dialog components, form components, navigation components, shared hooks, and utility functions used by multiple pages.
+- Search for usages across the project before making changes.
+- Consider the impact on all affected pages.
+- Avoid breaking existing workflows.
+
 ## Refactoring Rules
 - If code duplication appears in multiple places, suggest refactoring.
 - Prefer extracting shared components over copy-pasting.
 - Keep refactors incremental and low-risk.
+
+## Regression Prevention
+- Search for similar implementations before making a change.
+- Preserve existing behavior unless explicitly requested otherwise.
+- Prefer local fixes over large refactorings.
+- Consider both desktop and mobile behavior.
+- Consider keyboard navigation (Enter, Escape, Tab, Shift+Tab, Arrow Keys), context menu interactions, and touch interactions.
+- Keep behavior consistent with existing pages.
+- When modifying an existing feature, review all places using the same pattern.
+- If the same bug exists in multiple locations, fix all occurrences.
+- Do not introduce special-case behavior unless explicitly requested.
 
 ## UX Consistency Rules
 - Empty states should guide users toward the next action.
 - Prefer contextual actions over disabled controls.
 - Keep styling and interaction patterns consistent across pages.
 - Reuse existing empty-state, dialog, and topbar patterns.
+- Enter saves changes where expected; Escape cancels editing where expected.
+- Tab and Shift+Tab navigation remain consistent across all pages.
+- Desktop and mobile behavior remain aligned.
+- Context menu functionality remains consistent across pages.
+- Similar tables should behave the same way.
+
+## Verification Checklist
+After implementing a change, verify:
+- Existing workflows still work.
+- Saving still works.
+- Keyboard navigation still works.
+- Context menus still work.
+- Mobile layouts still work.
+- No obvious regression was introduced.
