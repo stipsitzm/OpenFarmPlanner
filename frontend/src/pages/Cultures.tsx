@@ -1046,7 +1046,7 @@ function Cultures() {
     setExportDialogOpen(true);
   }, []);
 
-  const handleExportAllCultures = useCallback(() => {
+  const handleExportAllCultures = useCallback(async () => {
     setExportDialogOpen(true);
   }, []);
 

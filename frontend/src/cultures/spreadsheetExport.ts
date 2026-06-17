@@ -14,7 +14,7 @@ const MIME_TYPES: Record<SpreadsheetExportFormat, string> = {
 const buildSheetData = (cultures: Culture[]): (string | number | null)[][] => {
   const headers = CULTURE_COLUMNS.map((col) => col.header);
   const rows = cultures.map((culture) => {
-    const portable = toPortableCulture(culture) as Record<string, unknown>;
+    const portable = toPortableCulture(culture) as unknown as Record<string, unknown>;
     return CULTURE_COLUMNS.map((col) => {
       const raw = portable[col.key];
       if (raw === undefined || raw === null) return null;
@@ -28,7 +28,7 @@ const buildSheetData = (cultures: Culture[]): (string | number | null)[][] => {
 };
 
 const triggerDownload = (data: Uint8Array | string, filename: string, mimeType: string): void => {
-  const blob = new Blob([data], { type: mimeType });
+  const blob = new Blob([data as BlobPart], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;

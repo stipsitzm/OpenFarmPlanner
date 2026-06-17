@@ -98,7 +98,7 @@ export function RichTextEditor({ value, onChange, focusRequestId = 0, autoFocus 
     onUpdate({ editor: e }) {
       // Guard against updates fired during editor destruction or re-initialization.
       if (e.isDestroyed) return;
-      onChange(e.storage.markdown.getMarkdown() as string);
+      onChange((e.storage as unknown as Record<string, { getMarkdown(): string }>).markdown.getMarkdown());
     },
   });
 
@@ -107,9 +107,7 @@ export function RichTextEditor({ value, onChange, focusRequestId = 0, autoFocus 
   useEffect(() => {
     if (!editor || editor.isDestroyed || focusRequestId === openMarker.current) return;
     openMarker.current = focusRequestId;
-    // Second arg must be a boolean in TipTap 3 — an object would be truthy and
-    // would incorrectly fire onUpdate during initialization.
-    editor.commands.setContent(value, false);
+    editor.commands.setContent(value);
     if (autoFocus) {
       editor.commands.focus('end');
     }
