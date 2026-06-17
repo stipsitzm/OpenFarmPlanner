@@ -417,7 +417,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, has
       <Dialog open={Boolean(selectedImage)} onClose={() => setSelectedImage(null)} maxWidth="lg" fullWidth>
         <DialogTitle>{t('notesDrawer.imageDialogTitle')}</DialogTitle>
         <DialogContent sx={{ display: 'flex', justifyContent: 'center', backgroundColor: '#111' }}>{selectedImage && <img src={selectedImage} style={{ width: '100%', maxHeight: '80vh', objectFit: 'contain' }} alt={t('notesDrawer.attachmentPreviewAlt')} />}</DialogContent>
-        <DialogActions><Button onClick={() => setSelectedImage(null)}>{t('actions.close')}</Button></DialogActions>
+        <DialogActions><Button variant="outlined" onClick={() => setSelectedImage(null)}>{t('actions.close')}</Button></DialogActions>
       </Dialog>
 
       <Dialog open={Boolean(pendingFile)} onClose={clearPendingSelection} maxWidth="md" fullWidth>
@@ -473,8 +473,8 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, has
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={clearPendingSelection}>{t('actions.cancel')}</Button>
-          <Button onClick={resetCrop}>{t('actions.reset')}</Button>
+          <Button variant="outlined" onClick={clearPendingSelection}>{t('actions.cancel')}</Button>
+          <Button variant="outlined" onClick={resetCrop}>{t('actions.reset')}</Button>
           <Button onClick={() => void handleUpload()} disabled={uploading || !pendingFile} variant="contained">{t('actions.save')}</Button>
         </DialogActions>
       </Dialog>
@@ -487,7 +487,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, has
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmDiscardOpen(false)}>
+          <Button variant="outlined" onClick={() => setConfirmDiscardOpen(false)}>
             {t('notesDrawer.unsavedDialog.continueEditing')}
           </Button>
           <Button

@@ -1919,7 +1919,7 @@ export default function GraphicalFields({
           ) : null}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setSelectedElement(null)}>
+          <Button variant="outlined" onClick={() => setSelectedElement(null)}>
             {t("common:actions.close")}
           </Button>
         </DialogActions>

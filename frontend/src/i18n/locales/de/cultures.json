@@ -369,7 +369,22 @@
   },
   "export": {
     "current": "Aktuelle Kultur als JSON herunterladen",
-    "all": "Alle Kulturen als JSON herunterladen"
+    "all": "Alle Kulturen als JSON herunterladen",
+    "menuLabel": "Exportieren…",
+    "dialogTitle": "Kulturen exportieren",
+    "scopeLabel": "Umfang",
+    "scopeCurrent": "Aktuelle Kultur",
+    "scopeAll": "Alle Kulturen",
+    "scopeCurrentDisabled": "Keine Kultur ausgewählt",
+    "formatLabel": "Format",
+    "formatXlsx": "Excel (.xlsx)",
+    "formatOds": "OpenDocument Tabelle (.ods)",
+    "formatCsv": "CSV (.csv)",
+    "formatJson": "JSON (.json)",
+    "formatJsonHint": "Für vollständige Datensicherung und Datenaustausch.",
+    "submit": "Exportieren",
+    "cancel": "Abbrechen",
+    "success": "Export abgeschlossen"
   },
   "buttons": {
     "addNew": "Kultur hinzufügen",
@@ -437,12 +452,20 @@
     }
   },
   "import": {
-    "menuLabel": "Weitere Aktionen",
+    "menuLabel": "Importieren…",
     "menuItem": "Aus JSON importieren…",
     "title": "Kulturen importieren",
+    "selectFileTitle": "Kulturen importieren",
+    "selectFileButton": "Datei auswählen",
+    "supportedFormats": "Unterstützte Formate: JSON, CSV, Excel (.xlsx), OpenDocument (.ods)",
+    "formatHintTable": "Excel, ODS, CSV: einfache Bearbeitung in Tabellenkalkulationen wie LibreOffice oder Excel.",
+    "formatHintJson": "JSON: verlustfreies Austausch- und Backup-Format.",
     "foundCount": "{{count}} Einträge gefunden",
     "invalidCount": "{{invalid}} Einträge ohne gültigen Namen",
-    "start": "Import starten",
+    "skippedRows": "{{count}} Zeilen ohne gültigen Namen wurden übersprungen.",
+    "warnings": "Hinweise",
+    "proceed": "Weiter",
+    "start": "Importieren",
     "close": "Schließen",
     "done": "Fertig",
     "success": "Import erfolgreich",
@@ -456,14 +479,15 @@
     "failedEntries": "Fehler beim Import",
     "fieldsChanged": "{{count}} Felder ändern",
     "noChanges": "Keine Änderungen",
-    "confirmUpdates": "Überschreiben bestätigen",
+    "confirmUpdates": "Vorhandene Kulturen aktualisieren",
     "errors": {
       "notArray": "Die Datei muss ein JSON-Array enthalten.",
       "noValidEntries": "Keine gültigen Einträge gefunden.",
       "parse": "Die Datei konnte nicht gelesen werden.",
       "server": "Import fehlgeschlagen.",
       "network": "Netzwerkfehler beim Import.",
-      "someFailures": "{{failed}} Einträge konnten nicht importiert werden."
+      "someFailures": "{{failed}} Einträge konnten nicht importiert werden.",
+      "unsupportedFormat": "Nicht unterstütztes Dateiformat. Bitte JSON, CSV, XLSX oder ODS verwenden."
     }
   },
   "library": {

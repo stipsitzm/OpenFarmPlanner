@@ -85,6 +85,8 @@ import {
   sanitizeSeedRateByCultivationForMethods,
 } from './culturesEnrichmentUtils';
 import { analyzeCultureImportJson, readFileAsText } from './culturesImportUtils';
+import { parseSpreadsheetFile } from '../cultures/spreadsheetImport';
+import { exportCulturesToSpreadsheet, buildSpreadsheetFilename, type SpreadsheetExportFormat } from '../cultures/spreadsheetExport';
 import { createCulturesCommandSpecs } from './culturesCommandSpecs';
 import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
@@ -104,6 +106,8 @@ import { dedupePublicCultures } from './publicCultureUtils';
 import { useCultureImportState } from './useCultureImportState';
 import { useEnrichmentLoadingProgress } from './useEnrichmentLoadingProgress';
 import { CulturesImportDialog } from './CulturesImportDialog';
+import { CulturesImportStartDialog } from './CulturesImportStartDialog';
+import { CulturesExportDialog } from './CulturesExportDialog';
 import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
@@ -143,6 +147,8 @@ function Cultures() {
   const [showForm, setShowForm] = useState(false);
   const [editingCulture, setEditingCulture] = useState<Culture | undefined>(undefined);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importStartDialogOpen, setImportStartDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const {
     state: importState,
     hasImportableEntries,
@@ -172,7 +178,6 @@ function Cultures() {
   const enrichmentLoadingRef = useRef(false);
   const enrichmentAbortControllerRef = useRef<AbortController | null>(null);
   const pendingCultureDeleteTimersRef = useRef<Map<string, number>>(new Map());
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [publicLibraryOpen, setPublicLibraryOpen] = useState(false);
   const [publicLibraryLoading, setPublicLibraryLoading] = useState(false);
   const [publicLibraryError, setPublicLibraryError] = useState<string | null>(null);
@@ -690,87 +695,146 @@ function Cultures() {
 
   const handleImportFileTrigger = useCallback(() => {
     resetImportState();
-    fileInputRef.current?.click();
+    setImportStartDialogOpen(true);
   }, [resetImportState]);
 
-  const handleExportCurrentCulture = useCallback(() => {
-    if (!selectedCulture) {
+  const handleImportFileSelected = useCallback(async (file: File) => {
+    setImportStartDialogOpen(false);
+    resetImportState();
+
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const isSpreadsheet = ['xlsx', 'ods', 'csv'].includes(ext);
+
+    if (isSpreadsheet) {
+      try {
+        const { entries, skippedRows, warnings } = await parseSpreadsheetFile(file);
+
+        if (entries.length === 0) {
+          const warningText = warnings.length > 0 ? warnings.join(' ') : t('import.errors.noValidEntries');
+          setImportErrorState({ error: warningText, previewCount: skippedRows, validCount: 0, invalidEntries: [] });
+          setImportDialogOpen(true);
+          return;
+        }
+
+        setImportUploading();
+        try {
+          const response = await cultureAPI.importPreview(entries);
+          const invalidEntries: string[] = [];
+          if (skippedRows > 0) {
+            invalidEntries.push(t('import.skippedRows', { count: skippedRows }));
+          }
+          if (warnings.length > 0) {
+            warnings.forEach((w) => invalidEntries.push(w));
+          }
+          setPreviewReadyState({
+            previewCount: entries.length + skippedRows,
+            validCount: entries.length,
+            invalidEntries,
+            payload: entries,
+            previewResults: response.data.results,
+          });
+          setImportDialogOpen(true);
+        } catch (error) {
+          console.error('Error calling preview endpoint:', error);
+          setImportErrorState({ error: t('import.errors.network') });
+          setImportDialogOpen(true);
+        }
+      } catch (error) {
+        console.error('Error parsing spreadsheet file:', error);
+        setImportErrorState({ error: t('import.errors.parse') });
+        setImportDialogOpen(true);
+      }
       return;
     }
 
-    const exportPayload = buildSingleCultureExport(selectedCulture);
-    const filename = buildSingleCultureFilename(selectedCulture);
-    downloadJsonFile(exportPayload, filename);
-    showSnackbar(t('messages.exportSuccess'), 'success');
-  }, [selectedCulture, showSnackbar, t]);
+    if (ext === 'json') {
+      try {
+        const jsonString = await readFileAsText(file);
+        const importAnalysis = analyzeCultureImportJson(jsonString, t);
 
-  const handleExportAllCultures = useCallback(async () => {
-    try {
-      const allCultures: Culture[] = [];
-      let nextUrl: string | null = '/cultures/';
+        if (importAnalysis.status === 'error') {
+          setImportErrorState({
+            error: t(importAnalysis.errorKey),
+            previewCount: importAnalysis.originalCount,
+            validCount: 0,
+            invalidEntries: importAnalysis.invalidEntries,
+          });
+          setImportDialogOpen(true);
+          return;
+        }
 
-      while (nextUrl) {
-        const response = await cultureAPI.list(nextUrl);
-        allCultures.push(...response.data.results);
-        nextUrl = response.data.next;
+        setImportUploading();
+        try {
+          const response = await cultureAPI.importPreview(importAnalysis.validEntries);
+          setPreviewReadyState({
+            previewCount: importAnalysis.originalCount,
+            validCount: importAnalysis.validEntries.length,
+            invalidEntries: importAnalysis.invalidEntries,
+            payload: importAnalysis.validEntries,
+            previewResults: response.data.results,
+          });
+          setImportDialogOpen(true);
+        } catch (error) {
+          console.error('Error calling preview endpoint:', error);
+          setImportErrorState({ error: t('import.errors.network') });
+          setImportDialogOpen(true);
+        }
+      } catch (error) {
+        console.error('Error reading JSON file:', error);
+        setImportErrorState({ error: t('import.errors.parse') });
+        setImportDialogOpen(true);
       }
+      return;
+    }
 
-      const exportPayload = buildAllCulturesExport(allCultures);
-      const filename = buildAllCulturesFilename();
-      downloadJsonFile(exportPayload, filename);
-      showSnackbar(t('messages.exportSuccess'), 'success');
+    setImportErrorState({ error: t('import.errors.unsupportedFormat') });
+    setImportDialogOpen(true);
+  }, [resetImportState, t, setImportErrorState, setImportUploading, setPreviewReadyState]);
+
+  const handleOpenExportDialog = useCallback(() => {
+    setExportDialogOpen(true);
+  }, []);
+
+  const handleExport = useCallback(async (scope: 'current' | 'all', format: SpreadsheetExportFormat | 'json') => {
+    try {
+      if (format === 'json') {
+        if (scope === 'current' && selectedCulture) {
+          const exportPayload = buildSingleCultureExport(selectedCulture);
+          const filename = buildSingleCultureFilename(selectedCulture);
+          downloadJsonFile(exportPayload, filename);
+        } else {
+          const allCultures: Culture[] = [];
+          let nextUrl: string | null = '/cultures/';
+          while (nextUrl) {
+            const response = await cultureAPI.list(nextUrl);
+            allCultures.push(...response.data.results);
+            nextUrl = response.data.next;
+          }
+          const exportPayload = buildAllCulturesExport(allCultures);
+          const filename = buildAllCulturesFilename();
+          downloadJsonFile(exportPayload, filename);
+        }
+      } else {
+        const culturesToExport: Culture[] = [];
+        if (scope === 'current' && selectedCulture) {
+          culturesToExport.push(selectedCulture);
+        } else {
+          let nextUrl: string | null = '/cultures/';
+          while (nextUrl) {
+            const response = await cultureAPI.list(nextUrl);
+            culturesToExport.push(...response.data.results);
+            nextUrl = response.data.next;
+          }
+        }
+        const filename = buildSpreadsheetFilename(format, scope === 'current' ? 'single' : 'all', selectedCulture ?? undefined);
+        exportCulturesToSpreadsheet(culturesToExport, format, filename);
+      }
+      showSnackbar(t('export.success'), 'success');
     } catch (error) {
       console.error('Error exporting cultures:', error);
       showSnackbar(t('messages.fetchError'), 'error');
     }
-  }, [showSnackbar, t]);
-
-  const handleImportFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (!file) {
-      return;
-    }
-
-    try {
-      const jsonString = await readFileAsText(file);
-      const importAnalysis = analyzeCultureImportJson(jsonString, t);
-
-      if (importAnalysis.status === 'error') {
-        setImportErrorState({
-          error: t(importAnalysis.errorKey),
-          previewCount: importAnalysis.originalCount,
-          validCount: 0,
-          invalidEntries: importAnalysis.invalidEntries,
-        });
-        setImportDialogOpen(true);
-        return;
-      }
-
-      setImportUploading();
-      try {
-        const response = await cultureAPI.importPreview(importAnalysis.validEntries);
-
-        setPreviewReadyState({
-          previewCount: importAnalysis.originalCount,
-          validCount: importAnalysis.validEntries.length,
-          invalidEntries: importAnalysis.invalidEntries,
-          payload: importAnalysis.validEntries,
-          previewResults: response.data.results,
-        });
-        setImportDialogOpen(true);
-      } catch (error) {
-        console.error('Error calling preview endpoint:', error);
-        setImportErrorState({ error: t('import.errors.network') });
-        setImportDialogOpen(true);
-      }
-    } catch (error) {
-      console.error('Error reading JSON file:', error);
-      setImportErrorState({ error: t('import.errors.parse') });
-      setImportDialogOpen(true);
-    }
-  };
+  }, [selectedCulture, showSnackbar, t]);
 
   const handleImportStart = async () => {
     if (!hasImportableEntries || importState.status === 'uploading') {
@@ -952,28 +1016,18 @@ function Cultures() {
       },
     },
     {
-      id: 'cultures-import-json',
-      label: 'Kulturen importieren (JSON)',
-      ariaLabel: 'Kulturen importieren (JSON)',
+      id: 'cultures-import',
+      label: t('import.menuLabel'),
+      ariaLabel: t('import.menuLabel'),
       onClick: handleImportFileTrigger,
-      shortcutHint: 'Alt+I',
     },
     {
-      id: 'cultures-export-current-json',
-      label: selectedCulture ? 'Aktuelle Kultur exportieren (JSON)' : 'Kulturen exportieren (JSON)',
-      ariaLabel: selectedCulture ? 'Aktuelle Kultur exportieren (JSON)' : 'Kulturen exportieren (JSON)',
-      onClick: handleExportCurrentCulture,
-      disabled: !selectedCulture,
-      shortcutHint: 'Alt+J',
+      id: 'cultures-export',
+      label: t('export.menuLabel'),
+      ariaLabel: t('export.menuLabel'),
+      onClick: handleOpenExportDialog,
     },
-    {
-      id: 'cultures-export-all-json',
-      label: 'Alle Kulturen exportieren (JSON)',
-      ariaLabel: 'Alle Kulturen exportieren (JSON)',
-      onClick: handleExportAllCultures,
-      shortcutHint: 'Alt+Shift+J',
-    },
-  ]), [handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, handleOpenPublicLibrary, selectedCulture]);
+  ]), [handleImportFileTrigger, handleOpenExportDialog, handleOpenPublicLibrary, t]);
 
   useTopbarContextActions(setTopbarContextActions, contextActions);
 
@@ -987,6 +1041,14 @@ function Cultures() {
   ], [handleAddNew]);
 
   useRegisterCreateActions('cultures-page', createActions);
+
+  const handleExportCurrentCulture = useCallback(() => {
+    setExportDialogOpen(true);
+  }, []);
+
+  const handleExportAllCultures = useCallback(() => {
+    setExportDialogOpen(true);
+  }, []);
 
   const commandSpecs = useMemo(() => createCulturesCommandSpecs({
     canRunEnrichmentForCulture,
@@ -1188,13 +1250,6 @@ function Cultures() {
 
   return (
     <PageContainer variant="xwide">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json,.json"
-          onChange={handleImportFileChange}
-          hidden
-        />
       
       {enrichmentCostBanner && (
         <Alert severity="info" sx={{ mb: 2 }}>
@@ -1341,7 +1396,7 @@ function Cultures() {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-          <Button onClick={() => setDeleteDialogCulture(null)}>
+          <Button variant="outlined" onClick={() => setDeleteDialogCulture(null)}>
             {t('common:actions.cancel')}
           </Button>
           <Button color="error" variant="contained" onClick={handleDeleteConfirm}>
@@ -1359,6 +1414,13 @@ function Cultures() {
         />
       ) : null}
 
+      <CulturesImportStartDialog
+        open={importStartDialogOpen}
+        onClose={() => setImportStartDialogOpen(false)}
+        onFileSelected={(file) => void handleImportFileSelected(file)}
+        t={t}
+      />
+
       <CulturesImportDialog
         open={importDialogOpen}
         importState={importState}
@@ -1370,6 +1432,14 @@ function Cultures() {
         t={t}
       />
 
+      <CulturesExportDialog
+        open={exportDialogOpen}
+        hasCurrentCulture={Boolean(selectedCulture)}
+        onClose={() => setExportDialogOpen(false)}
+        onExport={handleExport}
+        t={t}
+      />
+
       {aiEnrichmentEnabled && (<Dialog open={enrichAllConfirmOpen} onClose={() => setEnrichAllConfirmOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>{t('ai.confirmAllTitle')}</DialogTitle>
         <DialogContent>
@@ -1378,7 +1448,7 @@ function Cultures() {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEnrichAllConfirmOpen(false)}>{t('buttons.aiClose')}</Button>
+          <Button variant="outlined" onClick={() => setEnrichAllConfirmOpen(false)}>{t('buttons.aiClose')}</Button>
           <Button variant="contained" onClick={() => void handleEnrichAll()}>{t('buttons.aiCompleteAll')}</Button>
         </DialogActions>
       </Dialog>)}
@@ -1444,7 +1514,7 @@ function Cultures() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEnrichmentDialogOpen(false)}>{t('buttons.aiClose')}</Button>
+          <Button variant="outlined" onClick={() => setEnrichmentDialogOpen(false)}>{t('buttons.aiClose')}</Button>
           <Button variant="contained" onClick={handleApplySuggestions} disabled={selectedSuggestionFields.length === 0}>
             {t('buttons.aiApplySelected')}
           </Button>
@@ -1636,7 +1706,7 @@ function Cultures() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setHistoryOpen(false)}>{t('history.closeButton')}</Button>
+          <Button variant="outlined" onClick={() => setHistoryOpen(false)}>{t('history.closeButton')}</Button>
         </DialogActions>
       </Dialog>
 
@@ -1671,7 +1741,7 @@ function Cultures() {
           </List>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShortcutsOpen(false)}>{t('history.closeButton')}</Button>
+          <Button variant="outlined" onClick={() => setShortcutsOpen(false)}>{t('history.closeButton')}</Button>
         </DialogActions>
       </Dialog>
 

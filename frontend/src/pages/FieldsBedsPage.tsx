@@ -359,7 +359,7 @@ export default function FieldsBedsPage() {
             />
           </DialogContent>
           <DialogActions>
-            <Button type="button" onClick={() => setAddLocationDialogOpen(false)}>{t('common:actions.cancel')}</Button>
+            <Button type="button" variant="outlined" onClick={() => setAddLocationDialogOpen(false)}>{t('common:actions.cancel')}</Button>
             <Button type="submit" variant="contained" color="success" disabled={!newLocationName.trim()}>
               {t('hierarchy:dialogs.addAdditionalLocation.submit')}
             </Button>

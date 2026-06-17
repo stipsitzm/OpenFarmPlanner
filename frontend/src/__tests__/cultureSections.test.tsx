@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
+vi.mock('../components/data-grid/RichTextEditor', () => ({
+  RichTextEditor: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+    <textarea value={value} onChange={(e) => onChange(e.target.value)} />
+  ),
+}));
 import { ColorSection } from '../cultures/sections/ColorSection';
 import { NotesSection } from '../cultures/sections/NotesSection';
 import { SpacingSection } from '../cultures/sections/SpacingSection';
@@ -42,7 +48,7 @@ describe('culture form UI sections', () => {
     expect(screen.getByText('form.displayColorHelp')).toBeInTheDocument();
   });
 
-  it('renders NotesSection and emits note changes', () => {
+  it('renders NotesSection and emits note changes', async () => {
     const onChange = vi.fn();
 
     render(
@@ -54,7 +60,7 @@ describe('culture form UI sections', () => {
       />
     );
 
-    const notesInput = screen.getByLabelText('form.notes');
+    const notesInput = await screen.findByRole('textbox');
     expect(notesInput).toHaveValue('Bestehende Notiz');
 
     fireEvent.change(notesInput, { target: { value: 'Neue Notiz' } });

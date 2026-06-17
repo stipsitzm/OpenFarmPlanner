@@ -526,7 +526,7 @@ function AreaAssignmentDialogComponent({
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button ref={cancelButtonRef} type="button" data-dialog-action="cancel" onClick={handleCancel}>{t('areaAssignment.cancel')}</Button>
+            <Button ref={cancelButtonRef} type="button" variant="outlined" data-dialog-action="cancel" onClick={handleCancel}>{t('areaAssignment.cancel')}</Button>
             <Button ref={applyButtonRef} type="submit" data-dialog-action="apply" variant="contained" disabled={isApplyDisabled}>{t('areaAssignment.apply')}</Button>
           </DialogActions>
         </Box>

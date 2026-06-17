@@ -756,7 +756,7 @@ export function CultureForm({
                 : t('messages.fixErrors')}
             </Typography>
           )}
-          <Button onClick={onCancel} disabled={isSaving}>
+          <Button variant="outlined" onClick={onCancel} disabled={isSaving}>
             {t('form.cancel')}
           </Button>
           <Button

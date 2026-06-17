@@ -348,7 +348,7 @@ export default function AccountSettingsPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>{t('cancel')}</Button>
+          <Button variant="outlined" onClick={() => setDeleteDialogOpen(false)}>{t('cancel')}</Button>
           <Button color="error" variant="contained" disabled={!canDelete || deleteSubmitting} onClick={() => void handleDelete()}>
             {t('confirmDelete')}
           </Button>

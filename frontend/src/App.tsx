@@ -62,6 +62,8 @@ import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import PublicIcon from '@mui/icons-material/Public';
+import CollectionsBookmarkOutlinedIcon from '@mui/icons-material/CollectionsBookmarkOutlined';
+import ImportExportIcon from '@mui/icons-material/ImportExport';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
@@ -611,12 +613,10 @@ function RootLayout() {
     () => (
       !isFieldsBedsPage
       && !isCalendarPage
-      && (
-        (isCulturesPage && (Boolean(cultureLibraryAction) || showCultureImportExportButton))
-        || hasVisibleMobileContextActions
-      )
+      && !isCulturesPage
+      && hasVisibleMobileContextActions
     ),
-    [cultureLibraryAction, hasVisibleMobileContextActions, isCalendarPage, isCulturesPage, isFieldsBedsPage, showCultureImportExportButton],
+    [hasVisibleMobileContextActions, isCalendarPage, isCulturesPage, isFieldsBedsPage],
   );
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
@@ -1291,6 +1291,58 @@ function RootLayout() {
                   </Button>
                 </Tooltip>
               ) : null}
+              {isCompactTopbar && isCulturesPage && cultureLibraryAction ? (
+                <Tooltip title={t('cultureActions.openLibrary')} enterTouchDelay={0}>
+                  <span>
+                    <IconButton
+                      size="small"
+                      aria-label={t('cultureActions.openLibrary')}
+                      onClick={() => cultureLibraryAction.onClick()}
+                      disabled={cultureLibraryAction.disabled}
+                      sx={{ color: 'text.primary' }}
+                    >
+                      <CollectionsBookmarkOutlinedIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              ) : null}
+              {isCompactTopbar && isCulturesPage && showCultureImportExportButton ? (
+                <>
+                  <Tooltip title={t('cultureActions.openImportExport')} enterTouchDelay={0}>
+                    <IconButton
+                      size="small"
+                      aria-label={t('cultureActions.openImportExport')}
+                      aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu-mobile' : undefined}
+                      aria-haspopup="true"
+                      aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                      onClick={handleCultureActionsMenuOpen}
+                      sx={{ color: 'text.primary' }}
+                    >
+                      <ImportExportIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Menu
+                    id="culture-actions-menu-mobile"
+                    anchorEl={cultureActionsMenuAnchor}
+                    open={Boolean(cultureActionsMenuAnchor)}
+                    onClose={handleCultureActionsMenuClose}
+                  >
+                    {cultureImportExportActions.map((action) => (
+                      <MenuItem
+                        key={`mobile-icon-${action.id}`}
+                        aria-label={action.ariaLabel ?? action.label}
+                        onClick={() => {
+                          action.onClick();
+                          handleCultureActionsMenuClose();
+                        }}
+                        disabled={action.disabled}
+                      >
+                        <ListItemText primary={action.label} secondary={action.shortcutHint} />
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                </>
+              ) : null}
               <IconButton
                 aria-label="Mehr"
                 aria-controls={globalMenuAnchor ? 'global-actions-menu' : undefined}
@@ -1325,61 +1377,6 @@ function RootLayout() {
         {isCompactTopbar && hasMobileSecondaryRow ? (
           <Box className="mobile-action-scroll" sx={{ px: 0, pb: 0.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP, minHeight: 36, flexWrap: 'wrap', whiteSpace: 'normal', width: '100%' }}>
-              {isCulturesPage ? (
-                <>
-                  {cultureLibraryAction ? (
-                    <Tooltip title={t('cultureActions.openLibrary')}>
-                      <span>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => cultureLibraryAction.onClick()}
-                          aria-label={t('cultureActions.openLibrary')}
-                          startIcon={<PublicIcon fontSize="small" />}
-                          sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
-                          disabled={cultureLibraryAction.disabled}
-                        >
-                          {t('cultureActions.libraryShort')}
-                        </Button>
-                      </span>
-                    </Tooltip>
-                  ) : null}
-                  {showCultureImportExportButton || isMobile ? (
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      aria-label={t('cultureActions.openImportExport')}
-                      aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
-                      aria-haspopup="true"
-                      aria-expanded={Boolean(cultureActionsMenuAnchor)}
-                      onClick={handleCultureActionsMenuOpen}
-                      sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
-                    >
-                      {t('cultureActions.importExport')}
-                    </Button>
-                  ) : null}
-                  <Menu
-                    id="culture-actions-menu-mobile"
-                    anchorEl={cultureActionsMenuAnchor}
-                    open={Boolean(cultureActionsMenuAnchor)}
-                    onClose={handleCultureActionsMenuClose}
-                  >
-                    {cultureImportExportActions.map((action) => (
-                      <MenuItem
-                        key={`mobile-${action.id}`}
-                        aria-label={action.ariaLabel ?? action.label}
-                        onClick={() => {
-                          action.onClick();
-                          handleCultureActionsMenuClose();
-                        }}
-                        disabled={action.disabled}
-                      >
-                        <ListItemText primary={action.label} secondary={action.shortcutHint} />
-                      </MenuItem>
-                    ))}
-                  </Menu>
-                </>
-              ) : null}
               {(() => {
                 const groups: TopbarContextAction[][] = [];
                 [...topbarModeControls, ...topbarOverflowActions].forEach((action) => {
@@ -1648,7 +1645,7 @@ function RootLayout() {
           </List>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setProjectHistoryOpen(false)}>{t('common:actions.close')}</Button>
+          <Button variant="outlined" onClick={() => setProjectHistoryOpen(false)}>{t('common:actions.close')}</Button>
         </DialogActions>
       </Dialog>
 
@@ -1676,7 +1673,7 @@ function RootLayout() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShortcutsOpen(false)}>{t('common:actions.close')}</Button>
+          <Button variant="outlined" onClick={() => setShortcutsOpen(false)}>{t('common:actions.close')}</Button>
         </DialogActions>
       </Dialog>
       <HelpDialog open={globalHelpOpen} onClose={closeGlobalHelp} />
@@ -1757,7 +1754,7 @@ function RootLayout() {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPendingRestoreEntry(null)}>Abbrechen</Button>
+          <Button variant="outlined" onClick={() => setPendingRestoreEntry(null)}>Abbrechen</Button>
           <Button
             variant="contained"
             onClick={() => {
@@ -1787,7 +1784,7 @@ function RootLayout() {
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button type="button" onClick={closeCreateProjectDialog}>{t('projectSwitcher.createCancel')}</Button>
+            <Button type="button" variant="outlined" onClick={closeCreateProjectDialog}>{t('projectSwitcher.createCancel')}</Button>
             <Button type="submit" variant="contained" disabled={!newProjectName.trim() || isCreatingProject}>
               {t('projectSwitcher.createSubmit')}
             </Button>

@@ -11,6 +11,12 @@ vi.mock('../api/api', () => ({
   },
 }));
 
+vi.mock('../components/data-grid/RichTextEditor', () => ({
+  RichTextEditor: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
+    <textarea value={value} onChange={(e) => onChange(e.target.value)} />
+  ),
+}));
+
 describe('NotesDrawer attachments', () => {
   beforeEach(() => {
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
@@ -54,11 +60,12 @@ describe('NotesDrawer attachments', () => {
     expect(screen.getByTestId('crop-handle-se')).toBeInTheDocument();
   });
 
-  it('closes the drawer with Escape when notes are unchanged', () => {
+  it('closes the drawer with Escape when notes are unchanged', async () => {
     const onClose = vi.fn();
     render(<NotesDrawer open title="Notes" value="Existing note" onChange={() => {}} onSave={() => {}} onClose={onClose} noteId={1} />);
 
-    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+    const textbox = await screen.findByRole('textbox');
+    fireEvent.keyDown(textbox, { key: 'Escape' });
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -79,7 +86,8 @@ describe('NotesDrawer attachments', () => {
       />,
     );
 
-    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+    const textbox = await screen.findByRole('textbox');
+    fireEvent.keyDown(textbox, { key: 'Escape' });
 
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByRole('heading', { name: 'Ungespeicherte Notizen' })).toBeInTheDocument();
@@ -90,7 +98,7 @@ describe('NotesDrawer attachments', () => {
       expect(screen.queryByRole('heading', { name: 'Ungespeicherte Notizen' })).not.toBeInTheDocument();
     });
 
-    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
+    fireEvent.keyDown(textbox, { key: 'Escape' });
     await user.click(screen.getByRole('button', { name: 'Änderungen verwerfen und schließen' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);

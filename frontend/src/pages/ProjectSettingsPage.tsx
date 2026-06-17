@@ -496,7 +496,7 @@ export default function ProjectSettingsPage() {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPendingRemovalMember(null)}>{t('removeDialogCancel')}</Button>
+          <Button variant="outlined" onClick={() => setPendingRemovalMember(null)}>{t('removeDialogCancel')}</Button>
           <Button
             color="error"
             variant="contained"
@@ -528,7 +528,7 @@ export default function ProjectSettingsPage() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDeleteDialogClose} disabled={isDeletingProject}>
+          <Button variant="outlined" onClick={handleDeleteDialogClose} disabled={isDeletingProject}>
             {t('projectDelete.cancel')}
           </Button>
           <Button

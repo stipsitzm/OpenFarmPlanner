@@ -338,7 +338,7 @@ export function PublicCultureLibraryDialog({
         </Box>
       </DialogContent>
       <DialogActions sx={{ px: isMobileLandscape ? 1.25 : isMobile ? 1.25 : 3, py: isMobileLandscape ? 0.75 : isMobile ? 1 : 1.5 }}>
-        <Button onClick={onClose}>{t('form.cancel')}</Button>
+        <Button variant="outlined" onClick={onClose}>{t('form.cancel')}</Button>
         <Button
           variant="contained"
           onClick={() => selectedCulture && onImport(selectedCulture)}

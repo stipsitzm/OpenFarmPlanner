@@ -513,7 +513,7 @@ function Locations() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDialog}>{t('common:actions.cancel')}</Button>
+          <Button variant="outlined" onClick={closeDialog}>{t('common:actions.cancel')}</Button>
           <Button variant="contained" onClick={() => void saveLocation()}>{t('common:actions.save')}</Button>
         </DialogActions>
       </Dialog>

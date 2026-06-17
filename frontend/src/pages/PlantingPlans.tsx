@@ -2627,7 +2627,7 @@ function PlantingPlans() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeMobileCreateDialog}>{t("common:actions.cancel")}</Button>
+          <Button variant="outlined" onClick={closeMobileCreateDialog}>{t("common:actions.cancel")}</Button>
           <Button onClick={() => void (mobileEditId ? handleMobileUpdate() : handleMobileCreate())} variant="contained">
             {mobileEditId ? t("common:actions.save") : t("common:actions.add")}
           </Button>
@@ -2669,7 +2669,7 @@ function PlantingPlans() {
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={closeAreaValidationDialog}>{t("common:actions.cancel")}</Button>
+            <Button variant="outlined" onClick={closeAreaValidationDialog}>{t("common:actions.cancel")}</Button>
             {areaValidationDialog.mode !== "noRemainingArea" && (
               <Button
                 variant="contained"

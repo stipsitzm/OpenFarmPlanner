@@ -713,7 +713,7 @@ export default function Suppliers() {
             {error ? <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert> : null}
           </DialogContent>
           <DialogActions>
-            <Button type="button" onClick={() => setDialogOpen(false)}>{t('cancel')}</Button>
+            <Button type="button" variant="outlined" onClick={() => setDialogOpen(false)}>{t('cancel')}</Button>
             <Button type="submit" disabled={!canSave} variant="contained">{t('save')}</Button>
           </DialogActions>
         </Box>
@@ -783,7 +783,7 @@ export default function Suppliers() {
           >
             {t('deleteUsageDialog.unlinkAndDelete')}
           </Button>
-          <Button onClick={() => setDeleteUsageDialog(null)}>
+          <Button variant="outlined" onClick={() => setDeleteUsageDialog(null)}>
             {t('common:actions.cancel')}
           </Button>
         </DialogActions>

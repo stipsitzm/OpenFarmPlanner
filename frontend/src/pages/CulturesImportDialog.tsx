@@ -177,7 +177,7 @@ export function CulturesImportDialog({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t('import.close')}</Button>
+        <Button variant="outlined" onClick={onClose}>{t('import.close')}</Button>
         <Button
           variant="contained"
           onClick={onImportStart}
