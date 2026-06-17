@@ -62,7 +62,6 @@ import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import PublicIcon from '@mui/icons-material/Public';
-import CollectionsBookmarkOutlinedIcon from '@mui/icons-material/CollectionsBookmarkOutlined';
 import ImportExportIcon from '@mui/icons-material/ImportExport';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
@@ -1278,19 +1277,6 @@ function RootLayout() {
                   ) : null}
                 </Box>
               ) : null}
-              {topbarPrimaryAction && !showMobileTopbarViewActions ? (
-                <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    onClick={handleTopbarPrimaryAction}
-                    aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
-                    sx={{ textTransform: 'none', minWidth: 32, px: 0.75, minHeight: 30 }}
-                  >
-                    <AddIcon fontSize="small" />
-                  </Button>
-                </Tooltip>
-              ) : null}
               {isCompactTopbar && isCulturesPage && cultureLibraryAction ? (
                 <Tooltip title={t('cultureActions.openLibrary')} enterTouchDelay={0}>
                   <span>
@@ -1301,7 +1287,7 @@ function RootLayout() {
                       disabled={cultureLibraryAction.disabled}
                       sx={{ color: 'text.primary' }}
                     >
-                      <CollectionsBookmarkOutlinedIcon fontSize="small" />
+                      <PublicIcon fontSize="small" />
                     </IconButton>
                   </span>
                 </Tooltip>
@@ -1342,6 +1328,19 @@ function RootLayout() {
                     ))}
                   </Menu>
                 </>
+              ) : null}
+              {topbarPrimaryAction && !showMobileTopbarViewActions ? (
+                <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleTopbarPrimaryAction}
+                    aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
+                    sx={{ textTransform: 'none', minWidth: 32, px: 0.75, minHeight: 30 }}
+                  >
+                    <AddIcon fontSize="small" />
+                  </Button>
+                </Tooltip>
               ) : null}
               <IconButton
                 aria-label="Mehr"
