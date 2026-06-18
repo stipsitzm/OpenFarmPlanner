@@ -10,6 +10,7 @@ import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import type { HierarchyRow } from './utils/types';
@@ -111,6 +112,68 @@ function renderPlantingPlanActionButton(
   );
 }
 
+function renderHierarchyDeleteIconButton(
+  row: HierarchyRow,
+  callbacks: NameCellCallbacks,
+  t: TFunction,
+): ReactElement | null {
+  const targetId =
+    row.type === 'location'
+      ? row.locationId
+      : row.type === 'field'
+        ? row.fieldId
+        : row.bedId;
+
+  if (row.isNew || typeof targetId !== 'number' || targetId <= 0) {
+    return null;
+  }
+
+  return (
+    <Tooltip title={t('common:actions.delete')}>
+      <IconButton
+        size="small"
+        aria-label={t('common:actions.delete')}
+        onMouseDown={(event) => {
+          event.stopPropagation();
+        }}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (row.type === 'location') {
+            callbacks.onDeleteLocation(targetId);
+          } else if (row.type === 'field') {
+            callbacks.onDeleteField(targetId);
+          } else {
+            callbacks.onDeleteBed(targetId);
+          }
+        }}
+        sx={{
+          p: 0,
+          width: 20,
+          height: 20,
+          border: '1px solid',
+          borderColor: 'error.light',
+          color: 'error.main',
+          '& .MuiSvgIcon-root': {
+            fontSize: 12,
+          },
+          '&:hover': {
+            bgcolor: 'error.50',
+            color: 'error.dark',
+            borderColor: 'error.main',
+          },
+          '&:focus-visible': {
+            outline: '2px solid',
+            outlineColor: 'error.main',
+            outlineOffset: '2px',
+          },
+        }}
+      >
+        <DeleteOutlineIcon />
+      </IconButton>
+    </Tooltip>
+  );
+}
+
 function renderInlineActions(
   row: HierarchyRow,
   callbacks: NameCellCallbacks,
@@ -128,6 +191,7 @@ function renderInlineActions(
           label: t('hierarchy:addField'),
           onClick: () => callbacks.onAddField(row.locationId),
         })}
+        {renderHierarchyDeleteIconButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -139,6 +203,7 @@ function renderInlineActions(
           label: t('hierarchy:addBedToField'),
           onClick: () => callbacks.onAddBed(row.fieldId!),
         })}
+        {renderHierarchyDeleteIconButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -147,6 +212,7 @@ function renderInlineActions(
     return (
       <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
         {renderPlantingPlanActionButton(row, callbacks, t)}
+        {renderHierarchyDeleteIconButton(row, callbacks, t)}
       </Box>
     );
   }

@@ -565,7 +565,9 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     await user.click(screen.getByRole('button', { name: 'Escape -1700000000000' }));
 
     expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Löschen' })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('row--1700000000000')).queryByRole('button', { name: 'Löschen' }),
+    ).not.toBeInTheDocument();
   });
 
   it('opens hierarchy actions from the right-click context menu', async () => {
@@ -630,6 +632,19 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     await waitFor(() => expect(screen.queryByTestId('row-21')).not.toBeInTheDocument());
     expect(screen.getByText('Beet gelöscht')).toBeInTheDocument();
     expect(screen.getByTestId('hierarchy-delete-snackbar')).toHaveAttribute('role', 'status');
+    expect(screen.getByRole('button', { name: /Rückgängig: Beet gelöscht/i })).toBeInTheDocument();
+  });
+
+  it('deletes a bed through the inline hover action and shows undo feedback', async () => {
+    bedListMock.mockResolvedValue({ data: { results: [{ id: 21, name: 'Beet A', field: 10 }] } });
+    renderHierarchy();
+
+    const bedRow = await screen.findByTestId('row-21');
+    fireEvent.mouseDown(within(bedRow).getByRole('button', { name: 'Löschen' }));
+    fireEvent.click(within(bedRow).getByRole('button', { name: 'Löschen' }));
+
+    await waitFor(() => expect(bedDeleteMock).toHaveBeenCalledWith(21));
+    await waitFor(() => expect(screen.queryByTestId('row-21')).not.toBeInTheDocument());
     expect(screen.getByRole('button', { name: /Rückgängig: Beet gelöscht/i })).toBeInTheDocument();
   });
 

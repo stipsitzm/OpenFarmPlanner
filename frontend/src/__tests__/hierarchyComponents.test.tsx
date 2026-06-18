@@ -147,6 +147,8 @@ describe('hierarchy components and behaviors', () => {
     expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
     await user.click(addFieldButton!);
     expect(addField).toHaveBeenCalledWith(2);
+    await user.click(screen.getByRole('button', { name: 'Löschen' }));
+    expect(deleteLocation).toHaveBeenCalledWith(2);
 
     rerender(
       <>
@@ -164,11 +166,11 @@ describe('hierarchy components and behaviors', () => {
     expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
     await user.click(addBedButton!);
     expect(addBed).toHaveBeenCalledWith(10);
-    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Löschen' }));
+    expect(deleteField).toHaveBeenCalledWith(10);
     expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
     fireEvent.contextMenu(screen.getByTestId('hierarchy-name-text'));
     expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 'field-10' }));
-    expect(deleteField).not.toHaveBeenCalled();
 
     rerender(
       <>
@@ -183,11 +185,11 @@ describe('hierarchy components and behaviors', () => {
     const createPlantingPlanButton = screen.getByRole('button', { name: 'Pflanzplan erstellen' });
     await user.click(createPlantingPlanButton);
     expect(createPlan).toHaveBeenCalledWith(100);
-    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Löschen' }));
+    expect(deleteBed).toHaveBeenCalledWith(100);
     expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
     fireEvent.contextMenu(screen.getByTestId('hierarchy-name-text'));
     expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 100 }));
-    expect(deleteBed).not.toHaveBeenCalled();
 
     const touchColumns = createHierarchyColumns(
       toggleExpand,
@@ -215,6 +217,7 @@ describe('hierarchy components and behaviors', () => {
       </>
     );
     expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
 
     rerender(
       <>
@@ -227,10 +230,50 @@ describe('hierarchy components and behaviors', () => {
       </>
     );
     expect(screen.queryByLabelText('Beet hinzufügen')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
 
     fireEvent.contextMenu(screen.getByTestId('hierarchy-name-text'));
     expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 'field-10' }));
   }, 15000);
+
+  it('stops hover delete actions from propagating to the hierarchy row', () => {
+    const deleteField = vi.fn();
+    const rowMouseDown = vi.fn();
+    const rowClick = vi.fn();
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      deleteField,
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+    );
+    const nameColumn = columns.find((column) => column.field === 'name');
+
+    render(
+      <div onMouseDown={rowMouseDown} onClick={rowClick}>
+        {nameColumn?.renderCell?.({
+          id: 'field-10',
+          field: 'name',
+          value: 'Parzelle 10',
+          row: { id: 'field-10', type: 'field', fieldId: 10, level: 1 },
+        } as never)}
+      </div>,
+    );
+
+    const deleteButton = screen.getByRole('button', { name: 'Löschen' });
+
+    fireEvent.mouseDown(deleteButton);
+    fireEvent.click(deleteButton);
+
+    expect(deleteField).toHaveBeenCalledWith(10);
+    expect(rowMouseDown).not.toHaveBeenCalled();
+    expect(rowClick).not.toHaveBeenCalled();
+  });
 
 
 
@@ -299,7 +342,7 @@ describe('hierarchy components and behaviors', () => {
       },
     });
     expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Löschen')).toBeInTheDocument();
   });
 
   it('renders hover actions for empty unsaved row names even in edit mode', () => {
