@@ -40,6 +40,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
 import { ColumnVisibilityMenu } from './ColumnVisibilityMenu';
+import { computeAutoFitColumnVisibility } from '../../hooks/useColumnVisibility';
 import { confirmAction } from '../../utils/confirmAction';
 import { useTranslation } from '../../i18n';
 import { NotesCell } from './NotesCell';
@@ -172,12 +173,23 @@ export interface EditableDataGridProps<T extends EditableRow> {
    * - compact: compact content-sized mode for small tables
    */
   surfaceSizing?: 'contentFit' | 'fullWorkspace' | 'compact';
-  /** Controlled column visibility model. Hidden columns are still sortable and accessible. */
+  /** User-saved column visibility model. Pass the value from `useColumnVisibility`. */
   columnVisibilityModel?: GridColumnVisibilityModel;
   /** Called when the user changes column visibility via the built-in menu. */
   onColumnVisibilityModelChange?: (model: GridColumnVisibilityModel) => void;
-  /** When true, renders a "Spalten" toolbar button above the grid for toggling column visibility. */
+  /** When true, renders a "Spalten anzeigen" toolbar button above the grid. */
   showColumnVisibilityButton?: boolean;
+  /**
+   * Column fields to auto-hide in priority order when the table exceeds the
+   * container width. Index 0 is hidden first.
+   * Only applies when `columnVisibilityCustomized` is false.
+   */
+  autoHideColumnPriority?: string[];
+  /**
+   * Pass `isUserCustomized` from `useColumnVisibility`. When true, auto-hide
+   * is disabled and the saved user model is used directly.
+   */
+  columnVisibilityCustomized?: boolean;
 }
 
 const isUnsavedDraftRow = (row: EditableRow): boolean =>
@@ -373,6 +385,8 @@ export function EditableDataGrid<T extends EditableRow>({
   columnVisibilityModel,
   onColumnVisibilityModelChange,
   showColumnVisibilityButton = false,
+  autoHideColumnPriority,
+  columnVisibilityCustomized = false,
 }: EditableDataGridProps<T>) {
   const gridApiRef = useGridApiRef();
   const resolvedSurfaceSizing = surfaceSizing ?? 'contentFit';
@@ -1822,6 +1836,35 @@ export function EditableDataGrid<T extends EditableRow>({
     return `${notesEditor.field} – Notizen`;
   };
 
+  // Auto-fit: measure the outer container and hide columns in priority order
+  const outerContainerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    const el = outerContainerRef.current;
+    if (!el || !autoHideColumnPriority?.length) return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      setContainerWidth(entry.contentRect.width);
+    });
+    observer.observe(el);
+    setContainerWidth(el.clientWidth);
+
+    return () => observer.disconnect();
+  }, [autoHideColumnPriority]);
+
+  const effectiveColumnVisibilityModel = useMemo<GridColumnVisibilityModel>(() => {
+    if (!autoHideColumnPriority?.length || columnVisibilityCustomized) {
+      return columnVisibilityModel ?? {};
+    }
+    return computeAutoFitColumnVisibility(
+      columnsWithActions,
+      autoHideColumnPriority,
+      containerWidth,
+      columnVisibilityModel ?? {},
+    );
+  }, [autoHideColumnPriority, columnVisibilityCustomized, containerWidth, columnsWithActions, columnVisibilityModel]);
+
   useEffect(() => {
     if (!onRowsStateChange) {
       return;
@@ -1859,6 +1902,7 @@ export function EditableDataGrid<T extends EditableRow>({
       ) : null}
       
       <Box
+        ref={outerContainerRef}
         sx={{
           position: 'relative',
           width: '100%',
@@ -1871,7 +1915,7 @@ export function EditableDataGrid<T extends EditableRow>({
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.75 }}>
             <ColumnVisibilityMenu
               columns={columns}
-              columnVisibilityModel={columnVisibilityModel ?? {}}
+              columnVisibilityModel={effectiveColumnVisibilityModel}
               onColumnVisibilityModelChange={onColumnVisibilityModelChange}
             />
           </Box>
@@ -1917,7 +1961,7 @@ export function EditableDataGrid<T extends EditableRow>({
             <DataGrid
           rows={rowsForGrid}
           columns={columnsWithActions}
-          columnVisibilityModel={columnVisibilityModel}
+          columnVisibilityModel={effectiveColumnVisibilityModel}
           onColumnVisibilityModelChange={onColumnVisibilityModelChange}
           rowModesModel={rowModesModel}
           onRowModesModelChange={setRowModesModel}

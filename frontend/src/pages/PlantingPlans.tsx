@@ -538,12 +538,9 @@ function PlantingPlans() {
   const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const isWideScreen = useMediaQuery(theme.breakpoints.up("xl"));
-  const { columnVisibilityModel, setColumnVisibilityModel } = useColumnVisibility({
+  const { columnVisibilityModel, setColumnVisibilityModel, isUserCustomized } = useColumnVisibility({
     tableKey: "plantingPlans",
     defaultVisibilityModel: { harvest_date: false, harvest_end_date: false },
-    wideScreenRevealFields: ["harvest_date", "harvest_end_date"],
-    isWideScreen,
   });
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -2446,6 +2443,8 @@ function PlantingPlans() {
           defaultSortModel={[{ field: "planting_date", sort: "asc" }]}
           columnVisibilityModel={columnVisibilityModel}
           onColumnVisibilityModelChange={setColumnVisibilityModel}
+          columnVisibilityCustomized={isUserCustomized}
+          autoHideColumnPriority={["harvest_date", "harvest_end_date"]}
           showColumnVisibilityButton={!isMobile}
           persistSortInUrl={true}
             notes={{
