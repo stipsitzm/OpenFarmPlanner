@@ -40,6 +40,9 @@ npm run test:e2e:headed
 
 ## API Integration
 
+- Set `VITE_APP_ENV` explicitly to `development`, `staging`, or `production`.
+- Development and staging show detailed runtime error diagnostics; production uses the user-friendly error screen.
+- Service workers are disabled and stale registrations are removed in development.
 - Frontend API client targets `/api` by default.
 - In development, `VITE_API_BASE_URL` can override the API base URL.
 - Requests include credentials and CSRF token handling for write operations.

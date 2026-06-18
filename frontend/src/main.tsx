@@ -8,11 +8,13 @@ import App from './App.tsx'
 import theme from './theme'
 import { CommandProvider } from './commands/CommandProvider'
 import { AuthProvider } from './auth/AuthContext'
+import GlobalErrorBoundary from './components/runtime/GlobalErrorBoundary'
+import { isDevelopmentEnvironment } from './config/environment'
 
 // In development, unregister stale service workers and clear module caches so
 // that previously-cached workers or preload caches do not cause spurious module
 // load failures (which would otherwise show the generic error fallback screen).
-if (!import.meta.env.PROD) {
+if (isDevelopmentEnvironment) {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then((registrations) => {
       for (const registration of registrations) {
@@ -33,11 +35,13 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <CommandProvider>
-          <App />
-        </CommandProvider>
-      </AuthProvider>
+      <GlobalErrorBoundary>
+        <AuthProvider>
+          <CommandProvider>
+            <App />
+          </CommandProvider>
+        </AuthProvider>
+      </GlobalErrorBoundary>
     </ThemeProvider>
   </StrictMode>,
 )

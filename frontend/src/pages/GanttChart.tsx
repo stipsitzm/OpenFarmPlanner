@@ -66,6 +66,8 @@ import {
   getSegmentedActionButtonSx,
   segmentedButtonGroupSx,
 } from '../components/buttons/segmentedControlStyles';
+import RuntimeErrorState from '../components/runtime/RuntimeErrorState';
+import { showsDetailedRuntimeErrors } from '../config/environment';
 
 interface WeeklyYieldCultureMeta {
   id: number;
@@ -119,23 +121,34 @@ function storeCalendarMode(storageKey: string, mode: CalendarMode): void {
 
 class GanttRenderBoundary extends React.Component<
   { fallback: React.ReactNode; children: React.ReactNode },
-  { hasError: boolean }
+  { error: unknown; componentStack?: string }
 > {
   constructor(props: { fallback: React.ReactNode; children: React.ReactNode }) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { error: null };
   }
 
-  static getDerivedStateFromError(): { hasError: boolean } {
-    return { hasError: true };
+  static getDerivedStateFromError(error: unknown): { error: unknown } {
+    return { error };
   }
 
-  componentDidCatch(error: unknown): void {
-    console.error('Gantt render failed', error);
+  componentDidCatch(error: unknown, info: React.ErrorInfo): void {
+    console.error('Gantt render failed', error, info);
+    this.setState({ componentStack: info.componentStack ?? undefined });
   }
 
   render(): React.ReactNode {
-    if (this.state.hasError) {
+    if (this.state.error) {
+      if (showsDetailedRuntimeErrors) {
+        return (
+          <RuntimeErrorState
+            variant="routeError"
+            error={this.state.error}
+            componentStack={this.state.componentStack}
+            layout="inline"
+          />
+        );
+      }
       return this.props.fallback;
     }
     return this.props.children;

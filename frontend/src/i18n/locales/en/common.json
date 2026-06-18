@@ -44,5 +44,18 @@
     "supplierProjectMismatch": "The supplier does not belong to the active project.",
     "selectedSupplierProjectMismatch": "The selected seed supplier does not belong to the active project.",
     "cultureProjectMismatch": "The culture does not belong to the active project."
+  },
+  "runtime": {
+    "applicationUpdatedTitle": "The application was updated.",
+    "applicationUpdatedDescription": "Please reload the page.",
+    "routeErrorTitle": "The page could not be loaded.",
+    "routeErrorDescription": "Please reload the page. If the error persists, try again later.",
+    "reloadPage": "Reload page",
+    "goBack": "Go back",
+    "detailedErrorTitle": "Technical error details",
+    "stackTrace": "Stack trace",
+    "componentStack": "Component stack",
+    "apiDetails": "API error details",
+    "errorId": "Error ID"
   }
 }
