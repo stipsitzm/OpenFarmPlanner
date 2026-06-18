@@ -43,6 +43,12 @@
   "columns": {
     "project": "Projekt"
   },
+  "columnVisibility": {
+    "button": "Spalten",
+    "buttonTooltip": "Sichtbare Spalten auswählen",
+    "showAll": "Alle einblenden",
+    "hideAll": "Alle ausblenden"
+  },
   "project": "Projekt",
   "setupActions": {
     "createField": "Parzelle hinzufügen",

@@ -90,6 +90,7 @@ import {
 } from "../components/data-grid";
 import { MobileCardList } from "../components/mobile/MobileCardList";
 import { NotesDrawer } from "../components/data-grid/NotesDrawer";
+import { useColumnVisibility } from "../hooks/useColumnVisibility";
 import ProjectRequiredState from "../components/project/ProjectRequiredState";
 import {
   useCommandContextTag,
@@ -537,6 +538,13 @@ function PlantingPlans() {
   const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isWideScreen = useMediaQuery(theme.breakpoints.up("xl"));
+  const { columnVisibilityModel, setColumnVisibilityModel } = useColumnVisibility({
+    tableKey: "plantingPlans",
+    defaultVisibilityModel: { harvest_date: false, harvest_end_date: false },
+    wideScreenRevealFields: ["harvest_date", "harvest_end_date"],
+    isWideScreen,
+  });
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -2436,6 +2444,9 @@ function PlantingPlans() {
           })}
           tableKey="plantingPlans"
           defaultSortModel={[{ field: "planting_date", sort: "asc" }]}
+          columnVisibilityModel={columnVisibilityModel}
+          onColumnVisibilityModelChange={setColumnVisibilityModel}
+          showColumnVisibilityButton={true}
           persistSortInUrl={true}
             notes={{
               fields: [

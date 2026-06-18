@@ -29,7 +29,7 @@ import {
 } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
-import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRowParams, GridFilterOperator } from '@mui/x-data-grid';
+import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRowParams, GridFilterOperator, GridColumnVisibilityModel } from '@mui/x-data-grid';
 import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -39,6 +39,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
+import { ColumnVisibilityMenu } from './ColumnVisibilityMenu';
 import { confirmAction } from '../../utils/confirmAction';
 import { useTranslation } from '../../i18n';
 import { NotesCell } from './NotesCell';
@@ -171,6 +172,12 @@ export interface EditableDataGridProps<T extends EditableRow> {
    * - compact: compact content-sized mode for small tables
    */
   surfaceSizing?: 'contentFit' | 'fullWorkspace' | 'compact';
+  /** Controlled column visibility model. Hidden columns are still sortable and accessible. */
+  columnVisibilityModel?: GridColumnVisibilityModel;
+  /** Called when the user changes column visibility via the built-in menu. */
+  onColumnVisibilityModelChange?: (model: GridColumnVisibilityModel) => void;
+  /** When true, renders a "Spalten" toolbar button above the grid for toggling column visibility. */
+  showColumnVisibilityButton?: boolean;
 }
 
 const isUnsavedDraftRow = (row: EditableRow): boolean =>
@@ -363,6 +370,9 @@ export function EditableDataGrid<T extends EditableRow>({
   onBeforeSaveRow,
   isSaveErrorHandled,
   surfaceSizing,
+  columnVisibilityModel,
+  onColumnVisibilityModelChange,
+  showColumnVisibilityButton = false,
 }: EditableDataGridProps<T>) {
   const gridApiRef = useGridApiRef();
   const resolvedSurfaceSizing = surfaceSizing ?? 'contentFit';
@@ -1848,6 +1858,16 @@ export function EditableDataGrid<T extends EditableRow>({
         />
       ) : null}
       
+      {showColumnVisibilityButton && onColumnVisibilityModelChange ? (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+          <ColumnVisibilityMenu
+            columns={columns}
+            columnVisibilityModel={columnVisibilityModel ?? {}}
+            onColumnVisibilityModelChange={onColumnVisibilityModelChange}
+          />
+        </Box>
+      ) : null}
+
       <Box
         sx={{
           position: 'relative',
@@ -1898,6 +1918,8 @@ export function EditableDataGrid<T extends EditableRow>({
             <DataGrid
           rows={rowsForGrid}
           columns={columnsWithActions}
+          columnVisibilityModel={columnVisibilityModel}
+          onColumnVisibilityModelChange={onColumnVisibilityModelChange}
           rowModesModel={rowModesModel}
           onRowModesModelChange={setRowModesModel}
           onRowEditStop={(params, event, details) => {
