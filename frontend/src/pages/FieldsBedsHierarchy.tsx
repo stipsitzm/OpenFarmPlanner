@@ -791,7 +791,17 @@ function FieldsBedsHierarchy({
       return;
     }
 
-  }, [discardRowEdit]);
+    if (params.reason === GridRowEditStopReasons.enterKeyDown) {
+      // MUI moves DOM focus to the next row after Enter-save, but selectedRowId
+      // is externally controlled and MUI does not update it. Without this sync,
+      // the next Enter press would fire handleEditSelected on the old row.
+      const currentIndex = rows.findIndex((row) => String(row.id) === String(params.id));
+      const nextRow = currentIndex !== -1 ? rows[currentIndex + 1] : undefined;
+      if (nextRow !== undefined) {
+        setSelectedRowId(nextRow.id);
+      }
+    }
+  }, [discardRowEdit, rows, setSelectedRowId]);
 
   const getBedAreaSum = (
     fieldId: number,
