@@ -41,6 +41,7 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import EditIcon from "@mui/icons-material/Edit";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -1038,6 +1039,97 @@ function PlantingPlans() {
           truncateCellText: true,
           options: cultureOptions,
         }),
+        renderCell: (params) => {
+          const text = String(params.formattedValue ?? "");
+          return (
+            <Box sx={{ position: "relative", display: "flex", alignItems: "center", width: "100%", minWidth: 0 }}>
+              <Tooltip title={text} disableHoverListener={!text}>
+                <Box
+                  component="span"
+                  sx={{
+                    display: "block",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    flex: "1 1 auto",
+                    minWidth: 0,
+                  }}
+                >
+                  {text}
+                </Box>
+              </Tooltip>
+              <Box
+                sx={{
+                  position: "absolute",
+                  right: 0,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  py: 0.25,
+                  pl: 0.25,
+                  pr: 0.25,
+                  borderRadius: 1,
+                  bgcolor: "background.paper",
+                  opacity: 0,
+                  pointerEvents: "none",
+                  transition: "background-color 120ms ease-in-out, opacity 120ms ease-in-out",
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    top: 0,
+                    bottom: 0,
+                    right: "100%",
+                    width: 16,
+                    pointerEvents: "none",
+                    background: (theme) =>
+                      `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 100%)`,
+                  },
+                  ".MuiDataGrid-row:hover &": {
+                    bgcolor: "surface.surfaceHoverBackground",
+                    opacity: 1,
+                    pointerEvents: "auto",
+                  },
+                  ".MuiDataGrid-row:hover &::before": {
+                    background: (theme) => {
+                      const hoverBg = theme.palette.surface?.surfaceHoverBackground ?? theme.palette.action.hover;
+                      return `linear-gradient(90deg, ${alpha(hoverBg, 0)} 0%, ${hoverBg} 100%)`;
+                    },
+                  },
+                  ".MuiDataGrid-row:focus-within &": {
+                    opacity: 1,
+                    pointerEvents: "auto",
+                  },
+                }}
+              >
+                <Tooltip title={t("common:actions.delete")}>
+                  <IconButton
+                    size="small"
+                    aria-label={t("common:actions.delete")}
+                    onMouseDown={(event) => { event.stopPropagation(); }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      gridCommandApiRef.current?.deleteRow(params.id);
+                    }}
+                    sx={{
+                      p: 0.5,
+                      color: "error.main",
+                      "& .MuiSvgIcon-root": { fontSize: 18 },
+                      "&:hover": { bgcolor: "action.hover" },
+                      "&.Mui-focusVisible": {
+                        outline: "2px solid",
+                        outlineColor: "error.main",
+                        outlineOffset: 1,
+                      },
+                    }}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
+          );
+        },
         valueSetter: (value, row) => {
           const nextRow = row as PlantingPlanRow;
           const numericValue =
