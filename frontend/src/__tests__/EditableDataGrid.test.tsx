@@ -9,6 +9,7 @@ import { mockT } from './helpers/testI18n';
 
 const mockUseNavigationBlocker = vi.fn();
 const mockStopRowEditMode = vi.hoisted(() => vi.fn());
+const mockFilteredSortedRowIds = vi.hoisted(() => vi.fn());
 
 vi.mock('../hooks/autosave', () => ({
   useNavigationBlocker: (...args: unknown[]) => mockUseNavigationBlocker(...args),
@@ -55,6 +56,7 @@ vi.mock('@mui/x-data-grid', async () => {
 
     if (apiRef?.current) {
       apiRef.current.state = apiRef.current.state ?? { focus: { cell: null } };
+      apiRef.current.filteredSortedRowIds = rows.map((row: TestGridRow) => row.id);
       apiRef.current.getVisibleColumns = () => columns;
       apiRef.current.getRowWithUpdatedValues = (id: string | number) =>
         rows.find((row: TestGridRow) => String(row.id) === String(id)) ?? null;
@@ -187,6 +189,10 @@ vi.mock('@mui/x-data-grid', async () => {
     getGridNumericOperators: getMockFilterOperators,
     getGridSingleSelectOperators: getMockFilterOperators,
     getGridStringOperators: getMockFilterOperators,
+    gridFilteredSortedRowIdsSelector: (apiRef: { current?: { filteredSortedRowIds?: Array<string | number> } }) =>
+      mockFilteredSortedRowIds(apiRef.current?.filteredSortedRowIds ?? [])
+      ?? apiRef.current?.filteredSortedRowIds
+      ?? [],
     useGridApiRef,
   };
 });
@@ -227,25 +233,113 @@ describe('EditableDataGrid', () => {
     });
   });
 
-  it('keeps the column visibility control labeled and secondary in table view', async () => {
+  it('renders table-wide actions above the grid inside the table surface', async () => {
     render(
       <EditableDataGrid
         {...baseProps()}
         showDeleteAction={false}
-        showColumnVisibilityButton
+        showTableActions
         columnVisibilityModel={{}}
         onColumnVisibilityModelChange={vi.fn()}
       />,
     );
 
-    const button = await screen.findByRole('button', { name: 'columnVisibility.buttonTooltip' });
+    const button = await screen.findByRole('button', { name: 'tableActions.tooltip' });
     const surface = screen.getByTestId('data-grid-surface');
-    const toolbar = screen.getByTestId('data-grid-column-visibility-toolbar');
+    const toolbar = screen.getByTestId('data-grid-table-actions-toolbar');
 
-    expect(button).toHaveTextContent('columnVisibility.button');
-    expect(button).toHaveClass('MuiButton-outlinedSecondary');
+    expect(button).toHaveClass('MuiIconButton-colorSecondary');
     expect(surface).toContainElement(toolbar);
     expect(toolbar.nextElementSibling).toContainElement(screen.getByTestId('row-count'));
+  });
+
+  it('separates row actions from table actions', async () => {
+    const user = userEvent.setup();
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        duplicateRow={(row) => ({ ...row, id: -2, isNew: true })}
+        showTableActions
+        columnVisibilityModel={{}}
+        onColumnVisibilityModelChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.contextMenu(screen.getByTestId('row-1'));
+
+    expect(screen.getByRole('menuitem', { name: 'actions.copyRow' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'actions.copyTable' })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+    await user.click(screen.getByRole('button', { name: 'tableActions.tooltip' }));
+
+    expect(screen.getByRole('menuitem', { name: 'columnVisibility.button' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'actions.copyTable' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'actions.export' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'actions.copyRow' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('menuitem', { name: 'columnVisibility.button' }));
+    expect(screen.getByRole('menuitem', { name: /Name/ })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /Fläche/ })).toBeInTheDocument();
+  });
+
+  it('opens the shared export dialog with all supported table formats', async () => {
+    const user = userEvent.setup();
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        showTableActions
+        columnVisibilityModel={{}}
+        onColumnVisibilityModelChange={vi.fn()}
+      />,
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'tableActions.tooltip' }));
+    await user.click(screen.getByRole('menuitem', { name: 'actions.export' }));
+
+    expect(screen.getByRole('dialog', { name: 'tableActions.exportDialogTitle' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'tableActions.formatXlsx' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'tableActions.formatOds' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'tableActions.formatCsv' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /tableActions.formatJson/ })).toBeInTheDocument();
+  });
+
+  it('copies only visible columns from the filtered and sorted grid rows', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    const props = baseProps();
+    vi.spyOn(props.api, 'list').mockResolvedValue({
+      data: {
+        results: [
+          createGridRow({ id: 1, name: 'Beet A', area_sqm: 12 }),
+          createGridRow({ id: 2, name: 'Beet B', area_sqm: 24 }),
+        ],
+      },
+    });
+
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        showTableActions
+        columnVisibilityModel={{ area_sqm: false }}
+        onColumnVisibilityModelChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-2')).toBeInTheDocument());
+    mockFilteredSortedRowIds.mockReturnValueOnce([2]);
+    await user.click(screen.getByRole('button', { name: 'tableActions.tooltip' }));
+    await user.click(screen.getByRole('menuitem', { name: 'actions.copyTable' }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('Name\nBeet B'));
   });
 
   it('supports add, blur/enter/tab commit flows and calls API save with payload', async () => {

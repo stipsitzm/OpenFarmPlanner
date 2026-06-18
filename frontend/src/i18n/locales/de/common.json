@@ -8,6 +8,7 @@
     "undo": "Rückgängig",
     "copyRow": "Zeile kopieren",
     "copyTable": "Tabelle kopieren",
+    "export": "Exportieren",
     "save": "Speichern",
     "saveRow": "Zeile speichern",
     "cancelRowEdit": "Bearbeitung abbrechen",
@@ -49,6 +50,18 @@
     "autofitLabel": "Automatisch an Bildschirmbreite anpassen",
     "showAll": "Alle einblenden",
     "hideAll": "Alle ausblenden"
+  },
+  "tableActions": {
+    "tooltip": "Tabellenaktionen",
+    "exportDialogTitle": "Tabelle exportieren",
+    "formatLabel": "Format",
+    "formatXlsx": "Excel (.xlsx)",
+    "formatOds": "OpenDocument Tabelle (.ods)",
+    "formatCsv": "CSV (.csv)",
+    "formatJson": "OpenFarmPlanner JSON (.json)",
+    "formatJsonHint": "Für Datensicherung und Datenaustausch in OpenFarmPlanner.",
+    "defaultSheetName": "Tabelle",
+    "exportSuccess": "Export abgeschlossen."
   },
   "project": "Projekt",
   "setupActions": {

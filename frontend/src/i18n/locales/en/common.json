@@ -1,4 +1,29 @@
 {
+  "actions": {
+    "copyRow": "Copy row",
+    "copyTable": "Copy table",
+    "export": "Export",
+    "cancel": "Cancel"
+  },
+  "columnVisibility": {
+    "button": "Show columns",
+    "buttonTooltip": "Select visible columns",
+    "autofitLabel": "Automatically fit to screen width",
+    "showAll": "Show all",
+    "hideAll": "Hide all"
+  },
+  "tableActions": {
+    "tooltip": "Table actions",
+    "exportDialogTitle": "Export table",
+    "formatLabel": "Format",
+    "formatXlsx": "Excel (.xlsx)",
+    "formatOds": "OpenDocument Spreadsheet (.ods)",
+    "formatCsv": "CSV (.csv)",
+    "formatJson": "OpenFarmPlanner JSON (.json)",
+    "formatJsonHint": "For backup and data exchange in OpenFarmPlanner.",
+    "defaultSheetName": "Table",
+    "exportSuccess": "Export completed."
+  },
   "notesDrawer": {
     "unsavedDialog": {
       "title": "Unsaved notes",

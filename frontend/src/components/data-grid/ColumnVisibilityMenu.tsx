@@ -25,6 +25,14 @@ interface ColumnVisibilityMenuProps {
   autofitEnabled?: boolean;
   /** Called when the user toggles the Autofit checkbox. */
   onAutofitChange?: (enabled: boolean) => void;
+  /** Optional external anchor used when another component owns the trigger. */
+  anchorEl?: HTMLElement | null;
+  /** Optional controlled open state used with `anchorEl`. */
+  open?: boolean;
+  /** Called when a controlled menu should close. */
+  onClose?: () => void;
+  /** Hide the standalone button when the menu is opened from another control. */
+  hideTrigger?: boolean;
 }
 
 export function ColumnVisibilityMenu({
@@ -33,9 +41,19 @@ export function ColumnVisibilityMenu({
   onColumnVisibilityModelChange,
   autofitEnabled = false,
   onAutofitChange,
+  anchorEl,
+  open,
+  onClose,
+  hideTrigger = false,
 }: ColumnVisibilityMenuProps) {
   const { t } = useTranslation('common');
-  const [anchor, setAnchor] = useState<null | HTMLElement>(null);
+  const [internalAnchor, setInternalAnchor] = useState<null | HTMLElement>(null);
+  const resolvedAnchor = anchorEl ?? internalAnchor;
+  const isOpen = open ?? Boolean(internalAnchor);
+  const handleClose = (): void => {
+    setInternalAnchor(null);
+    onClose?.();
+  };
 
   const menuColumns = columns.filter((col) => col.hideable !== false);
 
@@ -61,27 +79,31 @@ export function ColumnVisibilityMenu({
   };
 
   return (
-    <Box sx={{ display: 'inline-flex', flexShrink: 0 }}>
-      <Tooltip title={t('columnVisibility.buttonTooltip')}>
-        <Button
-          size="small"
-          variant="outlined"
-          color="secondary"
-          startIcon={<ViewColumnIcon fontSize="small" />}
-          onClick={(e) => setAnchor(e.currentTarget)}
-          aria-label={t('columnVisibility.buttonTooltip')}
-          aria-haspopup="true"
-          aria-expanded={Boolean(anchor)}
-          sx={{ textTransform: 'none', flexShrink: 0, whiteSpace: 'nowrap', px: 1.25 }}
-        >
-          {t('columnVisibility.button')}
-        </Button>
-      </Tooltip>
+    <>
+      {!hideTrigger ? (
+        <Box sx={{ display: 'inline-flex', flexShrink: 0 }}>
+          <Tooltip title={t('columnVisibility.buttonTooltip')}>
+            <Button
+              size="small"
+              variant="outlined"
+              color="secondary"
+              startIcon={<ViewColumnIcon fontSize="small" />}
+              onClick={(e) => setInternalAnchor(e.currentTarget)}
+              aria-label={t('columnVisibility.buttonTooltip')}
+              aria-haspopup="true"
+              aria-expanded={isOpen}
+              sx={{ textTransform: 'none', flexShrink: 0, whiteSpace: 'nowrap', px: 1.25 }}
+            >
+              {t('columnVisibility.button')}
+            </Button>
+          </Tooltip>
+        </Box>
+      ) : null}
 
       <Menu
-        anchorEl={anchor}
-        open={Boolean(anchor)}
-        onClose={() => setAnchor(null)}
+        anchorEl={resolvedAnchor}
+        open={isOpen}
+        onClose={handleClose}
         slotProps={{ paper: { sx: { minWidth: 270, maxHeight: 560 } } }}
       >
         {onAutofitChange ? (
@@ -146,6 +168,6 @@ export function ColumnVisibilityMenu({
           );
         })}
       </Menu>
-    </Box>
+    </>
   );
 }

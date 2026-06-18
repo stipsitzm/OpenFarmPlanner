@@ -25,12 +25,13 @@ import {
   getGridNumericOperators,
   getGridSingleSelectOperators,
   getGridStringOperators,
+  gridFilteredSortedRowIdsSelector,
   useGridApiRef,
 } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRowParams, GridFilterOperator, GridColumnVisibilityModel } from '@mui/x-data-grid';
-import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
@@ -39,7 +40,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
-import { ColumnVisibilityMenu } from './ColumnVisibilityMenu';
 import { computeAutoFitColumnVisibility } from '../../hooks/useColumnVisibility';
 import { confirmAction } from '../../utils/confirmAction';
 import { useTranslation } from '../../i18n';
@@ -54,12 +54,20 @@ import { getPlainExcerpt } from './markdown';
 import { useNotesEditor } from './useNotesEditor';
 import { extractApiErrorMessage } from '../../api/errors';
 import { germanDataGridLocaleText } from './localeText';
-import { TableCopyMenuItems } from './TableCopyMenuItems';
-import { formatClipboardValue, type TableClipboardRow } from './tableClipboard';
+import {
+  buildTsv,
+  copyTextToClipboard,
+  formatClipboardValue,
+  showClipboardSnackbar,
+  type TableClipboardRow,
+} from './tableClipboard';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../../utils/contextMenu';
 import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from './contextMenuFocus';
 import { ContextMenuHint } from './ContextMenuHint';
 import { useContextMenuHint } from './useContextMenuHint';
+import { TableActionsMenu } from './TableActionsMenu';
+import { ExportFormatDialog, type TableExportFormat } from './ExportFormatDialog';
+import { exportVisibleTable } from './tableExport';
 
 export interface EditableRow {
   id: number;
@@ -184,8 +192,13 @@ export interface EditableDataGridProps<T extends EditableRow> {
    * This automatically disables Autofit in the hook.
    */
   onColumnVisibilityModelChange?: (model: GridColumnVisibilityModel) => void;
-  /** When true, renders the "Spalten anzeigen" toolbar button above the grid. */
-  showColumnVisibilityButton?: boolean;
+  /** When true, renders the reusable table-wide actions menu above the grid. */
+  showTableActions?: boolean;
+  tableExportOptions?: {
+    filenameBase: string;
+    sheetName: string;
+    tableType: string;
+  };
   /**
    * Column fields to auto-hide in priority order (index 0 = first to hide)
    * when the table width exceeds the container. Requires `columnVisibilityAutofit`.
@@ -396,7 +409,8 @@ export function EditableDataGrid<T extends EditableRow>({
   surfaceSizing,
   columnVisibilityModel,
   onColumnVisibilityModelChange,
-  showColumnVisibilityButton = false,
+  showTableActions = false,
+  tableExportOptions,
   autoHideColumnPriority,
   columnVisibilityAutofit = false,
   onColumnVisibilityAutofitChange,
@@ -415,6 +429,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const initialRowProcessedRef = useRef<boolean>(false);
   const initialFetchDoneRef = useRef<boolean>(false);
   const [selectedRowIds, setSelectedRowIds] = useState<GridRowId[]>([]);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [dirtyRowIds, setDirtyRowIds] = useState<Set<string>>(new Set());
   const [activeValidationErrors, setActiveValidationErrors] = useState<Record<string, Record<string, string>>>({});
   const [longPressFeedbackRowId, setLongPressFeedbackRowId] = useState<GridRowId | null>(null);
@@ -1603,10 +1618,18 @@ export function EditableDataGrid<T extends EditableRow>({
         : formatClipboardValue(row[column.field])
     ))
   ), [resolvedClipboardColumns]);
-  const getClipboardTableRows = useCallback((): TableClipboardRow[] => [
-    resolvedClipboardColumns.map((column) => column.headerName),
-    ...(rowsForGrid as T[]).map(getClipboardRowValues),
-  ], [getClipboardRowValues, resolvedClipboardColumns, rowsForGrid]);
+  const copyRowsToClipboard = useCallback(async (
+    clipboardRows: readonly TableClipboardRow[],
+    successMessage: string,
+  ): Promise<void> => {
+    try {
+      await copyTextToClipboard(buildTsv(clipboardRows));
+      showClipboardSnackbar({ message: successMessage, severity: 'success' });
+    } catch (copyError) {
+      console.error('Error copying table data', copyError);
+      showClipboardSnackbar({ message: t('messages.copyError'), severity: 'error' });
+    }
+  }, [t]);
 
   const clearRowActionLongPressTimer = useCallback((): void => {
     if (rowActionLongPressTimerRef.current === null) {
@@ -1915,6 +1938,44 @@ export function EditableDataGrid<T extends EditableRow>({
       onColumnVisibilityAutofitChange?.(true);
     }
   }, [effectiveColumnVisibilityModel, onColumnVisibilityModelChange, onColumnVisibilityAutofitChange]);
+  const visibleClipboardColumns = useMemo(
+    () => resolvedClipboardColumns.filter((column) => effectiveColumnVisibilityModel[column.field] !== false),
+    [effectiveColumnVisibilityModel, resolvedClipboardColumns],
+  );
+  const getVisibleClipboardRowValues = useCallback((row: T): TableClipboardRow => (
+    visibleClipboardColumns.map((column) => (
+      column.getValue
+        ? column.getValue(row)
+        : formatClipboardValue(row[column.field])
+    ))
+  ), [visibleClipboardColumns]);
+  const getVisibleTableRows = useCallback((): TableClipboardRow[] => {
+    let visibleRowIds: GridRowId[];
+    try {
+      visibleRowIds = gridFilteredSortedRowIdsSelector(gridApiRef);
+    } catch {
+      visibleRowIds = rowsForGrid.map((row) => row.id);
+    }
+    const visibleRows = visibleRowIds
+      .map((rowId) => rowsById.get(String(rowId)) as T | undefined)
+      .filter((row): row is T => Boolean(row));
+    return [
+      visibleClipboardColumns.map((column) => column.headerName),
+      ...visibleRows.map(getVisibleClipboardRowValues),
+    ];
+  }, [getVisibleClipboardRowValues, gridApiRef, rowsById, rowsForGrid, visibleClipboardColumns]);
+  const handleCopyVisibleTable = useCallback((): void => {
+    void copyRowsToClipboard(getVisibleTableRows(), t('messages.tableCopied'));
+  }, [copyRowsToClipboard, getVisibleTableRows, t]);
+  const handleExportVisibleTable = useCallback(async (format: TableExportFormat): Promise<void> => {
+    const options = tableExportOptions ?? {
+      filenameBase: tableKey ?? 'openfarmplanner_table',
+      sheetName: t('tableActions.defaultSheetName'),
+      tableType: tableKey ?? 'table',
+    };
+    exportVisibleTable(getVisibleTableRows(), format, options);
+    showClipboardSnackbar({ message: t('tableActions.exportSuccess'), severity: 'success' });
+  }, [getVisibleTableRows, tableExportOptions, tableKey, t]);
 
   useEffect(() => {
     if (!onRowsStateChange) {
@@ -2001,9 +2062,9 @@ export function EditableDataGrid<T extends EditableRow>({
               },
             }}
           >
-            {showColumnVisibilityButton && onColumnVisibilityModelChange ? (
+            {showTableActions && onColumnVisibilityModelChange ? (
               <Box
-                data-testid="data-grid-column-visibility-toolbar"
+                data-testid="data-grid-table-actions-toolbar"
                 sx={{
                   display: 'flex',
                   width: '100%',
@@ -2012,12 +2073,15 @@ export function EditableDataGrid<T extends EditableRow>({
                   mb: 0.75,
                 }}
               >
-                <ColumnVisibilityMenu
+                <TableActionsMenu
                   columns={columns}
                   columnVisibilityModel={effectiveColumnVisibilityModel}
                   onColumnVisibilityModelChange={onColumnVisibilityModelChange}
                   autofitEnabled={columnVisibilityAutofit}
                   onAutofitChange={onColumnVisibilityAutofitChange ? handleAutofitChange : undefined}
+                  onCopyTable={handleCopyVisibleTable}
+                  onExport={() => setExportDialogOpen(true)}
+                  copyDisabled={rowsForGrid.length === 0}
                 />
               </Box>
             ) : null}
@@ -2232,18 +2296,38 @@ export function EditableDataGrid<T extends EditableRow>({
             />
           </MenuItem>
         ))}
-        <TableCopyMenuItems
-          rowValues={menuRow ? getClipboardRowValues(menuRow) : null}
-          tableRows={getClipboardTableRows()}
-          copyRowLabel={t('actions.copyRow')}
-          copyTableLabel={t('actions.copyTable')}
-          rowCopiedMessage={t('messages.rowCopied')}
-          tableCopiedMessage={t('messages.tableCopied')}
-          copyErrorMessage={t('messages.copyError')}
-          includeDivider={menuActions.length > 0}
-          onClose={closeRowActionMenu}
-        />
+        {menuActions.length > 0 ? <Divider role="separator" /> : null}
+        <MenuItem
+          disabled={!menuRow}
+          onClick={() => {
+            if (!menuRow) {
+              return;
+            }
+            closeRowActionMenu();
+            void copyRowsToClipboard([getClipboardRowValues(menuRow)], t('messages.rowCopied'));
+          }}
+        >
+          <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
+          <ListItemText primary={t('actions.copyRow')} />
+        </MenuItem>
       </Menu>
+
+      <ExportFormatDialog
+        open={exportDialogOpen}
+        title={t('tableActions.exportDialogTitle')}
+        onClose={() => setExportDialogOpen(false)}
+        onExport={handleExportVisibleTable}
+        formatLabel={t('tableActions.formatLabel')}
+        formatLabels={{
+          xlsx: t('tableActions.formatXlsx'),
+          ods: t('tableActions.formatOds'),
+          csv: t('tableActions.formatCsv'),
+          json: t('tableActions.formatJson'),
+        }}
+        jsonHint={t('tableActions.formatJsonHint')}
+        cancelLabel={t('actions.cancel')}
+        submitLabel={t('actions.export')}
+      />
 
       {deleteUndoOptions ? pendingDeleteWithUndo.map((deletion, index) => (
         <DeleteUndoSnackbar

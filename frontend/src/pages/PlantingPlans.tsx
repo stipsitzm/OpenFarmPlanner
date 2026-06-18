@@ -2445,7 +2445,12 @@ function PlantingPlans() {
           columnVisibilityAutofit={autofitEnabled}
           onColumnVisibilityAutofitChange={setAutofitEnabled}
           autoHideColumnPriority={["harvest_date", "harvest_end_date"]}
-          showColumnVisibilityButton={!isMobile}
+          showTableActions={!isMobile}
+          tableExportOptions={{
+            filenameBase: t("plantingPlans:export.filenameBase"),
+            sheetName: t("plantingPlans:export.sheetName"),
+            tableType: "plantingPlans",
+          }}
           persistSortInUrl={true}
             notes={{
               fields: [

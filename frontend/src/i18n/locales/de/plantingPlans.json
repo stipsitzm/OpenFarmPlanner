@@ -18,6 +18,10 @@
   "labels": {
     "coupled": "gekoppelt"
   },
+  "export": {
+    "filenameBase": "anbauplaene_export",
+    "sheetName": "Anbaupläne"
+  },
   "actions": {
     "useAvailableArea": "Restfläche übernehmen",
     "useBedArea": "Beetfläche übernehmen",
