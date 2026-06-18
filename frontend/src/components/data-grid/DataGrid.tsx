@@ -1963,7 +1963,15 @@ export function EditableDataGrid<T extends EditableRow>({
         }}
       >
         {showColumnVisibilityButton && onColumnVisibilityModelChange ? (
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.75 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              width: '100%',
+              flexWrap: 'wrap',
+              justifyContent: 'flex-end',
+              mb: 0.75,
+            }}
+          >
             <ColumnVisibilityMenu
               columns={columns}
               columnVisibilityModel={effectiveColumnVisibilityModel}

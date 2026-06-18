@@ -66,16 +66,15 @@ export function ColumnVisibilityMenu({
         <Button
           size="small"
           variant="outlined"
+          color="secondary"
           startIcon={<ViewColumnIcon fontSize="small" />}
           onClick={(e) => setAnchor(e.currentTarget)}
           aria-label={t('columnVisibility.buttonTooltip')}
           aria-haspopup="true"
           aria-expanded={Boolean(anchor)}
-          sx={{ textTransform: 'none', flexShrink: 0, minWidth: 0, px: { xs: 1, lg: 1.25 } }}
+          sx={{ textTransform: 'none', flexShrink: 0, whiteSpace: 'nowrap', px: 1.25 }}
         >
-          <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' } }}>
-            {t('columnVisibility.button')}
-          </Box>
+          {t('columnVisibility.button')}
         </Button>
       </Tooltip>
 

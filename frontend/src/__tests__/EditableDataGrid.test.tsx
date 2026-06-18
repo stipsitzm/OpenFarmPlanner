@@ -227,6 +227,23 @@ describe('EditableDataGrid', () => {
     });
   });
 
+  it('keeps the column visibility control labeled and secondary in table view', async () => {
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        showColumnVisibilityButton
+        columnVisibilityModel={{}}
+        onColumnVisibilityModelChange={vi.fn()}
+      />,
+    );
+
+    const button = await screen.findByRole('button', { name: 'columnVisibility.buttonTooltip' });
+
+    expect(button).toHaveTextContent('columnVisibility.button');
+    expect(button).toHaveClass('MuiButton-outlinedSecondary');
+  });
+
   it('supports add, blur/enter/tab commit flows and calls API save with payload', async () => {
     const validateRow = vi
       .fn<(row: TestGridRow) => string | null>()
