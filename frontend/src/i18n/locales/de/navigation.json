@@ -88,6 +88,7 @@
   },
   "commandGroups": {
     "project": "Projekt",
+    "culture": "Kultur",
     "account": "Konto",
     "navigation": "Navigation",
     "help": "Hilfe"

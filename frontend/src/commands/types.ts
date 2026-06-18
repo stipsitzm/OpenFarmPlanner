@@ -9,7 +9,7 @@ export type CommandContextTag =
   | 'calendar'
   | 'seedDemand';
 
-export type CommandGroup = 'project' | 'account' | 'navigation' | 'help';
+export type CommandGroup = 'project' | 'culture' | 'account' | 'navigation' | 'help';
 
 export interface CreateAction {
   id: string;

@@ -14,6 +14,43 @@
   "messages": {
     "restoreDeleteError": "Culture could not be restored."
   },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "openShortcuts": "Open keyboard shortcuts",
+    "commandPalette": "Action search",
+    "closeDialog": "Close dialog",
+    "aiComplete": "AI: Complete culture",
+    "aiReresearch": "AI: Research culture again",
+    "aiCompleteAll": "AI: Complete all cultures"
+  },
+  "commands": {
+    "edit": "Edit culture",
+    "delete": "Delete culture",
+    "exportCurrent": "Export current culture",
+    "exportAll": "Export all cultures",
+    "import": "Import cultures",
+    "createPlan": "Create planting plan",
+    "aiCompleteCurrent": "Complete culture with AI",
+    "aiReresearchCurrent": "Research culture again with AI",
+    "aiCompleteAll": "Complete all cultures with AI",
+    "previous": "Previous culture",
+    "next": "Next culture"
+  },
+  "export": {
+    "current": "Export current culture",
+    "all": "Export all cultures",
+    "menuLabel": "Export…"
+  },
+  "import": {
+    "menuLabel": "Import…",
+    "menuItem": "Import cultures…"
+  },
+  "buttons": {
+    "addNew": "Add culture"
+  },
+  "library": {
+    "openButton": "Crop library"
+  },
   "history": {
     "currentVersion": "Current version",
     "changedFields": "Changed:",

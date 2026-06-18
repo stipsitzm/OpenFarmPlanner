@@ -1009,8 +1009,8 @@ function Cultures() {
   const contextActions = useMemo<TopbarContextAction[]>(() => ([
     {
       id: 'cultures-open-library',
-      label: 'Kulturbibliothek öffnen',
-      ariaLabel: 'Kulturbibliothek öffnen',
+      label: t('library.openButton'),
+      ariaLabel: t('library.openButton'),
       onClick: () => {
         void handleOpenPublicLibrary();
       },
@@ -1019,12 +1019,14 @@ function Cultures() {
       id: 'cultures-import',
       label: t('import.menuLabel'),
       ariaLabel: t('import.menuLabel'),
+      shortcutHint: 'Alt+I',
       onClick: handleImportFileTrigger,
     },
     {
       id: 'cultures-export',
       label: t('export.menuLabel'),
       ariaLabel: t('export.menuLabel'),
+      shortcutHint: 'Alt+J / Alt+Shift+J',
       onClick: handleOpenExportDialog,
     },
   ]), [handleImportFileTrigger, handleOpenExportDialog, handleOpenPublicLibrary, t]);
@@ -1034,11 +1036,11 @@ function Cultures() {
   const createActions = useMemo(() => [
     {
       id: 'create-culture',
-      label: 'Kultur hinzufügen',
+      label: t('buttons.addNew'),
       shortcut: 'Alt+Shift+N',
       handler: handleAddNew,
     },
-  ], [handleAddNew]);
+  ], [handleAddNew, t]);
 
   useRegisterCreateActions('cultures-page', createActions);
 
@@ -1066,6 +1068,7 @@ function Cultures() {
     selectedCulture,
     selectedCultureId,
     setEnrichAllConfirmOpen,
+    t,
   }), [
     aiEnrichmentEnabled,
     cultures,
@@ -1080,6 +1083,7 @@ function Cultures() {
     handleImportFileTrigger,
     selectedCulture,
     selectedCultureId,
+    t,
   ]);
 
   useRegisterCommands('cultures-page', commandSpecs);
@@ -1720,24 +1724,18 @@ function Cultures() {
               <ListItemText primary={t('shortcuts.openShortcuts')} secondary="?" />
             </ListItem>
             <ListItem>
-              <ListItemText primary={t('shortcuts.commandPalette')} secondary="Ctrl+K" />
+              <ListItemText primary={t('shortcuts.commandPalette')} secondary="Alt+K" />
             </ListItem>
             <ListItem>
               <ListItemText primary={t('shortcuts.closeDialog')} secondary="Esc" />
             </ListItem>
-            {aiEnrichmentEnabled && (
-              <>
-                <ListItem>
-                  <ListItemText primary={t('shortcuts.aiComplete')} secondary="–" />
+            {commandSpecs
+              .filter((command) => command.shortcutHint)
+              .map((command) => (
+                <ListItem key={command.id}>
+                  <ListItemText primary={command.label} secondary={command.shortcutHint} />
                 </ListItem>
-                <ListItem>
-                  <ListItemText primary={t('shortcuts.aiReresearch')} secondary="–" />
-                </ListItem>
-                <ListItem>
-                  <ListItemText primary={t('shortcuts.aiCompleteAll')} secondary="–" />
-                </ListItem>
-              </>
-            )}
+              ))}
           </List>
         </DialogContent>
         <DialogActions>

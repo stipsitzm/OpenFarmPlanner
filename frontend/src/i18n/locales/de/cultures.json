@@ -367,9 +367,22 @@
     "aiReresearch": "KI: Kultur neu recherchieren",
     "aiCompleteAll": "KI: Alle Kulturen vervollständigen"
   },
+  "commands": {
+    "edit": "Kultur bearbeiten",
+    "delete": "Kultur löschen",
+    "exportCurrent": "Aktuelle Kultur exportieren",
+    "exportAll": "Alle Kulturen exportieren",
+    "import": "Kulturen importieren",
+    "createPlan": "Anbauplan erstellen",
+    "aiCompleteCurrent": "Kultur per KI vervollständigen",
+    "aiReresearchCurrent": "Kultur per KI neu recherchieren",
+    "aiCompleteAll": "Alle Kulturen per KI vervollständigen",
+    "previous": "Vorherige Kultur",
+    "next": "Nächste Kultur"
+  },
   "export": {
-    "current": "Aktuelle Kultur als JSON herunterladen",
-    "all": "Alle Kulturen als JSON herunterladen",
+    "current": "Aktuelle Kultur exportieren",
+    "all": "Alle Kulturen exportieren",
     "menuLabel": "Exportieren…",
     "dialogTitle": "Kulturen exportieren",
     "scopeLabel": "Umfang",
@@ -453,7 +466,7 @@
   },
   "import": {
     "menuLabel": "Importieren…",
-    "menuItem": "Aus JSON importieren…",
+    "menuItem": "Kulturen importieren…",
     "title": "Kulturen importieren",
     "selectFileTitle": "Kulturen importieren",
     "selectFileButton": "Datei auswählen",

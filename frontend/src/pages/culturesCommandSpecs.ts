@@ -1,6 +1,8 @@
 import type { Culture } from '../api/api';
 import type { CommandSpec } from '../commands/types';
 
+type CultureCommandTranslator = (key: string) => string;
+
 export type CreateCulturesCommandSpecsOptions = {
   canRunEnrichmentForCulture: (culture?: Culture | null) => boolean;
   cultures: Culture[];
@@ -17,6 +19,7 @@ export type CreateCulturesCommandSpecsOptions = {
   selectedCulture?: Culture;
   selectedCultureId?: number;
   setEnrichAllConfirmOpen: (open: boolean) => void;
+  t: CultureCommandTranslator;
 };
 
 export function createCulturesCommandSpecs({
@@ -35,12 +38,13 @@ export function createCulturesCommandSpecs({
   selectedCulture,
   selectedCultureId,
   setEnrichAllConfirmOpen,
+  t,
 }: CreateCulturesCommandSpecsOptions): CommandSpec[] {
   const aiCommands: CommandSpec[] = enableAiEnrichment ? [
     {
       id: 'culture.aiCompleteCurrent',
-      label: 'Kultur per KI vervollständigen (Alt+U)',
-      group: 'navigation',
+      label: t('commands.aiCompleteCurrent'),
+      group: 'culture',
       keywords: ['ki', 'ai', 'vervollständigen', 'complete', 'kultur'],
       shortcutHint: 'Alt+U',
       keys: { alt: true, key: 'u' },
@@ -52,8 +56,8 @@ export function createCulturesCommandSpecs({
     },
     {
       id: 'culture.aiReresearchCurrent',
-      label: 'Kultur per KI neu recherchieren (Alt+R)',
-      group: 'navigation',
+      label: t('commands.aiReresearchCurrent'),
+      group: 'culture',
       keywords: ['ki', 'ai', 'recherche', 'reresearch', 'kultur'],
       shortcutHint: 'Alt+R',
       keys: { alt: true, key: 'r' },
@@ -65,8 +69,8 @@ export function createCulturesCommandSpecs({
     },
     {
       id: 'culture.aiCompleteAll',
-      label: 'Alle Kulturen per KI vervollständigen (Alt+A)',
-      group: 'navigation',
+      label: t('commands.aiCompleteAll'),
+      group: 'culture',
       keywords: ['ki', 'ai', 'alle', 'kulturen', 'vervollständigen'],
       shortcutHint: 'Alt+A',
       keys: { alt: true, key: 'a' },
@@ -79,8 +83,8 @@ export function createCulturesCommandSpecs({
   return [
     {
       id: 'culture.edit',
-      label: 'Kultur bearbeiten (Alt+E)',
-      group: 'navigation',
+      label: t('commands.edit'),
+      group: 'culture',
       keywords: ['kultur', 'bearbeiten', 'edit'],
       shortcutHint: 'Alt+E',
       keys: { alt: true, key: 'e' },
@@ -94,8 +98,8 @@ export function createCulturesCommandSpecs({
     },
     {
       id: 'culture.delete',
-      label: 'Kultur löschen (Alt+Shift+D)',
-      group: 'navigation',
+      label: t('commands.delete'),
+      group: 'culture',
       keywords: ['kultur', 'löschen', 'delete'],
       shortcutHint: 'Alt+Shift+D',
       keys: { alt: true, shift: true, key: 'd' },
@@ -109,9 +113,9 @@ export function createCulturesCommandSpecs({
     },
     {
       id: 'culture.exportCurrent',
-      label: (selectedCulture ? 'Aktuelle Kultur exportieren (JSON)' : 'Kulturen exportieren (JSON)') + ' (Alt+J)',
-      group: 'navigation',
-      keywords: ['json', 'export', 'kultur'],
+      label: t('commands.exportCurrent'),
+      group: 'culture',
+      keywords: ['export', 'kultur', 'xlsx', 'ods', 'csv', 'json'],
       shortcutHint: 'Alt+J',
       keys: { alt: true, key: 'j' },
       contextTags: ['cultures'],
@@ -120,9 +124,9 @@ export function createCulturesCommandSpecs({
     },
     {
       id: 'culture.exportAll',
-      label: 'Alle Kulturen exportieren (JSON) (Alt+Shift+J)',
-      group: 'navigation',
-      keywords: ['json', 'export', 'alle', 'kulturen'],
+      label: t('commands.exportAll'),
+      group: 'culture',
+      keywords: ['export', 'alle', 'kulturen', 'xlsx', 'ods', 'csv', 'json'],
       shortcutHint: 'Alt+Shift+J',
       keys: { alt: true, shift: true, key: 'j' },
       contextTags: ['cultures'],
@@ -131,9 +135,9 @@ export function createCulturesCommandSpecs({
     },
     {
       id: 'culture.import',
-      label: 'Kulturen importieren (JSON) (Alt+I)',
-      group: 'navigation',
-      keywords: ['json', 'import'],
+      label: t('commands.import'),
+      group: 'culture',
+      keywords: ['import', 'kulturen', 'xlsx', 'ods', 'csv', 'json'],
       shortcutHint: 'Alt+I',
       keys: { alt: true, key: 'i' },
       contextTags: ['cultures'],
@@ -142,8 +146,8 @@ export function createCulturesCommandSpecs({
     },
     {
       id: 'culture.createPlan',
-      label: 'Anbauplan erstellen (Alt+P)',
-      group: 'navigation',
+      label: t('commands.createPlan'),
+      group: 'culture',
       keywords: ['anbauplan', 'planting', 'plan'],
       shortcutHint: 'Alt+P',
       keys: { alt: true, key: 'p' },
@@ -154,7 +158,7 @@ export function createCulturesCommandSpecs({
     ...aiCommands,
     {
       id: 'culture.previous',
-      label: 'Vorherige Kultur (Alt+Shift+←)',
+      label: t('commands.previous'),
       group: 'navigation',
       keywords: ['vorherige', 'kultur', 'left'],
       shortcutHint: 'Alt+Shift+←',
@@ -165,7 +169,7 @@ export function createCulturesCommandSpecs({
     },
     {
       id: 'culture.next',
-      label: 'Nächste Kultur (Alt+Shift+→)',
+      label: t('commands.next'),
       group: 'navigation',
       keywords: ['nächste', 'kultur', 'right'],
       shortcutHint: 'Alt+Shift+→',
