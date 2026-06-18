@@ -46,6 +46,7 @@
   "columnVisibility": {
     "button": "Spalten anzeigen",
     "buttonTooltip": "Sichtbare Spalten auswählen",
+    "autofitLabel": "Automatisch an Bildschirmbreite anpassen",
     "showAll": "Alle einblenden",
     "hideAll": "Alle ausblenden"
   },

@@ -538,9 +538,8 @@ function PlantingPlans() {
   const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const { columnVisibilityModel, setColumnVisibilityModel, isUserCustomized } = useColumnVisibility({
+  const { autofitEnabled, columnVisibilityModel, setManualColumnVisibility, setAutofitEnabled } = useColumnVisibility({
     tableKey: "plantingPlans",
-    defaultVisibilityModel: { harvest_date: false, harvest_end_date: false },
   });
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -2442,8 +2441,9 @@ function PlantingPlans() {
           tableKey="plantingPlans"
           defaultSortModel={[{ field: "planting_date", sort: "asc" }]}
           columnVisibilityModel={columnVisibilityModel}
-          onColumnVisibilityModelChange={setColumnVisibilityModel}
-          columnVisibilityCustomized={isUserCustomized}
+          onColumnVisibilityModelChange={setManualColumnVisibility}
+          columnVisibilityAutofit={autofitEnabled}
+          onColumnVisibilityAutofitChange={setAutofitEnabled}
           autoHideColumnPriority={["harvest_date", "harvest_end_date"]}
           showColumnVisibilityButton={!isMobile}
           persistSortInUrl={true}

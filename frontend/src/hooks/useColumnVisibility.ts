@@ -1,11 +1,11 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { GridColDef, GridColumnVisibilityModel } from '@mui/x-data-grid';
 
 const COLUMN_VISIBILITY_PREFIX = 'tableColumns.';
 
 interface StoredState {
+  autofit: boolean;
   model: GridColumnVisibilityModel;
-  customized: boolean;
 }
 
 function loadFromStorage(key: string): StoredState | null {
@@ -17,80 +17,98 @@ function loadFromStorage(key: string): StoredState | null {
 
     const obj = parsed as Record<string, unknown>;
 
-    // New format: { model: {...}, customized: boolean }
-    if ('model' in obj && obj.model !== null && typeof obj.model === 'object' && !Array.isArray(obj.model)) {
+    // Current format: { autofit: boolean, model: {...} }
+    if ('autofit' in obj && 'model' in obj && obj.model !== null && typeof obj.model === 'object') {
       return {
+        autofit: Boolean(obj.autofit),
         model: obj.model as GridColumnVisibilityModel,
-        customized: Boolean(obj.customized),
       };
     }
 
-    // Legacy format: plain visibility model — treat as user-customized to preserve prior behaviour
-    return { model: obj as GridColumnVisibilityModel, customized: true };
+    // Legacy format { model, customized }: treat as manual (autofit=false)
+    if ('model' in obj && obj.model !== null && typeof obj.model === 'object') {
+      return { autofit: false, model: obj.model as GridColumnVisibilityModel };
+    }
+
+    // Oldest legacy format: plain visibility model object
+    return { autofit: false, model: obj as GridColumnVisibilityModel };
   } catch { /* ignore malformed data */ }
   return null;
 }
 
-export interface UseColumnVisibilityOptions {
-  /** Identifies the table — used as the localStorage key suffix. */
-  tableKey: string;
-  /**
-   * Fallback model used before the container is first measured and when no
-   * saved state exists. Set fields you want hidden by default on narrow screens.
-   */
-  defaultVisibilityModel?: GridColumnVisibilityModel;
+function saveToStorage(key: string, state: StoredState): void {
+  localStorage.setItem(key, JSON.stringify(state));
 }
 
-export function useColumnVisibility({
-  tableKey,
-  defaultVisibilityModel = {},
-}: UseColumnVisibilityOptions): {
-  /** The user-saved (or default) visibility model. */
+export interface UseColumnVisibilityOptions {
+  tableKey: string;
+}
+
+export function useColumnVisibility({ tableKey }: UseColumnVisibilityOptions): {
+  /** True when Autofit is active (default on first use). */
+  autofitEnabled: boolean;
+  /** The user's manually-saved visibility model (used when autofitEnabled=false). */
   columnVisibilityModel: GridColumnVisibilityModel;
-  /** Call on explicit user action; marks the config as user-customized. */
-  setColumnVisibilityModel: (model: GridColumnVisibilityModel) => void;
-  /** True once the user has made at least one explicit change. Disables auto-fit. */
-  isUserCustomized: boolean;
+  /**
+   * Save a manual column visibility model and disable Autofit.
+   * Call this when the user explicitly toggles a column.
+   */
+  setManualColumnVisibility: (model: GridColumnVisibilityModel) => void;
+  /**
+   * Enable or disable Autofit.
+   * When enabling: resumes auto-hide/show based on container width.
+   * When disabling: call setManualColumnVisibility instead so the current
+   * effective model is captured at the same time.
+   */
+  setAutofitEnabled: (enabled: boolean) => void;
 } {
   const storageKey = `${COLUMN_VISIBILITY_PREFIX}${tableKey}`;
 
-  const [savedState, setSavedState] = useState<StoredState | null>(
-    () => loadFromStorage(storageKey),
+  const [savedState, setSavedState] = useState<StoredState>(
+    () => loadFromStorage(storageKey) ?? { autofit: true, model: {} },
   );
 
-  const columnVisibilityModel = useMemo<GridColumnVisibilityModel>(
-    () => savedState?.model ?? defaultVisibilityModel,
-    [savedState, defaultVisibilityModel],
-  );
-
-  const isUserCustomized = savedState?.customized ?? false;
-
-  const setColumnVisibilityModel = useCallback(
+  const setManualColumnVisibility = useCallback(
     (model: GridColumnVisibilityModel) => {
-      const state: StoredState = { model, customized: true };
-      setSavedState(state);
-      localStorage.setItem(storageKey, JSON.stringify(state));
+      const next: StoredState = { autofit: false, model };
+      setSavedState(next);
+      saveToStorage(storageKey, next);
     },
     [storageKey],
   );
 
-  return { columnVisibilityModel, setColumnVisibilityModel, isUserCustomized };
+  const setAutofitEnabled = useCallback(
+    (enabled: boolean) => {
+      setSavedState((prev) => {
+        const next: StoredState = { ...prev, autofit: enabled };
+        saveToStorage(storageKey, next);
+        return next;
+      });
+    },
+    [storageKey],
+  );
+
+  return {
+    autofitEnabled: savedState.autofit,
+    columnVisibilityModel: savedState.model,
+    setManualColumnVisibility,
+    setAutofitEnabled,
+  };
 }
 
 /**
- * Determines which columns to hide so the table fits within `availableWidth`
- * without a horizontal scroll bar.
+ * Pure utility: hides columns in `autoHidePriority` order until the total
+ * minimum column width fits within `availableWidth`.
  *
- * Columns in `autoHidePriority` are hidden in order (index 0 = first to hide)
- * until the summed minimum widths fit. Returns `{}` when all columns already fit.
- * Returns `fallbackModel` when `availableWidth` is 0 (not yet measured).
+ * - Returns `{}` (all visible) when all columns fit.
+ * - Returns `fallbackModel` when `availableWidth <= 0` (not yet measured).
  *
- * This is a pure function suitable for use in `useMemo`.
+ * Suitable for use in `useMemo`.
  *
- * @param columns         Full column definitions (including any fixed action columns).
- * @param autoHidePriority Fields to hide in priority order.
- * @param availableWidth  Available container width in pixels.
- * @param fallbackModel   Model to return when availableWidth is not yet known.
+ * @param columns         All rendered column definitions.
+ * @param autoHidePriority Fields to hide, from first-to-hide to last-to-hide.
+ * @param availableWidth  Container width in pixels (from ResizeObserver).
+ * @param fallbackModel   Model to use before the first measurement fires.
  */
 export function computeAutoFitColumnVisibility(
   columns: GridColDef[],
@@ -105,10 +123,8 @@ export function computeAutoFitColumnVisibility(
 
   let remaining = columns.reduce((sum, col) => sum + getColMinWidth(col), 0);
 
-  // All columns fit — show everything
   if (remaining <= availableWidth) return {};
 
-  // Hide in priority order until the total fits
   const model: GridColumnVisibilityModel = {};
   for (const field of autoHidePriority) {
     if (remaining <= availableWidth) break;

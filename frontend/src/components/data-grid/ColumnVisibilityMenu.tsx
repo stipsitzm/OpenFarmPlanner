@@ -4,11 +4,13 @@ import {
   Button,
   Checkbox,
   Divider,
+  FormControlLabel,
   ListItemIcon,
   ListItemText,
   Menu,
   MenuItem,
   Tooltip,
+  Typography,
 } from '@mui/material';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import type { GridColDef, GridColumnVisibilityModel } from '@mui/x-data-grid';
@@ -16,22 +18,28 @@ import { useTranslation } from '../../i18n';
 
 interface ColumnVisibilityMenuProps {
   columns: GridColDef[];
+  /** Effective visibility model (auto-fit or manual — already resolved). */
   columnVisibilityModel: GridColumnVisibilityModel;
   onColumnVisibilityModelChange: (model: GridColumnVisibilityModel) => void;
+  /** Whether Autofit is currently enabled. */
+  autofitEnabled?: boolean;
+  /** Called when the user toggles the Autofit checkbox. */
+  onAutofitChange?: (enabled: boolean) => void;
 }
 
 export function ColumnVisibilityMenu({
   columns,
   columnVisibilityModel,
   onColumnVisibilityModelChange,
+  autofitEnabled = false,
+  onAutofitChange,
 }: ColumnVisibilityMenuProps) {
   const { t } = useTranslation('common');
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
 
   const menuColumns = columns.filter((col) => col.hideable !== false);
 
-  const isVisible = (field: string): boolean =>
-    columnVisibilityModel[field] !== false;
+  const isVisible = (field: string): boolean => columnVisibilityModel[field] !== false;
 
   const toggleColumn = (field: string) => {
     onColumnVisibilityModelChange({
@@ -70,12 +78,35 @@ export function ColumnVisibilityMenu({
           </Box>
         </Button>
       </Tooltip>
+
       <Menu
         anchorEl={anchor}
         open={Boolean(anchor)}
         onClose={() => setAnchor(null)}
-        slotProps={{ paper: { sx: { minWidth: 220, maxHeight: 480 } } }}
+        slotProps={{ paper: { sx: { minWidth: 270, maxHeight: 560 } } }}
       >
+        {onAutofitChange ? (
+          <Box sx={{ px: 2, py: 1 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  size="small"
+                  checked={autofitEnabled}
+                  onChange={(e) => onAutofitChange(e.target.checked)}
+                  sx={{ py: 0.5 }}
+                />
+              }
+              label={
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {t('columnVisibility.autofitLabel')}
+                </Typography>
+              }
+            />
+          </Box>
+        ) : null}
+
+        {onAutofitChange ? <Divider /> : null}
+
         <MenuItem dense onClick={toggleAll}>
           <ListItemIcon>
             <Checkbox
@@ -88,15 +119,13 @@ export function ColumnVisibilityMenu({
             />
           </ListItemIcon>
           <ListItemText
-            primary={
-              allVisible
-                ? t('columnVisibility.hideAll')
-                : t('columnVisibility.showAll')
-            }
+            primary={allVisible ? t('columnVisibility.hideAll') : t('columnVisibility.showAll')}
             primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
           />
         </MenuItem>
+
         <Divider />
+
         {menuColumns.map((col) => {
           const visible = isVisible(col.field);
           return (
