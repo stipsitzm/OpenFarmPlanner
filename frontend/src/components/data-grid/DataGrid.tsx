@@ -1858,16 +1858,6 @@ export function EditableDataGrid<T extends EditableRow>({
         />
       ) : null}
       
-      {showColumnVisibilityButton && onColumnVisibilityModelChange ? (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-          <ColumnVisibilityMenu
-            columns={columns}
-            columnVisibilityModel={columnVisibilityModel ?? {}}
-            onColumnVisibilityModelChange={onColumnVisibilityModelChange}
-          />
-        </Box>
-      ) : null}
-
       <Box
         sx={{
           position: 'relative',
@@ -1877,6 +1867,15 @@ export function EditableDataGrid<T extends EditableRow>({
           overflow: 'visible',
         }}
       >
+        {showColumnVisibilityButton && onColumnVisibilityModelChange ? (
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.75 }}>
+            <ColumnVisibilityMenu
+              columns={columns}
+              columnVisibilityModel={columnVisibilityModel ?? {}}
+              onColumnVisibilityModelChange={onColumnVisibilityModelChange}
+            />
+          </Box>
+        ) : null}
         <Box
           onKeyDownCapture={handleGridEditNavigation}
           sx={{

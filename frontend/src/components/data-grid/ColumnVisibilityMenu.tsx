@@ -63,9 +63,11 @@ export function ColumnVisibilityMenu({
           aria-label={t('columnVisibility.buttonTooltip')}
           aria-haspopup="true"
           aria-expanded={Boolean(anchor)}
-          sx={{ textTransform: 'none', flexShrink: 0, minWidth: 0, px: 1.25 }}
+          sx={{ textTransform: 'none', flexShrink: 0, minWidth: 0, px: { xs: 1, lg: 1.25 } }}
         >
-          {t('columnVisibility.button')}
+          <Box component="span" sx={{ display: { xs: 'none', lg: 'inline' } }}>
+            {t('columnVisibility.button')}
+          </Box>
         </Button>
       </Tooltip>
       <Menu

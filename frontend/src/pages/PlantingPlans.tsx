@@ -2446,7 +2446,7 @@ function PlantingPlans() {
           defaultSortModel={[{ field: "planting_date", sort: "asc" }]}
           columnVisibilityModel={columnVisibilityModel}
           onColumnVisibilityModelChange={setColumnVisibilityModel}
-          showColumnVisibilityButton={true}
+          showColumnVisibilityButton={!isMobile}
           persistSortInUrl={true}
             notes={{
               fields: [

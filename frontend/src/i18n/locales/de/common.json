@@ -44,7 +44,7 @@
     "project": "Projekt"
   },
   "columnVisibility": {
-    "button": "Spalten",
+    "button": "Spalten anzeigen",
     "buttonTooltip": "Sichtbare Spalten auswählen",
     "showAll": "Alle einblenden",
     "hideAll": "Alle ausblenden"
