@@ -9,6 +9,7 @@ backend/.env
 # IDE
 .vscode/
 .idea/
+.claude/
 .codex
 .codex/
 frontend/dist-production/
