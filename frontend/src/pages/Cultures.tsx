@@ -1026,7 +1026,7 @@ function Cultures() {
       id: 'cultures-export',
       label: t('export.menuLabel'),
       ariaLabel: t('export.menuLabel'),
-      shortcutHint: 'Alt+J / Alt+Shift+J',
+      shortcutHint: 'Alt+X / Alt+Shift+X',
       onClick: handleOpenExportDialog,
     },
   ]), [handleImportFileTrigger, handleOpenExportDialog, handleOpenPublicLibrary, t]);

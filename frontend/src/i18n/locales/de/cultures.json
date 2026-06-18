@@ -214,7 +214,7 @@
     "saving": "Speichern...",
     "unsavedChanges": "Ungespeicherte Änderungen",
     "fixErrors": "Bitte beheben Sie die Validierungsfehler",
-    "exportSuccess": "JSON exportiert",
+    "exportSuccess": "Exportiert",
     "deleted": "Kultur gelöscht"
   },
   "deleteDialog": {
