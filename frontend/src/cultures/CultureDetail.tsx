@@ -273,6 +273,13 @@ export function CultureDetail({
     gap: 2,
     justifyContent: 'start',
   } as const;
+  const detailSectionCardSx = {
+    p: { xs: 1.25, sm: 2 },
+    border: '1px solid',
+    borderColor: 'surface.surfaceSoftBorder',
+    borderRadius: 2,
+    bgcolor: 'surface.surfaceBackground',
+  } as const;
 
   const activeFilterCount = useMemo(
     () => {
@@ -1061,8 +1068,9 @@ export function CultureDetail({
 
             <Divider sx={{ mb: 2.5 }} />
 
+            <Stack spacing={{ xs: 1.5, sm: 2 }}>
             {/* General Information Section */}
-            <Box sx={{ mb: 3, p: { xs: 1.25, sm: 2 }, border: '1px solid #e5e7eb', borderRadius: 2 }}>
+            <Box data-testid="culture-detail-section" sx={detailSectionCardSx}>
               <Typography variant="h6" gutterBottom>
                 Allgemeine Informationen
               </Typography>
@@ -1110,10 +1118,8 @@ export function CultureDetail({
               </Box>
             </Box>
 
-            <Divider sx={{ mb: 2.5 }} />
-
             {/* Timing Section */}
-            <Box sx={{ mb: 3 }}>
+            <Box data-testid="culture-detail-section" sx={detailSectionCardSx}>
               <Typography variant="h6" gutterBottom>
                 Zeitplanung
               </Typography>
@@ -1147,10 +1153,8 @@ export function CultureDetail({
               </Box>
             </Box>
 
-            <Divider sx={{ mb: 2.5 }} />
-
             {/* Spacing Section */}
-            <Box sx={{ mb: 3 }}>
+            <Box data-testid="culture-detail-section" sx={detailSectionCardSx}>
               <Typography variant="h6" gutterBottom>
                 Abstände
               </Typography>
@@ -1188,10 +1192,8 @@ export function CultureDetail({
               </Box>
             </Box>
 
-            <Divider sx={{ mb: 2.5 }} />
-
             {/* Seeding Section */}
-            <Box sx={{ mb: 3 }}>
+            <Box data-testid="culture-detail-section" sx={detailSectionCardSx}>
               <Typography variant="h6" gutterBottom>
                 Saatgut
               </Typography>
@@ -1322,9 +1324,8 @@ export function CultureDetail({
               </Box>
             </Box>
 
-            <Divider sx={{ mb: 3 }} />
             {/* Harvest Section */}
-            <Box sx={{ mb: 4 }}>
+            <Box data-testid="culture-detail-section" sx={detailSectionCardSx}>
               <Typography variant="h6" gutterBottom>
                 Ernte
               </Typography>
@@ -1375,10 +1376,8 @@ export function CultureDetail({
               </Box>
             </Box>
 
-            <Divider sx={{ mb: 3 }} />
-
             {/* Notes Section */}
-            <Box sx={{ p: { xs: 1.5, sm: 2.5 }, border: '1px solid #e5e7eb', borderRadius: 2 }}>
+            <Box data-testid="culture-detail-section" sx={detailSectionCardSx}>
               <Typography variant="h6" gutterBottom>
                 Notizen
               </Typography>
@@ -1411,7 +1410,8 @@ export function CultureDetail({
                   </Box>
                 )}
               </Box>
-                  </Box>
+            </Box>
+            </Stack>
                 </CardContent>
               </Card>
             ) : (

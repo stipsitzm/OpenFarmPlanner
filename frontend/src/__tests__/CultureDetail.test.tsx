@@ -143,6 +143,7 @@ describe('CultureDetail Component', () => {
       'Ernte',
       'Notizen',
     ]);
+    expect(screen.getAllByTestId('culture-detail-section')).toHaveLength(6);
   });
 
   it('renders supplier seed data once inside the seed section', () => {
