@@ -248,9 +248,39 @@ describe('EditableDataGrid', () => {
     const surface = screen.getByTestId('data-grid-surface');
     const toolbar = screen.getByTestId('data-grid-table-actions-toolbar');
 
-    expect(button).toHaveClass('MuiIconButton-colorSecondary');
+    expect(button).toHaveTextContent('tableActions.button');
+    expect(button).toHaveClass('MuiButton-outlinedSecondary');
     expect(surface).toContainElement(toolbar);
     expect(toolbar.nextElementSibling).toContainElement(screen.getByTestId('row-count'));
+  });
+
+  it('hides table-wide actions in the mobile layout', async () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(max-width:900px)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })));
+
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        showTableActions
+        columnVisibilityModel={{}}
+        onColumnVisibilityModelChange={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('row-count')).toHaveTextContent('1');
+    });
+    expect(screen.queryByTestId('data-grid-table-actions-toolbar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'tableActions.tooltip' })).not.toBeInTheDocument();
   });
 
   it('separates row actions from table actions', async () => {

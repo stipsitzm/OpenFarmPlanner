@@ -52,6 +52,7 @@
     "hideAll": "Alle ausblenden"
   },
   "tableActions": {
+    "button": "Tabellenoptionen",
     "tooltip": "Tabellenaktionen",
     "exportDialogTitle": "Tabelle exportieren",
     "formatLabel": "Format",

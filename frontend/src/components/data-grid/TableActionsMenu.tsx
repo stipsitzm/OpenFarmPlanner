@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import ViewColumnIcon from '@mui/icons-material/ViewColumn';
 import {
-  IconButton,
+  Button,
   ListItemIcon,
   ListItemText,
   Menu,
@@ -46,16 +46,18 @@ export function TableActionsMenu({
   return (
     <>
       <Tooltip title={t('tableActions.tooltip')}>
-        <IconButton
+        <Button
           size="small"
           color="secondary"
+          variant="outlined"
+          startIcon={<SettingsOutlinedIcon />}
           aria-label={t('tableActions.tooltip')}
           aria-haspopup="menu"
           aria-expanded={Boolean(menuAnchor)}
           onClick={(event) => setMenuAnchor(event.currentTarget)}
         >
-          <MoreVertIcon />
-        </IconButton>
+          {t('tableActions.button')}
+        </Button>
       </Tooltip>
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closeMenu}>
         <MenuItem

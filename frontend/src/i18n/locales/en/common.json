@@ -13,6 +13,7 @@
     "hideAll": "Hide all"
   },
   "tableActions": {
+    "button": "Table options",
     "tooltip": "Table actions",
     "exportDialogTitle": "Export table",
     "formatLabel": "Format",

@@ -2062,7 +2062,7 @@ export function EditableDataGrid<T extends EditableRow>({
               },
             }}
           >
-            {showTableActions && onColumnVisibilityModelChange ? (
+            {showTableActions && onColumnVisibilityModelChange && !isMobile ? (
               <Box
                 data-testid="data-grid-table-actions-toolbar"
                 sx={{
