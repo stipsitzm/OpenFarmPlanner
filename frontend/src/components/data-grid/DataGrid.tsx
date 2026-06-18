@@ -1962,25 +1962,6 @@ export function EditableDataGrid<T extends EditableRow>({
           overflow: 'visible',
         }}
       >
-        {showColumnVisibilityButton && onColumnVisibilityModelChange ? (
-          <Box
-            sx={{
-              display: 'flex',
-              width: '100%',
-              flexWrap: 'wrap',
-              justifyContent: 'flex-end',
-              mb: 0.75,
-            }}
-          >
-            <ColumnVisibilityMenu
-              columns={columns}
-              columnVisibilityModel={effectiveColumnVisibilityModel}
-              onColumnVisibilityModelChange={onColumnVisibilityModelChange}
-              autofitEnabled={columnVisibilityAutofit}
-              onAutofitChange={onColumnVisibilityAutofitChange ? handleAutofitChange : undefined}
-            />
-          </Box>
-        ) : null}
         <Box
           onKeyDownCapture={handleGridEditNavigation}
           sx={{
@@ -2008,6 +1989,7 @@ export function EditableDataGrid<T extends EditableRow>({
             onTouchMove={hasContextualRowActions ? handleGridTouchMove : undefined}
             onTouchEnd={hasContextualRowActions ? handleGridTouchEnd : undefined}
             onTouchCancel={hasContextualRowActions ? handleGridTouchEnd : undefined}
+            data-testid="data-grid-surface"
             sx={{
               position: 'relative',
               display: 'block',
@@ -2019,6 +2001,26 @@ export function EditableDataGrid<T extends EditableRow>({
               },
             }}
           >
+            {showColumnVisibilityButton && onColumnVisibilityModelChange ? (
+              <Box
+                data-testid="data-grid-column-visibility-toolbar"
+                sx={{
+                  display: 'flex',
+                  width: '100%',
+                  flexWrap: 'wrap',
+                  justifyContent: 'flex-end',
+                  mb: 0.75,
+                }}
+              >
+                <ColumnVisibilityMenu
+                  columns={columns}
+                  columnVisibilityModel={effectiveColumnVisibilityModel}
+                  onColumnVisibilityModelChange={onColumnVisibilityModelChange}
+                  autofitEnabled={columnVisibilityAutofit}
+                  onAutofitChange={onColumnVisibilityAutofitChange ? handleAutofitChange : undefined}
+                />
+              </Box>
+            ) : null}
             <DataGrid
           rows={rowsForGrid}
           columns={columnsWithActions}

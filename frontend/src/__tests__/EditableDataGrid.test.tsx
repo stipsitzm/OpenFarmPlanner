@@ -239,9 +239,13 @@ describe('EditableDataGrid', () => {
     );
 
     const button = await screen.findByRole('button', { name: 'columnVisibility.buttonTooltip' });
+    const surface = screen.getByTestId('data-grid-surface');
+    const toolbar = screen.getByTestId('data-grid-column-visibility-toolbar');
 
     expect(button).toHaveTextContent('columnVisibility.button');
     expect(button).toHaveClass('MuiButton-outlinedSecondary');
+    expect(surface).toContainElement(toolbar);
+    expect(toolbar.nextElementSibling).toContainElement(screen.getByTestId('row-count'));
   });
 
   it('supports add, blur/enter/tab commit flows and calls API save with payload', async () => {
