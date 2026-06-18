@@ -1,8 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import FieldsBedsPage from '../pages/FieldsBedsPage';
 import { MemoryRouter } from 'react-router-dom';
+import type { CommandSpec } from '../commands/types';
+import type { TopbarContextAction } from '../App';
 
 const { locationListMock, fieldListMock, bedListMock, addFieldMock, navigateMock } = vi.hoisted(() => ({
   locationListMock: vi.fn(),
@@ -14,6 +16,10 @@ const { locationListMock, fieldListMock, bedListMock, addFieldMock, navigateMock
 const projectRequirementState = vi.hoisted(() => ({
   shouldShowProjectRequiredState: false,
   missingProjectReason: null as null | 'no_projects' | 'no_active_project',
+}));
+const registeredUiState = vi.hoisted(() => ({
+  commands: [] as CommandSpec[],
+  topbarActions: [] as TopbarContextAction[],
 }));
 
 vi.mock('../pages/FieldsBedsHierarchy', () => ({
@@ -33,8 +39,19 @@ vi.mock('../pages/GraphicalFields', () => ({
 
 vi.mock('../commands/useCommandContext', () => ({
   useCommandContextTag: vi.fn(),
-  useRegisterCommands: vi.fn(),
+  useRegisterCommands: (_scope: string, commands: CommandSpec[]) => {
+    registeredUiState.commands = commands;
+  },
   useRegisterCreateActions: vi.fn(),
+}));
+
+vi.mock('../hooks/useTopbarContextActions', () => ({
+  useTopbarContextActions: (
+    _setActions: unknown,
+    actions: TopbarContextAction[],
+  ) => {
+    registeredUiState.topbarActions = actions;
+  },
 }));
 
 vi.mock('../api/api', async () => {
@@ -96,6 +113,8 @@ describe('FieldsBedsPage', () => {
     bedListMock.mockResolvedValue({ data: { results: [{ id: 21, name: 'A', field: 11 }] } });
     addFieldMock.mockReset();
     navigateMock.mockReset();
+    registeredUiState.commands = [];
+    registeredUiState.topbarActions = [];
     window.localStorage.clear();
   });
 
@@ -106,6 +125,51 @@ describe('FieldsBedsPage', () => {
 
     expect(await screen.findByText('EditMode-location-scoped')).toBeInTheDocument();
     expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
+  });
+
+  it('keeps Alt+G, toolbar state, and the current command action synchronized', async () => {
+    renderPage();
+
+    expect(await screen.findByText('Hierarchieansicht')).toBeInTheDocument();
+
+    const expectedViews = [
+      { content: 'EditMode-location-scoped', commandLabel: 'Listenansicht öffnen', activeActionId: 'fields-view-mode-graphical' },
+      { content: 'Hierarchieansicht', commandLabel: 'Grafikansicht öffnen', activeActionId: 'fields-view-mode-list' },
+      { content: 'EditMode-location-scoped', commandLabel: 'Listenansicht öffnen', activeActionId: 'fields-view-mode-graphical' },
+      { content: 'Hierarchieansicht', commandLabel: 'Grafikansicht öffnen', activeActionId: 'fields-view-mode-list' },
+      { content: 'EditMode-location-scoped', commandLabel: 'Listenansicht öffnen', activeActionId: 'fields-view-mode-graphical' },
+    ] as const;
+
+    for (const expected of expectedViews) {
+      await act(async () => {
+        await registeredUiState.commands[0].action();
+      });
+
+      expect(screen.getByText(expected.content)).toBeInTheDocument();
+      expect(registeredUiState.commands).toHaveLength(1);
+      expect(registeredUiState.commands[0].label).toBe(expected.commandLabel);
+      expect(
+        registeredUiState.topbarActions.find((action) => action.active)?.id,
+      ).toBe(expected.activeActionId);
+    }
+
+    const listAction = registeredUiState.topbarActions.find((action) => action.id === 'fields-view-mode-list');
+    await act(async () => {
+      listAction?.onClick();
+    });
+    expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
+    expect(registeredUiState.commands[0].label).toBe('Grafikansicht öffnen');
+
+    const graphicalAction = registeredUiState.topbarActions.find((action) => action.id === 'fields-view-mode-graphical');
+    await act(async () => {
+      graphicalAction?.onClick();
+    });
+    expect(screen.getByText('EditMode-location-scoped')).toBeInTheDocument();
+    expect(registeredUiState.commands[0].label).toBe('Listenansicht öffnen');
+
+    expect(locationListMock).toHaveBeenCalledTimes(1);
+    expect(fieldListMock).toHaveBeenCalledTimes(1);
+    expect(bedListMock).toHaveBeenCalledTimes(1);
   });
 
   it('shows a neutral project-required state when no project is available', async () => {

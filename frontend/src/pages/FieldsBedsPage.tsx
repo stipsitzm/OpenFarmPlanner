@@ -70,34 +70,26 @@ export default function FieldsBedsPage() {
 
   useCommandContextTag('areas');
 
+  const changeViewMode = useCallback((nextViewMode?: ViewMode): void => {
+    setViewMode((currentViewMode) => (
+      nextViewMode ?? (currentViewMode === 'table' ? 'graphical' : 'table')
+    ));
+  }, []);
+
   const commands = useMemo<CommandSpec[]>(() => [
     {
-      id: 'areas.showListView',
-      label: 'Listenansicht öffnen',
+      id: 'areas.toggleView',
+      label: t(viewMode === 'table'
+        ? 'fields:representation.openGraphical'
+        : 'fields:representation.openTable'),
       group: 'navigation',
-      keywords: ['liste', 'tabelle', 'anbauflächen'],
+      keywords: ['liste', 'tabelle', 'grafik', 'grafisch', 'anbauflächen'],
       shortcutHint: 'Alt+G',
       keys: { alt: true, key: 'g' },
       contextTags: ['areas'],
-      isEnabled: () => viewMode !== 'table',
-      action: () => {
-        setViewMode('table');
-      },
+      action: changeViewMode,
     },
-    {
-      id: 'areas.showGraphicalView',
-      label: 'Grafikansicht öffnen',
-      group: 'navigation',
-      keywords: ['grafik', 'grafisch', 'anbauflächen'],
-      shortcutHint: 'Alt+G',
-      keys: { alt: true, key: 'g' },
-      contextTags: ['areas'],
-      isEnabled: () => viewMode !== 'graphical',
-      action: () => {
-        setViewMode('graphical');
-      },
-    },
-  ], [viewMode]);
+  ], [changeViewMode, t, viewMode]);
 
   useRegisterCommands('areas-view-switch', commands);
 
@@ -235,7 +227,7 @@ export default function FieldsBedsPage() {
     {
       id: 'fields-view-mode-list',
       label: t('fields:representation.table'),
-      onClick: () => setViewMode('table'),
+      onClick: () => changeViewMode('table'),
       active: viewMode === 'table',
       ariaLabel: t('fields:representation.ariaLabel'),
       groupId: 'fields-view-mode',
@@ -243,12 +235,12 @@ export default function FieldsBedsPage() {
     {
       id: 'fields-view-mode-graphical',
       label: t('fields:representation.graphical'),
-      onClick: () => setViewMode('graphical'),
+      onClick: () => changeViewMode('graphical'),
       active: viewMode === 'graphical',
       ariaLabel: t('fields:representation.ariaLabel'),
       groupId: 'fields-view-mode',
     },
-  ]), [t, viewMode]);
+  ]), [changeViewMode, t, viewMode]);
 
   const contextActions = useMemo<TopbarContextAction[]>(() => {
     const globalActions: TopbarContextAction[] = shouldShowProjectRequiredState

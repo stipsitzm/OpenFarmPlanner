@@ -26,7 +26,9 @@
     "label": "Darstellung",
     "ariaLabel": "Darstellung auswählen",
     "table": "Liste",
-    "graphical": "Grafik"
+    "graphical": "Grafik",
+    "openTable": "Listenansicht öffnen",
+    "openGraphical": "Grafikansicht öffnen"
   },
   "graphical": {
     "title": "Grafische Ansicht der Anbauflächen",

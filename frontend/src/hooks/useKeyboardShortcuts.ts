@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
 export interface ShortcutKeys {
   alt?: boolean;
@@ -73,6 +73,13 @@ export function useKeyboardShortcuts(
   options: UseKeyboardShortcutsOptions,
 ): void {
   const { currentContexts, allowWhenTyping = false } = options;
+  const shortcutsRef = useRef(shortcuts);
+  const currentContextsRef = useRef(currentContexts);
+
+  useLayoutEffect(() => {
+    shortcutsRef.current = shortcuts;
+    currentContextsRef.current = currentContexts;
+  }, [currentContexts, shortcuts]);
 
   useEffect(() => {
     if (!enabled) {
@@ -88,8 +95,8 @@ export function useKeyboardShortcuts(
         return;
       }
 
-      const matchedShortcut = shortcuts.find((shortcut) => {
-        const inContext = shortcut.contexts.every((context) => currentContexts.includes(context));
+      const matchedShortcut = shortcutsRef.current.find((shortcut) => {
+        const inContext = shortcut.contexts.every((context) => currentContextsRef.current.includes(context));
         if (!inContext) {
           return false;
         }
@@ -114,5 +121,5 @@ export function useKeyboardShortcuts(
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [allowWhenTyping, currentContexts, enabled, shortcuts]);
+  }, [allowWhenTyping, enabled]);
 }

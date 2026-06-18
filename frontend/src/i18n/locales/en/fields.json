@@ -26,7 +26,9 @@
     "label": "Representation",
     "ariaLabel": "Select representation",
     "table": "List",
-    "graphical": "Graphic"
+    "graphical": "Graphic",
+    "openTable": "Open list view",
+    "openGraphical": "Open graphical view"
   },
   "graphical": {
     "title": "Graphical field view",

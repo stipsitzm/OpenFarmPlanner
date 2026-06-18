@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { matchesShortcut, isTypingInEditableElement, useKeyboardShortcuts, type ShortcutSpec } from '../hooks/useKeyboardShortcuts';
 import { CommandPalette } from '../commands/CommandPalette';
 import { filterCommands } from '../commands/commandPaletteUtils';
@@ -56,6 +56,44 @@ describe('useKeyboardShortcuts context guard', () => {
 
     fireEvent.keyDown(window, { key: 'e', altKey: true });
     expect(action).not.toHaveBeenCalled();
+  });
+
+  it('uses the latest shortcut action without registering duplicate listeners', () => {
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+    const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+
+    function ToggleHarness(): JSX.Element {
+      const [view, setView] = useState<'table' | 'graphical'>('table');
+      const toggleView = useCallback(() => {
+        setView((currentView) => currentView === 'table' ? 'graphical' : 'table');
+      }, []);
+      const shortcut: ShortcutSpec = {
+        id: 'areas.toggleView',
+        title: view === 'table' ? 'Grafikansicht öffnen' : 'Listenansicht öffnen',
+        keys: { alt: true, key: 'g' },
+        contexts: ['areas'],
+        action: toggleView,
+      };
+
+      useKeyboardShortcuts([shortcut], true, { currentContexts: ['areas'] });
+
+      return <div data-testid="view">{view}</div>;
+    }
+
+    const { unmount } = render(<ToggleHarness />);
+
+    for (const expectedView of ['graphical', 'table', 'graphical', 'table', 'graphical'] as const) {
+      fireEvent.keyDown(window, { key: 'g', altKey: true });
+      expect(screen.getByTestId('view')).toHaveTextContent(expectedView);
+    }
+
+    const keydownRegistrations = addEventListenerSpy.mock.calls.filter(([type]) => type === 'keydown');
+    expect(keydownRegistrations).toHaveLength(1);
+
+    unmount();
+
+    const keydownCleanups = removeEventListenerSpy.mock.calls.filter(([type]) => type === 'keydown');
+    expect(keydownCleanups).toHaveLength(1);
   });
 });
 
