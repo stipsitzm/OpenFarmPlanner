@@ -147,24 +147,18 @@ function renderHierarchyDeleteIconButton(
           }
         }}
         sx={{
-          p: 0,
-          width: 20,
-          height: 20,
-          border: '1px solid',
-          borderColor: 'error.light',
+          p: 0.5,
           color: 'error.main',
           '& .MuiSvgIcon-root': {
-            fontSize: 12,
+            fontSize: 18,
           },
           '&:hover': {
-            bgcolor: 'error.50',
-            color: 'error.dark',
-            borderColor: 'error.main',
+            bgcolor: 'action.hover',
           },
-          '&:focus-visible': {
+          '&.Mui-focusVisible': {
             outline: '2px solid',
             outlineColor: 'error.main',
-            outlineOffset: '2px',
+            outlineOffset: 1,
           },
         }}
       >
