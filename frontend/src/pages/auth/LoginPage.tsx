@@ -114,6 +114,7 @@ export default function LoginPage() {
                     <IconButton
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                       edge="end"
+                      tabIndex={-1}
                       onClick={() => setShowPassword((current) => !current)}
                       onMouseDown={(event) => event.preventDefault()}
                     >

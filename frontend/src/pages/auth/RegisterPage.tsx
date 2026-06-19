@@ -19,6 +19,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [registrationSucceeded, setRegistrationSucceeded] = useState(false);
   const [pendingInvitation, setPendingInvitation] = useState<InvitationPublicStatus | null>(null);
   const nextPath = getNextFromSearch(location.search);
   const isLoggedIn = user !== null;
@@ -56,6 +57,7 @@ export default function RegisterPage() {
       }
       const message = await register(email.trim().toLowerCase(), password, passwordConfirm, displayName.trim());
       setSuccess(pendingInvitation ? t('projectInvitations:registerSuccessWithInvitation', { detail: message }) : message);
+      setRegistrationSucceeded(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth:register.failed'));
     } finally {
@@ -120,7 +122,7 @@ export default function RegisterPage() {
           <TextField label={t('auth:register.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoggedIn} />
           <TextField label={t('auth:register.passwordConfirm')} type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} required disabled={isLoggedIn} />
           <Button type="submit" variant="contained" disabled={submitting || isLoggedIn}>{submitting ? t('auth:register.submitting') : t('auth:register.submit')}</Button>
-          <Button type="button" onClick={() => void handleResend()} disabled={!email || isLoggedIn}>{t('auth:register.resendActivation')}</Button>
+          <Button type="button" onClick={() => void handleResend()} disabled={!email || isLoggedIn || !registrationSucceeded}>{t('auth:register.resendActivation')}</Button>
           <Button type="button" component={RouterLink} to={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'} state={location.state}>{t('auth:register.hasAccount')}</Button>
         </Stack>
       </Box>
