@@ -91,6 +91,8 @@ vi.mock('@mui/x-data-grid', async () => {
     enterKeyDown: 'enterKeyDown',
     escapeKeyDown: 'escapeKeyDown',
     rowFocusOut: 'rowFocusOut',
+    shiftTabKeyDown: 'shiftTabKeyDown',
+    tabKeyDown: 'tabKeyDown',
   };
 
   const useGridApiRef = vi.fn(() => ({
@@ -146,7 +148,11 @@ vi.mock('@mui/x-data-grid', async () => {
         { id: row.id, reason },
         { defaultMuiPrevented: false, stopPropagation: vi.fn() },
       );
-      if (reason === GridRowEditStopReasons.enterKeyDown) {
+      if (
+        reason === GridRowEditStopReasons.enterKeyDown ||
+        reason === GridRowEditStopReasons.tabKeyDown ||
+        reason === GridRowEditStopReasons.shiftTabKeyDown
+      ) {
         onRowModesModelChange?.({
           ...rowModesModel,
           [row.id]: { mode: GridRowModes.View },
@@ -176,6 +182,19 @@ vi.mock('@mui/x-data-grid', async () => {
             ) {
               void commitBlur(row, GridRowEditStopReasons.enterKeyDown);
             }
+            if (
+              event.key === 'Tab' &&
+              mode === GridRowModes.Edit &&
+              !(event as React.KeyboardEvent & { defaultMuiPrevented?: boolean }).defaultMuiPrevented &&
+              !event.isPropagationStopped()
+            ) {
+              void commitBlur(
+                row,
+                event.shiftKey
+                  ? GridRowEditStopReasons.shiftTabKeyDown
+                  : GridRowEditStopReasons.tabKeyDown,
+              );
+            }
           };
 
           return (
@@ -184,6 +203,7 @@ vi.mock('@mui/x-data-grid', async () => {
               <span data-testid={`focus-field-${row.id}`}>{rowModesModel[row.id]?.fieldToFocus ?? ''}</span>
               {columns.map((column) => {
                 const editable = Boolean(column.editable) && (isCellEditable?.({ row, field: column.field }) ?? true);
+                const keyboardFocusable = editable || column.field === 'notes';
                 const cellClassName = typeof column.cellClassName === 'function'
                   ? column.cellClassName({ row, field: column.field } as never)
                   : column.cellClassName;
@@ -194,7 +214,7 @@ vi.mock('@mui/x-data-grid', async () => {
                       data-testid={`cell-${row.id}-${column.field}`}
                       key={`${row.id}-${column.field}`}
                       onKeyDown={(event) => handleCellKeyDown(column.field, editable, event)}
-                      tabIndex={editable ? 0 : -1}
+                      tabIndex={keyboardFocusable ? 0 : -1}
                     >
                       {column.renderCell({
                         api: {},
@@ -215,7 +235,7 @@ vi.mock('@mui/x-data-grid', async () => {
                     type="button"
                     onClick={() => onCellClick?.({ id: row.id, field: column.field, isEditable: editable, row })}
                     onKeyDown={(event) => handleCellKeyDown(column.field, editable, event)}
-                    tabIndex={editable ? 0 : -1}
+                    tabIndex={keyboardFocusable ? 0 : -1}
                   >
                     {`Cell ${row.id}-${column.field}`}
                   </button>
@@ -461,10 +481,59 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     const locationNameCell = await screen.findByTestId('cell-location-1-name');
     fireEvent.keyDown(locationNameCell, { key: 'ArrowRight' });
 
-    expect(setCellFocusMock).toHaveBeenCalledWith('field-10', 'name');
-    expect(screen.getByTestId('cell-field-10-name')).toHaveFocus();
+    expect(setCellFocusMock).toHaveBeenCalledWith('location-1', 'notes');
+    expect(screen.getByTestId('cell-location-1-notes')).toHaveFocus();
     expect(setCellFocusMock).not.toHaveBeenCalledWith('location-1', 'length_m');
     expect(setCellFocusMock).not.toHaveBeenCalledWith('location-1', 'width_m');
+    expect(setCellFocusMock).not.toHaveBeenCalledWith('location-1', 'area_sqm');
+  });
+
+  it('uses only Name and Notes for location arrow navigation', async () => {
+    useMultipleLocations();
+    renderHierarchy();
+
+    const nameCell = await screen.findByTestId('cell-location-1-name');
+    const notesCell = screen.getByTestId('cell-location-1-notes');
+
+    fireEvent.keyDown(nameCell, { key: 'ArrowRight' });
+    expect(notesCell).toHaveFocus();
+
+    fireEvent.keyDown(notesCell, { key: 'ArrowLeft' });
+    expect(nameCell).toHaveFocus();
+  });
+
+  it('uses Name, Length, Width, and Notes for parcel and bed arrow navigation', async () => {
+    bedListMock.mockResolvedValue({ data: { results: [{ id: 21, name: 'Beet A', field: 10 }] } });
+    renderHierarchy();
+
+    const parcelFields = ['name', 'length_m', 'width_m', 'notes'];
+    for (let index = 0; index < parcelFields.length - 1; index += 1) {
+      fireEvent.keyDown(
+        await screen.findByTestId(`cell-field-10-${parcelFields[index]}`),
+        { key: 'ArrowRight' },
+      );
+      expect(screen.getByTestId(`cell-field-10-${parcelFields[index + 1]}`)).toHaveFocus();
+    }
+
+    const bedFields = ['name', 'length_m', 'width_m', 'notes'];
+    for (let index = 0; index < bedFields.length - 1; index += 1) {
+      fireEvent.keyDown(
+        screen.getByTestId(`cell-21-${bedFields[index]}`),
+        { key: 'ArrowRight' },
+      );
+      expect(screen.getByTestId(`cell-21-${bedFields[index + 1]}`)).toHaveFocus();
+    }
+  });
+
+  it('keeps Area cells outside Tab and arrow navigation', async () => {
+    renderHierarchy();
+
+    const areaCell = await screen.findByTestId('cell-field-10-area_sqm');
+    expect(areaCell).toHaveAttribute('tabindex', '-1');
+
+    fireEvent.keyDown(screen.getByTestId('cell-field-10-width_m'), { key: 'ArrowRight' });
+    expect(screen.getByTestId('cell-field-10-notes')).toHaveFocus();
+    expect(setCellFocusMock).not.toHaveBeenCalledWith('field-10', 'area_sqm');
   });
 
   it('cancels inline Standort editing with Escape without saving', async () => {
@@ -590,6 +659,60 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     await waitFor(() => expect(setCellFocusMock).toHaveBeenCalledWith(21, 'width_m'));
     expect(widthCell).toHaveFocus();
     expect(setCellFocusMock).not.toHaveBeenCalledWith(21, 'name');
+  });
+
+  it('moves through parcel editable cells with Tab and reaches Notes', async () => {
+    const user = userEvent.setup();
+    renderHierarchy();
+
+    const nameCell = await screen.findByTestId('cell-field-10-name');
+    fireEvent.keyDown(nameCell, { key: 'Enter' });
+    expect(screen.getByTestId('focus-field-field-10')).toHaveTextContent('name');
+
+    fireEvent.keyDown(nameCell, { key: 'Tab' });
+    expect(setCellFocusMock).toHaveBeenCalledWith('field-10', 'length_m');
+    expect(screen.getByTestId('mode-field-10')).toHaveTextContent('edit');
+
+    const lengthCell = screen.getByTestId('cell-field-10-length_m');
+    fireEvent.keyDown(lengthCell, { key: 'Tab' });
+    expect(setCellFocusMock).toHaveBeenCalledWith('field-10', 'width_m');
+    expect(screen.getByTestId('mode-field-10')).toHaveTextContent('edit');
+
+    await user.click(screen.getByRole('button', { name: 'Width value field-10' }));
+    fireEvent.keyDown(screen.getByTestId('cell-field-10-width_m'), { key: 'Tab' });
+
+    await waitFor(() => expect(fieldUpdateMock).toHaveBeenCalled());
+    expect(screen.getByTestId('mode-field-10')).toHaveTextContent('view');
+    await waitFor(() => expect(setCellFocusMock).toHaveBeenCalledWith('field-10', 'notes'));
+    expect(screen.getByTestId('cell-field-10-notes')).toHaveFocus();
+    expect(setCellFocusMock).not.toHaveBeenCalledWith('field-10', 'area_sqm');
+  });
+
+  it('moves from location Name directly to Notes with Tab', async () => {
+    const user = userEvent.setup();
+    useMultipleLocations();
+    renderHierarchy();
+
+    const nameCell = await screen.findByTestId('cell-location-1-name');
+    fireEvent.keyDown(nameCell, { key: 'Enter' });
+    await user.click(screen.getByRole('button', { name: 'Partial name location-1' }));
+    fireEvent.keyDown(nameCell, { key: 'Tab' });
+
+    await waitFor(() => expect(locationUpdateMock).toHaveBeenCalled());
+    expect(screen.getByTestId('mode-location-1')).toHaveTextContent('view');
+    await waitFor(() => expect(setCellFocusMock).toHaveBeenCalledWith('location-1', 'notes'));
+    expect(screen.getByTestId('cell-location-1-notes')).toHaveFocus();
+  });
+
+  it('moves backward through editable cells with Shift+Tab', async () => {
+    renderHierarchy();
+
+    const widthCell = await screen.findByTestId('cell-field-10-width_m');
+    fireEvent.keyDown(widthCell, { key: 'Enter' });
+    fireEvent.keyDown(widthCell, { key: 'Tab', shiftKey: true });
+
+    expect(setCellFocusMock).toHaveBeenCalledWith('field-10', 'length_m');
+    expect(screen.getByTestId('mode-field-10')).toHaveTextContent('edit');
   });
 
   it('keeps Enter independent from expansion and uses Space to toggle rows', async () => {
