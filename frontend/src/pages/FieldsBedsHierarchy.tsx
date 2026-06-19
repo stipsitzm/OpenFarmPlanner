@@ -338,6 +338,7 @@ function FieldsBedsHierarchy({
   const hasInitiallyExpandedRef = useRef(false);
   const handledCreateFieldRequestRef = useRef(0);
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
+  const activeEditFieldRef = useRef<string>("name");
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
   const touchLongPressTimeoutRef = useRef<number | null>(null);
   const contextMenuOriginRef = useRef<HTMLElement | null>(null);
@@ -785,11 +786,11 @@ function FieldsBedsHierarchy({
     discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
   }, [discardRowEdit, rowModesModel, rowsById]);
 
-  const restoreHierarchyRowFocus = useCallback((rowId: GridRowId): void => {
+  const restoreHierarchyRowFocus = useCallback((rowId: GridRowId, field: string): void => {
     setSelectedRowId(rowId);
     setTreeActive(true);
     window.setTimeout(() => {
-      gridApiRef.current?.setCellFocus(rowId, "name");
+      gridApiRef.current?.setCellFocus(rowId, field);
     }, 0);
   }, [gridApiRef]);
 
@@ -801,7 +802,7 @@ function FieldsBedsHierarchy({
     }
 
     if (params.reason === GridRowEditStopReasons.enterKeyDown) {
-      restoreHierarchyRowFocus(params.id);
+      restoreHierarchyRowFocus(params.id, activeEditFieldRef.current);
     }
   }, [discardRowEdit, restoreHierarchyRowFocus]);
 
@@ -1375,6 +1376,7 @@ function FieldsBedsHierarchy({
     }
 
     rememberRowSnapshot(selectedRow.id);
+    activeEditFieldRef.current = "name";
     setRowModesModel((previous) => ({
       ...previous,
       [selectedRow.id]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
@@ -1383,6 +1385,7 @@ function FieldsBedsHierarchy({
 
   const startRowEdit = useCallback((row: HierarchyRow): void => {
     rememberRowSnapshot(row.id);
+    activeEditFieldRef.current = "name";
     setSelectedRowId(row.id);
     setTreeActive(true);
     setRowModesModel((previous) => ({
@@ -1593,117 +1596,12 @@ function FieldsBedsHierarchy({
       }
     };
 
-    const handleTreeNavigation = (event: KeyboardEvent) => {
-      if (contextMenuState !== null || !treeActive || !selectedRowId) {
-        return;
-      }
-
-      if (isTypingInEditableElement(document.activeElement)) {
-        return;
-      }
-
-      const currentIndex = rows.findIndex((row) => row.id === selectedRowId);
-      if (currentIndex === -1) {
-        return;
-      }
-
-      const currentRow = rows[currentIndex];
-      if (!currentRow) {
-        return;
-      }
-
-      if (event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey && event.key === "Enter") {
-        if (currentRow.type === "bed" && hasPersistedEntityId(currentRow.bedId)) {
-          event.preventDefault();
-          event.stopPropagation();
-          event.stopImmediatePropagation();
-          handleCreatePlantingPlan(currentRow.bedId);
-        }
-        return;
-      }
-
-      if (!event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          event.stopPropagation();
-          event.stopImmediatePropagation();
-          startRowEdit(currentRow);
-          return;
-        }
-
-        if (event.key === " " || event.key === "Spacebar") {
-          event.preventDefault();
-          event.stopPropagation();
-          event.stopImmediatePropagation();
-          if (
-            (currentRow.type === "location" || currentRow.type === "field") &&
-            currentRow.hasChildren === true
-          ) {
-            toggleExpand(currentRow.id);
-          }
-          return;
-        }
-
-        if (event.key === "Delete") {
-          event.preventDefault();
-          event.stopPropagation();
-          event.stopImmediatePropagation();
-          void deleteHierarchyRowWithUndo(currentRow);
-          return;
-        }
-      }
-
-      let performedAction = false;
-      let targetRowId: string | number | null = selectedRowId;
-
-      if (event.key === "ArrowDown") {
-        const nextRow = rows[currentIndex + 1];
-        if (nextRow) {
-          targetRowId = nextRow.id;
-          setSelectedRowId(nextRow.id);
-          performedAction = true;
-        }
-      } else if (event.key === "ArrowUp") {
-        const previousRow = rows[currentIndex - 1];
-        if (previousRow) {
-          targetRowId = previousRow.id;
-          setSelectedRowId(previousRow.id);
-          performedAction = true;
-        }
-      }
-
-      if (!performedAction) {
-        return;
-      }
-
-      event.preventDefault();
-
-      const selectedElement = document.querySelector(
-        `[data-id="${String(targetRowId ?? selectedRowId)}"]`,
-      );
-      if (selectedElement instanceof HTMLElement) {
-        selectedElement.scrollIntoView({ block: "nearest" });
-      }
-    };
-
     document.addEventListener("mousedown", handleDocumentPointerDown);
-    window.addEventListener("keydown", handleTreeNavigation);
 
     return () => {
       document.removeEventListener("mousedown", handleDocumentPointerDown);
-      window.removeEventListener("keydown", handleTreeNavigation);
     };
-  }, [
-    contextMenuState,
-    deleteHierarchyRowWithUndo,
-    discardActiveRowEdit,
-    handleCreatePlantingPlan,
-    rows,
-    selectedRowId,
-    startRowEdit,
-    toggleExpand,
-    treeActive,
-  ]);
+  }, [discardActiveRowEdit]);
 
   useEffect(() => {
     const handleContextMenuKeyboard = (event: KeyboardEvent) => {
@@ -2024,6 +1922,7 @@ function FieldsBedsHierarchy({
                   discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
                 }
                 rememberRowSnapshot(params.id);
+                activeEditFieldRef.current = params.field;
                 setSelectedRowId(params.id);
                 setTreeActive(true);
                 handleEditableCellClick(params, rowModesModel, setRowModesModel);
@@ -2045,6 +1944,7 @@ function FieldsBedsHierarchy({
                 }
 
                 if (isEditing && keyboardEvent.key === "Enter") {
+                  activeEditFieldRef.current = params.field;
                   setSelectedRowId(params.id);
                   setTreeActive(true);
                   return;
@@ -2082,7 +1982,10 @@ function FieldsBedsHierarchy({
                   return;
                 }
 
-                if (keyboardEvent.key === " " || keyboardEvent.key === "Spacebar") {
+                if (
+                  params.field === "name" &&
+                  (keyboardEvent.key === " " || keyboardEvent.key === "Spacebar")
+                ) {
                   keyboardEvent.preventDefault();
                   keyboardEvent.stopPropagation();
                   keyboardEvent.defaultMuiPrevented = true;
@@ -2106,11 +2009,21 @@ function FieldsBedsHierarchy({
                   return;
                 }
 
-                if (keyboardEvent.key === "Enter" && targetRow) {
+                if (keyboardEvent.key === "Enter" && targetRow && params.isEditable) {
                   keyboardEvent.preventDefault();
                   keyboardEvent.stopPropagation();
                   keyboardEvent.defaultMuiPrevented = true;
-                  startRowEdit(targetRow);
+                  rememberRowSnapshot(params.id);
+                  activeEditFieldRef.current = params.field;
+                  setSelectedRowId(params.id);
+                  setTreeActive(true);
+                  setRowModesModel((previousModel) => ({
+                    ...previousModel,
+                    [params.id]: {
+                      mode: GridRowModes.Edit,
+                      fieldToFocus: params.field,
+                    },
+                  }));
                 }
               }}
               localeText={germanDataGridLocaleText}

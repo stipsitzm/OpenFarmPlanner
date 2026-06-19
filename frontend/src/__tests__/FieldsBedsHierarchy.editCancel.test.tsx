@@ -125,7 +125,7 @@ vi.mock('@mui/x-data-grid', async () => {
     ) => void;
     onRowModesModelChange?: (model: Record<string, { mode: string }>) => void;
     processRowUpdate?: (row: Record<string, unknown>) => Promise<Record<string, unknown>>;
-    rowModesModel: Record<string, { mode: string }>;
+    rowModesModel: Record<string, { mode: string; fieldToFocus?: string }>;
     rows: Array<Record<string, unknown> & { id: string | number }>;
   }) => {
     if (apiRef?.current) {
@@ -181,6 +181,7 @@ vi.mock('@mui/x-data-grid', async () => {
           return (
             <div data-id={String(row.id)} data-testid={`row-${row.id}`} key={String(row.id)} role="row">
               <span data-testid={`mode-${row.id}`}>{mode}</span>
+              <span data-testid={`focus-field-${row.id}`}>{rowModesModel[row.id]?.fieldToFocus ?? ''}</span>
               {columns.map((column) => {
                 const editable = Boolean(column.editable) && (isCellEditable?.({ row, field: column.field }) ?? true);
                 if (typeof column.renderCell === 'function') {
@@ -239,6 +240,22 @@ vi.mock('@mui/x-data-grid', async () => {
                 }}
               >
                 {`Partial invalid ${row.id}`}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  mockDrafts.set(String(row.id), { ...row, length_m: 12 });
+                }}
+              >
+                {`Length value ${row.id}`}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  mockDrafts.set(String(row.id), { ...row, width_m: 4 });
+                }}
+              >
+                {`Width value ${row.id}`}
               </button>
               <button
                 type="button"
@@ -483,6 +500,55 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     expect(bedNameCell).toHaveFocus();
   });
 
+  it('starts and saves length editing without redirecting focus to the name cell', async () => {
+    const user = userEvent.setup();
+    renderHierarchy();
+
+    const lengthCell = await screen.findByTestId('cell-field-10-length_m');
+    fireEvent.keyDown(lengthCell, { key: 'Enter' });
+
+    expect(screen.getByTestId('mode-field-10')).toHaveTextContent('edit');
+    expect(screen.getByTestId('focus-field-field-10')).toHaveTextContent('length_m');
+
+    await user.click(screen.getByRole('button', { name: 'Length value field-10' }));
+    fireEvent.keyDown(lengthCell, { key: 'Enter' });
+
+    await waitFor(() => expect(fieldUpdateMock).toHaveBeenCalledWith(
+      10,
+      expect.objectContaining({ length_m: 12 }),
+    ));
+    expect(screen.getByTestId('mode-field-10')).toHaveTextContent('view');
+    await waitFor(() => expect(setCellFocusMock).toHaveBeenCalledWith('field-10', 'length_m'));
+    expect(lengthCell).toHaveFocus();
+    expect(setCellFocusMock).not.toHaveBeenCalledWith('field-10', 'name');
+  });
+
+  it('starts and saves width editing without redirecting focus to the name cell', async () => {
+    const user = userEvent.setup();
+    bedListMock.mockResolvedValue({
+      data: { results: [{ id: 21, name: 'Beet A', field: 10, area_sqm: 10 }] },
+    });
+    renderHierarchy();
+
+    const widthCell = await screen.findByTestId('cell-21-width_m');
+    fireEvent.keyDown(widthCell, { key: 'Enter' });
+
+    expect(screen.getByTestId('mode-21')).toHaveTextContent('edit');
+    expect(screen.getByTestId('focus-field-21')).toHaveTextContent('width_m');
+
+    await user.click(screen.getByRole('button', { name: 'Width value 21' }));
+    fireEvent.keyDown(widthCell, { key: 'Enter' });
+
+    await waitFor(() => expect(bedUpdateMock).toHaveBeenCalledWith(
+      21,
+      expect.objectContaining({ width_m: 4 }),
+    ));
+    expect(screen.getByTestId('mode-21')).toHaveTextContent('view');
+    await waitFor(() => expect(setCellFocusMock).toHaveBeenCalledWith(21, 'width_m'));
+    expect(widthCell).toHaveFocus();
+    expect(setCellFocusMock).not.toHaveBeenCalledWith(21, 'name');
+  });
+
   it('keeps Enter independent from expansion and uses Space to toggle rows', async () => {
     useMultipleLocations();
     renderHierarchy();
@@ -492,6 +558,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
     fireEvent.keyDown(locationNameCell, { key: 'Enter' });
     expect(screen.getByTestId('mode-location-1')).toHaveTextContent('edit');
+    expect(screen.getByTestId('focus-field-location-1')).toHaveTextContent('name');
     expect(screen.getByTestId('row-field-10')).toBeInTheDocument();
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Escape location-1' }));
@@ -500,6 +567,21 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
     fireEvent.keyDown(locationNameCell, { key: 'ArrowRight' });
     expect(screen.queryByTestId('row-field-10')).not.toBeInTheDocument();
+  });
+
+  it('does not toggle expansion or start rename from numeric-cell keyboard navigation', async () => {
+    useMultipleLocations();
+    renderHierarchy();
+
+    const lengthCell = await screen.findByTestId('cell-field-10-length_m');
+    expect(screen.getByTestId('row-field-10')).toBeInTheDocument();
+
+    fireEvent.keyDown(lengthCell, { key: ' ' });
+    expect(screen.getByTestId('row-field-10')).toBeInTheDocument();
+    expect(screen.getByTestId('mode-field-10')).toHaveTextContent('view');
+
+    expect(fireEvent.keyDown(lengthCell, { key: 'ArrowRight' })).toBe(true);
+    expect(screen.getByTestId('mode-field-10')).toHaveTextContent('view');
   });
 
   it('deletes the focused row with Delete', async () => {
