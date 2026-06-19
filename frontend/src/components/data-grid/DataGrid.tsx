@@ -715,8 +715,8 @@ export function EditableDataGrid<T extends EditableRow>({
     if (initialRow && !initialRowProcessedRef.current && dataFetched && !loading) {
       initialRowProcessedRef.current = true;
       const newRow = { ...createNewRow(), ...initialRow };
-      setRows((oldRows) => [newRow, ...oldRows]);
-      setStableRowOrder((previousOrder) => [newRow.id, ...previousOrder]);
+      setRows((oldRows) => [...oldRows, newRow]);
+      setStableRowOrder((previousOrder) => [...previousOrder, newRow.id]);
       // Set row to edit mode after a small delay to ensure row is added first
       setTimeout(() => {
         setRowModesModel((oldModel) => ({
@@ -732,8 +732,8 @@ export function EditableDataGrid<T extends EditableRow>({
    */
   const handleAddClick = (): void => {
     const newRow = createNewRow();
-    setRows((oldRows) => [newRow, ...oldRows]);
-    setStableRowOrder((previousOrder) => [newRow.id, ...previousOrder]);
+    setRows((oldRows) => [...oldRows, newRow]);
+    setStableRowOrder((previousOrder) => [...previousOrder, newRow.id]);
     setRowModesModel((oldModel) => ({
       ...oldModel,
       [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus: columns[0]?.field },
