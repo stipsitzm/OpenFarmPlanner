@@ -19,7 +19,7 @@ msgstr "Ein Konto mit dieser E-Mail-Adresse existiert bereits."
 
 #: accounts/serializers.py:84 accounts/serializers.py:125
 msgid "Passwords do not match."
-msgstr "Die Passwoerter stimmen nicht ueberein."
+msgstr "Die Passwörter stimmen nicht überein."
 
 #: accounts/templates/accounts/emails/activation_email.txt:1
 #, python-format
@@ -67,7 +67,7 @@ msgstr "Falls das Konto existiert, wurde eine E-Mail gesendet."
 
 #: accounts/views.py:46
 msgid "Registration successful. Please check your email to activate your account."
-msgstr "Registrierung erfolgreich. Bitte pruefe deine E-Mails, um dein Konto zu aktivieren."
+msgstr "Registrierung erfolgreich. Bitte prüfe deine E-Mails, um dein Konto zu aktivieren."
 
 #: accounts/views.py:49
 msgid ""
@@ -92,15 +92,15 @@ msgstr "CSRF-Cookie gesetzt"
 
 #: accounts/views.py:128
 msgid "Invalid activation link."
-msgstr "Ungueltiger Aktivierungslink."
+msgstr "Ungültiger Aktivierungslink."
 
 #: accounts/views.py:133
 msgid "Invalid or expired activation token."
-msgstr "Ungueltiges oder abgelaufenes Aktivierungs-Token."
+msgstr "Ungültiges oder abgelaufenes Aktivierungs-Token."
 
 #: accounts/views.py:153
 msgid "Invalid credentials."
-msgstr "Ungueltige Zugangsdaten."
+msgstr "Ungültige Zugangsdaten."
 
 #: accounts/views.py:156
 msgid "Account is not activated yet."
@@ -116,12 +116,12 @@ msgstr "Authentifizierungsdaten wurden nicht bereitgestellt."
 
 #: accounts/views.py:215 accounts/views.py:219
 msgid "Invalid reset link."
-msgstr "Ungueltiger Zuruecksetzungslink."
+msgstr "Ungültiger Zurücksetzungslink."
 
 #: accounts/views.py:223
 msgid "Invalid or expired reset token."
-msgstr "Ungueltiges oder abgelaufenes Zuruecksetzungs-Token."
+msgstr "Ungültiges oder abgelaufenes Zurücksetzungs-Token."
 
 #: accounts/views.py:227
 msgid "Password has been reset successfully."
-msgstr "Das Passwort wurde erfolgreich zurueckgesetzt."
+msgstr "Das Passwort wurde erfolgreich zurückgesetzt."
