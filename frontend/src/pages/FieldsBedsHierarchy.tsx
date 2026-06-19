@@ -61,6 +61,7 @@ import { fieldAPI, bedAPI, locationAPI, type Bed, type Field, type Location as F
 import {
   buildHierarchyIndex,
   createHierarchyRowsProjector,
+  hasPersistedEntityId,
   type HierarchySortConfig,
 } from "../components/hierarchy/utils/hierarchyUtils";
 import {
@@ -1250,6 +1251,42 @@ function FieldsBedsHierarchy({
     const deletedLocationIds = new Set(deletedLocations.map((locationItem) => locationItem.id));
     const deletedFieldIds = new Set(deletedFields.map((field) => field.id));
     const deletedBedIds = new Set(deletedBeds.map((bed) => bed.id));
+    const removeDeletedItemsFromLocalState = (): void => {
+      setLocations((currentLocations) =>
+        currentLocations.filter((locationItem) => !deletedLocationIds.has(locationItem.id)),
+      );
+      setFields((currentFields) =>
+        currentFields.filter((field) => !deletedFieldIds.has(field.id)),
+      );
+      setBeds((currentBeds) =>
+        currentBeds.filter((bed) => !deletedBedIds.has(bed.id)),
+      );
+      setSelectedRowId((currentSelectedRowId) => {
+        if (currentSelectedRowId === null) {
+          return null;
+        }
+        const deletedRowIds = new Set<string | number>([
+          ...deletedLocations.map((locationItem) => `location-${locationItem.id}`),
+          ...deletedFields.map((field) => `field-${field.id}`),
+          ...deletedBeds.map((bed) => bed.id).filter((id): id is number => typeof id === "number"),
+        ]);
+        return deletedRowIds.has(currentSelectedRowId) ? null : currentSelectedRowId;
+      });
+    };
+
+    if (!hasPersistedEntityId(targetId)) {
+      removeDeletedItemsFromLocalState();
+      rowSnapshotRef.current.delete(String(row.id));
+      setRowModesModel((currentModel) => {
+        const nextModel = { ...currentModel };
+        delete nextModel[row.id];
+        return nextModel;
+      });
+      setDraftValidationWarning("");
+      setError("");
+      return;
+    }
+
     const pendingDeletion: PendingHierarchyDeletion = {
       id: deletionId,
       type: deletionType,
@@ -1276,26 +1313,7 @@ function FieldsBedsHierarchy({
       return;
     }
 
-    setLocations((currentLocations) =>
-      currentLocations.filter((locationItem) => !deletedLocationIds.has(locationItem.id)),
-    );
-    setFields((currentFields) =>
-      currentFields.filter((field) => !deletedFieldIds.has(field.id)),
-    );
-    setBeds((currentBeds) =>
-      currentBeds.filter((bed) => !deletedBedIds.has(bed.id)),
-    );
-    setSelectedRowId((currentSelectedRowId) => {
-      if (currentSelectedRowId === null) {
-        return null;
-      }
-      const deletedRowIds = new Set<string | number>([
-        ...deletedLocations.map((locationItem) => `location-${locationItem.id}`),
-        ...deletedFields.map((field) => `field-${field.id}`),
-        ...deletedBeds.map((bed) => bed.id).filter((id): id is number => typeof id === "number"),
-      ]);
-      return deletedRowIds.has(currentSelectedRowId) ? null : currentSelectedRowId;
-    });
+    removeDeletedItemsFromLocalState();
     setError("");
     onPendingDeletionCountChange?.(pendingDeletions.length + 1);
     setPendingDeletions((currentDeletions) => [...currentDeletions, pendingDeletion]);

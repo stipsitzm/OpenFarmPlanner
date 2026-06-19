@@ -8,6 +8,7 @@ import FieldsBedsHierarchy, {
   isCompletelyEmptyNewHierarchyRow,
   isPartiallyFilledNamelessNewHierarchyRow,
 } from '../pages/FieldsBedsHierarchy';
+import { hasPersistedEntityId } from '../components/hierarchy/utils/hierarchyUtils';
 import { mockT } from './helpers/testI18n';
 
 const {
@@ -301,6 +302,13 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     expect(isCompletelyEmptyNewHierarchyRow({ id: -1, type: 'bed', level: 1, isNew: true, name: '', field: 10 })).toBe(true);
     expect(isCompletelyEmptyNewHierarchyRow({ id: -1, type: 'bed', level: 1, isNew: true, name: '', field: 10, length_m: 2 })).toBe(false);
     expect(isPartiallyFilledNamelessNewHierarchyRow({ id: -1, type: 'bed', level: 1, isNew: true, name: '', field: 10, length_m: 2 })).toBe(true);
+  });
+
+  it('recognizes only positive integer hierarchy IDs as persisted', () => {
+    expect(hasPersistedEntityId(1)).toBe(true);
+    expect(hasPersistedEntityId(-1)).toBe(false);
+    expect(hasPersistedEntityId(0)).toBe(false);
+    expect(hasPersistedEntityId(undefined)).toBe(false);
   });
 
   it('creates exactly one editable parcel row for one create request', async () => {
@@ -633,6 +641,33 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     expect(screen.getByText('Beet gelöscht')).toBeInTheDocument();
     expect(screen.getByTestId('hierarchy-delete-snackbar')).toHaveAttribute('role', 'status');
     expect(screen.getByRole('button', { name: /Rückgängig: Beet gelöscht/i })).toBeInTheDocument();
+  });
+
+  it('removes a newly created empty bed locally without calling the delete API', async () => {
+    renderHierarchy();
+    await addNewBed();
+
+    deleteRowViaContextMenu(screen.getByTestId('row--1700000000000'));
+
+    await waitFor(() => expect(screen.queryByTestId('row--1700000000000')).not.toBeInTheDocument());
+    expect(bedDeleteMock).not.toHaveBeenCalled();
+    expect(fieldDeleteMock).not.toHaveBeenCalled();
+    expect(locationDeleteMock).not.toHaveBeenCalled();
+    expect(screen.queryByText('Fehler beim Löschen')).not.toBeInTheDocument();
+  });
+
+  it('removes a newly created empty parcel locally without calling the delete API', async () => {
+    fieldListMock.mockResolvedValue({ data: { results: [] } });
+    renderHierarchyWithCreateFieldRequest(1);
+
+    const fieldRow = await screen.findByTestId('row-field--1700000000000');
+    deleteRowViaContextMenu(fieldRow);
+
+    await waitFor(() => expect(screen.queryByTestId('row-field--1700000000000')).not.toBeInTheDocument());
+    expect(fieldDeleteMock).not.toHaveBeenCalled();
+    expect(bedDeleteMock).not.toHaveBeenCalled();
+    expect(locationDeleteMock).not.toHaveBeenCalled();
+    expect(screen.queryByText('Fehler beim Löschen')).not.toBeInTheDocument();
   });
 
   it('deletes a bed through the inline hover action and shows undo feedback', async () => {

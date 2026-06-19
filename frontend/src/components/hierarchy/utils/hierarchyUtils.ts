@@ -19,6 +19,10 @@ export interface HierarchyIndex {
   bedsByField: Map<number, Bed[]>;
 }
 
+export const hasPersistedEntityId = (id: number | undefined): id is number => (
+  typeof id === 'number' && Number.isInteger(id) && id > 0
+);
+
 const compareText = (left: string, right: string, direction: 'asc' | 'desc'): number => {
   const normalizedLeft = left.toLocaleLowerCase('de');
   const normalizedRight = right.toLocaleLowerCase('de');
