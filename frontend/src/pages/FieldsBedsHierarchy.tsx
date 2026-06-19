@@ -302,6 +302,10 @@ const HIERARCHY_DATA_GRID_SX = {
     backgroundColor: "surface.surfaceHoverBackground",
     boxShadow: "inset 0 0 0 9999px rgba(237, 108, 2, 0.14)",
   },
+  "& .ofp-hierarchy-cell-readonly": {
+    color: "text.disabled",
+    cursor: "default",
+  },
 };
 
 function FieldsBedsHierarchy({
@@ -1745,6 +1749,67 @@ function FieldsBedsHierarchy({
     return false;
   }, []);
 
+  useEffect(() => gridApiRef.current?.subscribeEvent?.(
+    "cellFocusIn",
+    (params: GridCellParams<HierarchyRow>) => {
+      if (
+        params.row.type === "location" &&
+        (params.field === "length_m" || params.field === "width_m")
+      ) {
+        gridApiRef.current?.setCellFocus(params.id, "name");
+      }
+    },
+  ), [gridApiRef]);
+
+  const focusAdjacentEditableCell = useCallback((
+    rowId: GridRowId,
+    field: string,
+    key: string,
+  ): boolean => {
+    const editableFields = ["name", "length_m", "width_m"];
+    const rowIndex = rows.findIndex((row) => row.id === rowId);
+    const fieldIndex = editableFields.indexOf(field);
+    if (rowIndex === -1 || fieldIndex === -1) {
+      return false;
+    }
+
+    let targetRowIndex = rowIndex;
+    let targetFieldIndex = fieldIndex;
+    if (key === "ArrowLeft" || key === "ArrowRight") {
+      const direction = key === "ArrowRight" ? 1 : -1;
+      let flatIndex = rowIndex * editableFields.length + fieldIndex + direction;
+      while (flatIndex >= 0 && flatIndex < rows.length * editableFields.length) {
+        targetRowIndex = Math.floor(flatIndex / editableFields.length);
+        targetFieldIndex = flatIndex % editableFields.length;
+        const targetRow = rows[targetRowIndex];
+        const targetField = editableFields[targetFieldIndex];
+        if (targetRow && targetField && isCellEditable({ row: targetRow, field: targetField })) {
+          gridApiRef.current?.setCellFocus(targetRow.id, targetField);
+          setSelectedRowId(targetRow.id);
+          return true;
+        }
+        flatIndex += direction;
+      }
+      return false;
+    }
+
+    if (key === "ArrowUp" || key === "ArrowDown") {
+      const direction = key === "ArrowDown" ? 1 : -1;
+      targetRowIndex += direction;
+      while (targetRowIndex >= 0 && targetRowIndex < rows.length) {
+        const targetRow = rows[targetRowIndex];
+        if (targetRow && isCellEditable({ row: targetRow, field })) {
+          gridApiRef.current?.setCellFocus(targetRow.id, field);
+          setSelectedRowId(targetRow.id);
+          return true;
+        }
+        targetRowIndex += direction;
+      }
+    }
+
+    return false;
+  }, [gridApiRef, isCellEditable, rows]);
+
 
   const shouldShowMissingDimensionsHint = useMemo(() => {
     const hasBeds = beds.length > 0;
@@ -1917,6 +1982,13 @@ function FieldsBedsHierarchy({
                 setSelectedRowId(Array.from(nextModel.ids)[0] ?? null)
               }
               onCellClick={(params) => {
+                if (
+                  params.row.type === "location" &&
+                  (params.field === "length_m" || params.field === "width_m")
+                ) {
+                  gridApiRef.current?.setCellFocus(params.id, "name");
+                  return;
+                }
                 const editingRowId = Object.entries(rowModesModel).find(([, mode]) => mode.mode === GridRowModes.Edit)?.[0];
                 if (editingRowId !== undefined && String(editingRowId) !== String(params.id)) {
                   discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
@@ -1931,6 +2003,17 @@ function FieldsBedsHierarchy({
                 const keyboardEvent = event as MuiEvent<React.KeyboardEvent>;
                 const targetRow = rows.find((row) => row.id === params.id);
                 const isEditing = rowModesModel[params.id]?.mode === GridRowModes.Edit;
+                const isReadonlyLocationDimension =
+                  params.row.type === "location" &&
+                  (params.field === "length_m" || params.field === "width_m");
+
+                if (isReadonlyLocationDimension) {
+                  keyboardEvent.preventDefault();
+                  keyboardEvent.stopPropagation();
+                  keyboardEvent.defaultMuiPrevented = true;
+                  gridApiRef.current?.setCellFocus(params.id, "name");
+                  return;
+                }
 
                 if (
                   keyboardEvent.key === "Escape" &&
@@ -1951,6 +2034,20 @@ function FieldsBedsHierarchy({
                 }
 
                 if (isEditing) {
+                  return;
+                }
+
+                if (
+                  keyboardEvent.key === "ArrowLeft" ||
+                  keyboardEvent.key === "ArrowRight" ||
+                  keyboardEvent.key === "ArrowUp" ||
+                  keyboardEvent.key === "ArrowDown"
+                ) {
+                  if (focusAdjacentEditableCell(params.id, params.field, keyboardEvent.key)) {
+                    keyboardEvent.preventDefault();
+                    keyboardEvent.stopPropagation();
+                    keyboardEvent.defaultMuiPrevented = true;
+                  }
                   return;
                 }
 

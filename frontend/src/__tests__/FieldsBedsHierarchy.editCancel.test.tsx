@@ -184,13 +184,17 @@ vi.mock('@mui/x-data-grid', async () => {
               <span data-testid={`focus-field-${row.id}`}>{rowModesModel[row.id]?.fieldToFocus ?? ''}</span>
               {columns.map((column) => {
                 const editable = Boolean(column.editable) && (isCellEditable?.({ row, field: column.field }) ?? true);
+                const cellClassName = typeof column.cellClassName === 'function'
+                  ? column.cellClassName({ row, field: column.field } as never)
+                  : column.cellClassName;
                 if (typeof column.renderCell === 'function') {
                   return (
                     <div
+                      className={cellClassName}
                       data-testid={`cell-${row.id}-${column.field}`}
                       key={`${row.id}-${column.field}`}
                       onKeyDown={(event) => handleCellKeyDown(column.field, editable, event)}
-                      tabIndex={0}
+                      tabIndex={editable ? 0 : -1}
                     >
                       {column.renderCell({
                         api: {},
@@ -205,11 +209,13 @@ vi.mock('@mui/x-data-grid', async () => {
                 }
                 return (
                   <button
+                    className={cellClassName}
                     data-testid={`cell-${row.id}-${column.field}`}
                     key={`${row.id}-${column.field}`}
                     type="button"
                     onClick={() => onCellClick?.({ id: row.id, field: column.field, isEditable: editable, row })}
                     onKeyDown={(event) => handleCellKeyDown(column.field, editable, event)}
+                    tabIndex={editable ? 0 : -1}
                   >
                     {`Cell ${row.id}-${column.field}`}
                   </button>
@@ -424,6 +430,43 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     expect(screen.getByTestId('mode-location-1')).toHaveTextContent('edit');
   });
 
+  it('renders location dimensions as unfocusable read-only cells', async () => {
+    useMultipleLocations();
+    renderHierarchy();
+
+    const lengthCell = await screen.findByTestId('cell-location-1-length_m');
+    const widthCell = screen.getByTestId('cell-location-1-width_m');
+
+    expect(lengthCell).toHaveTextContent('—');
+    expect(widthCell).toHaveTextContent('—');
+    expect(lengthCell).toHaveClass('ofp-hierarchy-cell-readonly');
+    expect(widthCell).toHaveClass('ofp-hierarchy-cell-readonly');
+    expect(lengthCell).toHaveClass('ofp-cell-calculated');
+    expect(widthCell).toHaveClass('ofp-cell-calculated');
+    expect(lengthCell).toHaveAttribute('tabindex', '-1');
+    expect(widthCell).toHaveAttribute('tabindex', '-1');
+
+    fireEvent.keyDown(lengthCell, { key: 'Enter' });
+    fireEvent.keyDown(widthCell, { key: 'Enter' });
+
+    expect(screen.getByTestId('mode-location-1')).toHaveTextContent('view');
+    expect(locationUpdateMock).not.toHaveBeenCalled();
+    expect(setCellFocusMock).toHaveBeenCalledWith('location-1', 'name');
+  });
+
+  it('skips location dimension cells during arrow-key navigation', async () => {
+    useMultipleLocations();
+    renderHierarchy();
+
+    const locationNameCell = await screen.findByTestId('cell-location-1-name');
+    fireEvent.keyDown(locationNameCell, { key: 'ArrowRight' });
+
+    expect(setCellFocusMock).toHaveBeenCalledWith('field-10', 'name');
+    expect(screen.getByTestId('cell-field-10-name')).toHaveFocus();
+    expect(setCellFocusMock).not.toHaveBeenCalledWith('location-1', 'length_m');
+    expect(setCellFocusMock).not.toHaveBeenCalledWith('location-1', 'width_m');
+  });
+
   it('cancels inline Standort editing with Escape without saving', async () => {
     const user = userEvent.setup();
     useMultipleLocations();
@@ -580,7 +623,8 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     expect(screen.getByTestId('row-field-10')).toBeInTheDocument();
     expect(screen.getByTestId('mode-field-10')).toHaveTextContent('view');
 
-    expect(fireEvent.keyDown(lengthCell, { key: 'ArrowRight' })).toBe(true);
+    fireEvent.keyDown(lengthCell, { key: 'ArrowRight' });
+    expect(setCellFocusMock).toHaveBeenCalledWith('field-10', 'width_m');
     expect(screen.getByTestId('mode-field-10')).toHaveTextContent('view');
   });
 

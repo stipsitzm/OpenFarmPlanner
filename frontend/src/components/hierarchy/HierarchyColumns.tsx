@@ -17,7 +17,10 @@ import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
 import { HierarchyAddIcon } from './HierarchyAddIcon';
 import { getPlainExcerpt } from '../data-grid/markdown';
-import { getCalculatedColumnProps } from '../data-grid/calculatedColumns';
+import {
+  CALCULATED_COLUMN_CELL_CLASS,
+  getCalculatedColumnProps,
+} from '../data-grid/calculatedColumns';
 
 export interface HierarchyColumnWidths {
   name: number;
@@ -433,6 +436,9 @@ const isDimensionCellIncomplete = (type: DimensionCellType, rowState: DimensionR
 };
 
 const getDimensionCellClassName = (row: HierarchyRow, type: DimensionCellType): string => {
+  if (row.type === 'location') {
+    return `${CALCULATED_COLUMN_CELL_CLASS} ofp-hierarchy-cell-readonly`;
+  }
   const rowState = getDimensionRowState(row);
   if (!rowState || !isDimensionCellIncomplete(type, rowState)) {
     return '';
@@ -445,6 +451,18 @@ const renderDimensionCell = (
   type: DimensionCellType,
   t: TFunction,
 ): ReactElement => {
+  if (params.row.type === 'location') {
+    return (
+      <Box
+        component="span"
+        aria-hidden="true"
+        sx={{ color: 'text.disabled', cursor: 'default', userSelect: 'none' }}
+      >
+        —
+      </Box>
+    );
+  }
+
   const rowState = getDimensionRowState(params.row);
   const displayValue = params.formattedValue ?? params.value;
   const hasDisplayValue = displayValue !== null && displayValue !== undefined && String(displayValue).trim() !== '';
