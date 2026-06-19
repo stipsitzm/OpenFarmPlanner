@@ -28,10 +28,10 @@ import {
   gridFilteredSortedRowIdsSelector,
   useGridApiRef,
 } from '@mui/x-data-grid';
-import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
+import { dataGridSx, dataGridFooterSx, deleteIconButtonSx, firstRowHintRowSx, FIRST_ROW_HINT_CLASS } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRowParams, GridFilterOperator, GridColumnVisibilityModel } from '@mui/x-data-grid';
-import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
+import { Box, Alert, IconButton, Chip, Button, Tooltip, Typography, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
@@ -68,6 +68,7 @@ import { useContextMenuHint } from './useContextMenuHint';
 import { TableActionsMenu } from './TableActionsMenu';
 import { ExportFormatDialog, type TableExportFormat } from './ExportFormatDialog';
 import { exportVisibleTable } from './tableExport';
+import { FirstRowHint } from './FirstRowHint';
 
 export interface EditableRow {
   id: number;
@@ -152,6 +153,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
   deleteErrorMessage: string; // Error message when delete fails
   deleteConfirmMessage: string; // Delete confirmation message
   addButtonLabel: string; // Aria label for add button
+  addRowLabel?: string; // When set, the footer add action renders as a full-width labelled row instead of a bare icon
   showDeleteAction?: boolean; // Whether to show delete action column (default: true)
   initialRow?: Partial<T>; // Optional initial row to add on mount (e.g., pre-filled from another page)
   tableKey?: string; // Optional key for persisting table sorting in session + URL
@@ -386,6 +388,7 @@ export function EditableDataGrid<T extends EditableRow>({
   deleteErrorMessage,
   deleteConfirmMessage,
   addButtonLabel,
+  addRowLabel,
   showDeleteAction = true,
   initialRow,
   tableKey,
@@ -1683,6 +1686,73 @@ export function EditableDataGrid<T extends EditableRow>({
   const CustomFooter = () => {
     const hasInvalidCell = hasValidationError || hasInvalidRowInEditMode;
 
+    if (showAddAction && addRowLabel) {
+      return (
+        <Box
+          sx={{
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            position: 'sticky',
+            bottom: 0,
+            backgroundColor: 'surface.surfaceBackground',
+            zIndex: 2,
+          }}
+        >
+          {showFooterEditControls && hasUnsavedChanges && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Button size="small" variant="contained" onClick={() => void handleSaveAllDirtyRows()}>
+                {t('actions.save')}
+              </Button>
+              <Button
+                size="small"
+                onClick={() => {
+                  const editIds = Object.entries(rowModesModel)
+                    .filter(([, mode]) => mode.mode === GridRowModes.Edit)
+                    .map(([id]) => id);
+                  for (const id of editIds) {
+                    handleDiscardRowChanges(id);
+                  }
+                }}
+              >
+                {t('actions.cancel')}
+              </Button>
+              {hasInvalidCell && <Chip size="small" color="error" label={t('messages.validationErrors')} />}
+            </Box>
+          )}
+          <Box
+            role="button"
+            tabIndex={0}
+            aria-label={addButtonLabel}
+            onClick={handleAddClick}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleAddClick(); }
+            }}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 0.75,
+              minHeight: 44,
+              px: 2,
+              color: 'text.secondary',
+              cursor: 'pointer',
+              userSelect: 'none',
+              '&:hover': { bgcolor: 'action.hover', color: 'text.primary' },
+              '&:focus-visible': {
+                outline: '2px solid',
+                outlineColor: 'primary.main',
+                outlineOffset: '-2px',
+                borderRadius: 1,
+              },
+            }}
+          >
+            <AddIcon fontSize="small" />
+            <Typography variant="body2">{addRowLabel}</Typography>
+          </Box>
+        </Box>
+      );
+    }
+
     return (
       <Box sx={dataGridFooterSx}>
         {showAddAction && (
@@ -2051,6 +2121,7 @@ export function EditableDataGrid<T extends EditableRow>({
             onTouchEnd={hasContextualRowActions ? handleGridTouchEnd : undefined}
             onTouchCancel={hasContextualRowActions ? handleGridTouchEnd : undefined}
             data-testid="data-grid-surface"
+            data-primary-table
             sx={{
               position: 'relative',
               display: 'block',
@@ -2129,6 +2200,7 @@ export function EditableDataGrid<T extends EditableRow>({
               '& .MuiDataGrid-virtualScrollerContent': { width: 'fit-content !important' },
               '& .MuiDataGrid-columnHeaders': { width: 'fit-content !important' },
             } : {}),
+            ...(showContextMenuHint ? firstRowHintRowSx : {}),
           }}
           getRowClassName={(params) => {
             const rowKey = String(params.id);
@@ -2141,6 +2213,9 @@ export function EditableDataGrid<T extends EditableRow>({
             }
             if (longPressFeedbackRowId !== null && String(longPressFeedbackRowId) === rowKey) {
               classNames.push('ofp-row-long-press');
+            }
+            if (showContextMenuHint && rowsForGrid.length > 0 && params.id === rowsForGrid[0].id) {
+              classNames.push(FIRST_ROW_HINT_CLASS);
             }
             return classNames.join(' ');
           }}
@@ -2247,6 +2322,7 @@ export function EditableDataGrid<T extends EditableRow>({
           localeText={germanDataGridLocaleText}
           apiRef={gridApiRef}
           />
+          <FirstRowHint show={showContextMenuHint} containerRef={gridSurfaceRef} />
           </Box>
         </Box>
       </Box>

@@ -199,6 +199,23 @@ export const dataGridSx = {
 };
 
 /**
+ * CSS class applied to the first data row during the context-menu-hint period.
+ * The animation fades a subtle green background in and then back out over 6 s.
+ */
+export const FIRST_ROW_HINT_CLASS = 'ofp-ctx-hint-row';
+
+export const firstRowHintRowSx = {
+  [`& .${FIRST_ROW_HINT_CLASS} .MuiDataGrid-cell`]: {
+    animation: 'ofpCtxHintRow 6s ease-in-out forwards',
+  },
+  '@keyframes ofpCtxHintRow': {
+    '0%, 100%': { backgroundColor: 'transparent' },
+    '8%': { backgroundColor: 'rgba(37, 111, 42, 0.07)' },
+    '75%': { backgroundColor: 'rgba(37, 111, 42, 0.07)' },
+  },
+};
+
+/**
  * Common styles for footer containers in DataGrid
  */
 export const dataGridFooterSx = {

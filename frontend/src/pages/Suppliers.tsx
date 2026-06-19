@@ -39,6 +39,7 @@ import EmptyStateCard from '../components/project/EmptyStateCard';
 import { useRegisterCreateActions } from '../commands/useCommandContext';
 import { ContextMenuHint, DELETE_UNDO_DURATION_MS, DeleteUndoSnackbar, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
 import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from '../components/data-grid/contextMenuFocus';
+import { FirstRowHint } from '../components/data-grid/FirstRowHint';
 import { extractApiErrorMessage } from '../api/errors';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
 
@@ -110,6 +111,7 @@ export default function Suppliers() {
     mouseY: number;
   } | null>(null);
   const contextMenuOriginRef = useRef<HTMLElement | null>(null);
+  const tableContainerRef = useRef<HTMLDivElement | null>(null);
   const [pendingSupplierDeletions, setPendingSupplierDeletions] = useState<PendingSupplierDeletion[]>([]);
   const [deleteUsageDialog, setDeleteUsageDialog] = useState<SupplierDeleteUsageDialogState | null>(null);
   const [unlinkDeletingSupplierId, setUnlinkDeletingSupplierId] = useState<number | null>(null);
@@ -575,8 +577,9 @@ export default function Suppliers() {
           />
         ) : null}
         {supplierLoadStatus === 'success' && suppliers.length > 0 ? (
+          <Box sx={{ position: 'relative' }}>
           <TableSurface sizingMode="compact">
-          <TableContainer>
+          <TableContainer data-primary-table ref={tableContainerRef}>
             <Table size="medium">
               <TableHead>
                 <TableRow>
@@ -629,6 +632,8 @@ export default function Suppliers() {
             </Table>
           </TableContainer>
           </TableSurface>
+          <FirstRowHint show={showContextMenuHint} containerRef={tableContainerRef} />
+          </Box>
         ) : null}
       </PageSurface>
 

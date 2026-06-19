@@ -36,6 +36,7 @@ import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContext
 import { getFirstMissingProjectSetupStep, getProjectSetupAction, getProjectSetupActions } from './requirementFlow';
 import { formatLocalizedNumber } from '../utils/numberLocalization';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
+import { FirstRowHint } from '../components/data-grid/FirstRowHint';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
@@ -79,6 +80,7 @@ export default function SeedDemandPage() {
     mouseY: number;
   } | null>(null);
   const contextMenuOriginRef = useRef<HTMLElement | null>(null);
+  const tableContainerRef = useRef<HTMLDivElement | null>(null);
   const hasPlans = planCount > 0;
   const hasSeedData = hasCulturesWithSeedData;
   const canCalculateSeedDemand = locationCount > 0 && fieldCount > 0 && bedCount > 0 && cultureCount > 0 && hasPlans && hasSeedData;
@@ -353,8 +355,9 @@ export default function SeedDemandPage() {
         ) : null}
 
         {!isLoading && !error && canCalculateSeedDemand && (
+          <Box sx={{ position: 'relative' }}>
           <TableSurface sizingMode="contentFit">
-          <TableContainer>
+          <TableContainer data-primary-table ref={tableContainerRef}>
             <Table
               sx={{
                 '& .MuiTableCell-root': { py: 1 },
@@ -466,6 +469,8 @@ export default function SeedDemandPage() {
             ) : null}
           </TableContainer>
           </TableSurface>
+          <FirstRowHint show={showContextMenuHint} containerRef={tableContainerRef} />
+          </Box>
         )}
       </PageSurface>
 

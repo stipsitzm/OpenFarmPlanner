@@ -49,6 +49,7 @@ import {
   useContextMenuHint,
 } from "../components/data-grid";
 import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from "../components/data-grid/contextMenuFocus";
+import { FirstRowHint } from "../components/data-grid/FirstRowHint";
 import {
   handleEditableCellClick,
 } from "../components/data-grid/handlers";
@@ -1989,6 +1990,7 @@ function FieldsBedsHierarchy({
         {shouldShowHierarchyTable ? (
           <Box
             ref={tableWrapperRef}
+            data-primary-table
             sx={{
               width: "100%",
               maxWidth: "100%",
@@ -2215,6 +2217,7 @@ function FieldsBedsHierarchy({
               localeText={germanDataGridLocaleText}
               apiRef={gridApiRef}
             />
+            <FirstRowHint show={showContextMenuHint} containerRef={tableWrapperRef} />
             </Box>
           </Box>
         ) : null}
