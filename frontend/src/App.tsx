@@ -780,6 +780,37 @@ function RootLayout() {
     return () => window.removeEventListener('keydown', handleSidebarShortcut);
   }, [isDesktopUp]);
   useEffect(() => {
+    const handleFocusTableShortcut = (event: KeyboardEvent): void => {
+      if (!event.altKey || event.ctrlKey || event.shiftKey || event.metaKey) return;
+      if (event.key.toLowerCase() !== 't') return;
+      const target = event.target as HTMLElement | null;
+      const isTypingTarget = target instanceof HTMLInputElement
+        || target instanceof HTMLTextAreaElement
+        || target?.isContentEditable;
+      if (isTypingTarget) return;
+
+      const container = document.querySelector<HTMLElement>('[data-primary-table]');
+      if (!container) return;
+
+      event.preventDefault();
+
+      // MUI DataGrid: re-focus the previously focused cell
+      const activeGridCell = container.querySelector<HTMLElement>('[role="gridcell"][tabindex="0"]');
+      if (activeGridCell) { activeGridCell.focus(); return; }
+
+      // MUI DataGrid: focus the first cell of the first data row
+      const firstDataRow = container.querySelector<HTMLElement>('[role="row"][data-id]');
+      const firstGridCell = firstDataRow?.querySelector<HTMLElement>('[role="gridcell"]');
+      if (firstGridCell) { firstGridCell.focus(); return; }
+
+      // HTML Table (e.g. Suppliers, SeedDemand): focus the first focusable row
+      const firstTableRow = container.querySelector<HTMLElement>('tbody tr[tabindex]');
+      firstTableRow?.focus();
+    };
+    window.addEventListener('keydown', handleFocusTableShortcut);
+    return () => window.removeEventListener('keydown', handleFocusTableShortcut);
+  }, []);
+  useEffect(() => {
     setSidebarCollapsed(!isLargeDesktop);
   }, [isLargeDesktop]);
   
@@ -1659,6 +1690,7 @@ function RootLayout() {
             <Typography variant="subtitle2">{t('commandPalette.shortcutSections.navigation')}</Typography>
             <List dense disablePadding>
               <ListItem><ListItemText primary={t('commandPalette.createNewShortcut')} secondary="Alt+Shift+N" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.focusTable')} secondary="Alt+T" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.nextPage')} secondary="Ctrl+Shift+↓" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.previousPage')} secondary="Ctrl+Shift+↑" /></ListItem>
               <ListItem><ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="Alt+V" /></ListItem>
