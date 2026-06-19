@@ -37,7 +37,7 @@ describe('graphicalViewport helpers', () => {
     });
   });
 
-  it('shows labels when zoom is sufficient or when the bed is large enough on screen', () => {
+  it('shows labels when the bed occupies enough screen pixels', () => {
     expect(shouldShowFieldLabel({ width: 150, height: 80 }, 1)).toBe(true);
     expect(shouldShowFieldLabel({ width: 80, height: 30 }, 1)).toBe(false);
     expect(shouldShowBedLabel({ width: 120, height: 50 }, ZOOM_LEVEL_DETAIL)).toBe(true);
@@ -50,8 +50,8 @@ describe('graphicalViewport helpers', () => {
     expect(shouldShowBedLabel({ width: 28, height: 14 }, GRAPHICAL_MAX_SCALE)).toBe(true);
   });
 
-  it('keeps bed labels hidden when beds are truly too small', () => {
-    expect(shouldShowBedLabel({ width: 12, height: 5 }, GRAPHICAL_MAX_SCALE)).toBe(false);
+  it('keeps bed labels hidden when beds are truly too small to render any text', () => {
+    expect(shouldShowBedLabel({ width: 6, height: 4 }, GRAPHICAL_MAX_SCALE)).toBe(false);
   });
 
   it('fits content into the available stage size', () => {

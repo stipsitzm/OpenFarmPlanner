@@ -1804,8 +1804,8 @@ export default function GraphicalFields({
                                         const bedScreenHeight =
                                           bedVm.height * viewport.scale;
                                         const shouldUseCompactLabel =
-                                          bedScreenWidth < 120 ||
-                                          bedScreenHeight < 42;
+                                          bedScreenWidth < 80 ||
+                                          bedScreenHeight < 30;
                                         const labelText =
                                           visibility.showDetailedBedLabels &&
                                           !shouldUseCompactLabel
@@ -1830,8 +1830,8 @@ export default function GraphicalFields({
                                               shouldUseCompactLabel ? 11 : 12
                                             }
                                             width={Math.max(
-                                              36,
-                                              bedScreenWidth - 8,
+                                              1,
+                                              bedScreenWidth - 4,
                                             )}
                                             wrap="word"
                                             listening={false}

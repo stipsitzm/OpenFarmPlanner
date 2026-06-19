@@ -15,8 +15,8 @@ export const BED_LABEL_MIN_HEIGHT = 36;
 export const BED_LABEL_MIN_SCALE = Math.min(1, GRAPHICAL_MAX_SCALE);
 export const BED_LABEL_MIN_SCREEN_WIDTH = 76;
 export const BED_LABEL_MIN_SCREEN_HEIGHT = 26;
-export const BED_LABEL_ABSOLUTE_MIN_SCREEN_WIDTH = 46;
-export const BED_LABEL_ABSOLUTE_MIN_SCREEN_HEIGHT = 18;
+export const BED_LABEL_ABSOLUTE_MIN_SCREEN_WIDTH = 22;
+export const BED_LABEL_ABSOLUTE_MIN_SCREEN_HEIGHT = 14;
 
 export interface ViewportState {
   scale: number;
@@ -141,19 +141,10 @@ export function shouldShowFieldLabel(size: RectSize, scale: number): boolean {
 export function shouldShowBedLabel(size: RectSize, scale: number): boolean {
   const screenWidth = size.width * scale;
   const screenHeight = size.height * scale;
-  const hasAbsoluteSpace =
+  return (
     screenWidth >= BED_LABEL_ABSOLUTE_MIN_SCREEN_WIDTH &&
-    screenHeight >= BED_LABEL_ABSOLUTE_MIN_SCREEN_HEIGHT;
-  if (!hasAbsoluteSpace) {
-    return false;
-  }
-
-  const hasComfortableSpace =
-    screenWidth >= BED_LABEL_MIN_SCREEN_WIDTH &&
-    screenHeight >= BED_LABEL_MIN_SCREEN_HEIGHT;
-  const reachedZoomThreshold = scale >= BED_LABEL_MIN_SCALE;
-  const reachedMaxZoom = scale >= GRAPHICAL_MAX_SCALE;
-  return reachedZoomThreshold || hasComfortableSpace || reachedMaxZoom;
+    screenHeight >= BED_LABEL_ABSOLUTE_MIN_SCREEN_HEIGHT
+  );
 }
 
 export function fitBoundsToStage(
