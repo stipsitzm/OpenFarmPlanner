@@ -108,6 +108,7 @@ vi.mock('@mui/x-data-grid', async () => {
     onCellKeyDown,
     onProcessRowUpdateError,
     onRowEditStop,
+    onRowModesModelChange,
     processRowUpdate,
     rowModesModel,
     rows,
@@ -122,6 +123,7 @@ vi.mock('@mui/x-data-grid', async () => {
       params: { id: string | number; reason: string },
       event: { defaultMuiPrevented: boolean; stopPropagation?: () => void },
     ) => void;
+    onRowModesModelChange?: (model: Record<string, { mode: string }>) => void;
     processRowUpdate?: (row: Record<string, unknown>) => Promise<Record<string, unknown>>;
     rowModesModel: Record<string, { mode: string }>;
     rows: Array<Record<string, unknown> & { id: string | number }>;
@@ -144,6 +146,12 @@ vi.mock('@mui/x-data-grid', async () => {
         { id: row.id, reason },
         { defaultMuiPrevented: false, stopPropagation: vi.fn() },
       );
+      if (reason === GridRowEditStopReasons.enterKeyDown) {
+        onRowModesModelChange?.({
+          ...rowModesModel,
+          [row.id]: { mode: GridRowModes.View },
+        });
+      }
     };
 
     return (
@@ -163,7 +171,8 @@ vi.mock('@mui/x-data-grid', async () => {
             if (
               event.key === 'Enter' &&
               mode === GridRowModes.Edit &&
-              !(event as React.KeyboardEvent & { defaultMuiPrevented?: boolean }).defaultMuiPrevented
+              !(event as React.KeyboardEvent & { defaultMuiPrevented?: boolean }).defaultMuiPrevented &&
+              !event.isPropagationStopped()
             ) {
               void commitBlur(row, GridRowEditStopReasons.enterKeyDown);
             }
@@ -417,49 +426,61 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Edit location-1' }));
     await user.click(screen.getByRole('button', { name: 'Partial name location-1' }));
-    await user.click(screen.getByRole('button', { name: 'Enter location-1' }));
+    fireEvent.keyDown(screen.getByTestId('cell-location-1-name'), { key: 'Enter' });
 
     await waitFor(() => {
       expect(locationUpdateMock).toHaveBeenCalledWith(1, expect.objectContaining({ name: 'Teilweise gefuellt' }));
     });
+    expect(screen.getByTestId('mode-location-1')).toHaveTextContent('view');
   });
 
-  it('restores focus to the location name cell after saving with Enter', async () => {
+  it('saves a location and restores focus to its name cell after Enter', async () => {
     const user = userEvent.setup();
     useMultipleLocations();
     renderHierarchy();
 
     await user.click(await screen.findByRole('button', { name: 'Edit location-1' }));
     await user.click(screen.getByRole('button', { name: 'Partial name location-1' }));
-    await user.click(screen.getByRole('button', { name: 'Enter location-1' }));
+    const locationNameCell = screen.getByTestId('cell-location-1-name');
+    fireEvent.keyDown(locationNameCell, { key: 'Enter' });
 
+    await waitFor(() => expect(locationUpdateMock).toHaveBeenCalledTimes(1));
+    expect(screen.getByTestId('mode-location-1')).toHaveTextContent('view');
     await waitFor(() => expect(setCellFocusMock).toHaveBeenCalledWith('location-1', 'name'));
-    expect(screen.getByTestId('cell-location-1-name')).toHaveFocus();
+    expect(locationNameCell).toHaveFocus();
+    expect(screen.getByTestId('row-field-10')).toBeInTheDocument();
   });
 
-  it('restores focus to the parcel name cell after saving with Enter', async () => {
+  it('saves a parcel and restores focus to its name cell after Enter', async () => {
     const user = userEvent.setup();
     renderHierarchy();
 
     await user.click(await screen.findByRole('button', { name: 'Edit field-10' }));
     await user.click(screen.getByRole('button', { name: 'Partial name field-10' }));
-    await user.click(screen.getByRole('button', { name: 'Enter field-10' }));
+    const fieldNameCell = screen.getByTestId('cell-field-10-name');
+    fireEvent.keyDown(fieldNameCell, { key: 'Enter' });
 
+    await waitFor(() => expect(fieldUpdateMock).toHaveBeenCalledTimes(1));
+    expect(screen.getByTestId('mode-field-10')).toHaveTextContent('view');
     await waitFor(() => expect(setCellFocusMock).toHaveBeenCalledWith('field-10', 'name'));
-    expect(screen.getByTestId('cell-field-10-name')).toHaveFocus();
+    expect(fieldNameCell).toHaveFocus();
+    expect(screen.queryByTestId('row-21')).not.toBeInTheDocument();
   });
 
-  it('restores focus to the bed name cell after saving with Enter', async () => {
+  it('saves a bed and restores focus to its name cell after Enter', async () => {
     const user = userEvent.setup();
     bedListMock.mockResolvedValue({ data: { results: [{ id: 21, name: 'Beet A', field: 10 }] } });
     renderHierarchy();
 
     await user.click(await screen.findByRole('button', { name: 'Edit 21' }));
     await user.click(screen.getByRole('button', { name: 'Partial name 21' }));
-    await user.click(screen.getByRole('button', { name: 'Enter 21' }));
+    const bedNameCell = screen.getByTestId('cell-21-name');
+    fireEvent.keyDown(bedNameCell, { key: 'Enter' });
 
+    await waitFor(() => expect(bedUpdateMock).toHaveBeenCalledTimes(1));
+    expect(screen.getByTestId('mode-21')).toHaveTextContent('view');
     await waitFor(() => expect(setCellFocusMock).toHaveBeenCalledWith(21, 'name'));
-    expect(screen.getByTestId('cell-21-name')).toHaveFocus();
+    expect(bedNameCell).toHaveFocus();
   });
 
   it('keeps Enter independent from expansion and uses Space to toggle rows', async () => {

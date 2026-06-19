@@ -801,7 +801,6 @@ function FieldsBedsHierarchy({
     }
 
     if (params.reason === GridRowEditStopReasons.enterKeyDown) {
-      (event as MuiEvent<React.KeyboardEvent>).stopPropagation();
       restoreHierarchyRowFocus(params.id);
     }
   }, [discardRowEdit, restoreHierarchyRowFocus]);
@@ -2046,7 +2045,6 @@ function FieldsBedsHierarchy({
                 }
 
                 if (isEditing && keyboardEvent.key === "Enter") {
-                  keyboardEvent.stopPropagation();
                   setSelectedRowId(params.id);
                   setTreeActive(true);
                   return;
