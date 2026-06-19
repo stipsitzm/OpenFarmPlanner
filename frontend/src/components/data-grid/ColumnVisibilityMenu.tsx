@@ -92,7 +92,7 @@ export function ColumnVisibilityMenu({
               aria-label={t('columnVisibility.buttonTooltip')}
               aria-haspopup="true"
               aria-expanded={isOpen}
-              sx={{ textTransform: 'none', flexShrink: 0, whiteSpace: 'nowrap', px: 1.25 }}
+              sx={{ textTransform: 'none', flexShrink: 0, whiteSpace: 'nowrap', px: 1.25, bgcolor: 'background.paper' }}
             >
               {t('columnVisibility.button')}
             </Button>

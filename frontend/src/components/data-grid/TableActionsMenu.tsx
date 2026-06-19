@@ -55,6 +55,7 @@ export function TableActionsMenu({
           aria-haspopup="menu"
           aria-expanded={Boolean(menuAnchor)}
           onClick={(event) => setMenuAnchor(event.currentTarget)}
+          sx={{ bgcolor: 'background.paper' }}
         >
           {t('tableActions.button')}
         </Button>
