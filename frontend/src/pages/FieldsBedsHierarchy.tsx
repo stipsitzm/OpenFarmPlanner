@@ -344,6 +344,8 @@ function FieldsBedsHierarchy({
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
   const activeEditFieldRef = useRef<string>("name");
   const pendingTabFocusRef = useRef<{ rowId: GridRowId; field: string } | null>(null);
+  const notesFocusOriginRef = useRef<{ rowId: GridRowId; field: string } | null>(null);
+  const notesWasOpenRef = useRef(false);
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
   const touchLongPressTimeoutRef = useRef<number | null>(null);
   const contextMenuOriginRef = useRef<HTMLElement | null>(null);
@@ -495,6 +497,32 @@ function FieldsBedsHierarchy({
     },
     onError: setError,
   });
+
+  const restoreNotesCellFocus = useCallback((): void => {
+    const focusOrigin = notesFocusOriginRef.current;
+    notesFocusOriginRef.current = null;
+    if (!focusOrigin) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      gridApiRef.current?.setCellFocus(focusOrigin.rowId, focusOrigin.field);
+      setSelectedRowId(focusOrigin.rowId);
+      setTreeActive(true);
+    }, 0);
+  }, [gridApiRef]);
+
+  const openNotesEditor = useCallback((rowId: GridRowId, field: string): void => {
+    notesFocusOriginRef.current = { rowId, field };
+    notesEditor.handleOpen(rowId, field);
+  }, [notesEditor]);
+
+  useEffect(() => {
+    if (notesWasOpenRef.current && !notesEditor.isOpen) {
+      restoreNotesCellFocus();
+    }
+    notesWasOpenRef.current = notesEditor.isOpen;
+  }, [notesEditor.isOpen, restoreNotesCellFocus]);
 
   /**
    * Expand all rows when data is loaded (only once on initial load)
@@ -1718,7 +1746,7 @@ function FieldsBedsHierarchy({
       },
       handleCreatePlantingPlan,
       handleNameCellContextMenu,
-      notesEditor.handleOpen,
+      openNotesEditor,
       t,
       {
         ...DEFAULT_HIERARCHY_COLUMN_WIDTHS,
@@ -1735,7 +1763,7 @@ function FieldsBedsHierarchy({
     deleteHierarchyRowWithUndo,
     handleCreatePlantingPlan,
     handleNameCellContextMenu,
-    notesEditor.handleOpen,
+    openNotesEditor,
     rowsById,
     t,
     nameColumnWidth,
@@ -2083,6 +2111,19 @@ function FieldsBedsHierarchy({
                 }
 
                 if (isEditing) {
+                  return;
+                }
+
+                if (
+                  params.field === "notes" &&
+                  (keyboardEvent.key === "Enter" ||
+                    keyboardEvent.key === " " ||
+                    keyboardEvent.key === "Spacebar")
+                ) {
+                  keyboardEvent.preventDefault();
+                  keyboardEvent.stopPropagation();
+                  keyboardEvent.defaultMuiPrevented = true;
+                  openNotesEditor(params.id, "notes");
                   return;
                 }
 

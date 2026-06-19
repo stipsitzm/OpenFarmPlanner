@@ -536,6 +536,37 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     expect(setCellFocusMock).not.toHaveBeenCalledWith('field-10', 'area_sqm');
   });
 
+  it('opens Notes with Enter and restores focus after Escape', async () => {
+    renderHierarchy();
+
+    const notesCell = await screen.findByTestId('cell-field-10-notes');
+    notesCell.focus();
+    fireEvent.keyDown(notesCell, { key: 'Enter' });
+
+    const drawerTitle = await screen.findByText('columns.notes');
+    fireEvent.keyDown(drawerTitle.parentElement!, { key: 'Escape' });
+
+    await waitFor(() => expect(screen.queryByText('columns.notes')).not.toBeInTheDocument());
+    await waitFor(() => expect(setCellFocusMock).toHaveBeenCalledWith('field-10', 'notes'));
+    expect(notesCell).toHaveFocus();
+  });
+
+  it('opens Notes with Space and restores focus after closing', async () => {
+    const user = userEvent.setup();
+    renderHierarchy();
+
+    const notesCell = await screen.findByTestId('cell-field-10-notes');
+    notesCell.focus();
+    fireEvent.keyDown(notesCell, { key: ' ' });
+
+    expect(await screen.findByText('columns.notes')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'actions.cancel' }));
+
+    await waitFor(() => expect(screen.queryByText('columns.notes')).not.toBeInTheDocument());
+    await waitFor(() => expect(setCellFocusMock).toHaveBeenCalledWith('field-10', 'notes'));
+    expect(notesCell).toHaveFocus();
+  });
+
   it('cancels inline Standort editing with Escape without saving', async () => {
     const user = userEvent.setup();
     useMultipleLocations();
