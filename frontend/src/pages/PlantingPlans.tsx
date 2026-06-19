@@ -1106,6 +1106,7 @@ function PlantingPlans() {
                   <IconButton
                     size="small"
                     aria-label={t("common:actions.delete")}
+                    tabIndex={-1}
                     onMouseDown={(event) => { event.stopPropagation(); }}
                     onClick={(event) => {
                       event.stopPropagation();
