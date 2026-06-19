@@ -221,6 +221,8 @@ export function CultureForm({
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const userInteractedRef = useRef(false);
   const dialogContentRef = useDialogKeyboardScroll(true);
   const formRef = useRef<HTMLFormElement | null>(null);
   const supplierOptionsRef = useRef<Supplier[]>([]);
@@ -284,6 +286,7 @@ export function CultureForm({
     setIsValid(true);
     setHasSubmitted(false);
     setSaveError('');
+    userInteractedRef.current = false;
   }, [culture]);
 
   useEffect(() => {
@@ -433,6 +436,7 @@ export function CultureForm({
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
       setIsDirty(true);
+      userInteractedRef.current = true;
       setSaveError('');
       if (name === 'name' || name === 'variety') {
         setDuplicateErrorKey('');
@@ -545,7 +549,11 @@ export function CultureForm({
       open
       onClose={(_event, reason) => {
         if (reason === 'backdropClick') return;
-        onCancel();
+        if (isDirty && userInteractedRef.current) {
+          setShowDiscardConfirm(true);
+        } else {
+          onCancel();
+        }
       }}
       aria-labelledby="culture-form-dialog-title"
       maxWidth="md"
@@ -749,14 +757,20 @@ export function CultureForm({
               {saveError}
             </Alert>
           ) : null}
-          {isDirty && (
+          {isDirty && userInteractedRef.current && (
             <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
               {isValid && !duplicateErrorKey
                 ? t('messages.unsavedChanges')
                 : t('messages.fixErrors')}
             </Typography>
           )}
-          <Button variant="outlined" onClick={onCancel} disabled={isSaving}>
+          <Button variant="outlined" onClick={() => {
+            if (isDirty && userInteractedRef.current) {
+              setShowDiscardConfirm(true);
+            } else {
+              onCancel();
+            }
+          }} disabled={isSaving}>
             {t('form.cancel')}
           </Button>
           <Button
@@ -770,6 +784,20 @@ export function CultureForm({
           </Button>
         </DialogActions>
       </form>
+      <Dialog open={showDiscardConfirm} onClose={() => setShowDiscardConfirm(false)} maxWidth="xs">
+        <DialogTitle>{t('form.discardChangesTitle')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            {t('form.discardChangesMessage')}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDiscardConfirm(false)}>{t('form.discardCancel')}</Button>
+          <Button variant="contained" color="error" onClick={() => { setShowDiscardConfirm(false); onCancel(); }}>
+            {t('form.discardConfirm')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 }
