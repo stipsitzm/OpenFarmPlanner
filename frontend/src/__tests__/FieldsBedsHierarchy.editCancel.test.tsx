@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import type { GridColDef } from '@mui/x-data-grid';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import FieldsBedsHierarchy, {
   isCompletelyEmptyNewHierarchyRow,
   isPartiallyFilledNamelessNewHierarchyRow,
@@ -26,6 +26,7 @@ const {
   locationUpdateMock,
   mockUseNavigationBlocker,
   mockDrafts,
+  setCellFocusMock,
 } = vi.hoisted(() => ({
   bedCreateMock: vi.fn(),
   bedDeleteMock: vi.fn(),
@@ -41,6 +42,9 @@ const {
   locationUpdateMock: vi.fn(),
   mockUseNavigationBlocker: vi.fn(),
   mockDrafts: new Map<string, Record<string, unknown>>(),
+  setCellFocusMock: vi.fn((id: string | number, field: string) => {
+    document.querySelector<HTMLElement>(`[data-testid="cell-${String(id)}-${field}"]`)?.focus();
+  }),
 }));
 
 vi.mock('../i18n', () => ({
@@ -82,9 +86,9 @@ vi.mock('../api/api', async () => {
 });
 
 vi.mock('@mui/x-data-grid', async () => {
-  const ReactModule = await import('react');
   const GridRowModes = { Edit: 'edit', View: 'view' };
   const GridRowEditStopReasons = {
+    enterKeyDown: 'enterKeyDown',
     escapeKeyDown: 'escapeKeyDown',
     rowFocusOut: 'rowFocusOut',
   };
@@ -92,6 +96,7 @@ vi.mock('@mui/x-data-grid', async () => {
   const useGridApiRef = vi.fn(() => ({
     current: {
       getRowWithUpdatedValues: (id: string | number) => mockDrafts.get(String(id)) ?? null,
+      setCellFocus: setCellFocusMock,
     },
   }));
 
@@ -113,7 +118,10 @@ vi.mock('@mui/x-data-grid', async () => {
     onCellClick?: (params: { id: string | number; field: string; isEditable: boolean; row: Record<string, unknown> }) => void;
     onCellKeyDown?: (params: { id: string | number; field: string; isEditable: boolean; row: Record<string, unknown> }, event: React.KeyboardEvent) => void;
     onProcessRowUpdateError?: (error: Error) => void;
-    onRowEditStop?: (params: { id: string | number; reason: string }, event: { defaultMuiPrevented: boolean }) => void;
+    onRowEditStop?: (
+      params: { id: string | number; reason: string },
+      event: { defaultMuiPrevented: boolean; stopPropagation?: () => void },
+    ) => void;
     processRowUpdate?: (row: Record<string, unknown>) => Promise<Record<string, unknown>>;
     rowModesModel: Record<string, { mode: string }>;
     rows: Array<Record<string, unknown> & { id: string | number }>;
@@ -122,14 +130,20 @@ vi.mock('@mui/x-data-grid', async () => {
       apiRef.current.getRowWithUpdatedValues = (id: string | number) => mockDrafts.get(String(id)) ?? null;
     }
 
-    const commitBlur = async (row: Record<string, unknown> & { id: string | number }): Promise<void> => {
+    const commitBlur = async (
+      row: Record<string, unknown> & { id: string | number },
+      reason = GridRowEditStopReasons.rowFocusOut,
+    ): Promise<void> => {
       const draft = mockDrafts.get(String(row.id)) ?? row;
       try {
         await processRowUpdate?.(draft);
       } catch (error) {
         onProcessRowUpdateError?.(error as Error);
       }
-      onRowEditStop?.({ id: row.id, reason: GridRowEditStopReasons.rowFocusOut }, { defaultMuiPrevented: false });
+      onRowEditStop?.(
+        { id: row.id, reason },
+        { defaultMuiPrevented: false, stopPropagation: vi.fn() },
+      );
     };
 
     return (
@@ -137,6 +151,24 @@ vi.mock('@mui/x-data-grid', async () => {
         <div data-testid="row-count">{rows.length}</div>
         {rows.map((row) => {
           const mode = rowModesModel[row.id]?.mode ?? rowModesModel[String(row.id)]?.mode ?? GridRowModes.View;
+          const handleCellKeyDown = (
+            field: string,
+            editable: boolean,
+            event: React.KeyboardEvent<HTMLElement>,
+          ): void => {
+            onCellKeyDown?.(
+              { id: row.id, field, isEditable: editable, row },
+              event as React.KeyboardEvent,
+            );
+            if (
+              event.key === 'Enter' &&
+              mode === GridRowModes.Edit &&
+              !(event as React.KeyboardEvent & { defaultMuiPrevented?: boolean }).defaultMuiPrevented
+            ) {
+              void commitBlur(row, GridRowEditStopReasons.enterKeyDown);
+            }
+          };
+
           return (
             <div data-id={String(row.id)} data-testid={`row-${row.id}`} key={String(row.id)} role="row">
               <span data-testid={`mode-${row.id}`}>{mode}</span>
@@ -144,7 +176,12 @@ vi.mock('@mui/x-data-grid', async () => {
                 const editable = Boolean(column.editable) && (isCellEditable?.({ row, field: column.field }) ?? true);
                 if (typeof column.renderCell === 'function') {
                   return (
-                    <ReactModule.Fragment key={`${row.id}-${column.field}`}>
+                    <div
+                      data-testid={`cell-${row.id}-${column.field}`}
+                      key={`${row.id}-${column.field}`}
+                      onKeyDown={(event) => handleCellKeyDown(column.field, editable, event)}
+                      tabIndex={0}
+                    >
                       {column.renderCell({
                         api: {},
                         cellMode: mode === GridRowModes.Edit ? 'edit' : 'view',
@@ -153,14 +190,16 @@ vi.mock('@mui/x-data-grid', async () => {
                         row,
                         value: row[column.field],
                       } as never)}
-                    </ReactModule.Fragment>
+                    </div>
                   );
                 }
                 return (
                   <button
+                    data-testid={`cell-${row.id}-${column.field}`}
                     key={`${row.id}-${column.field}`}
                     type="button"
                     onClick={() => onCellClick?.({ id: row.id, field: column.field, isEditable: editable, row })}
+                    onKeyDown={(event) => handleCellKeyDown(column.field, editable, event)}
                   >
                     {`Cell ${row.id}-${column.field}`}
                   </button>
@@ -197,7 +236,12 @@ vi.mock('@mui/x-data-grid', async () => {
                 onClick={() =>
                   onCellKeyDown?.(
                     { id: row.id, field: 'name', isEditable: true, row },
-                    { key: 'Escape', preventDefault: vi.fn(), defaultMuiPrevented: false } as unknown as React.KeyboardEvent,
+                    {
+                      key: 'Escape',
+                      preventDefault: vi.fn(),
+                      stopPropagation: vi.fn(),
+                      defaultMuiPrevented: false,
+                    } as unknown as React.KeyboardEvent,
                   )
                 }
               >
@@ -206,7 +250,10 @@ vi.mock('@mui/x-data-grid', async () => {
               <button type="button" onClick={() => void commitBlur(row)}>
                 {`Blur ${row.id}`}
               </button>
-              <button type="button" onClick={() => void commitBlur(row)}>
+              <button
+                type="button"
+                onClick={() => void commitBlur(row, GridRowEditStopReasons.enterKeyDown)}
+              >
                 {`Enter ${row.id}`}
               </button>
             </div>
@@ -228,9 +275,15 @@ const renderHierarchy = (initialPath = '/app/fields-beds') => (
   render(
     <MemoryRouter initialEntries={[initialPath]}>
       <FieldsBedsHierarchy showTitle={false} />
+      <CurrentRoute />
     </MemoryRouter>,
   )
 );
+
+const CurrentRoute = (): React.ReactElement => {
+  const currentLocation = useLocation();
+  return <div data-testid="current-route">{`${currentLocation.pathname}${currentLocation.search}`}</div>;
+};
 
 const renderHierarchyWithCreateFieldRequest = (
   createFieldRequest: number,
@@ -369,6 +422,100 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     await waitFor(() => {
       expect(locationUpdateMock).toHaveBeenCalledWith(1, expect.objectContaining({ name: 'Teilweise gefuellt' }));
     });
+  });
+
+  it('restores focus to the location name cell after saving with Enter', async () => {
+    const user = userEvent.setup();
+    useMultipleLocations();
+    renderHierarchy();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit location-1' }));
+    await user.click(screen.getByRole('button', { name: 'Partial name location-1' }));
+    await user.click(screen.getByRole('button', { name: 'Enter location-1' }));
+
+    await waitFor(() => expect(setCellFocusMock).toHaveBeenCalledWith('location-1', 'name'));
+    expect(screen.getByTestId('cell-location-1-name')).toHaveFocus();
+  });
+
+  it('restores focus to the parcel name cell after saving with Enter', async () => {
+    const user = userEvent.setup();
+    renderHierarchy();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit field-10' }));
+    await user.click(screen.getByRole('button', { name: 'Partial name field-10' }));
+    await user.click(screen.getByRole('button', { name: 'Enter field-10' }));
+
+    await waitFor(() => expect(setCellFocusMock).toHaveBeenCalledWith('field-10', 'name'));
+    expect(screen.getByTestId('cell-field-10-name')).toHaveFocus();
+  });
+
+  it('restores focus to the bed name cell after saving with Enter', async () => {
+    const user = userEvent.setup();
+    bedListMock.mockResolvedValue({ data: { results: [{ id: 21, name: 'Beet A', field: 10 }] } });
+    renderHierarchy();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit 21' }));
+    await user.click(screen.getByRole('button', { name: 'Partial name 21' }));
+    await user.click(screen.getByRole('button', { name: 'Enter 21' }));
+
+    await waitFor(() => expect(setCellFocusMock).toHaveBeenCalledWith(21, 'name'));
+    expect(screen.getByTestId('cell-21-name')).toHaveFocus();
+  });
+
+  it('keeps Enter independent from expansion and uses Space to toggle rows', async () => {
+    useMultipleLocations();
+    renderHierarchy();
+
+    const locationNameCell = await screen.findByTestId('cell-location-1-name');
+    expect(screen.getByTestId('row-field-10')).toBeInTheDocument();
+
+    fireEvent.keyDown(locationNameCell, { key: 'Enter' });
+    expect(screen.getByTestId('mode-location-1')).toHaveTextContent('edit');
+    expect(screen.getByTestId('row-field-10')).toBeInTheDocument();
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Escape location-1' }));
+    fireEvent.keyDown(locationNameCell, { key: ' ' });
+    await waitFor(() => expect(screen.queryByTestId('row-field-10')).not.toBeInTheDocument());
+
+    fireEvent.keyDown(locationNameCell, { key: 'ArrowRight' });
+    expect(screen.queryByTestId('row-field-10')).not.toBeInTheDocument();
+  });
+
+  it('deletes the focused row with Delete', async () => {
+    bedListMock.mockResolvedValue({ data: { results: [{ id: 21, name: 'Beet A', field: 10 }] } });
+    renderHierarchy();
+
+    fireEvent.keyDown(await screen.findByTestId('cell-21-name'), { key: 'Delete' });
+
+    await waitFor(() => expect(bedDeleteMock).toHaveBeenCalledWith(21));
+    await waitFor(() => expect(screen.queryByTestId('row-21')).not.toBeInTheDocument());
+  });
+
+  it('creates a planting plan from a bed with Ctrl+Enter', async () => {
+    bedListMock.mockResolvedValue({ data: { results: [{ id: 21, name: 'Beet A', field: 10 }] } });
+    renderHierarchy();
+
+    fireEvent.keyDown(await screen.findByTestId('cell-21-name'), { key: 'Enter', ctrlKey: true });
+
+    await waitFor(() => expect(screen.getByTestId('current-route')).toHaveTextContent('/app/planting-plans?bedId=21'));
+  });
+
+  it('opens the complete row action menu with Shift+F10', async () => {
+    bedListMock.mockResolvedValue({ data: { results: [{ id: 21, name: 'Beet A', field: 10 }] } });
+    renderHierarchy();
+
+    const bedNameCell = await screen.findByTestId('cell-21-name');
+    fireEvent.keyDown(bedNameCell, { key: 'F10', shiftKey: true });
+
+    expect(await screen.findByRole('menuitem', { name: 'Pflanzplan erstellen' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+
+    fireEvent.keyDown(bedNameCell, { key: 'ContextMenu' });
+    expect(await screen.findByRole('menuitem', { name: 'Pflanzplan erstellen' })).toBeInTheDocument();
   });
 
   it('keeps Standort name validation consistent with other hierarchy rows', async () => {

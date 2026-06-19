@@ -785,6 +785,14 @@ function FieldsBedsHierarchy({
     discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
   }, [discardRowEdit, rowModesModel, rowsById]);
 
+  const restoreHierarchyRowFocus = useCallback((rowId: GridRowId): void => {
+    setSelectedRowId(rowId);
+    setTreeActive(true);
+    window.setTimeout(() => {
+      gridApiRef.current?.setCellFocus(rowId, "name");
+    }, 0);
+  }, [gridApiRef]);
+
   const handleHierarchyRowEditStop = useCallback<GridEventListener<"rowEditStop">>((params, event): void => {
     if (params.reason === GridRowEditStopReasons.escapeKeyDown) {
       event.defaultMuiPrevented = true;
@@ -793,16 +801,10 @@ function FieldsBedsHierarchy({
     }
 
     if (params.reason === GridRowEditStopReasons.enterKeyDown) {
-      // MUI moves DOM focus to the next row after Enter-save, but selectedRowId
-      // is externally controlled and MUI does not update it. Without this sync,
-      // the next Enter press would fire handleEditSelected on the old row.
-      const currentIndex = rows.findIndex((row) => String(row.id) === String(params.id));
-      const nextRow = currentIndex !== -1 ? rows[currentIndex + 1] : undefined;
-      if (nextRow !== undefined) {
-        setSelectedRowId(nextRow.id);
-      }
+      (event as MuiEvent<React.KeyboardEvent>).stopPropagation();
+      restoreHierarchyRowFocus(params.id);
     }
-  }, [discardRowEdit, rows, setSelectedRowId]);
+  }, [discardRowEdit, restoreHierarchyRowFocus]);
 
   const getBedAreaSum = (
     fieldId: number,
@@ -1560,10 +1562,8 @@ function FieldsBedsHierarchy({
         label: "Bearbeiten (Alt+E)",
         group: 'navigation',
       keywords: ["bearbeiten", "edit"],
-                keys: { key: "Enter" },
         contextTags: ["areas"],
-        isEnabled: () =>
-          selectedRow !== null && selectedRow.type !== "location",
+        isEnabled: () => selectedRow !== null,
         action: handleEditSelected,
       },
       {
@@ -1571,7 +1571,6 @@ function FieldsBedsHierarchy({
         label: "Löschen (Alt+Shift+D)",
         group: 'navigation',
       keywords: ["löschen", "delete"],
-                keys: { key: "Delete" },
         contextTags: ["areas"],
         isEnabled: () => selectedRow !== null,
         action: handleDeleteSelected,
@@ -1604,13 +1603,55 @@ function FieldsBedsHierarchy({
         return;
       }
 
-      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
-        return;
-      }
-
       const currentIndex = rows.findIndex((row) => row.id === selectedRowId);
       if (currentIndex === -1) {
         return;
+      }
+
+      const currentRow = rows[currentIndex];
+      if (!currentRow) {
+        return;
+      }
+
+      if (event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey && event.key === "Enter") {
+        if (currentRow.type === "bed" && hasPersistedEntityId(currentRow.bedId)) {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+          handleCreatePlantingPlan(currentRow.bedId);
+        }
+        return;
+      }
+
+      if (!event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+          startRowEdit(currentRow);
+          return;
+        }
+
+        if (event.key === " " || event.key === "Spacebar") {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+          if (
+            (currentRow.type === "location" || currentRow.type === "field") &&
+            currentRow.hasChildren === true
+          ) {
+            toggleExpand(currentRow.id);
+          }
+          return;
+        }
+
+        if (event.key === "Delete") {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation();
+          void deleteHierarchyRowWithUndo(currentRow);
+          return;
+        }
       }
 
       let performedAction = false;
@@ -1628,23 +1669,6 @@ function FieldsBedsHierarchy({
         if (previousRow) {
           targetRowId = previousRow.id;
           setSelectedRowId(previousRow.id);
-          performedAction = true;
-        }
-      } else if (event.key === "ArrowRight") {
-        const row = rows[currentIndex];
-        if (
-          row &&
-          (row.type === "location" || row.type === "field") &&
-          row.hasChildren === true &&
-          !expandedRows.has(row.id)
-        ) {
-          toggleExpand(row.id);
-          performedAction = true;
-        }
-      } else if (event.key === "ArrowLeft") {
-        const row = rows[currentIndex];
-        if (row && expandedRows.has(row.id)) {
-          toggleExpand(row.id);
           performedAction = true;
         }
       }
@@ -1670,7 +1694,17 @@ function FieldsBedsHierarchy({
       document.removeEventListener("mousedown", handleDocumentPointerDown);
       window.removeEventListener("keydown", handleTreeNavigation);
     };
-  }, [contextMenuState, discardActiveRowEdit, expandedRows, rows, selectedRowId, toggleExpand, treeActive]);
+  }, [
+    contextMenuState,
+    deleteHierarchyRowWithUndo,
+    discardActiveRowEdit,
+    handleCreatePlantingPlan,
+    rows,
+    selectedRowId,
+    startRowEdit,
+    toggleExpand,
+    treeActive,
+  ]);
 
   useEffect(() => {
     const handleContextMenuKeyboard = (event: KeyboardEvent) => {
@@ -1997,24 +2031,88 @@ function FieldsBedsHierarchy({
               }}
               onCellKeyDown={(params: GridCellParams<HierarchyRow>, event) => {
                 const keyboardEvent = event as MuiEvent<React.KeyboardEvent>;
+                const targetRow = rows.find((row) => row.id === params.id);
+                const isEditing = rowModesModel[params.id]?.mode === GridRowModes.Edit;
+
                 if (
                   keyboardEvent.key === "Escape" &&
-                  rowModesModel[params.id]?.mode === GridRowModes.Edit
+                  isEditing
                 ) {
                   keyboardEvent.preventDefault();
+                  keyboardEvent.stopPropagation();
                   keyboardEvent.defaultMuiPrevented = true;
                   discardRowEdit(params.id);
                   return;
                 }
+
+                if (isEditing && keyboardEvent.key === "Enter") {
+                  keyboardEvent.stopPropagation();
+                  setSelectedRowId(params.id);
+                  setTreeActive(true);
+                  return;
+                }
+
+                if (isEditing) {
+                  return;
+                }
+
                 if (keyboardEvent.key === "ContextMenu" || (keyboardEvent.shiftKey && keyboardEvent.key === "F10")) {
                   keyboardEvent.preventDefault();
                   keyboardEvent.stopPropagation();
-                  const targetRow = rows.find((row) => row.id === params.id);
+                  keyboardEvent.defaultMuiPrevented = true;
                   if (targetRow) {
                     const targetElement = keyboardEvent.currentTarget as HTMLElement;
                     const rect = targetElement.getBoundingClientRect();
                     openContextMenuForRow(targetRow, rect.left + Math.min(240, rect.width), rect.top + 12, targetElement);
                   }
+                  return;
+                }
+
+                if (
+                  keyboardEvent.ctrlKey &&
+                  !keyboardEvent.altKey &&
+                  !keyboardEvent.metaKey &&
+                  !keyboardEvent.shiftKey &&
+                  keyboardEvent.key === "Enter"
+                ) {
+                  keyboardEvent.preventDefault();
+                  keyboardEvent.stopPropagation();
+                  keyboardEvent.defaultMuiPrevented = true;
+                  if (targetRow?.type === "bed" && hasPersistedEntityId(targetRow.bedId)) {
+                    handleCreatePlantingPlan(targetRow.bedId);
+                  }
+                  return;
+                }
+
+                if (keyboardEvent.key === " " || keyboardEvent.key === "Spacebar") {
+                  keyboardEvent.preventDefault();
+                  keyboardEvent.stopPropagation();
+                  keyboardEvent.defaultMuiPrevented = true;
+                  if (
+                    targetRow &&
+                    (targetRow.type === "location" || targetRow.type === "field") &&
+                    targetRow.hasChildren === true
+                  ) {
+                    toggleExpand(targetRow.id);
+                  }
+                  return;
+                }
+
+                if (keyboardEvent.key === "Delete") {
+                  keyboardEvent.preventDefault();
+                  keyboardEvent.stopPropagation();
+                  keyboardEvent.defaultMuiPrevented = true;
+                  if (targetRow) {
+                    void deleteHierarchyRowWithUndo(targetRow);
+                  }
+                  return;
+                }
+
+                if (keyboardEvent.key === "Enter" && targetRow) {
+                  keyboardEvent.preventDefault();
+                  keyboardEvent.stopPropagation();
+                  keyboardEvent.defaultMuiPrevented = true;
+                  startRowEdit(targetRow);
                 }
               }}
               localeText={germanDataGridLocaleText}

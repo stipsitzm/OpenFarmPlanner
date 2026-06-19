@@ -63,6 +63,11 @@ function renderHierarchyAddIconButton({
       <span>
         <HierarchyAddIcon
           ariaLabel={label}
+          tabIndex={-1}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
           onClick={(event) => {
             event.stopPropagation();
             onClick(event);
@@ -89,6 +94,11 @@ function renderPlantingPlanActionButton(
         size="small"
         color="primary"
         aria-label={t('hierarchy:createPlantingPlan')}
+        tabIndex={-1}
+        onMouseDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
         onClick={(event) => {
           event.stopPropagation();
           callbacks.onCreatePlantingPlan(row.bedId!);
@@ -133,7 +143,9 @@ function renderHierarchyDeleteIconButton(
       <IconButton
         size="small"
         aria-label={t('common:actions.delete')}
+        tabIndex={-1}
         onMouseDown={(event) => {
+          event.preventDefault();
           event.stopPropagation();
         }}
         onClick={(event) => {

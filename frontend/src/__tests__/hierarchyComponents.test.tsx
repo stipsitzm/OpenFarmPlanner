@@ -144,6 +144,7 @@ describe('hierarchy components and behaviors', () => {
     const addFieldButton = screen.getAllByLabelText('Parzelle hinzufügen')
       .find((button) => !button.hasAttribute('data-mui-internal-clone-element'));
     expect(addFieldButton).toBeDefined();
+    expect(addFieldButton).toHaveAttribute('tabindex', '-1');
     expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
     await user.click(addFieldButton!);
     expect(addField).toHaveBeenCalledWith(2);
@@ -163,6 +164,7 @@ describe('hierarchy components and behaviors', () => {
     const addBedButton = screen.getAllByRole('button', { name: 'Beet zu dieser Parzelle hinzufügen' })
       .find((button) => !button.hasAttribute('data-mui-internal-clone-element'));
     expect(addBedButton).toBeDefined();
+    expect(addBedButton).toHaveAttribute('tabindex', '-1');
     expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
     await user.click(addBedButton!);
     expect(addBed).toHaveBeenCalledWith(10);
@@ -183,8 +185,10 @@ describe('hierarchy components and behaviors', () => {
       </>
     );
     const createPlantingPlanButton = screen.getByRole('button', { name: 'Pflanzplan erstellen' });
+    expect(createPlantingPlanButton).toHaveAttribute('tabindex', '-1');
     await user.click(createPlantingPlanButton);
     expect(createPlan).toHaveBeenCalledWith(100);
+    expect(screen.getByRole('button', { name: 'Löschen' })).toHaveAttribute('tabindex', '-1');
     await user.click(screen.getByRole('button', { name: 'Löschen' }));
     expect(deleteBed).toHaveBeenCalledWith(100);
     expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
