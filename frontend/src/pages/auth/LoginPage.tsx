@@ -132,7 +132,7 @@ export default function LoginPage() {
             </Button>
           ) : null}
           <Button component={RouterLink} to={nextPath ? `/register?next=${encodeURIComponent(nextPath)}` : '/register'} state={location.state}>{t('auth:login.noAccount')}</Button>
-          <Button component={RouterLink} to="/forgot-password">{t('auth:login.forgotPassword')}</Button>
+          <Button component={RouterLink} to="/forgot-password" state={{ email }}>{t('auth:login.forgotPassword')}</Button>
         </Stack>
       </Box>
     </Container>
