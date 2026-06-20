@@ -176,6 +176,22 @@ cd frontend
 npm run test:e2e
 ```
 
+E2E tests require the backend to expose its test-fixture API. Add the following
+to `backend/.env` (already included in the committed `.env.example`):
+
+```
+E2E_TEST_TOKEN=openfarmplanner-e2e-token
+FRONTEND_URL=http://localhost:5173
+```
+
+`E2E_TEST_TOKEN` activates the `/api/__e2e__/` endpoint that Playwright uses to
+create isolated test users and seed data. `FRONTEND_URL` tells the backend
+where to point invitation links so they resolve in the browser during tests.
+
+The same settings also enable AI-agent-driven verification (e.g. when Claude
+Code runs `verify` tasks against the local dev server). Without them the backend
+silently skips registering the endpoint and tests fail at login.
+
 ## Version Bumping
 
 Project version is defined in `backend/config/version.py` as a semantic version (`MAJOR.MINOR.PATCH`).
