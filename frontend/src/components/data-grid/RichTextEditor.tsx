@@ -87,6 +87,9 @@ const EDITOR_WRAPPER_SX = {
 export function RichTextEditor({ value, onChange, focusRequestId = 0, autoFocus = true }: RichTextEditorProps) {
   const { t } = useTranslation('common');
   const openMarker = useRef(-1);
+  // Prevents the onUpdate callback from propagating onChange when we programmatically
+  // load content via setContent (e.g. on init or when a new item is opened).
+  const isSettingContentRef = useRef(false);
 
   const editor = useEditor({
     extensions: [
@@ -96,8 +99,7 @@ export function RichTextEditor({ value, onChange, focusRequestId = 0, autoFocus 
     ],
     content: '',
     onUpdate({ editor: e }) {
-      // Guard against updates fired during editor destruction or re-initialization.
-      if (e.isDestroyed) return;
+      if (e.isDestroyed || isSettingContentRef.current) return;
       onChange((e.storage as unknown as Record<string, { getMarkdown(): string }>).markdown.getMarkdown());
     },
   });
@@ -107,7 +109,9 @@ export function RichTextEditor({ value, onChange, focusRequestId = 0, autoFocus 
   useEffect(() => {
     if (!editor || editor.isDestroyed || focusRequestId === openMarker.current) return;
     openMarker.current = focusRequestId;
+    isSettingContentRef.current = true;
     editor.commands.setContent(value);
+    isSettingContentRef.current = false;
     if (autoFocus) {
       editor.commands.focus('end');
     }

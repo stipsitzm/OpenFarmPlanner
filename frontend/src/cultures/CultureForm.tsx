@@ -120,6 +120,26 @@ const EMPTY_CULTURE: Partial<Culture> = {
 
 const DUPLICATE_CHECK_DEBOUNCE_MS = 400;
 
+// Deep equality for dirty-state comparison. Treats null, undefined, and ''
+// as equivalent ("no value") so that clearing a field back to blank matches
+// an originally-absent API value and does not trigger a false dirty state.
+function formValuesEqual(a: unknown, b: unknown): boolean {
+  const isAbsent = (v: unknown) => v === null || v === undefined || v === '';
+  if (isAbsent(a) && isAbsent(b)) return true;
+  if (isAbsent(a) !== isAbsent(b)) return false;
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((v, i) => formValuesEqual(v, (b as unknown[])[i]));
+  }
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (typeof a === 'object' && typeof b === 'object') {
+    const ao = a as Record<string, unknown>;
+    const bo = b as Record<string, unknown>;
+    const allKeys = new Set([...Object.keys(ao), ...Object.keys(bo)]);
+    return [...allKeys].every(key => formValuesEqual(ao[key], bo[key]));
+  }
+  return a === b;
+}
+
 const normalizeCultureIdentityValue = (value: string | undefined | null): string | null => {
   if (!value) {
     return null;
@@ -222,7 +242,7 @@ export function CultureForm({
   const [isValid, setIsValid] = useState(true);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
-  const userInteractedRef = useRef(false);
+  const originalFormDataRef = useRef<Partial<Culture>>(buildInitialFormData(culture));
   const dialogContentRef = useDialogKeyboardScroll(true);
   const formRef = useRef<HTMLFormElement | null>(null);
   const supplierOptionsRef = useRef<Supplier[]>([]);
@@ -276,7 +296,9 @@ export function CultureForm({
   }, []);
 
   useEffect(() => {
-    setFormData(buildInitialFormData(culture));
+    const initial = buildInitialFormData(culture);
+    originalFormDataRef.current = initial;
+    setFormData(initial);
     setErrors({});
     setDuplicateErrorKey('');
     setIsDuplicateChecking(false);
@@ -286,7 +308,6 @@ export function CultureForm({
     setIsValid(true);
     setHasSubmitted(false);
     setSaveError('');
-    userInteractedRef.current = false;
   }, [culture]);
 
   useEffect(() => {
@@ -435,8 +456,7 @@ export function CultureForm({
   const handleChange = <K extends keyof Culture>(name: K, value: Culture[K]) => {
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
-      setIsDirty(true);
-      userInteractedRef.current = true;
+      setIsDirty(!formValuesEqual(updated, originalFormDataRef.current));
       setSaveError('');
       if (name === 'name' || name === 'variety') {
         setDuplicateErrorKey('');
@@ -506,6 +526,7 @@ export function CultureForm({
     setIsSaving(true);
     try {
       await saveCulture(formData);
+      originalFormDataRef.current = { ...formData };
       setSaveError('');
       setIsDirty(false);
       setHasSubmitted(false);
@@ -549,7 +570,7 @@ export function CultureForm({
       open
       onClose={(_event, reason) => {
         if (reason === 'backdropClick') return;
-        if (isDirty && userInteractedRef.current) {
+        if (isDirty) {
           setShowDiscardConfirm(true);
         } else {
           onCancel();
@@ -757,7 +778,7 @@ export function CultureForm({
               {saveError}
             </Alert>
           ) : null}
-          {isDirty && userInteractedRef.current && (
+          {isDirty && (
             <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
               {isValid && !duplicateErrorKey
                 ? t('messages.unsavedChanges')
@@ -765,7 +786,7 @@ export function CultureForm({
             </Typography>
           )}
           <Button variant="outlined" onClick={() => {
-            if (isDirty && userInteractedRef.current) {
+            if (isDirty) {
               setShowDiscardConfirm(true);
             } else {
               onCancel();
