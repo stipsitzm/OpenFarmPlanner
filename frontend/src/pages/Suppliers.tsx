@@ -24,7 +24,6 @@ import {
   Typography,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
@@ -498,15 +497,6 @@ export default function Suppliers() {
     });
   }, [markContextMenuHintUsed]);
 
-  const handleContextMenuEdit = useCallback((): void => {
-    if (!contextMenuState) {
-      return;
-    }
-    const { supplier } = contextMenuState;
-    closeContextMenu();
-    openEdit(supplier);
-  }, [closeContextMenu, contextMenuState, openEdit]);
-
   const handleContextMenuDelete = useCallback((): void => {
     if (!contextMenuState) {
       return;
@@ -592,9 +582,21 @@ export default function Suppliers() {
                     key={supplier.id}
                     hover
                     tabIndex={0}
+                    onClick={(event) => {
+                      if ((event.target as HTMLElement).closest('a, button')) {
+                        return;
+                      }
+                      openEdit(supplier);
+                    }}
                     onContextMenu={(event) => openSupplierContextMenu(event, supplier)}
-                    onKeyDown={(event) => openSupplierKeyboardContextMenu(event, supplier)}
-                    sx={{ WebkitTouchCallout: 'none' }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        openEdit(supplier);
+                        return;
+                      }
+                      openSupplierKeyboardContextMenu(event, supplier);
+                    }}
+                    sx={{ cursor: 'pointer', WebkitTouchCallout: 'none' }}
                   >
                     <TableCell sx={{ py: 1.25 }}>{supplier.name}</TableCell>
                     <TableCell sx={{ py: 1.25 }}>
@@ -635,12 +637,6 @@ export default function Suppliers() {
             : undefined
         }
       >
-        <MenuItem onClick={handleContextMenuEdit}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary={t('editAction')} />
-        </MenuItem>
         <MenuItem onClick={handleContextMenuDelete}>
           <ListItemIcon sx={{ color: 'error.main' }}>
             <DeleteIcon fontSize="small" />

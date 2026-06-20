@@ -36,7 +36,6 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
@@ -1528,14 +1527,7 @@ export function EditableDataGrid<T extends EditableRow>({
   }), [handleDeleteClick, handleDuplicateRow, handleStartRowEdit]);
 
   const defaultRowActions = useCallback((row: T): EditableDataGridRowAction<T>[] => {
-    const actions: EditableDataGridRowAction<T>[] = [
-      {
-        id: 'edit',
-        label: t('actions.edit'),
-        icon: <EditIcon fontSize="small" />,
-        onClick: (_row, helpers) => helpers.startEdit(row.id),
-      },
-    ];
+    const actions: EditableDataGridRowAction<T>[] = [];
 
     if (duplicateRow) {
       actions.push({

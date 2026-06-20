@@ -128,12 +128,27 @@ describe('Suppliers page empty and table states', () => {
     const stopPropagationSpy = vi.spyOn(contextMenuEvent, 'stopPropagation');
     fireEvent(supplierRow as HTMLTableRowElement, contextMenuEvent);
 
-    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
     expect(contextMenuEvent.defaultPrevented).toBe(true);
     expect(stopPropagationSpy).toHaveBeenCalled();
+  });
 
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Bearbeiten' }));
+  it('opens edit dialog on single click on a supplier row', async () => {
+    mocks.list.mockResolvedValue({
+      data: {
+        results: [{ id: 1, name: 'Reinsaat', homepage_url: 'https://example.com' }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <Suppliers />
+      </MemoryRouter>,
+    );
+
+    const supplierName = await screen.findByText('Reinsaat');
+    fireEvent.click(supplierName.closest('tr') as HTMLTableRowElement);
 
     expect(await screen.findByRole('heading', { name: 'Lieferant bearbeiten' })).toBeInTheDocument();
   });
@@ -157,7 +172,7 @@ describe('Suppliers page empty and table states', () => {
 
     fireEvent.keyDown(supplierRow as HTMLTableRowElement, { key: 'F10', shiftKey: true });
 
-    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
   });
 

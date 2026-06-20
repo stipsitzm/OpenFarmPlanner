@@ -809,7 +809,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     fireEvent.keyDown(bedNameCell, { key: 'F10', shiftKey: true });
 
     expect(await screen.findByRole('menuitem', { name: 'Pflanzplan erstellen' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
 
     fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
@@ -1035,46 +1035,42 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
       'Parzelle hinzufügen',
-      'Bearbeiten',
       'Löschen',
       'common:actions.copyRow',
       'common:actions.copyTable',
     ]);
-    expect(screen.getAllByRole('separator')).toHaveLength(3);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Bearbeiten' }));
-    expect(screen.getByTestId('mode-location-1')).toHaveTextContent('edit');
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
 
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Escape location-1' }));
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
 
     const fieldRow = await screen.findByTestId('row-field-10');
     fireEvent.contextMenu(fieldRow);
 
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
       'Beet hinzufügen',
-      'Bearbeiten',
       'Löschen',
       'common:actions.copyRow',
       'common:actions.copyTable',
     ]);
     expect(screen.getByRole('menuitem', { name: 'Beet hinzufügen' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Beet' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('separator')).toHaveLength(3);
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
 
     fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
-    await waitFor(() => expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
     expect(within(fieldRow).queryByLabelText('Aktionen')).not.toBeInTheDocument();
     fireEvent.contextMenu(fieldRow);
 
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
       'Beet hinzufügen',
-      'Bearbeiten',
       'Löschen',
       'common:actions.copyRow',
       'common:actions.copyTable',
     ]);
     expect(screen.getByRole('menuitem', { name: 'Beet hinzufügen' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Beet' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('separator')).toHaveLength(3);
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
   });
 
   it('persists a deleted bed immediately and shows undo feedback', async () => {
