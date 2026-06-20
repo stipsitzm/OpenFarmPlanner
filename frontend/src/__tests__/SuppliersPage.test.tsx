@@ -105,7 +105,6 @@ describe('Suppliers page empty and table states', () => {
     await waitFor(() => expect(screen.getByText('Reinsaat')).toBeInTheDocument());
     expect(screen.getByText('Name')).toBeInTheDocument();
     expect(screen.getByText('Webseite')).toBeInTheDocument();
-    expect(screen.getByText('Aktionen')).toBeInTheDocument();
   });
 
   it('opens supplier row actions from the right-click context menu', async () => {
@@ -187,8 +186,9 @@ describe('Suppliers page empty and table states', () => {
       </MemoryRouter>,
     );
 
-    await screen.findByText('Reinsaat');
-    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    const supplierName = await screen.findByText('Reinsaat');
+    fireEvent.contextMenu(supplierName.closest('tr') as HTMLTableRowElement);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Löschen' }));
 
     await waitFor(() => expect(mocks.deleteUsage).toHaveBeenCalledWith(1));
     expect(confirmSpy).not.toHaveBeenCalled();
@@ -223,8 +223,9 @@ describe('Suppliers page empty and table states', () => {
       </MemoryRouter>,
     );
 
-    await screen.findByText('Reinsaat');
-    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    const supplierName = await screen.findByText('Reinsaat');
+    fireEvent.contextMenu(supplierName.closest('tr') as HTMLTableRowElement);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Löschen' }));
 
     expect(await screen.findByRole('heading', { name: 'Lieferant wird noch verwendet' })).toBeInTheDocument();
     expect(screen.getByText('Dieser Lieferant wird noch von 12 Kulturen verwendet.')).toBeInTheDocument();
@@ -285,8 +286,9 @@ describe('Suppliers page empty and table states', () => {
       </MemoryRouter>,
     );
 
-    await screen.findByText('Reinsaat');
-    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    const supplierName = await screen.findByText('Reinsaat');
+    fireEvent.contextMenu(supplierName.closest('tr') as HTMLTableRowElement);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Löschen' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Lieferant aus allen Kulturen entfernen und löschen' }));
 
     await waitFor(() => expect(mocks.unlinkAndDelete).toHaveBeenCalledWith(1));

@@ -126,7 +126,7 @@ describe('CommandProvider', () => {
 
     fireEvent.keyDown(window, { key: 'k', altKey: true });
 
-    expect(screen.getByText('Aktionssuche')).toBeInTheDocument();
+    expect(screen.getAllByText('Aktionssuche').length).toBeGreaterThan(0);
     expect(screen.getByText('Tastenkürzel')).toBeInTheDocument();
     expect(screen.getByText('Projekteinstellungen')).toBeInTheDocument();
     expect(screen.getByText('Projekt wechseln: Garten')).toBeInTheDocument();
@@ -143,7 +143,7 @@ describe('CommandProvider', () => {
 
     fireEvent.keyDown(window, { key: 'k', altKey: true });
 
-    expect(screen.getByRole('textbox', { name: 'Aktionssuche (Alt+K)' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Aktionssuche' })).toBeInTheDocument();
   });
 
   it('does not open the command palette with Alt+K while typing in an input', () => {
@@ -158,7 +158,7 @@ describe('CommandProvider', () => {
     input.focus();
     fireEvent.keyDown(window, { key: 'k', altKey: true });
 
-    expect(screen.queryByRole('textbox', { name: 'Aktionssuche (Alt+K)' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Aktionssuche' })).not.toBeInTheDocument();
   });
 
   it('keeps Ctrl+Shift+Arrow navigation working through root commands', () => {

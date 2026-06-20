@@ -44,7 +44,7 @@ class AuthApiTest(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['detail'], 'Registrierung erfolgreich. Bitte pruefe deine E-Mails, um dein Konto zu aktivieren.')
+        self.assertEqual(response.data['detail'], 'Registrierung erfolgreich. Bitte prüfe deine E-Mails, um dein Konto zu aktivieren.')
         created = User.objects.get(email='new@example.com')
         self.assertFalse(created.is_active)
         self.assertEqual(created.first_name, 'New User')
