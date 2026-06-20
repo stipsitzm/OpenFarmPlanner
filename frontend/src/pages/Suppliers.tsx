@@ -9,7 +9,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  IconButton,
   Link,
   ListItemIcon,
   ListItemText,
@@ -585,7 +584,6 @@ export default function Suppliers() {
                 <TableRow>
                   <TableCell sx={{ py: 1.5, minWidth: { xs: 140, sm: 180 } }}>{t('name')}</TableCell>
                   <TableCell sx={{ py: 1.5, minWidth: { xs: 180, sm: 280 } }}>{t('homepage')}</TableCell>
-                  <TableCell align="right" sx={{ py: 1.5, width: 1, whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -605,26 +603,6 @@ export default function Suppliers() {
                           {supplier.homepage_url}
                         </Link>
                       ) : null}
-                    </TableCell>
-                    <TableCell align="right" sx={{ py: 1.25 }}>
-                      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        aria-label={t('editAction')}
-                        onClick={() => openEdit(supplier)}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        aria-label={t('deleteAction')}
-                        onClick={() => void deleteSupplier(supplier)}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
