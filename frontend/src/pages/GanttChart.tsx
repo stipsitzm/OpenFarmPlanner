@@ -785,6 +785,7 @@ function GanttChartPage() {
                 locale={resolvedLocale}
                 localeText={ganttLocaleText}
                 viewMode={ViewMode.MONTH}
+                leftColumnWidth={220}
                 startDate={startDate}
                 endDate={endDate}
                 editMode={calendarMode === 'occupancy' ? editMode : false}
