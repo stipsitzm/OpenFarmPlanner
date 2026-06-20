@@ -487,7 +487,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, has
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button variant="outlined" onClick={() => setConfirmDiscardOpen(false)}>
+          <Button autoFocus variant="outlined" onClick={() => setConfirmDiscardOpen(false)}>
             {t('notesDrawer.unsavedDialog.continueEditing')}
           </Button>
           <Button

@@ -1789,7 +1789,7 @@ function RootLayout() {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button variant="outlined" onClick={() => setPendingRestoreEntry(null)}>Abbrechen</Button>
+          <Button autoFocus variant="outlined" onClick={() => setPendingRestoreEntry(null)}>Abbrechen</Button>
           <Button
             variant="contained"
             onClick={() => {

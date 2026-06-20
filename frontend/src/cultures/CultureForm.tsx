@@ -813,7 +813,7 @@ export function CultureForm({
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button variant="outlined" onClick={() => setShowDiscardConfirm(false)}>{t('form.discardCancel')}</Button>
+          <Button autoFocus variant="outlined" onClick={() => setShowDiscardConfirm(false)}>{t('form.discardCancel')}</Button>
           <Button variant="contained" color="error" onClick={() => { setShowDiscardConfirm(false); onCancel(); }}>
             {t('form.discardConfirm')}
           </Button>
