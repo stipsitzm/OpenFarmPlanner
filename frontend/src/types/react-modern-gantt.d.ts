@@ -64,6 +64,7 @@ declare module 'react-modern-gantt' {
     locale?: string;
     localeText?: GanttLocaleText;
     viewMode?: ViewMode;
+    leftColumnWidth?: number;
     startDate?: Date;
     endDate?: Date;
     editMode?: boolean;
