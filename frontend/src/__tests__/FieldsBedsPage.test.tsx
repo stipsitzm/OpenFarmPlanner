@@ -157,10 +157,24 @@ describe('FieldsBedsPage', () => {
 
     renderPage();
     expect(await screen.findByText('Parzelle fehlt')).toBeInTheDocument();
-    expect(screen.getByText('Lege zuerst eine Parzelle an, um deine Anbauflächen zu strukturieren.')).toBeInTheDocument();
+    expect(screen.getByText('Lege eine Parzelle an, um zu starten.')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Falls du Flächen an mehreren Orten bewirtschaftest, kannst du auch'))).toBeInTheDocument();
+    const addLocationLink = screen.getByRole('link', { name: 'zusätzliche Standorte anlegen' });
+    expect(addLocationLink).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Parzelle hinzufügen' })).toHaveLength(1);
+    expect(registeredUiState.topbarActions.find((action) => action.id === 'fields-global-add-field')?.menuActions?.map((action) => action.label))
+      .toEqual(['Parzelle hinzufügen', 'Standort hinzufügen']);
+    expect(registeredUiState.topbarActions.find((action) => action.id === 'fields-global-add-location')?.hidden).toBe(true);
     expect(screen.queryByText('Tipp: Rechtsklick auf eine Tabellenzeile öffnet weitere Aktionen.')).not.toBeInTheDocument();
     expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
 
+    await user.click(addLocationLink);
+    expect(screen.getByRole('dialog', { name: 'Weiteren Standort hinzufügen' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Weiteren Standort hinzufügen' })).not.toBeInTheDocument();
+    });
     await user.click(screen.getByRole('button', { name: 'Parzelle hinzufügen' }));
 
     expect(await screen.findByText('Hierarchieansicht')).toBeInTheDocument();
@@ -175,8 +189,10 @@ describe('FieldsBedsPage', () => {
     renderPage();
 
     expect(await screen.findByText('Parzelle fehlt')).toBeInTheDocument();
-    expect(screen.getByText('Füge beim gewünschten Standort über das ➕-Symbol eine Parzelle hinzu.')).toBeInTheDocument();
+    expect(screen.getByText('Füge beim gewünschten Standort über das ➕-Symbol oder das Kontextmenü eine Parzelle hinzu.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
+    expect(registeredUiState.topbarActions.find((action) => action.id === 'fields-global-add-field')).toBeUndefined();
+    expect(registeredUiState.topbarActions.find((action) => action.id === 'fields-global-add-location')?.hidden).toBe(false);
     expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
   });
 

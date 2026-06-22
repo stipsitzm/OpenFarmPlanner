@@ -62,7 +62,8 @@
     "fieldDeleted": "Parzelle gelöscht",
     "bedDeleted": "Beet gelöscht",
     "locationAndBedsDeleted": "Standort und {{count}} Beete gelöscht",
-    "fieldAndBedsDeleted": "Parzelle und {{count}} Beete gelöscht"
+    "fieldAndBedsDeleted": "Parzelle und {{count}} Beete gelöscht",
+    "locationsNowVisible": "Standorte werden nun angezeigt, da mehrere Standorte vorhanden sind."
   },
   "prompts": {
     "newFieldName": "Name der neuen Parzelle:",
@@ -73,7 +74,8 @@
     "addBed": "Beet hinzufügen",
     "createLocation": "Standort hinzufügen",
     "addAdditionalLocation": "Mehrere Orte? Weiteren Standort hinzufügen",
-    "undo": "Rückgängig"
+    "undo": "Rückgängig",
+    "addFieldDropdown": "Parzelle hinzufügen"
   },
   "dialogs": {
     "addField": {
@@ -94,8 +96,10 @@
     "missingLocationTitle": "Standort fehlt",
     "missingLocationDescription": "Der Hauptstandort ist für dieses Projekt noch nicht verfügbar.",
     "missingFieldTitle": "Parzelle fehlt",
-    "missingFieldSingleLocationDescription": "Lege zuerst eine Parzelle an, um deine Anbauflächen zu strukturieren.",
-    "missingFieldMultipleLocationsDescription": "Füge beim gewünschten Standort über das ➕-Symbol eine Parzelle hinzu.",
+    "missingFieldSingleLocationDescription": "Lege eine Parzelle an, um zu starten.",
+    "additionalLocationHint": "Falls du Flächen an mehreren Orten bewirtschaftest, kannst du auch",
+    "additionalLocationLink": "zusätzliche Standorte anlegen",
+    "missingFieldMultipleLocationsDescription": "Füge beim gewünschten Standort über das ➕-Symbol oder das Kontextmenü eine Parzelle hinzu.",
     "actions": {
       "createLocation": "Standort hinzufügen",
       "createField": "Parzelle hinzufügen",

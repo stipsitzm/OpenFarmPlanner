@@ -1,4 +1,4 @@
-import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Link, TextField, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
@@ -108,7 +108,8 @@ export default function FieldsBedsPage() {
   }, [shouldShowProjectRequiredState]);
 
   const hasAddFieldTarget = locations.some((item) => item.id !== undefined);
-  const canUseGlobalAddField = locations.length === 1 && locations[0]?.id !== undefined;
+  const isSingleLocationMode = locations.length === 1 && locations[0]?.id !== undefined;
+  const canUseGlobalAddField = isSingleLocationMode;
   const hasActiveFieldDraft = fields.some((field) => !hasPersistedEntityId(field.id));
 
   const requestInlineFieldCreation = useCallback((): void => {
@@ -135,17 +136,20 @@ export default function FieldsBedsPage() {
       return;
     }
     try {
+      const wasSingleLocationMode = locations.length === 1;
       await locationAPI.create({ name: trimmedName });
       setAddLocationDialogOpen(false);
       setNewLocationName('');
       await reloadHierarchyData();
       setGlobalActionError('');
-      setGlobalActionSuccess(t('hierarchy:messages.locationCreated'));
+      setGlobalActionSuccess(wasSingleLocationMode
+        ? t('hierarchy:messages.locationsNowVisible')
+        : t('hierarchy:messages.locationCreated'));
     } catch (error) {
       console.error('Error creating additional location:', error);
       setGlobalActionError(t('hierarchy:messages.createLocationError'));
     }
-  }, [newLocationName, reloadHierarchyData, t]);
+  }, [locations.length, newLocationName, reloadHierarchyData, t]);
 
   const handleAdditionalLocationSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -218,6 +222,24 @@ export default function FieldsBedsPage() {
       ? 'hierarchy:emptyAreas.missingFieldSingleLocationDescription'
       : 'hierarchy:emptyAreas.missingFieldMultipleLocationsDescription')
     : t('hierarchy:emptyAreas.missingLocationDescription');
+  const emptyAreasSupplement = shouldShowMissingFieldsState && isSingleLocationMode
+    ? (
+        <Typography variant="body2" color="text.secondary">
+          {t('hierarchy:emptyAreas.additionalLocationHint')}{' '}
+          <Link
+            href="#add-location"
+            onClick={(event) => {
+              event.preventDefault();
+              openAddLocationDialog();
+            }}
+            underline="hover"
+          >
+            {t('hierarchy:emptyAreas.additionalLocationLink')}
+          </Link>
+          .
+        </Typography>
+      )
+    : undefined;
   const emptyAreaActions = useMemo<EmptyStateAction[]>(() => {
     if (shouldShowMissingFieldsState) {
       return locations.length === 1
@@ -256,15 +278,28 @@ export default function FieldsBedsPage() {
       : [
         ...(canUseGlobalAddField ? [{
           id: 'fields-global-add-field',
-          label: t('hierarchy:actions.addField'),
+          label: t('hierarchy:actions.addFieldDropdown'),
           onClick: requestInlineFieldCreation,
-          ariaLabel: t('hierarchy:actions.addField'),
+          ariaLabel: t('hierarchy:actions.addFieldDropdown'),
+          menuActions: [
+            {
+              id: 'fields-global-add-field-menu-item',
+              label: t('hierarchy:actions.addField'),
+              onClick: requestInlineFieldCreation,
+            },
+            {
+              id: 'fields-global-add-location-menu-item',
+              label: t('hierarchy:actions.createLocation'),
+              onClick: openAddLocationDialog,
+            },
+          ],
         }] : []),
         {
           id: 'fields-global-add-location',
           label: t('hierarchy:actions.createLocation'),
           onClick: openAddLocationDialog,
           ariaLabel: t('hierarchy:actions.createLocation'),
+          hidden: isSingleLocationMode,
         },
       ];
     return [...globalActions, ...viewModeActions];
@@ -273,6 +308,7 @@ export default function FieldsBedsPage() {
     requestInlineFieldCreation,
     openAddLocationDialog,
     shouldShowProjectRequiredState,
+    isSingleLocationMode,
     t,
     viewModeActions,
   ]);
@@ -319,6 +355,7 @@ export default function FieldsBedsPage() {
             title={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldTitle') : t('hierarchy:emptyAreas.missingLocationTitle')}
             description={emptyAreasDescription}
             actions={emptyAreaActions}
+            supplement={emptyAreasSupplement}
             containerSx={CONTENT_ALIGNED_EMPTY_STATE_SX}
           />
         ) : null}

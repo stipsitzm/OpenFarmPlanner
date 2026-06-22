@@ -292,6 +292,7 @@ export interface TopbarContextAction {
   reserveSpace?: boolean;
   groupId?: string;
   tooltip?: string;
+  menuActions?: Array<{ id: string; label: string; onClick: () => void; disabled?: boolean }>;
 }
 
 export interface RootLayoutOutletContext {
@@ -342,6 +343,7 @@ function RootLayout() {
   const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
   const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileActionsOverflowAnchor, setMobileActionsOverflowAnchor] = useState<null | HTMLElement>(null);
+  const [topbarPrimaryActionMenuAnchor, setTopbarPrimaryActionMenuAnchor] = useState<null | HTMLElement>(null);
   currentPathnameRef.current = location.pathname;
 
   useEffect(() => {
@@ -817,11 +819,14 @@ function RootLayout() {
         onClick: runPrimaryCreateAction,
       };
     }
-    if (location.pathname.startsWith('/app/fields-beds')) return fieldsGlobalAddAction ? { label: fieldsGlobalAddAction.label, to: '', onClick: fieldsGlobalAddAction.onClick } : null;
+    if (location.pathname.startsWith('/app/fields-beds')) return fieldsGlobalAddAction ? { label: fieldsGlobalAddAction.label, to: '', onClick: fieldsGlobalAddAction.onClick, menuActions: fieldsGlobalAddAction.menuActions } : null;
     return null;
   }, [activeCreateActions, fieldsGlobalAddAction, location.pathname, runPrimaryCreateAction, t]);
   const handleTopbarPrimaryAction = useCallback((): void => {
     if (!topbarPrimaryAction) {
+      return;
+    }
+    if (topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0) {
       return;
     }
     if (topbarPrimaryAction.onClick) {
@@ -1116,9 +1121,19 @@ function RootLayout() {
               <Button
                 size="small"
                 variant="contained"
-                onClick={handleTopbarPrimaryAction}
+                onClick={(event) => {
+                  if (topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0) {
+                    setTopbarPrimaryActionMenuAnchor(event.currentTarget);
+                    return;
+                  }
+                  handleTopbarPrimaryAction();
+                }}
                 aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
+                aria-controls={topbarPrimaryActionMenuAnchor ? 'topbar-primary-action-menu' : undefined}
+                aria-haspopup={topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0 ? 'true' : undefined}
+                aria-expanded={Boolean(topbarPrimaryActionMenuAnchor)}
                 startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
+                endIcon={!isPhone && topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0 ? <KeyboardArrowDownIcon fontSize="small" /> : undefined}
                 sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
               >
                 {isPhone ? <AddIcon fontSize="small" /> : topbarPrimaryAction.label}
@@ -1126,6 +1141,27 @@ function RootLayout() {
             </Tooltip>
           ) : null}
             </Box>
+          {topbarPrimaryAction?.menuActions && topbarPrimaryAction.menuActions.length > 0 ? (
+            <Menu
+              id="topbar-primary-action-menu"
+              anchorEl={topbarPrimaryActionMenuAnchor}
+              open={Boolean(topbarPrimaryActionMenuAnchor)}
+              onClose={() => setTopbarPrimaryActionMenuAnchor(null)}
+            >
+              {topbarPrimaryAction.menuActions.map((action) => (
+                <MenuItem
+                  key={action.id}
+                  onClick={() => {
+                    setTopbarPrimaryActionMenuAnchor(null);
+                    action.onClick();
+                  }}
+                  disabled={action.disabled}
+                >
+                  <ListItemText primary={action.label} />
+                </MenuItem>
+              ))}
+            </Menu>
+          ) : null}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP, ml: TOPBAR_ACTION_GROUP_GAP, flexShrink: 0 }}>
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
@@ -1283,13 +1319,43 @@ function RootLayout() {
                   <Button
                     size="small"
                     variant="contained"
-                    onClick={handleTopbarPrimaryAction}
+                    onClick={(event) => {
+                      if (topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0) {
+                        setTopbarPrimaryActionMenuAnchor(event.currentTarget);
+                        return;
+                      }
+                      handleTopbarPrimaryAction();
+                    }}
                     aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
+                    aria-controls={topbarPrimaryActionMenuAnchor ? 'topbar-primary-action-menu' : undefined}
+                    aria-haspopup={topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0 ? 'true' : undefined}
+                    aria-expanded={Boolean(topbarPrimaryActionMenuAnchor)}
                     sx={{ textTransform: 'none', minWidth: 32, px: 0.75, minHeight: 30 }}
                   >
                     <AddIcon fontSize="small" />
                   </Button>
                 </Tooltip>
+              ) : null}
+              {topbarPrimaryAction?.menuActions && topbarPrimaryAction.menuActions.length > 0 ? (
+                <Menu
+                  id="topbar-primary-action-menu"
+                  anchorEl={topbarPrimaryActionMenuAnchor}
+                  open={Boolean(topbarPrimaryActionMenuAnchor)}
+                  onClose={() => setTopbarPrimaryActionMenuAnchor(null)}
+                >
+                  {topbarPrimaryAction.menuActions.map((action) => (
+                    <MenuItem
+                      key={action.id}
+                      onClick={() => {
+                        setTopbarPrimaryActionMenuAnchor(null);
+                        action.onClick();
+                      }}
+                      disabled={action.disabled}
+                    >
+                      <ListItemText primary={action.label} />
+                    </MenuItem>
+                  ))}
+                </Menu>
               ) : null}
               <IconButton
                 aria-label="Mehr"

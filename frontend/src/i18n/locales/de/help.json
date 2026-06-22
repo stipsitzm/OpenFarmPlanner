@@ -8,7 +8,7 @@
     {
       "title": "Anbauflächen",
       "points": [
-        "Hier legst du Standorte, Parzellen und Beete an."
+        "Hier legst du Parzellen und Beete an. Bei Bedarf kannst du zusätzliche Standorte verwenden."
       ]
     },
     {
@@ -57,7 +57,7 @@
         {
           "title": "Zusammenhang mit anderen Seiten",
           "points": [
-            "Auf der Seite Anbauflächen legst du zu jedem Standort Parzellen und Beete an.",
+            "Auf der Seite Anbauflächen legst du Parzellen und Beete an; bei mehreren Standorten ordnest du sie dem passenden Standort zu.",
             "Aufgaben werden aus den Anbauplänen ermittelt."
           ]
         }
@@ -103,7 +103,7 @@
     },
     "areas": {
       "title": "Hilfe: Anbauflächen – Listenansicht",
-      "intro": "Hier verwaltest du die Flächenstruktur deines Betriebs – vom Standort über Parzellen bis zu einzelnen Beeten.\n\nNeue Standorte, Parzellen und Beete können über das {{addIcon}} hinzugefügt werden, das beim Überfahren eines Elements mit der Maus erscheint.\n\nEinträge können direkt in der Tabelle bearbeitet werden. Weitere Aktionen wie Umbenennen, Löschen oder das Anlegen von Anbauplänen findest du im Kontextmenü per Rechtsklick.\n\nDie angelegten Flächen bilden die Grundlage für deine Anbauplanung."
+      "intro": "Hier verwaltest du Parzellen und Beete für deine Anbauflächen. Wenn du Flächen an mehreren Orten bewirtschaftest, kannst du zusätzliche Standorte anlegen; dann werden Standorte, Parzellen und Beete als Hierarchie angezeigt.\n\nNeue Parzellen und Beete können über das {{addIcon}} hinzugefügt werden, das beim Überfahren eines Elements mit der Maus erscheint. Weitere Aktionen wie Umbenennen, Löschen oder das Anlegen von Anbauplänen findest du im Kontextmenü per Rechtsklick.\n\nDie angelegten Flächen bilden die Grundlage für deine Anbauplanung."
     },
     "cultures": {
       "title": "Hilfe: Kulturen",
@@ -152,7 +152,7 @@
     },
     "graphical": {
       "title": "Hilfe: Anbauflächen – Grafische Ansicht",
-      "intro": "Hier siehst du Standorte, Parzellen und Beete räumlich angeordnet. Die grafische Ansicht hilft, die Flächenstruktur visuell zu prüfen und anzupassen.",
+      "intro": "Hier siehst du Parzellen und Beete räumlich angeordnet. Wenn mehrere Standorte vorhanden sind, zeigt die grafische Ansicht auch die Standortstruktur.",
       "sections": [
         {
           "title": "Bedienung",
