@@ -56,6 +56,8 @@ import { useNavigationBlocker } from "../hooks/autosave";
 import { useHierarchyData, type HierarchyDataState } from "../components/hierarchy/hooks/useHierarchyData";
 import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
+import { useHierarchyDelete } from "../components/hierarchy/hooks/useHierarchyDelete";
+import type { PendingHierarchyDeletion } from "../components/hierarchy/hooks/useHierarchyDelete";
 import { usePersistentSortModel } from "../hooks/usePersistentSortModel";
 import { fieldAPI, bedAPI, locationAPI, type Bed, type Field, type Location as FarmLocation } from "../api/api";
 import {
@@ -70,6 +72,22 @@ import {
 import { extractApiErrorMessage } from "../api/errors";
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from "../utils/contextMenu";
 import type { HierarchyRow } from "../components/hierarchy/utils/types";
+import {
+  calculateHierarchyNameColumnWidth,
+  getHierarchyNameMeasureKey,
+  measureHierarchyNameTextWidths,
+  type HierarchyNameMeasureEntry,
+} from "../components/hierarchy/utils/hierarchyNameColumnWidth";
+import {
+  isCompletelyEmptyNewHierarchyRow,
+  isPartiallyFilledNamelessNewHierarchyRow,
+} from "../components/hierarchy/utils/hierarchyRowDraft";
+import {
+  parseAreaExpression,
+  normalizeAreaValue,
+  parseAreaValue,
+  parseDimensionValue,
+} from "../components/hierarchy/utils/hierarchyAreaParsing";
 import {
   useCommandContextTag,
   useRegisterCommands,
@@ -93,147 +111,6 @@ interface HierarchyRowAction {
   color?: "default" | "error";
   onClick: () => void;
 }
-
-type PendingHierarchyDeletionType = "location" | "field" | "bed";
-
-interface PendingHierarchyDeletion {
-  id: string;
-  type: PendingHierarchyDeletionType;
-  targetId: number;
-  message: string;
-  locations: FarmLocation[];
-  fields: Field[];
-  beds: Bed[];
-  expandedRowsBeforeDelete: Set<string | number>;
-  visible: boolean;
-}
-
-export type HierarchyNameMeasureEntry = {
-  name: string;
-  level: number;
-  type: HierarchyRow["type"];
-};
-
-const isEmptyHierarchyDraftValue = (value: unknown): boolean => {
-  if (value === null || value === undefined) {
-    return true;
-  }
-  if (typeof value === "string") {
-    return value.trim() === "";
-  }
-  return false;
-};
-
-export const isCompletelyEmptyNewHierarchyRow = (row: HierarchyRow): boolean => {
-  if (!row.isNew) {
-    return false;
-  }
-
-  return (
-    isEmptyHierarchyDraftValue(row.name) &&
-    isEmptyHierarchyDraftValue(row.area_sqm) &&
-    isEmptyHierarchyDraftValue(row.length_m) &&
-    isEmptyHierarchyDraftValue(row.width_m) &&
-    isEmptyHierarchyDraftValue(row.notes)
-  );
-};
-
-export const isPartiallyFilledNamelessNewHierarchyRow = (row: HierarchyRow): boolean => (
-  Boolean(row.isNew) &&
-  isEmptyHierarchyDraftValue(row.name) &&
-  !isCompletelyEmptyNewHierarchyRow(row)
-);
-
-const NAME_COLUMN_MIN_WIDTH = 220;
-const NAME_COLUMN_MAX_WIDTH = 520;
-const NAME_COLUMN_CHAR_WIDTH_FALLBACK_PX = 8;
-const NAME_COLUMN_INDENT_PER_LEVEL_PX = 24;
-const NAME_COLUMN_EXPAND_CHROME_PX = 44;
-const NAME_COLUMN_CELL_HORIZONTAL_PADDING_PX = 20;
-const NAME_COLUMN_BED_TEXT_PADDING_PX = 8;
-const NAME_COLUMN_WIDTH_BUFFER_PX = 2;
-export const NAME_COLUMN_MEASUREMENT_RESERVE_PX = 14;
-export const calculateHierarchyNameColumnWidth = (
-  entries: HierarchyNameMeasureEntry[],
-  getTextWidth: (entry: HierarchyNameMeasureEntry) => number,
-): number => {
-  const measuredWidth = entries.reduce((maxWidth, row) => {
-    const textWidth = getTextWidth(row);
-    const hierarchyChromeWidth =
-      row.level * NAME_COLUMN_INDENT_PER_LEVEL_PX +
-      NAME_COLUMN_EXPAND_CHROME_PX +
-      NAME_COLUMN_CELL_HORIZONTAL_PADDING_PX +
-      (row.type === "bed" ? NAME_COLUMN_BED_TEXT_PADDING_PX : 0) +
-      NAME_COLUMN_WIDTH_BUFFER_PX;
-
-    return Math.max(
-      maxWidth,
-      hierarchyChromeWidth + textWidth + NAME_COLUMN_MEASUREMENT_RESERVE_PX,
-    );
-  }, NAME_COLUMN_MIN_WIDTH);
-
-  return Math.min(NAME_COLUMN_MAX_WIDTH, Math.max(NAME_COLUMN_MIN_WIDTH, measuredWidth));
-};
-
-const getHierarchyNameFont = (
-  entry: HierarchyNameMeasureEntry,
-  baseFontSizePx: number,
-  fontFamily: string,
-): string => {
-  const fontWeight = entry.type === "location" ? 600 : 400;
-  const fontSizePx =
-    entry.type === "location"
-      ? baseFontSizePx * 1.02
-      : entry.type === "bed"
-        ? baseFontSizePx * 0.95
-        : baseFontSizePx;
-
-  return `${fontWeight} ${fontSizePx}px ${fontFamily}`;
-};
-
-const getHierarchyNameMeasureKey = (entry: HierarchyNameMeasureEntry): string =>
-  `${entry.type}\u0000${entry.name}`;
-
-const measureHierarchyNameTextWidths = (
-  entries: HierarchyNameMeasureEntry[],
-): Map<string, number> => {
-  const widths = new Map<string, number>();
-
-  const setFallbackWidths = (): Map<string, number> => {
-    entries.forEach((entry) => {
-      widths.set(
-        getHierarchyNameMeasureKey(entry),
-        entry.name.length * NAME_COLUMN_CHAR_WIDTH_FALLBACK_PX,
-      );
-    });
-    return widths;
-  };
-
-  if (typeof document === "undefined") {
-    return setFallbackWidths();
-  }
-
-  const canvas = document.createElement("canvas");
-  const context = canvas.getContext("2d");
-  if (!context) {
-    return setFallbackWidths();
-  }
-
-  const bodyStyle = window.getComputedStyle(document.body);
-  const baseFontSizePx =
-    Number.parseFloat(bodyStyle.fontSize) || 16;
-  const fontFamily = bodyStyle.fontFamily || "Roboto, Arial, sans-serif";
-
-  entries.forEach((entry) => {
-    context.font = getHierarchyNameFont(entry, baseFontSizePx, fontFamily);
-    widths.set(
-      getHierarchyNameMeasureKey(entry),
-      Math.ceil(context.measureText(entry.name).width),
-    );
-  });
-
-  return widths;
-};
 
 const HIERARCHY_DATA_GRID_SX = {
   ...dataGridSx,
@@ -333,7 +210,6 @@ function FieldsBedsHierarchy({
     mouseY: number;
   } | null>(null);
   const [draftValidationWarning, setDraftValidationWarning] = useState("");
-  const [pendingDeletions, setPendingDeletions] = useState<PendingHierarchyDeletion[]>([]);
   const hasInitiallyExpandedRef = useRef(false);
   const handledCreateFieldRequestRef = useRef(0);
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
@@ -343,9 +219,6 @@ function FieldsBedsHierarchy({
 
   useCommandContextTag("areas");
 
-  useEffect(() => {
-    onPendingDeletionCountChange?.(pendingDeletions.length);
-  }, [onPendingDeletionCountChange, pendingDeletions.length]);
 
   // Data fetching
   const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
@@ -391,6 +264,28 @@ function FieldsBedsHierarchy({
   const { addBed, saveBed, pendingEditRow, setPendingEditRow } =
     useBedOperations(setBeds, setError, t);
   const [pendingFieldEditRow, setPendingFieldEditRow] = useState<string | number | null>(null);
+
+  // Delete with undo
+  const {
+    pendingDeletions,
+    deleteHierarchyRowWithUndo,
+    undoPendingDeletion,
+    closePendingDeletionSnackbar,
+  } = useHierarchyDelete({
+    locations,
+    fields,
+    beds,
+    expandedRows,
+    fetchData,
+    expandAll,
+    setLocations,
+    setFields,
+    setBeds,
+    setSelectedRowId,
+    setError,
+    onPendingDeletionCountChange,
+    t,
+  });
 
   const hierarchyIndex = useMemo(
     () => buildHierarchyIndex(locations, fields, beds, hierarchySortConfig),
@@ -650,72 +545,6 @@ function FieldsBedsHierarchy({
     [navigate],
   );
 
-  const parseAreaExpression = useCallback((input: string): number | undefined => {
-    const normalizedInput = input.trim().replace(/,/g, ".");
-    if (!normalizedInput) {
-      return undefined;
-    }
-
-    const factors = normalizedInput
-      .split(/[*x×]/i)
-      .map((part) => part.trim())
-      .filter((part) => part.length > 0);
-
-    if (factors.length === 0) {
-      return undefined;
-    }
-
-    let product = 1;
-    for (const factor of factors) {
-      if (!/^\d+(\.\d+)?$/.test(factor)) {
-        return undefined;
-      }
-      const numeric = Number.parseFloat(factor);
-      if (!Number.isFinite(numeric)) {
-        return undefined;
-      }
-      product *= numeric;
-    }
-
-    return Number.isFinite(product) ? product : undefined;
-  }, []);
-
-  const normalizeAreaValue = (
-    value: number | undefined,
-  ): number | undefined => {
-    if (value === undefined || !Number.isFinite(value)) {
-      return undefined;
-    }
-    return Math.round(value * 10) / 10;
-  };
-
-  const parseAreaValue = useCallback((
-    value: number | string | undefined,
-  ): number | undefined => {
-    if (typeof value === "number") {
-      return Number.isFinite(value) ? value : undefined;
-    }
-    if (typeof value === "string" && value.trim() !== "") {
-      return parseAreaExpression(value);
-    }
-    return undefined;
-  }, [parseAreaExpression]);
-
-  const parseDimensionValue = useCallback((
-    value: number | string | null | undefined,
-  ): number | null | undefined => {
-    if (value === null) return null;
-    if (typeof value === "number") {
-      return Number.isFinite(value) ? value : undefined;
-    }
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      if (trimmed === "") return null;
-      const parsed = Number.parseFloat(trimmed.replace(",", "."));
-      return Number.isFinite(parsed) ? parsed : undefined;
-    }
-    return undefined;
-  }, []);
 
   const preservePartialNewBedDraft = useCallback((draftRow: HierarchyRow): void => {
     if (draftRow.type !== "bed" || typeof draftRow.bedId !== "number") {
@@ -1114,196 +943,6 @@ function FieldsBedsHierarchy({
     }
     setError(error.message || t("errors.save"));
   };
-
-  const restoreDeletedItems = useCallback(async (deletion: PendingHierarchyDeletion): Promise<void> => {
-    const locationIdMap = new Map<number, number>();
-    const fieldIdMap = new Map<number, number>();
-
-    for (const locationItem of deletion.locations) {
-      const { id, created_at, updated_at, ...locationPayload } = locationItem;
-      if (typeof id !== "number") {
-        continue;
-      }
-      const restoredLocation = await locationAPI.create(locationPayload);
-      if (typeof restoredLocation.data.id === "number") {
-        locationIdMap.set(id, restoredLocation.data.id);
-      }
-    }
-
-    for (const field of deletion.fields) {
-      const { id, location_name, created_at, updated_at, ...fieldPayload } = field;
-      if (typeof id !== "number") {
-        continue;
-      }
-      const restoredLocationId = locationIdMap.get(field.location) ?? field.location;
-      const restoredField = await fieldAPI.create({
-        ...fieldPayload,
-        location: restoredLocationId,
-      });
-      if (typeof restoredField.data.id === "number") {
-        fieldIdMap.set(id, restoredField.data.id);
-      }
-    }
-
-    for (const bed of deletion.beds) {
-      const { id, field_name, created_at, updated_at, ...bedPayload } = bed;
-      if (typeof id !== "number") {
-        continue;
-      }
-      const restoredFieldId = fieldIdMap.get(bed.field) ?? bed.field;
-      await bedAPI.create({
-        ...bedPayload,
-        field: restoredFieldId,
-      });
-    }
-
-    await fetchData();
-    expandAll(Array.from(deletion.expandedRowsBeforeDelete));
-  }, [expandAll, fetchData]);
-
-  const removePendingDeletion = useCallback((deletionId: string): void => {
-    setPendingDeletions((currentDeletions) =>
-      currentDeletions.filter((deletion) => deletion.id !== deletionId),
-    );
-  }, []);
-
-  const undoPendingDeletion = useCallback(async (deletionId: string): Promise<void> => {
-    const deletion = pendingDeletions.find((pendingDeletion) => pendingDeletion.id === deletionId);
-    if (!deletion) {
-      return;
-    }
-
-    removePendingDeletion(deletionId);
-    try {
-      await restoreDeletedItems(deletion);
-      setError("");
-    } catch (err) {
-      await fetchData();
-      setError(extractApiErrorMessage(err, t, t("errors.save")));
-    }
-  }, [fetchData, pendingDeletions, removePendingDeletion, restoreDeletedItems, setError, t]);
-
-  const closePendingDeletionSnackbar = useCallback((deletionId: string): void => {
-    removePendingDeletion(deletionId);
-  }, [removePendingDeletion]);
-
-  const getDeletionMessage = useCallback((
-    rowType: PendingHierarchyDeletionType,
-    deletedBedCount: number,
-  ): string => {
-    if (rowType === "bed") {
-      return t("messages.bedDeleted");
-    }
-    if (rowType === "location") {
-      if (deletedBedCount > 0) {
-        return t("messages.locationAndBedsDeleted", { count: deletedBedCount });
-      }
-      return t("messages.locationDeleted");
-    }
-    if (deletedBedCount > 0) {
-      return t("messages.fieldAndBedsDeleted", { count: deletedBedCount });
-    }
-    return t("messages.fieldDeleted");
-  }, [t]);
-
-  const deleteHierarchyRowWithUndo = useCallback(async (row: HierarchyRow): Promise<void> => {
-    const deletionId = `${row.type}-${String(row.id)}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    let deletionType: PendingHierarchyDeletionType;
-    let targetId: number | undefined;
-    let deletedLocations: FarmLocation[] = [];
-    let deletedFields: Field[] = [];
-    let deletedBeds: Bed[] = [];
-
-    if (row.type === "location") {
-      deletionType = "location";
-      targetId = row.locationId;
-      deletedLocations = locations.filter((locationItem) => locationItem.id === row.locationId);
-      const deletedLocationIds = new Set(deletedLocations.map((locationItem) => locationItem.id));
-      deletedFields = fields.filter((field) => deletedLocationIds.has(field.location));
-      const deletedFieldIds = new Set(deletedFields.map((field) => field.id));
-      deletedBeds = beds.filter((bed) => deletedFieldIds.has(bed.field));
-    } else if (row.type === "field") {
-      deletionType = "field";
-      targetId = row.fieldId;
-      deletedFields = fields.filter((field) => field.id === row.fieldId);
-      deletedBeds = beds.filter((bed) => bed.field === row.fieldId);
-    } else {
-      deletionType = "bed";
-      targetId = row.bedId;
-      deletedBeds = beds.filter((bed) => bed.id === row.bedId);
-    }
-
-    if (typeof targetId !== "number") {
-      return;
-    }
-
-    const deletedLocationIds = new Set(deletedLocations.map((locationItem) => locationItem.id));
-    const deletedFieldIds = new Set(deletedFields.map((field) => field.id));
-    const deletedBedIds = new Set(deletedBeds.map((bed) => bed.id));
-    const pendingDeletion: PendingHierarchyDeletion = {
-      id: deletionId,
-      type: deletionType,
-      targetId,
-      message: getDeletionMessage(deletionType, deletedBeds.length),
-      locations: deletedLocations,
-      fields: deletedFields,
-      beds: deletedBeds,
-      expandedRowsBeforeDelete: new Set(expandedRows),
-      visible: true,
-    };
-
-    try {
-      if (deletionType === "location") {
-        await locationAPI.delete(targetId);
-      } else if (deletionType === "field") {
-        await fieldAPI.delete(targetId);
-      } else {
-        await bedAPI.delete(targetId);
-      }
-    } catch (err) {
-      await fetchData();
-      setError(extractApiErrorMessage(err, t, t("errors.delete")));
-      return;
-    }
-
-    setLocations((currentLocations) =>
-      currentLocations.filter((locationItem) => !deletedLocationIds.has(locationItem.id)),
-    );
-    setFields((currentFields) =>
-      currentFields.filter((field) => !deletedFieldIds.has(field.id)),
-    );
-    setBeds((currentBeds) =>
-      currentBeds.filter((bed) => !deletedBedIds.has(bed.id)),
-    );
-    setSelectedRowId((currentSelectedRowId) => {
-      if (currentSelectedRowId === null) {
-        return null;
-      }
-      const deletedRowIds = new Set<string | number>([
-        ...deletedLocations.map((locationItem) => `location-${locationItem.id}`),
-        ...deletedFields.map((field) => `field-${field.id}`),
-        ...deletedBeds.map((bed) => bed.id).filter((id): id is number => typeof id === "number"),
-      ]);
-      return deletedRowIds.has(currentSelectedRowId) ? null : currentSelectedRowId;
-    });
-    setError("");
-    onPendingDeletionCountChange?.(pendingDeletions.length + 1);
-    setPendingDeletions((currentDeletions) => [...currentDeletions, pendingDeletion]);
-  }, [
-    beds,
-    expandedRows,
-    fetchData,
-    fields,
-    getDeletionMessage,
-    locations,
-    onPendingDeletionCountChange,
-    pendingDeletions.length,
-    setBeds,
-    setFields,
-    setLocations,
-    setError,
-    t,
-  ]);
 
   const selectedRow = useMemo(
     () => rows.find((row) => row.id === selectedRowId) ?? null,

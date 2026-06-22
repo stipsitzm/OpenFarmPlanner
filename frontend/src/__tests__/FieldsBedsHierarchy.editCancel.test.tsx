@@ -4,10 +4,11 @@ import userEvent from '@testing-library/user-event';
 import type { GridColDef } from '@mui/x-data-grid';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import FieldsBedsHierarchy, {
+import FieldsBedsHierarchy from '../pages/FieldsBedsHierarchy';
+import {
   isCompletelyEmptyNewHierarchyRow,
   isPartiallyFilledNamelessNewHierarchyRow,
-} from '../pages/FieldsBedsHierarchy';
+} from '../components/hierarchy/utils/hierarchyRowDraft';
 import { mockT } from './helpers/testI18n';
 
 const {

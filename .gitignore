@@ -11,6 +11,7 @@ backend/.env
 .idea/
 .codex
 .codex/
+.claude/
 frontend/dist-production/
 frontend/dist-staging/
 
@@ -34,6 +35,9 @@ tmp*
 coverage/
 **/coverage/
 *.lcov
+
+# Test results / Playwright output
+frontend/test-results/
 
 # Mutation testing
 .stryker-tmp/

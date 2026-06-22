@@ -3,7 +3,7 @@ import {
   calculateHierarchyNameColumnWidth,
   NAME_COLUMN_MEASUREMENT_RESERVE_PX,
   type HierarchyNameMeasureEntry,
-} from '../pages/FieldsBedsHierarchy';
+} from '../components/hierarchy/utils/hierarchyNameColumnWidth';
 
 describe('fields-beds hierarchy name column width', () => {
   it('adds a small measurement reserve to the dynamic name width', () => {
