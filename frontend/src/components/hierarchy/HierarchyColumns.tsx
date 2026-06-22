@@ -189,6 +189,7 @@ function renderNameCell(
             <IconButton
               size="small"
               aria-label={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}
+              tabIndex={-1}
               onClick={(event) => {
                 event.stopPropagation();
                 callbacks.onToggleExpand(row.id);

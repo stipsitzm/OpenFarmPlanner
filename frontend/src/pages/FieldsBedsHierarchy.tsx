@@ -1998,6 +1998,20 @@ function FieldsBedsHierarchy({
                   return;
                 }
 
+                if (
+                  (keyboardEvent.key === " " || keyboardEvent.key === "Spacebar") &&
+                  params.field !== "notes" &&
+                  rowModesModel[params.id]?.mode !== GridRowModes.Edit
+                ) {
+                  const row = params.row as HierarchyRow;
+                  if ((row.type === "location" || row.type === "field") && row.hasChildren) {
+                    keyboardEvent.preventDefault();
+                    keyboardEvent.defaultMuiPrevented = true;
+                    toggleExpand(params.id);
+                    return;
+                  }
+                }
+
                 if (keyboardEvent.key === "ContextMenu" || (keyboardEvent.shiftKey && keyboardEvent.key === "F10")) {
                   keyboardEvent.preventDefault();
                   keyboardEvent.stopPropagation();
