@@ -1,4 +1,4 @@
-import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Link, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Link, TextField, Typography, useMediaQuery } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
@@ -54,6 +54,7 @@ export default function FieldsBedsPage() {
   const [pendingHierarchyDeletionCount, setPendingHierarchyDeletionCount] = useState(0);
   const [addLocationDialogOpen, setAddLocationDialogOpen] = useState(false);
   const [newLocationName, setNewLocationName] = useState('');
+  const isTouchDevice = useMediaQuery('(pointer: coarse)');
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const hierarchyData = useHierarchyData(!shouldShowProjectRequiredState);
   const {
@@ -340,11 +341,13 @@ export default function FieldsBedsPage() {
           <EmptyStateCard
             title={t('hierarchy:messages.noBedsHintTitle')}
             description={(
-              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
-                {t('hierarchy:messages.noBedsHintBeforeIcon')}
-                <AddBedIcon interactive={false} ariaHidden />
-                {t('hierarchy:messages.noBedsHintAfterIcon')}
-              </Box>
+              isTouchDevice ? t('hierarchy:messages.noBedsHintMobile') : (
+                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {t('hierarchy:messages.noBedsHintBeforeIcon')}
+                  <AddBedIcon interactive={false} ariaHidden />
+                  {t('hierarchy:messages.noBedsHintAfterIcon')}
+                </Box>
+              )
             )}
             actions={[{ label: t(createBedAction.labelKey), to: createBedAction.to }]}
             containerSx={CONTENT_ALIGNED_EMPTY_STATE_SX}

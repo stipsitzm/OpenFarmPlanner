@@ -40,7 +40,10 @@
     "applyBedArea": "Beetfläche übernehmen"
   },
   "placeholders": {
+    "selectCulture": "Kultur wählen",
     "selectCultivationType": "Anbauart wählen",
+    "selectArea": "Anbaufläche wählen",
+    "plantsCount": "Anzahl eingeben",
     "maxKeyword": "max"
   },
   "tooltips": {

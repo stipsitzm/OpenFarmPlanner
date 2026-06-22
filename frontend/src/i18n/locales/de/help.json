@@ -103,7 +103,8 @@
     },
     "areas": {
       "title": "Hilfe: Anbauflächen – Listenansicht",
-      "intro": "Hier verwaltest du Parzellen und Beete für deine Anbauflächen. Wenn du Flächen an mehreren Orten bewirtschaftest, kannst du zusätzliche Standorte anlegen; dann werden Standorte, Parzellen und Beete als Hierarchie angezeigt.\n\nNeue Parzellen und Beete können über das {{addIcon}} hinzugefügt werden, das beim Überfahren eines Elements mit der Maus erscheint. Weitere Aktionen wie Umbenennen, Löschen oder das Anlegen von Anbauplänen findest du im Kontextmenü per Rechtsklick.\n\nDie angelegten Flächen bilden die Grundlage für deine Anbauplanung."
+      "intro": "Hier verwaltest du die Flächenstruktur deines Betriebs – vom Standort über Parzellen bis zu einzelnen Beeten.\n\nNeue Standorte, Parzellen und Beete können über das {{addIcon}} hinzugefügt werden, das beim Überfahren eines Elements mit der Maus erscheint.\n\nEinträge können direkt in der Tabelle bearbeitet werden. Weitere Aktionen wie Umbenennen, Löschen oder das Anlegen von Anbauplänen findest du im Kontextmenü per Rechtsklick.\n\nDie angelegten Flächen bilden die Grundlage für deine Anbauplanung.",
+      "symbolsTitle": "Symbole und Bedienelemente"
     },
     "cultures": {
       "title": "Hilfe: Kulturen",

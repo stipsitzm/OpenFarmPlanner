@@ -1286,6 +1286,38 @@ function RootLayout() {
                       })}
                     </ToggleButtonGroup>
                   ) : null}
+                  {isFieldsBedsPage && fieldsGlobalAddAction ? (
+                    <Tooltip title={fieldsGlobalAddAction.ariaLabel ?? fieldsGlobalAddAction.label} enterTouchDelay={0}>
+                      <IconButton
+                        size="small"
+                        aria-label={fieldsGlobalAddAction.ariaLabel ?? fieldsGlobalAddAction.label}
+                        onClick={(event) => {
+                          if (fieldsGlobalAddAction.menuActions && fieldsGlobalAddAction.menuActions.length > 0) {
+                            setTopbarPrimaryActionMenuAnchor(event.currentTarget);
+                          } else {
+                            fieldsGlobalAddAction.onClick();
+                          }
+                        }}
+                        disabled={fieldsGlobalAddAction.disabled}
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          bgcolor: 'success.main',
+                          color: 'success.contrastText',
+                          boxShadow: 1,
+                          '&:hover': {
+                            bgcolor: 'success.dark',
+                          },
+                          '&.Mui-disabled': {
+                            bgcolor: 'action.disabledBackground',
+                            color: 'action.disabled',
+                          },
+                        }}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  ) : null}
                   {mobileFieldsAddLocationAction ? (
                     <Tooltip title={mobileFieldsAddLocationAction.label}>
                       <IconButton
@@ -1870,6 +1902,7 @@ function RootLayout() {
         <Alert
           onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
           severity={snackbar.severity}
+          closeText={t('common:actions.close')}
           sx={{ width: '100%' }}
           action={snackbar.actionLabel && snackbar.onAction ? (
             <Button
