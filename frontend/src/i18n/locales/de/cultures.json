@@ -250,7 +250,7 @@
     "progressive": {
       "fields": {
         "title": "Noch kein Saatgutbedarf berechenbar",
-        "description": "Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu.",
+        "description": "Öffne die Anbauflächen und füge dort eine Parzelle hinzu.",
         "action": "Parzelle hinzufügen"
       },
       "beds": {

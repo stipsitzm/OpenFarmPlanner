@@ -66,6 +66,7 @@ import {
 import {
   createHierarchyColumns,
   DEFAULT_HIERARCHY_COLUMN_WIDTHS,
+  isDimensionEditValueInvalid,
 } from "../components/hierarchy/HierarchyColumns";
 import { extractApiErrorMessage } from "../api/errors";
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from "../utils/contextMenu";
@@ -859,19 +860,19 @@ function FieldsBedsHierarchy({
       const parsedLength = parseDimensionValue(newRow.length_m);
       const parsedWidth = parseDimensionValue(newRow.width_m);
 
-      if (
-        parsedLength !== undefined &&
-        parsedLength !== null &&
-        parsedLength < 0
-      ) {
+      if (newRow.length_m != null && parsedLength === undefined) {
+        setError(t('validation.lengthNotANumber'));
+        throw new Error(t('validation.lengthNotANumber'));
+      }
+      if (newRow.width_m != null && parsedWidth === undefined) {
+        setError(t('validation.widthNotANumber'));
+        throw new Error(t('validation.widthNotANumber'));
+      }
+      if (parsedLength !== null && parsedLength !== undefined && parsedLength < 0) {
         setError(t('validation.lengthNonNegative'));
         throw new Error(t('validation.lengthNonNegative'));
       }
-      if (
-        parsedWidth !== undefined &&
-        parsedWidth !== null &&
-        parsedWidth < 0
-      ) {
+      if (parsedWidth !== null && parsedWidth !== undefined && parsedWidth < 0) {
         setError(t('validation.widthNonNegative'));
         throw new Error(t('validation.widthNonNegative'));
       }
@@ -930,19 +931,19 @@ function FieldsBedsHierarchy({
       const parsedLength = parseDimensionValue(newRow.length_m);
       const parsedWidth = parseDimensionValue(newRow.width_m);
 
-      if (
-        parsedLength !== undefined &&
-        parsedLength !== null &&
-        parsedLength < 0
-      ) {
+      if (newRow.length_m != null && parsedLength === undefined) {
+        setError(t('validation.lengthNotANumber'));
+        throw new Error(t('validation.lengthNotANumber'));
+      }
+      if (newRow.width_m != null && parsedWidth === undefined) {
+        setError(t('validation.widthNotANumber'));
+        throw new Error(t('validation.widthNotANumber'));
+      }
+      if (parsedLength !== null && parsedLength !== undefined && parsedLength < 0) {
         setError(t('validation.lengthNonNegative'));
         throw new Error(t('validation.lengthNonNegative'));
       }
-      if (
-        parsedWidth !== undefined &&
-        parsedWidth !== null &&
-        parsedWidth < 0
-      ) {
+      if (parsedWidth !== null && parsedWidth !== undefined && parsedWidth < 0) {
         setError(t('validation.widthNonNegative'));
         throw new Error(t('validation.widthNonNegative'));
       }
@@ -1817,9 +1818,16 @@ function FieldsBedsHierarchy({
     }))
   ), [beds]);
 
+  const isAnyRowInEditMode = useMemo(
+    () => Object.values(rowModesModel).some((mode) => mode.mode === GridRowModes.Edit),
+    [rowModesModel],
+  );
+
   useNavigationBlocker(
-    hasUnsavedInvalidNewRows,
-    t("messages.unsavedInvalidRowsNavigationWarning"),
+    hasUnsavedInvalidNewRows || isAnyRowInEditMode,
+    hasUnsavedInvalidNewRows
+      ? t("messages.unsavedInvalidRowsNavigationWarning")
+      : t("messages.unsavedRowEditNavigationWarning"),
   );
 
   useEffect(() => {
@@ -1895,7 +1903,6 @@ function FieldsBedsHierarchy({
         {showContextMenuHint && (
           <ContextMenuHint
             message={t("common:messages.contextMenuTableHint")}
-            secondary={t("common:messages.contextMenuHintKeyboard")}
             onClose={closeContextMenuHint}
             sx={{ mb: 1.25 }}
           />
@@ -1978,6 +1985,97 @@ function FieldsBedsHierarchy({
                   discardRowEdit(params.id);
                   return;
                 }
+
+                if (isEditing && keyboardEvent.key === "Enter") {
+                  const draft = gridApiRef.current?.getRowWithUpdatedValues?.(params.id);
+                  const firstInvalidDimensionField = draft
+                    ? (["length_m", "width_m"] as const).find(
+                        (f) => isDimensionEditValueInvalid((draft as Record<string, unknown>)[f]),
+                      )
+                    : undefined;
+                  if (firstInvalidDimensionField) {
+                    keyboardEvent.preventDefault();
+                    keyboardEvent.stopPropagation();
+                    keyboardEvent.defaultMuiPrevented = true;
+                    gridApiRef.current?.setCellFocus(params.id, firstInvalidDimensionField);
+                    return;
+                  }
+                  activeEditFieldRef.current = params.field;
+                  setSelectedRowId(params.id);
+                  setTreeActive(true);
+                  return;
+                }
+
+                if (isEditing && keyboardEvent.key === "Tab") {
+                  const keyboardFields = getKeyboardFields(params.row);
+                  const currentFieldIndex = keyboardFields.indexOf(params.field);
+                  const targetField = keyboardFields[
+                    currentFieldIndex + (keyboardEvent.shiftKey ? -1 : 1)
+                  ];
+
+                  if (!targetField) {
+                    // Wrap around: Tab past last field → first editable, Shift+Tab before first → last editable
+                    const editableFields = keyboardFields.filter(
+                      (f) => isCellEditable({ row: params.row, field: f }),
+                    );
+                    const wrapField = keyboardEvent.shiftKey
+                      ? editableFields[editableFields.length - 1]
+                      : editableFields[0];
+                    keyboardEvent.preventDefault();
+                    keyboardEvent.stopPropagation();
+                    keyboardEvent.defaultMuiPrevented = true;
+                    if (wrapField) {
+                      activeEditFieldRef.current = wrapField;
+                      gridApiRef.current?.setCellFocus(params.id, wrapField);
+                    }
+                    return;
+                  }
+
+                  activeEditFieldRef.current = targetField;
+                  if (isCellEditable({ row: params.row, field: targetField })) {
+                    keyboardEvent.preventDefault();
+                    keyboardEvent.stopPropagation();
+                    keyboardEvent.defaultMuiPrevented = true;
+                    gridApiRef.current?.setCellFocus(params.id, targetField);
+                  } else {
+                    // Non-editable target (e.g. notes): prevent native Tab escape but let
+                    // MUI DataGrid process Tab to save the row and trigger pendingTabFocusRef
+                    keyboardEvent.preventDefault();
+                    pendingTabFocusRef.current = { rowId: params.id, field: targetField };
+                  }
+                  return;
+                }
+
+                if (isEditing) {
+                  return;
+                }
+
+                if (
+                  params.field === "notes" &&
+                  (keyboardEvent.key === "Enter" ||
+                    keyboardEvent.key === " " ||
+                    keyboardEvent.key === "Spacebar")
+                ) {
+                  keyboardEvent.preventDefault();
+                  keyboardEvent.stopPropagation();
+                  keyboardEvent.defaultMuiPrevented = true;
+                  openNotesEditor(params.id, "notes");
+                  return;
+                }
+
+                if (
+                  keyboardEvent.key === "ArrowLeft" ||
+                  keyboardEvent.key === "ArrowRight" ||
+                  keyboardEvent.key === "ArrowUp" ||
+                  keyboardEvent.key === "ArrowDown"
+                ) {
+                  focusAdjacentEditableCell(params.id, params.field, keyboardEvent.key);
+                  keyboardEvent.preventDefault();
+                  keyboardEvent.stopPropagation();
+                  keyboardEvent.defaultMuiPrevented = true;
+                  return;
+                }
+
                 if (keyboardEvent.key === "ContextMenu" || (keyboardEvent.shiftKey && keyboardEvent.key === "F10")) {
                   keyboardEvent.preventDefault();
                   keyboardEvent.stopPropagation();

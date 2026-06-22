@@ -605,7 +605,7 @@ export function EditableDataGrid<T extends EditableRow>({
 
   // Do not block navigation with modal prompts: invalid/dirty state is visible inline.
   useNavigationBlocker(
-    false,
+    hasUnsavedChanges,
     t('messages.unsavedChanges')
   );
 
@@ -1842,7 +1842,6 @@ export function EditableDataGrid<T extends EditableRow>({
       {showContextMenuHint ? (
         <ContextMenuHint
           message={t('messages.contextMenuTableHint')}
-          secondary={t('messages.contextMenuHintKeyboard')}
           onClose={closeContextMenuHint}
           sx={{ mb: 1.25 }}
         />

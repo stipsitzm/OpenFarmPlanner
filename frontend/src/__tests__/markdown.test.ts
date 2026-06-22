@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { stripMarkdown, getPlainExcerpt } from '../components/data-grid/markdown';
+import { stripMarkdown, getPlainExcerpt, stripCitationMarkers } from '../components/data-grid/markdown';
 
 describe('stripMarkdown', () => {
   it('should return empty string for null input', () => {
@@ -127,6 +127,37 @@ describe('stripMarkdown', () => {
   it('should preserve normal content without markdown', () => {
     const input = 'This is plain text without unknown markdown syntax.';
     expect(stripMarkdown(input)).toBe('This is plain text without unknown markdown syntax.');
+  });
+});
+
+describe('stripCitationMarkers', () => {
+  it('returns the input unchanged when no markers are present', () => {
+    expect(stripCitationMarkers('Normal text without any markers.')).toBe('Normal text without any markers.');
+  });
+
+  it('removes a single citation marker', () => {
+    expect(stripCitationMarkers('Karotten brauchen 70 Tage【941131680077198†L4162-L4178】 bis zur Ernte.')).toBe('Karotten brauchen 70 Tage bis zur Ernte.');
+  });
+
+  it('removes multiple citation markers', () => {
+    const input = 'Wert A【123†ref1】 und Wert B【456†ref2】.';
+    expect(stripCitationMarkers(input)).toBe('Wert A und Wert B.');
+  });
+
+  it('returns empty string for empty input', () => {
+    expect(stripCitationMarkers('')).toBe('');
+  });
+
+  it('leaves text without the dagger character untouched', () => {
+    expect(stripCitationMarkers('Text 【ohne Dolch】 normal.')).toBe('Text 【ohne Dolch】 normal.');
+  });
+
+  it('strips marker that appears at the start of text', () => {
+    expect(stripCitationMarkers('【123†ref】Beginn des Textes.')).toBe('Beginn des Textes.');
+  });
+
+  it('strips marker at end of text', () => {
+    expect(stripCitationMarkers('Ende des Textes.【123†ref】')).toBe('Ende des Textes.');
   });
 });
 

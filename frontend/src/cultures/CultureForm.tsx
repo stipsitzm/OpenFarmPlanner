@@ -46,6 +46,7 @@ import { SeedingSection } from './sections/SeedingSection';
 import { ColorSection } from './sections/ColorSection';
 import { NotesSection } from './sections/NotesSection';
 import { hasSupplierDataRowMissingSupplier, hasSupplierInformation } from './supplierDataRows';
+import { stripCitationMarkers } from '../components/data-grid/markdown';
 
 interface CultureFormProps {
   culture?: Culture;
@@ -162,11 +163,14 @@ const buildInitialFormData = (culture?: Culture): Partial<Culture> => {
     seed_rate_pre_cultivation_unit: normalizeSeedRateUnit(culture.seed_rate_pre_cultivation_unit),
   };
 
+  const normalizedNotes = culture.notes ? stripCitationMarkers(culture.notes) : culture.notes;
+
   if (culture.supplier || !culture.seed_supplier) {
     return {
       ...culture,
       ...normalizedSpacingValues,
       ...normalizedSeedRateUnits,
+      notes: normalizedNotes,
     };
   }
 
@@ -174,6 +178,7 @@ const buildInitialFormData = (culture?: Culture): Partial<Culture> => {
     ...culture,
     ...normalizedSpacingValues,
     ...normalizedSeedRateUnits,
+    notes: normalizedNotes,
     supplier: {
       name: culture.seed_supplier,
       allowed_domains: [],

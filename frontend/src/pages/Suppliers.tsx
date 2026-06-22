@@ -569,7 +569,6 @@ export default function Suppliers() {
         {showContextMenuHint ? (
           <ContextMenuHint
             message={t('common:messages.contextMenuTableHint')}
-            secondary={t('common:messages.contextMenuHintKeyboard')}
             onClose={closeContextMenuHint}
             sx={{ mb: 1.25, width: '100%', maxWidth: 880 }}
           />

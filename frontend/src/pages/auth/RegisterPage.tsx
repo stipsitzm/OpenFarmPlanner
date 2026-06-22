@@ -44,6 +44,14 @@ export default function RegisterPage() {
     setError(null);
     setSuccess(null);
 
+    if (!email.trim()) {
+      setError(t('auth:error.messages.required'));
+      return;
+    }
+    if (!password) {
+      setError(t('auth:error.messages.required'));
+      return;
+    }
     if (password !== passwordConfirm) {
       setError(t('auth:register.passwordMismatch'));
       return;
@@ -86,7 +94,7 @@ export default function RegisterPage() {
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>{t('auth:register.title')}</Typography>
-      <Box component="form" onSubmit={handleSubmit}>
+      <Box component="form" onSubmit={handleSubmit} noValidate>
         <Stack spacing={2}>
           {isLoggedIn ? (
             <Alert severity="info">

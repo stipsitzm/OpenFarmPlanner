@@ -1,8 +1,20 @@
 /**
  * Markdown utility functions for notes fields.
- * 
+ *
  * Provides helper functions to strip markdown syntax and generate plain text excerpts.
  */
+
+// Matches internal AI citation markers of the form 【digits†identifier】
+const CITATION_MARKER_RE = /\s*【[^】]*†[^】]*】/g;
+
+/**
+ * Remove AI-generated citation markers (e.g. 【941131680077198†L4162-L4178】) from text.
+ * These are internal retrieval references that should not be shown to users.
+ */
+export function stripCitationMarkers(text: string): string {
+  if (!text) return text;
+  return text.replace(CITATION_MARKER_RE, '');
+}
 
 /**
  * Strip common markdown syntax tokens from text.

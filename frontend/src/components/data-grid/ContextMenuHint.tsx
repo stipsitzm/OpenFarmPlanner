@@ -39,11 +39,11 @@ export function ContextMenuHint({
         px: compact ? 1 : 1.25,
         py: compact ? 0.625 : 0.75,
         border: '1px solid',
-        borderColor: 'surface.surfaceSoftBorder',
+        borderColor: 'success.200',
         borderRadius: 1.5,
-        bgcolor: 'surface.surfaceSubtleBackground',
+        bgcolor: 'success.50',
         color: 'text.secondary',
-        boxShadow: 'none',
+        boxShadow: '0 1px 2px rgba(21, 31, 24, 0.05)',
         ...sx,
       }}
     >
@@ -64,7 +64,7 @@ export function ContextMenuHint({
         <MouseOutlinedIcon sx={{ fontSize: compact ? 15 : 16 }} />
       </Box>
       <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 0.75, flexWrap: 'wrap' }}>
-        <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500, lineHeight: 1.35 }}>
+        <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 600, lineHeight: 1.35 }}>
           {message}
         </Typography>
         {secondary ? (

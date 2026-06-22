@@ -346,7 +346,6 @@ export default function SeedDemandPage() {
         {!isLoading && !error && canCalculateSeedDemand && showContextMenuHint ? (
           <ContextMenuHint
             message={t('common:messages.contextMenuTableHint')}
-            secondary={t('common:messages.contextMenuHintKeyboard')}
             onClose={closeContextMenuHint}
             sx={{ mb: 1.25 }}
           />

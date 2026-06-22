@@ -26,6 +26,10 @@ vi.mock('../auth/useAuth', () => ({
   useAuth: () => authState,
 }));
 
+vi.mock('../hooks/useNavigationBlocker', () => ({
+  useNavigationBlocker: vi.fn(),
+}));
+
 vi.mock('../auth/authApi', () => ({
   updateProfile: vi.fn(async () => ({ detail: 'Profil aktualisiert.', user: authState.user })),
   requestEmailChange: vi.fn(async () => ({ detail: 'Bestätigungslink gesendet.' })),

@@ -1341,7 +1341,7 @@ function Cultures() {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-          <Button onClick={() => setDeleteDialogCulture(null)}>
+          <Button variant="outlined" onClick={() => setDeleteDialogCulture(null)}>
             {t('common:actions.cancel')}
           </Button>
           <Button color="error" variant="contained" onClick={handleDeleteConfirm}>

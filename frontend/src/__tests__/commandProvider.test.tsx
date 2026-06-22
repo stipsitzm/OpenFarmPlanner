@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useMemo } from 'react';
 import { CommandProvider } from '../commands/CommandProvider';
-import { useCommandContext, useRegisterCommands } from '../commands/useCommandContext';
+import { useCommandContext, useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import { createRootCommands } from '../commands/commands';
 import type { CommandSpec } from '../commands/types';
 
@@ -92,9 +92,14 @@ describe('CommandProvider', () => {
     vi.useFakeTimers();
     localStorage.removeItem('ofp.shortcutHintSeen');
 
+    function FeaturePageFixture(): React.ReactElement {
+      useCommandContextTag('cultures');
+      return <div>feature page</div>;
+    }
+
     const { rerender } = render(
       <CommandProvider>
-        <div>first</div>
+        <FeaturePageFixture />
       </CommandProvider>,
     );
 

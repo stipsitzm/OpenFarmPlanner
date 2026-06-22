@@ -29,6 +29,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { stripCitationMarkers } from '../components/data-grid/markdown';
 
 interface PublicCultureLibraryDialogProps {
   open: boolean;
@@ -327,7 +328,7 @@ export function PublicCultureLibraryDialog({
                   <strong>{t('form.harvestDurationDays')}:</strong> {selectedCulture.harvest_duration_days ?? t('noData')}
                 </Typography>
                 <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>
-                  <strong>{t('form.notes')}:</strong> {selectedCulture.notes || t('noData')}
+                  <strong>{t('form.notes')}:</strong> {(selectedCulture.notes ? stripCitationMarkers(selectedCulture.notes) : null) || t('noData')}
                 </Typography>
               </>
             ) : (

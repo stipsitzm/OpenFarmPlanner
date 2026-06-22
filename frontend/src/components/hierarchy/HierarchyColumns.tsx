@@ -320,6 +320,15 @@ interface DimensionRowState {
   hasAreaValue: boolean;
 }
 
+/** Returns true when a dimension edit cell value is non-empty but invalid (non-numeric or negative). */
+export const isDimensionEditValueInvalid = (value: unknown): boolean => {
+  if (value === null || value === undefined) return false;
+  const str = typeof value === 'string' ? value.trim() : String(value);
+  if (str === '') return false;
+  const parsed = Number.parseFloat(str.replace(',', '.'));
+  return !Number.isFinite(parsed) || parsed < 0;
+};
+
 const parseNumericValue = (value: unknown): number | undefined => {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? value : undefined;
@@ -488,6 +497,10 @@ export function createHierarchyColumns(
       valueGetter: (_value, row: HierarchyRow) => row.type === 'location' ? undefined : row.length_m,
       cellClassName: (params) => getDimensionCellClassName(params.row, 'length'),
       renderCell: (params) => renderDimensionCell(params, 'length', t),
+      preProcessEditCellProps: (params) => ({
+        ...params.props,
+        error: params.row.type !== 'location' && isDimensionEditValueInvalid(params.props.value),
+      }),
     },
     {
       field: 'width_m',
@@ -504,6 +517,10 @@ export function createHierarchyColumns(
       valueGetter: (_value, row: HierarchyRow) => row.type === 'location' ? undefined : row.width_m,
       cellClassName: (params) => getDimensionCellClassName(params.row, 'width'),
       renderCell: (params) => renderDimensionCell(params, 'width', t),
+      preProcessEditCellProps: (params) => ({
+        ...params.props,
+        error: params.row.type !== 'location' && isDimensionEditValueInvalid(params.props.value),
+      }),
     },
     {
       field: 'area_sqm',

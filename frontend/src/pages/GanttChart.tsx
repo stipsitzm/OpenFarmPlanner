@@ -850,7 +850,14 @@ function GanttChartPage() {
                   </Box>
 
                   <Box sx={{ overflowX: 'auto', pb: 0.5 }}>
-                    <Box sx={{ width: Math.max(chartData.length * 40, 420) }}>
+                    <Box
+                      data-testid="yield-chart-scroll-content"
+                      sx={{
+                        width: Math.max(chartData.length * 40 + 32, 420),
+                        boxSizing: 'border-box',
+                        pr: 2,
+                      }}
+                    >
                       <Box sx={{ borderLeft: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db', height: 260, px: 1, display: 'flex', alignItems: 'flex-end', gap: 0.75 }}>
                         {chartData.map((week) => (
                           <Box key={week.isoWeek} sx={{ width: 34, flex: '0 0 34px', height: '100%', display: 'flex', alignItems: 'flex-end' }}>

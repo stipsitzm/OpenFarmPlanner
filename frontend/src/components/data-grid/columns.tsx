@@ -10,6 +10,7 @@ import type { SearchableSelectOption } from './SearchableSelectEditCell';
 
 interface StandardSingleSelectEditCellProps extends GridRenderEditCellParams {
   options: SearchableSelectOption[];
+  placeholder?: string;
 }
 
 const StandardSingleSelectEditCell = memo(function StandardSingleSelectEditCell({
@@ -19,7 +20,10 @@ const StandardSingleSelectEditCell = memo(function StandardSingleSelectEditCell(
   hasFocus,
   api,
   options,
+  placeholder,
 }: StandardSingleSelectEditCellProps) {
+  const selectedOption = options.find((option) => option.value === value);
+
   return (
     <TextField
       select
@@ -30,6 +34,14 @@ const StandardSingleSelectEditCell = memo(function StandardSingleSelectEditCell(
       slotProps={{
         htmlInput: {
           tabIndex: hasFocus ? 0 : -1,
+        },
+        select: {
+          displayEmpty: Boolean(placeholder),
+          renderValue: () => selectedOption?.label ?? (
+            <Box component="span" sx={{ color: 'text.disabled' }}>
+              {placeholder}
+            </Box>
+          ),
         },
       }}
       onChange={async (event) => {
@@ -53,6 +65,7 @@ const StandardSingleSelectEditCell = memo(function StandardSingleSelectEditCell(
   && previous.value === next.value
   && previous.hasFocus === next.hasFocus
   && previous.options === next.options
+  && previous.placeholder === next.placeholder
 ));
 
 export interface SearchableSelectColumnConfig<Row extends { [key: string]: unknown }> {
@@ -63,6 +76,7 @@ export interface SearchableSelectColumnConfig<Row extends { [key: string]: unkno
   options: SearchableSelectOption[];
   maxWidth?: number;
   truncateCellText?: boolean;
+  placeholder?: string;
 }
 
 /**
@@ -77,7 +91,16 @@ export interface SearchableSelectColumnConfig<Row extends { [key: string]: unkno
 export const createSearchableSelectColumn = <Row extends { [key: string]: unknown }>(
   config: SearchableSelectColumnConfig<Row>
 ): GridColDef => {
-  const { field, headerName, flex, minWidth, options, maxWidth, truncateCellText = false } = config;
+  const {
+    field,
+    headerName,
+    flex,
+    minWidth,
+    options,
+    maxWidth,
+    truncateCellText = false,
+    placeholder,
+  } = config;
 
   return {
     field: String(field),
@@ -126,6 +149,7 @@ export const createSearchableSelectColumn = <Row extends { [key: string]: unknow
       <SearchableSelectEditCell
         {...params}
         options={options}
+        placeholder={placeholder}
       />
     ),
     valueSetter: (value, row) => {
@@ -151,7 +175,16 @@ export const createSearchableSelectColumn = <Row extends { [key: string]: unknow
 export const createSingleSelectColumn = <Row extends { [key: string]: unknown }>(
   config: SearchableSelectColumnConfig<Row>
 ): GridColDef => {
-  const { field, headerName, flex, minWidth, options, maxWidth, truncateCellText = false } = config;
+  const {
+    field,
+    headerName,
+    flex,
+    minWidth,
+    options,
+    maxWidth,
+    truncateCellText = false,
+    placeholder,
+  } = config;
 
   return {
     field: String(field),
@@ -200,6 +233,7 @@ export const createSingleSelectColumn = <Row extends { [key: string]: unknown }>
       <StandardSingleSelectEditCell
         {...params}
         options={options}
+        placeholder={placeholder}
       />
     ),
     valueSetter: (value, row) => {

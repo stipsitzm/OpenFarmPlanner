@@ -9,6 +9,7 @@
 
 import { memo, useCallback, useState, useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useGridApiContext } from "@mui/x-data-grid";
 import type {
   GridCellParams,
   GridColDef,
@@ -72,6 +73,7 @@ import {
   resolveLocaleFromLanguage,
 } from "../utils/numberLocalization";
 import { AreaM2EditCell } from "../components/data-grid/AreaM2EditCell";
+import { PlantsCountEditCell } from "../components/data-grid/PlantsCountEditCell";
 import {
   EditableDataGrid,
   createSingleSelectColumn,
@@ -209,8 +211,64 @@ const toIsoDateString = (value: unknown): string | null => {
   return null;
 };
 
+const parseGermanDateText = (text: string): Date | null => {
+  const match = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(text.trim());
+  if (!match) return null;
+  const [, day, month, year] = match.map(Number);
+  const d = new Date(year, month - 1, day);
+  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
+  return d;
+};
+
+const formatDateAsGerman = (value: Date | string | null | undefined): string => {
+  if (!value) return '';
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${day}.${month}.${d.getFullYear()}`;
+};
+
+function GermanDateEditCell({ id, field, value, hasFocus }: GridRenderEditCellParams) {
+  const apiRef = useGridApiContext();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [text, setText] = useState<string>(formatDateAsGerman(value as Date | null));
+
+  useEffect(() => {
+    if (!hasFocus) {
+      setText(formatDateAsGerman(value as Date | null));
+    }
+  }, [hasFocus, value]);
+
+  useEffect(() => {
+    if (hasFocus) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [hasFocus]);
+
+  return (
+    <TextField
+      type="text"
+      inputRef={inputRef}
+      value={text}
+      placeholder="TT.MM.JJJJ"
+      onChange={(e) => {
+        const raw = e.target.value;
+        setText(raw);
+        const parsed = parseGermanDateText(raw);
+        void apiRef.current.setEditCellValue({ id, field, value: parsed ?? (raw === '' ? null : value) });
+      }}
+      slotProps={{ input: { sx: { fontSize: 'inherit' } } }}
+      variant="standard"
+      sx={{ width: '100%', px: 1 }}
+    />
+  );
+}
+
 interface CultivationTypeEditCellProps extends GridRenderEditCellParams {
   options: CultivationTypeSelectOption[];
+  placeholder: string;
 }
 
 const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
@@ -220,8 +278,10 @@ const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
   hasFocus,
   api,
   options,
+  placeholder,
 }: CultivationTypeEditCellProps) {
   const selectedValue = normalizeCultivationType(value) ?? "";
+  const selectedOption = options.find((option) => option.value === selectedValue);
 
   return (
     <TextField
@@ -233,6 +293,32 @@ const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
       slotProps={{
         htmlInput: {
           tabIndex: hasFocus ? 0 : -1,
+        },
+        select: {
+          displayEmpty: true,
+          renderValue: () => selectedOption?.label ?? (
+            <Box
+              component="span"
+              sx={{
+                display: "block",
+                minWidth: 0,
+                overflow: "hidden",
+                color: "text.disabled",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {placeholder}
+            </Box>
+          ),
+        },
+      }}
+      sx={{
+        "& .MuiSelect-select": {
+          minWidth: 0,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         },
       }}
       onChange={async (event) => {
@@ -256,6 +342,7 @@ const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
   && previous.value === next.value
   && previous.hasFocus === next.hasFocus
   && previous.options === next.options
+  && previous.placeholder === next.placeholder
 ));
 
 const toDateKey = (value: unknown): number | null => {
@@ -1028,6 +1115,7 @@ function PlantingPlans() {
           maxWidth: CULTURE_COLUMN_MAX_WIDTH,
           truncateCellText: true,
           options: cultureOptions,
+          placeholder: t("plantingPlans:placeholders.selectCulture"),
         }),
         valueSetter: (value, row) => {
           const nextRow = row as PlantingPlanRow;
@@ -1084,6 +1172,7 @@ function PlantingPlans() {
             <CultivationTypeEditCell
               {...params}
               options={options}
+              placeholder={t("plantingPlans:placeholders.selectCultivationType")}
             />
           );
         },
@@ -1146,6 +1235,7 @@ function PlantingPlans() {
               locations={locations}
               locale={numberLocale}
               compactLabel={label}
+              placeholder={t("plantingPlans:placeholders.selectArea")}
               hasFocus={params.hasFocus}
               memoKey={`${String(params.id)}:${params.field}`}
               onApply={async (nextBedId) => {
@@ -1186,10 +1276,12 @@ function PlantingPlans() {
         type: "date",
         editable: true,
         valueGetter: (value) => (value ? new Date(value) : null),
+        valueFormatter: (value) => (value instanceof Date ? value.toLocaleDateString('de-DE') : ''),
         preProcessEditCellProps: (params) => {
           const hasError = !params.props.value;
           return { ...params.props, error: hasError };
         },
+        renderEditCell: (params) => <GermanDateEditCell {...params} />,
       },
       {
         field: "harvest_date",
@@ -1204,6 +1296,7 @@ function PlantingPlans() {
         }),
         type: "date",
         valueGetter: (value) => (value ? new Date(value) : null),
+        valueFormatter: (value) => (value instanceof Date ? value.toLocaleDateString('de-DE') : ''),
       },
       {
         field: "harvest_end_date",
@@ -1218,6 +1311,7 @@ function PlantingPlans() {
         }),
         type: "date",
         valueGetter: (value) => (value ? new Date(value) : null),
+        valueFormatter: (value) => (value instanceof Date ? value.toLocaleDateString('de-DE') : ''),
       },
       {
         field: "area_m2",
@@ -1299,6 +1393,17 @@ function PlantingPlans() {
           }
           return params.props;
         },
+        renderEditCell: (params) => (
+          <PlantsCountEditCell
+            {...params}
+            cultures={cultures}
+            placeholder={t("plantingPlans:placeholders.plantsCount")}
+            onLastEditedFieldChange={() => {
+              lastEditedFieldRef.current = "plants_count";
+              setAreaNotice(null);
+            }}
+          />
+        ),
         valueFormatter: (value) => {
           if (typeof value === "number" && !isNaN(value)) {
             return `≈ ${Math.round(value)}`;
@@ -1772,6 +1877,10 @@ function PlantingPlans() {
       }));
       return false;
     }
+    if (!parseGermanDateText(mobileCreateForm.planting_date)) {
+      setMobileCreateError(t("plantingPlans:validation.plantingDateRequired"));
+      return false;
+    }
     if (
       mobileCreateForm.area_m2.trim() !== "" &&
       mobileCreateForm.area_m2.trim().toLowerCase() !== t("plantingPlans:placeholders.maxKeyword").toLowerCase() &&
@@ -1814,11 +1923,13 @@ function PlantingPlans() {
       };
     }
 
+    const plantingDateIso = toIsoDateString(parseGermanDateText(mobileCreateForm.planting_date)) ?? mobileCreateForm.planting_date;
+
     try {
       await plantingPlanAPI.create({
         culture: Number(mobileCreateForm.culture),
         bed: Number(mobileCreateForm.bed),
-        planting_date: mobileCreateForm.planting_date,
+        planting_date: plantingDateIso,
         cultivation_type: mobileCreateForm.cultivation_type,
         notes: mobileCreateForm.notes || "",
         ...areaPayload,
@@ -1840,7 +1951,7 @@ function PlantingPlans() {
       culture: String(row.culture ?? ""),
       bed: String(row.bed ?? ""),
       cultivation_type: (row.cultivation_type as CultivationType) || "",
-      planting_date: row.planting_date || "",
+      planting_date: formatDateAsGerman(row.planting_date),
       area_m2:
         derivedArea !== null
           ? formatNumberForInput(derivedArea, { maximumFractionDigits: 2 })
@@ -1865,7 +1976,7 @@ function PlantingPlans() {
       culture: String(row.culture ?? ""),
       bed: String(row.bed ?? ""),
       cultivation_type: (row.cultivation_type as CultivationType) || "",
-      planting_date: row.planting_date || "",
+      planting_date: formatDateAsGerman(row.planting_date),
       area_m2:
         derivedArea !== null
           ? formatNumberForInput(derivedArea, { maximumFractionDigits: 2 })
@@ -1903,11 +2014,13 @@ function PlantingPlans() {
       };
     }
 
+    const updateDateIso = toIsoDateString(parseGermanDateText(mobileCreateForm.planting_date)) ?? mobileCreateForm.planting_date;
+
     try {
       await plantingPlanAPI.update(mobileEditId, {
         culture: Number(mobileCreateForm.culture),
         bed: Number(mobileCreateForm.bed),
-        planting_date: mobileCreateForm.planting_date,
+        planting_date: updateDateIso,
         cultivation_type: mobileCreateForm.cultivation_type,
         notes: mobileCreateForm.notes || "",
         ...areaPayload,
@@ -2497,8 +2610,9 @@ function PlantingPlans() {
               </Select>
             </FormControl>
             <TextField
-              type="date"
+              type="text"
               label={t("plantingPlans:columns.plantingDate")}
+              placeholder="TT.MM.JJJJ"
               InputLabelProps={{ shrink: true }}
               value={mobileCreateForm.planting_date}
               onChange={(event) =>

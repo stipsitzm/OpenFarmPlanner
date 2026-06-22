@@ -437,6 +437,10 @@ describe('GanttChartPage', () => {
     expect(screen.getByText('W13')).toBeInTheDocument();
     expect(screen.getByText('W14')).toBeInTheDocument();
     expect(screen.getByText('W15')).toBeInTheDocument();
+    expect(screen.getByTestId('yield-chart-scroll-content')).toHaveStyle({
+      boxSizing: 'border-box',
+      paddingRight: '16px',
+    });
   });
 
   it('hides yield distribution area when no yield data is available', async () => {

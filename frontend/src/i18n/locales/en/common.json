@@ -8,8 +8,7 @@
     }
   },
   "messages": {
-    "contextMenuTableHint": "Tip: Right-click a table row to open more actions.",
-    "contextMenuHintKeyboard": "Alternative: context menu key or Shift+F10."
+    "contextMenuTableHint": "Tip: Right-click a row for more actions."
   },
   "errors": {
     "supplierDataDuplicate": "This supplier already has data for this culture.",

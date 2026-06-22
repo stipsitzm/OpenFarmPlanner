@@ -32,6 +32,7 @@ interface AreaAssignmentDialogProps {
   locale: string;
   onApply: (bedId: number) => Promise<void> | void;
   compactLabel: string;
+  placeholder?: string;
   hasFocus?: boolean;
   memoKey?: string;
 }
@@ -87,6 +88,7 @@ function AreaAssignmentDialogComponent({
   locale,
   onApply,
   compactLabel,
+  placeholder,
   hasFocus = false,
 }: AreaAssignmentDialogProps) {
   const { t } = useTranslation('plantingPlans');
@@ -424,7 +426,13 @@ function AreaAssignmentDialogComponent({
           },
         }}
       >
-        <Typography variant="body2" noWrap sx={{ flexGrow: 1 }}>{compactLabel}</Typography>
+        <Typography
+          variant="body2"
+          noWrap
+          sx={{ flexGrow: 1, color: compactLabel ? 'text.primary' : 'text.disabled' }}
+        >
+          {compactLabel || placeholder}
+        </Typography>
         <IconButton
           size="small"
           tabIndex={-1}
@@ -542,6 +550,7 @@ export const AreaAssignmentDialog = memo(AreaAssignmentDialogComponent, (previou
   && previous.locations === next.locations
   && previous.locale === next.locale
   && previous.compactLabel === next.compactLabel
+  && previous.placeholder === next.placeholder
   && previous.hasFocus === next.hasFocus
   && previous.memoKey === next.memoKey
 ));

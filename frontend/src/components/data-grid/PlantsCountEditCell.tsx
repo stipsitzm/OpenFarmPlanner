@@ -13,10 +13,11 @@ import type { Culture } from '../../api/types';
 export interface PlantsCountEditCellProps extends GridRenderEditCellParams {
   cultures: Culture[];
   onLastEditedFieldChange: (field: 'plants_count') => void;
+  placeholder?: string;
 }
 
 export function PlantsCountEditCell(props: PlantsCountEditCellProps) {
-  const { id, value, field, hasFocus, onLastEditedFieldChange } = props;
+  const { id, value, field, hasFocus, onLastEditedFieldChange, placeholder } = props;
   const apiRef = useGridApiContext();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [inputValue, setInputValue] = useState<string>(
@@ -56,6 +57,7 @@ export function PlantsCountEditCell(props: PlantsCountEditCellProps) {
       inputRef={inputRef}
       value={inputValue}
       onChange={handleChange}
+      placeholder={placeholder}
       slotProps={{
         htmlInput: {
           min: 0,

@@ -64,6 +64,14 @@ vi.mock('../hooks/useProjectRequirement', () => ({
   useProjectRequirement: () => projectRequirementState,
 }));
 
+const registeredUiState: { topbarActions: { id: string; label: string; hidden?: boolean; menuActions?: { id: string; label: string }[] }[] } = { topbarActions: [] };
+
+vi.mock('../hooks/useTopbarContextActions', () => ({
+  useTopbarContextActions: (_setter: unknown, actions: typeof registeredUiState.topbarActions) => {
+    registeredUiState.topbarActions = actions;
+  },
+}));
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {

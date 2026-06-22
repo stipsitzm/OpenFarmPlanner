@@ -323,7 +323,7 @@ describe('EditableDataGrid', () => {
     await user.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
 
     await waitFor(() => {
-      expect(mockUseNavigationBlocker).toHaveBeenLastCalledWith(false, 'messages.unsavedChanges');
+      expect(mockUseNavigationBlocker).toHaveBeenLastCalledWith(true, 'messages.unsavedChanges');
     });
   });
 
