@@ -1206,6 +1206,26 @@ function FieldsBedsHierarchy({
       }
     };
 
+    const handleFocusTable = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.key !== "t" && event.key !== "T") return;
+      if (isTypingInEditableElement(document.activeElement)) return;
+
+      const firstRow = rows[0];
+      if (!firstRow) return;
+
+      event.preventDefault();
+      const targetId = selectedRowId ?? firstRow.id;
+      setSelectedRowId(targetId);
+      setTreeActive(true);
+      gridApiRef.current?.setCellFocus?.(targetId, "name");
+
+      const selectedElement = document.querySelector(`[data-id="${String(targetId)}"]`);
+      if (selectedElement instanceof HTMLElement) {
+        selectedElement.scrollIntoView({ block: "nearest" });
+      }
+    };
+
     const handleTreeNavigation = (event: KeyboardEvent) => {
       if (contextMenuState !== null || !treeActive || !selectedRowId) {
         return;
@@ -1275,13 +1295,15 @@ function FieldsBedsHierarchy({
     };
 
     document.addEventListener("mousedown", handleDocumentPointerDown);
+    window.addEventListener("keydown", handleFocusTable);
     window.addEventListener("keydown", handleTreeNavigation);
 
     return () => {
       document.removeEventListener("mousedown", handleDocumentPointerDown);
+      window.removeEventListener("keydown", handleFocusTable);
       window.removeEventListener("keydown", handleTreeNavigation);
     };
-  }, [contextMenuState, discardActiveRowEdit, expandedRows, rows, selectedRowId, toggleExpand, treeActive]);
+  }, [contextMenuState, discardActiveRowEdit, expandedRows, gridApiRef, rows, selectedRowId, setSelectedRowId, toggleExpand, treeActive]);
 
   useEffect(() => {
     const handleContextMenuKeyboard = (event: KeyboardEvent) => {
