@@ -1276,7 +1276,6 @@ function PlantingPlans() {
         type: "date",
         editable: true,
         valueGetter: (value) => (value ? new Date(value) : null),
-        valueFormatter: (value) => (value instanceof Date ? value.toLocaleDateString('de-DE') : ''),
         preProcessEditCellProps: (params) => {
           const hasError = !params.props.value;
           return { ...params.props, error: hasError };
@@ -1296,7 +1295,6 @@ function PlantingPlans() {
         }),
         type: "date",
         valueGetter: (value) => (value ? new Date(value) : null),
-        valueFormatter: (value) => (value instanceof Date ? value.toLocaleDateString('de-DE') : ''),
       },
       {
         field: "harvest_end_date",
@@ -1311,7 +1309,6 @@ function PlantingPlans() {
         }),
         type: "date",
         valueGetter: (value) => (value ? new Date(value) : null),
-        valueFormatter: (value) => (value instanceof Date ? value.toLocaleDateString('de-DE') : ''),
       },
       {
         field: "area_m2",

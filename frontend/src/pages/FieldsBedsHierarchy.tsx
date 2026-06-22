@@ -66,7 +66,6 @@ import {
 import {
   createHierarchyColumns,
   DEFAULT_HIERARCHY_COLUMN_WIDTHS,
-  isDimensionEditValueInvalid,
 } from "../components/hierarchy/HierarchyColumns";
 import { extractApiErrorMessage } from "../api/errors";
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from "../utils/contextMenu";
@@ -1986,70 +1985,6 @@ function FieldsBedsHierarchy({
                   return;
                 }
 
-                if (isEditing && keyboardEvent.key === "Enter") {
-                  const draft = gridApiRef.current?.getRowWithUpdatedValues?.(params.id);
-                  const firstInvalidDimensionField = draft
-                    ? (["length_m", "width_m"] as const).find(
-                        (f) => isDimensionEditValueInvalid((draft as Record<string, unknown>)[f]),
-                      )
-                    : undefined;
-                  if (firstInvalidDimensionField) {
-                    keyboardEvent.preventDefault();
-                    keyboardEvent.stopPropagation();
-                    keyboardEvent.defaultMuiPrevented = true;
-                    gridApiRef.current?.setCellFocus(params.id, firstInvalidDimensionField);
-                    return;
-                  }
-                  activeEditFieldRef.current = params.field;
-                  setSelectedRowId(params.id);
-                  setTreeActive(true);
-                  return;
-                }
-
-                if (isEditing && keyboardEvent.key === "Tab") {
-                  const keyboardFields = getKeyboardFields(params.row);
-                  const currentFieldIndex = keyboardFields.indexOf(params.field);
-                  const targetField = keyboardFields[
-                    currentFieldIndex + (keyboardEvent.shiftKey ? -1 : 1)
-                  ];
-
-                  if (!targetField) {
-                    // Wrap around: Tab past last field → first editable, Shift+Tab before first → last editable
-                    const editableFields = keyboardFields.filter(
-                      (f) => isCellEditable({ row: params.row, field: f }),
-                    );
-                    const wrapField = keyboardEvent.shiftKey
-                      ? editableFields[editableFields.length - 1]
-                      : editableFields[0];
-                    keyboardEvent.preventDefault();
-                    keyboardEvent.stopPropagation();
-                    keyboardEvent.defaultMuiPrevented = true;
-                    if (wrapField) {
-                      activeEditFieldRef.current = wrapField;
-                      gridApiRef.current?.setCellFocus(params.id, wrapField);
-                    }
-                    return;
-                  }
-
-                  activeEditFieldRef.current = targetField;
-                  if (isCellEditable({ row: params.row, field: targetField })) {
-                    keyboardEvent.preventDefault();
-                    keyboardEvent.stopPropagation();
-                    keyboardEvent.defaultMuiPrevented = true;
-                    gridApiRef.current?.setCellFocus(params.id, targetField);
-                  } else {
-                    // Non-editable target (e.g. notes): prevent native Tab escape but let
-                    // MUI DataGrid process Tab to save the row and trigger pendingTabFocusRef
-                    keyboardEvent.preventDefault();
-                    pendingTabFocusRef.current = { rowId: params.id, field: targetField };
-                  }
-                  return;
-                }
-
-                if (isEditing) {
-                  return;
-                }
-
                 if (
                   params.field === "notes" &&
                   (keyboardEvent.key === "Enter" ||
@@ -2059,20 +1994,7 @@ function FieldsBedsHierarchy({
                   keyboardEvent.preventDefault();
                   keyboardEvent.stopPropagation();
                   keyboardEvent.defaultMuiPrevented = true;
-                  openNotesEditor(params.id, "notes");
-                  return;
-                }
-
-                if (
-                  keyboardEvent.key === "ArrowLeft" ||
-                  keyboardEvent.key === "ArrowRight" ||
-                  keyboardEvent.key === "ArrowUp" ||
-                  keyboardEvent.key === "ArrowDown"
-                ) {
-                  focusAdjacentEditableCell(params.id, params.field, keyboardEvent.key);
-                  keyboardEvent.preventDefault();
-                  keyboardEvent.stopPropagation();
-                  keyboardEvent.defaultMuiPrevented = true;
+                  notesEditor.handleOpen(params.id, "notes");
                   return;
                 }
 
