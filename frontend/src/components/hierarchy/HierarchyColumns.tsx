@@ -62,6 +62,7 @@ function renderHierarchyAddIconButton({
       <span>
         <HierarchyAddIcon
           ariaLabel={label}
+          tabIndex={-1}
           onClick={(event) => {
             event.stopPropagation();
             onClick(event);
@@ -88,6 +89,7 @@ function renderPlantingPlanActionButton(
         size="small"
         color="primary"
         aria-label={t('hierarchy:createPlantingPlan')}
+        tabIndex={-1}
         onClick={(event) => {
           event.stopPropagation();
           callbacks.onCreatePlantingPlan(row.bedId!);

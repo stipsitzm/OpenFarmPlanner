@@ -6,6 +6,7 @@ interface HierarchyAddIconProps {
   interactive?: boolean;
   ariaLabel?: string;
   ariaHidden?: boolean;
+  tabIndex?: number;
   onClick?: MouseEventHandler<HTMLButtonElement>;
   sx?: SxProps<Theme>;
 }
@@ -14,6 +15,7 @@ export function HierarchyAddIcon({
   interactive = true,
   ariaLabel,
   ariaHidden,
+  tabIndex,
   onClick,
   sx,
 }: HierarchyAddIconProps): ReactElement {
@@ -73,6 +75,7 @@ export function HierarchyAddIcon({
     <IconButton
       size="small"
       aria-label={ariaLabel}
+      tabIndex={tabIndex}
       onClick={onClick}
       sx={{
         p: 0,
