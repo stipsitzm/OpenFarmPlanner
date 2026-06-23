@@ -1,4 +1,6 @@
-import { Alert, Box, Button, Container, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Container, IconButton, InputAdornment, Stack, TextField, Typography } from '@mui/material';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
@@ -19,6 +21,9 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+  const [registrationSucceeded, setRegistrationSucceeded] = useState(false);
   const [pendingInvitation, setPendingInvitation] = useState<InvitationPublicStatus | null>(null);
   const nextPath = getNextFromSearch(location.search);
   const isLoggedIn = user !== null;
@@ -64,6 +69,7 @@ export default function RegisterPage() {
       }
       const message = await register(email.trim().toLowerCase(), password, passwordConfirm, displayName.trim());
       setSuccess(pendingInvitation ? t('projectInvitations:registerSuccessWithInvitation', { detail: message }) : message);
+      setRegistrationSucceeded(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth:register.failed'));
     } finally {
@@ -125,10 +131,58 @@ export default function RegisterPage() {
           {success ? <Alert severity="success">{success}</Alert> : null}
           <TextField label={t('auth:register.email')} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={isLoggedIn} />
           <TextField label={t('auth:register.displayName')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} disabled={isLoggedIn} />
-          <TextField label={t('auth:register.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required disabled={isLoggedIn} />
-          <TextField label={t('auth:register.passwordConfirm')} type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} required disabled={isLoggedIn} />
+          <TextField
+            label={t('auth:register.password')}
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={isLoggedIn}
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      edge="end"
+                      tabIndex={-1}
+                      onClick={() => setShowPassword((current) => !current)}
+                      onMouseDown={(event) => event.preventDefault()}
+                    >
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+          <TextField
+            label={t('auth:register.passwordConfirm')}
+            type={showPasswordConfirm ? 'text' : 'password'}
+            value={passwordConfirm}
+            onChange={(e) => setPasswordConfirm(e.target.value)}
+            required
+            disabled={isLoggedIn}
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label={showPasswordConfirm ? 'Hide password' : 'Show password'}
+                      edge="end"
+                      tabIndex={-1}
+                      onClick={() => setShowPasswordConfirm((current) => !current)}
+                      onMouseDown={(event) => event.preventDefault()}
+                    >
+                      {showPasswordConfirm ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
           <Button type="submit" variant="contained" disabled={submitting || isLoggedIn}>{submitting ? t('auth:register.submitting') : t('auth:register.submit')}</Button>
-          <Button type="button" onClick={() => void handleResend()} disabled={!email || isLoggedIn}>{t('auth:register.resendActivation')}</Button>
+          <Button type="button" onClick={() => void handleResend()} disabled={!email || isLoggedIn || !registrationSucceeded}>{t('auth:register.resendActivation')}</Button>
           <Button type="button" component={RouterLink} to={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'} state={location.state}>{t('auth:register.hasAccount')}</Button>
         </Stack>
       </Box>

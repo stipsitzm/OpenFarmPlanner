@@ -83,6 +83,10 @@
     "cancel": "Abbrechen",
     "save": "Speichern",
     "create": "Erstellen",
+    "discardChangesTitle": "Änderungen verwerfen?",
+    "discardChangesMessage": "Alle nicht gespeicherten Änderungen gehen verloren.",
+    "discardCancel": "Weiter bearbeiten",
+    "discardConfirm": "Verwerfen",
     "sectionGeneral": "Allgemein / Details",
     "sectionTiming": "Zeitplanung",
     "sectionHarvest": "Ernteinformationen",
@@ -319,8 +323,9 @@
     "unknownUser": "Unbekannter Nutzer",
     "meta": "Version vom {{timestamp}}",
     "emptyState": {
-      "title": "Keine weiteren Versionen verfügbar.",
-      "description": "Für diese Sorte existiert aktuell nur diese Version."
+      "title": "Kein Versionsverlauf verfügbar.",
+      "description": "Für diese Sorte existiert aktuell noch kein Versionsverlauf.",
+      "onlyCurrentVersion": "Noch keine ältere Version verfügbar."
     },
     "title": {
       "withName": "{{objectType}} „{{objectName}}“ {{action}}",

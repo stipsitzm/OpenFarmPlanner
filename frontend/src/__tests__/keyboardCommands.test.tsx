@@ -79,7 +79,7 @@ describe('command palette', () => {
 
     render(<CommandPalette open commands={commands} onClose={vi.fn()} />);
 
-    const input = screen.getByRole('textbox', { name: 'Aktionssuche (Alt+K)' });
+    const input = screen.getByRole('textbox', { name: 'Aktionssuche' });
     fireEvent.change(input, { target: { value: 'bearb' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 

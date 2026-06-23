@@ -193,7 +193,7 @@ class AuthApiTest(APITestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data.get('detail'), 'Ungueltiger Aktivierungslink.')
+        self.assertEqual(response.data.get('detail'), 'Ungültiger Aktivierungslink.')
 
     def test_activation_expired_pending_record_deletes_user(self) -> None:
         self.client.post(
@@ -214,7 +214,7 @@ class AuthApiTest(APITestCase):
 
         response = self.client.post('/openfarmplanner/api/auth/activate/', {'uid': uid, 'token': token}, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data.get('detail'), 'Ungueltiges oder abgelaufenes Aktivierungs-Token.')
+        self.assertEqual(response.data.get('detail'), 'Ungültiges oder abgelaufenes Aktivierungs-Token.')
         self.assertFalse(User.objects.filter(pk=user.pk).exists())
 
     def test_activation_token_cannot_be_reused_after_successful_activation(self) -> None:
@@ -333,7 +333,7 @@ class AuthApiTest(APITestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data.get('detail'), 'Ungueltiger Zuruecksetzungslink.')
+        self.assertEqual(response.data.get('detail'), 'Ungültiger Zurücksetzungslink.')
 
     @override_settings(PUBLIC_FRONTEND_URL='https://zwiebelzopf.at/openfarmplanner')
     def test_password_reset_email_uses_public_frontend_url(self) -> None:

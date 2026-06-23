@@ -1,14 +1,16 @@
 import { Alert, Box, Button, Container, Stack, TextField, Typography } from '@mui/material';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
 
 export default function ForgotPasswordPage() {
   const { requestPasswordReset } = useAuth();
   const { t } = useTranslation('auth');
-  const [email, setEmail] = useState('');
+  const location = useLocation();
+  const prefillEmail = (location.state as { email?: string } | null)?.email ?? '';
+  const [email, setEmail] = useState(prefillEmail);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 

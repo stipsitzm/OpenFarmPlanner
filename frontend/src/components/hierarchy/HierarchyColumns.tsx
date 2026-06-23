@@ -541,8 +541,8 @@ export function createHierarchyColumns(
       field: 'notes',
       headerName: t('common:fields.notes'),
       width: widths.notes,
-      minWidth: 180,
-      maxWidth: 260,
+      minWidth: widths.notes,
+      flex: 1,
       editable: false,
       renderCell: (params) => {
         const value = (params.value as string) || '';

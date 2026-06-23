@@ -93,7 +93,7 @@
     "help": "Hilfe"
   },
   "commandPalette": {
-    "label": "Aktionssuche (Alt+K)",
+    "label": "Aktionssuche",
     "placeholder": "Aktion suchen oder direkt ausführen",
     "emptyTitle": "Keine passenden Aktionen gefunden.",
     "emptyDescription": "Versuche einen anderen Suchbegriff oder prüfe, ob im aktuellen Kontext weitere Aktionen verfügbar sind.",

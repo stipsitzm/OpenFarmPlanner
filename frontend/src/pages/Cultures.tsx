@@ -442,7 +442,7 @@ function Cultures() {
       return;
     }
     const response = await cultureAPI.history(selectedCulture.id);
-    if (response.data.length <= 1) {
+    if (response.data.length === 0) {
       showSnackbar(t('history.emptyState.title'), 'info');
       return;
     }
@@ -1472,6 +1472,7 @@ function Cultures() {
               </Typography>
             </Box>
           ) : (
+            <>
             <List>
               {historyItems.map((item, index) => {
                 const isCurrentVersion = isCurrentHistoryEntry(item, index);
@@ -1633,6 +1634,12 @@ function Cultures() {
                 );
               })}
             </List>
+            {historyItems.length === 1 && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, pt: 1, borderTop: 1, borderColor: 'divider' }}>
+                {t('history.emptyState.onlyCurrentVersion')}
+              </Typography>
+            )}
+            </>
           )}
         </DialogContent>
         <DialogActions>
