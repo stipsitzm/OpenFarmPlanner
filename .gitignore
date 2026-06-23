@@ -54,3 +54,6 @@ reports/
 
 # Local data sync backups
 /backups/
+
+# Node.js (e.g. accidentally created at repo root)
+node_modules/

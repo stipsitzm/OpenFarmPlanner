@@ -141,7 +141,31 @@
     },
     "calendar": {
       "title": "Hilfe: Anbaukalender",
-      "intro": "Der Anbaukalender visualisiert die zeitliche Planung deiner Anbaupläne. So erkennst du Belegungen, Anzuchtphasen, Erntezeiträume und mögliche Überschneidungen.\n\nFahre über Einträge, um weitere Details anzuzeigen.\n\nÄnderungen in den Anbauplänen werden hier automatisch übernommen."
+      "intro": "Der Anbaukalender visualisiert die zeitliche Planung deiner Anbaupläne. So erkennst du Belegungen, Anzuchtphasen, Erntezeiträume und mögliche Überschneidungen.\n\nFahre über Einträge, um weitere Details anzuzeigen.\n\nÄnderungen in den Anbauplänen werden hier automatisch übernommen.",
+      "sections": [
+        {
+          "title": "Bedienung",
+          "points": [
+            "Wechsle zwischen Feldbelegung und Anzucht über die Ansichtsumschaltung.",
+            "Blende den wöchentlichen Ertragskalender bei Bedarf ein oder aus.",
+            "Bewege die Zeitachse, um bevorstehende Zeiträume einzusehen.",
+            "Fahre über Einträge, um Details als Tooltip anzuzeigen."
+          ]
+        },
+        {
+          "title": "Zusammenhang mit anderen Seiten",
+          "points": [
+            "Der Kalender basiert auf den Anbauplänen.",
+            "Änderungen an Zeiträumen in den Anbauplänen aktualisieren diese Ansicht."
+          ]
+        }
+      ],
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "tabs": "Zwischen Ansichten wechseln",
+        "switch": "Ertragskalender ein- oder ausblenden",
+        "tooltip": "Weitere Details anzeigen"
+      }
     },
     "seedDemand": {
       "title": "Hilfe: Saatgutbedarf",
