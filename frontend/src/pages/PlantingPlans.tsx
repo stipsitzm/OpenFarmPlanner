@@ -48,18 +48,18 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTranslation } from "../i18n";
 import {
-  getAllowedCultivationTypesForCulture,
   normalizeCultivationType,
   resolveCultivationTypeForAllowedOptions,
+  toNumericValue,
+  formatAreaM2,
+  buildBedDisplayLabel,
+  buildAreaColumnHeaderLabel,
 } from "./plantingPlansUtils";
+import { usePlantingPlanHierarchy, type CultivationTypeSelectOption } from "./usePlantingPlanHierarchy";
 import PageContainer from "../components/layout/PageContainer";
 import PageSurface from "../components/layout/PageSurface";
 import {
   plantingPlanAPI,
-  cultureAPI,
-  bedAPI,
-  fieldAPI,
-  locationAPI,
   type PlantingPlan,
   type Culture,
   type Bed,
@@ -69,7 +69,6 @@ import { extractApiErrorMessage } from "../api/errors";
 import {
   formatLocalizedNumber,
   parseLocalizedNumber,
-  resolveLocaleFromLanguage,
 } from "../utils/numberLocalization";
 import { AreaM2EditCell } from "../components/data-grid/AreaM2EditCell";
 import { PlantsCountEditCell } from "../components/data-grid/PlantsCountEditCell";
@@ -79,7 +78,6 @@ import {
   getCalculatedColumnProps,
   type EditableRow,
   type DataGridAPI,
-  type SearchableSelectOption,
   type EditableDataGridCommandApi,
   buildTsv,
   copyTextToClipboard,
@@ -113,18 +111,9 @@ export {
   filterFieldOptionsByLocation,
 } from "../components/planting-plans/areaHierarchySelection";
 
-const AREA_LABEL_SEPARATOR = " | ";
-const DATA_GRID_HEADER_LABEL_SX = { fontWeight: 600 };
+export { buildAreaColumnHeaderLabel } from "./plantingPlansUtils";
 
-export const buildAreaColumnHeaderLabel = (
-  includeLocation: boolean,
-  locationLabel: string,
-  fieldLabel: string,
-  bedLabel: string,
-): string =>
-  includeLocation
-    ? `${locationLabel}${AREA_LABEL_SEPARATOR}${fieldLabel}${AREA_LABEL_SEPARATOR}${bedLabel}`
-    : `${fieldLabel}${AREA_LABEL_SEPARATOR}${bedLabel}`;
+const DATA_GRID_HEADER_LABEL_SX = { fontWeight: 600 };
 
 /**
  * Row data type for Data Grid
@@ -149,11 +138,6 @@ interface MobileCreateFormState {
   notes: string;
 }
 
-interface CultivationTypeSelectOption {
-  value: CultivationType;
-  label: string;
-}
-
 interface AreaValidationDialogState {
   rowId: number;
   requestedArea: number;
@@ -166,41 +150,8 @@ interface AreaValidationDialogState {
 }
 
 const AREA_VALIDATION_CLOSE_SUPPRESSION_MS = 250;
-
-const CULTIVATION_TYPE_OPTIONS = [
-  {
-    value: "direct_sowing",
-    labelKey: "plantingPlans:cultivationTypes.directSowing",
-  },
-  {
-    value: "pre_cultivation",
-    labelKey: "plantingPlans:cultivationTypes.preCultivation",
-  },
-] as const;
-
 const CULTURE_COLUMN_MAX_WIDTH = 280;
 const BED_COLUMN_MAX_WIDTH = 220;
-const DATE_COLUMN_WIDTH = 142;
-
-const estimateColumnWidth = (
-  values: string[],
-  min: number,
-  max: number,
-): number => {
-  const longest = values.reduce(
-    (length, value) => Math.max(length, value.length),
-    0,
-  );
-  const estimated = longest * 8 + 52;
-  return Math.max(min, Math.min(max, estimated));
-};
-
-const formatAreaM2 = (value: number, locale: string): string =>
-  `${formatLocalizedNumber(value, locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}\u00a0m²`;
-
 
 interface CultivationTypeEditCellProps extends GridRenderEditCellParams {
   options: CultivationTypeSelectOption[];
@@ -317,16 +268,6 @@ const toDateKey = (value: unknown): number | null => {
   return Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
 };
 
-const toNumericValue = (value: unknown): number | null => {
-  if (typeof value === "number") {
-    return Number.isNaN(value) ? null : value;
-  }
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value);
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-  return null;
-};
 const toAreaNumericValue = (value: unknown, locale: string): number | null => {
   const directNumeric = toNumericValue(value);
   if (directNumeric !== null) {
@@ -455,35 +396,7 @@ export const normalizeSelectionAfterBedChange = (
   };
 };
 
-export const buildBedDisplayLabel = (
-  locationName: string | null | undefined,
-  fieldName: string | null | undefined,
-  bedName: string | null | undefined,
-  areaSqm: number | null,
-  includeLocation: boolean,
-  locale: string,
-): string => {
-  const normalizedLocationName = (locationName ?? "").trim();
-  const normalizedBedName = (bedName ?? "").trim();
-  const normalizedFieldName = (fieldName ?? "").trim();
-  const combinedName = [
-    includeLocation ? normalizedLocationName : "",
-    normalizedFieldName,
-    normalizedBedName,
-  ]
-    .filter((part) => part.length > 0)
-    .join(AREA_LABEL_SEPARATOR);
-
-  if (!combinedName) {
-    return "—";
-  }
-
-  if (areaSqm === null) {
-    return combinedName;
-  }
-
-  return `${combinedName} (${formatAreaM2(areaSqm, locale)})`;
-};
+export { buildBedDisplayLabel } from "./plantingPlansUtils";
 
 export const resolveBedCellValue = (
   value: unknown,
@@ -553,18 +466,34 @@ export const buildMobileCreateForm = (
 
 function PlantingPlans() {
   const { t } = useTranslation(["plantingPlans", "common"]);
-  const { i18n } = useTranslation();
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
-  const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [cultures, setCultures] = useState<Culture[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [fields, setFields] = useState<Field[]>([]);
-  const [beds, setBeds] = useState<Bed[]>([]);
+  const {
+    cultures,
+    locations,
+    fields,
+    beds,
+    isHierarchyLoading,
+    numberLocale,
+    cultureOptions,
+    locationById,
+    fieldById,
+    bedById,
+    hierarchyAvailability,
+    bedOptions,
+    bedLabelById,
+    cultivationTypeOptions,
+    cultivationTypeOptionsByCultureId,
+    hasMultipleLocationsWithBeds,
+    fieldBedColumnLabel,
+    areaColumnLabel,
+    getCultivationTypeOptionsForRow,
+    dynamicWidths,
+  } = usePlantingPlanHierarchy(shouldShowProjectRequiredState);
   const [areaNotice, setAreaNotice] = useState<{
     message: string;
     severity: "info" | "warning";
@@ -576,7 +505,6 @@ function PlantingPlans() {
     null,
   );
   const [mobileRows, setMobileRows] = useState<PlantingPlanRow[]>([]);
-  const [isHierarchyLoading, setIsHierarchyLoading] = useState(true);
   const [isPlansLoading, setIsPlansLoading] = useState(true);
   const [expandedCardIds, setExpandedCardIds] = useState<Set<number | string>>(
     new Set(),
@@ -674,198 +602,6 @@ function PlantingPlans() {
     clearAreaValidationCloseTimer();
   }, [clearAreaValidationCloseTimer]);
 
-  const cultureOptions: SearchableSelectOption[] = useMemo(
-    () =>
-      cultures
-        .filter((c) => c.id !== undefined)
-        .map((c) => ({
-          value: c.id!,
-          label: c.variety ? `${c.name} (${c.variety})` : c.name,
-        })),
-    [cultures],
-  );
-
-  const locationById = useMemo(
-    () => new Map(locations.filter((location) => location.id !== undefined).map((location) => [location.id!, location])),
-    [locations],
-  );
-
-  const fieldById = useMemo(
-    () => new Map(fields.filter((field) => field.id !== undefined).map((field) => [field.id!, field])),
-    [fields],
-  );
-
-  const bedById = useMemo(
-    () => new Map(beds.filter((bed) => bed.id !== undefined).map((bed) => [bed.id!, bed])),
-    [beds],
-  );
-
-  const hierarchyAvailability = useMemo(
-    () => collectHierarchyAvailability(fields, beds),
-    [fields, beds],
-  );
-
-  const bedOptions: SearchableSelectOption[] = useMemo(
-    () => {
-      const locationIdsWithBeds = new Set<number>();
-      beds.forEach((bed) => {
-        const field = fieldById.get(bed.field);
-        if (field) {
-          locationIdsWithBeds.add(field.location);
-        }
-      });
-      const includeLocation = locationIdsWithBeds.size > 1;
-
-      return beds
-        .filter((b) => b.id !== undefined)
-        .filter((bed) => hierarchyAvailability.fieldIdsWithBeds.has(bed.field))
-        .map((b) => {
-          const field = fieldById.get(b.field);
-          const locationName = field
-            ? locationById.get(field.location)?.name
-            : null;
-          const normalizedAreaSqm = toNumericValue(b.area_sqm);
-          return {
-            value: b.id!,
-            label: buildBedDisplayLabel(
-              locationName,
-              b.field_name ?? field?.name,
-              b.name,
-              normalizedAreaSqm,
-              includeLocation,
-              numberLocale,
-            ),
-          };
-        });
-    },
-    [beds, fieldById, hierarchyAvailability.fieldIdsWithBeds, locationById, numberLocale],
-  );
-
-  const bedLabelById = useMemo(
-    () => new Map(bedOptions.map((option) => [option.value as number, option.label])),
-    [bedOptions],
-  );
-
-  const cultivationTypeOptions = useMemo(
-    () =>
-      CULTIVATION_TYPE_OPTIONS.map((option) => ({
-        value: option.value,
-        label: t(option.labelKey),
-      })),
-    [t],
-  );
-
-  const cultivationTypeOptionsByCultureId = useMemo(() => {
-    const optionsByCultureId = new Map<number, CultivationTypeSelectOption[]>();
-    cultures.forEach((culture) => {
-      if (culture.id === undefined) {
-        return;
-      }
-      const allowedTypes = getAllowedCultivationTypesForCulture(culture);
-      optionsByCultureId.set(
-        culture.id,
-        cultivationTypeOptions.filter((option) =>
-          allowedTypes.includes(option.value as CultivationType),
-        ),
-      );
-    });
-    return optionsByCultureId;
-  }, [cultivationTypeOptions, cultures]);
-
-  const fieldBedColumnLabel = useMemo(
-    () =>
-      t("plantingPlans:columns.fieldBed", {
-        separator: AREA_LABEL_SEPARATOR,
-      }),
-    [t],
-  );
-
-  const hasMultipleLocationsWithBeds = useMemo(() => {
-    const fieldById = new Map(
-      fields
-        .filter((item) => item.id !== undefined)
-        .map((item) => [item.id as number, item]),
-    );
-    const locationIdsWithBeds = new Set<number>();
-    beds.forEach((bed) => {
-      const field = fieldById.get(bed.field);
-      if (field) {
-        locationIdsWithBeds.add(field.location);
-      }
-    });
-    return locationIdsWithBeds.size > 1;
-  }, [beds, fields]);
-
-  const areaColumnLabel = useMemo(
-    () =>
-      buildAreaColumnHeaderLabel(
-        hasMultipleLocationsWithBeds,
-        t("plantingPlans:columns.location"),
-        t("plantingPlans:columns.field"),
-        t("plantingPlans:columns.bed"),
-      ),
-    [hasMultipleLocationsWithBeds, t],
-  );
-
-  const getCultivationTypeOptionsForRow = useMemo(
-    () => (row: PlantingPlanRow) => {
-      return cultivationTypeOptionsByCultureId.get(row.culture) ?? cultivationTypeOptions;
-    },
-    [cultivationTypeOptions, cultivationTypeOptionsByCultureId],
-  );
-
-  const dynamicWidths = useMemo(() => {
-    const cultureWidth = estimateColumnWidth(
-      [
-        t("plantingPlans:columns.culture"),
-        ...cultureOptions.map((option) => option.label),
-      ],
-      170,
-      240,
-    );
-    const hierarchyColumnValues = [
-      t("plantingPlans:columns.bed"),
-      ...Array.from(new Set(bedOptions.map((option) => option.label))),
-    ];
-    const bedWidth = estimateColumnWidth(
-      hierarchyColumnValues,
-      hasMultipleLocationsWithBeds ? 210 : 160,
-      hasMultipleLocationsWithBeds ? 380 : 300,
-    );
-
-    return {
-      culture: cultureWidth,
-      bed: bedWidth,
-      cultivationType: estimateColumnWidth(
-        [
-          t("plantingPlans:columns.cultivationType"),
-          ...cultivationTypeOptions.map((option) => option.label),
-        ],
-        110,
-        150,
-      ),
-      plantingDate: DATE_COLUMN_WIDTH,
-      harvestDate: DATE_COLUMN_WIDTH,
-      harvestEndDate: DATE_COLUMN_WIDTH,
-      area: estimateColumnWidth(
-        [
-          t("plantingPlans:columns.areaM2"),
-          ...beds
-            .filter((bed) => typeof bed.area_sqm === "number")
-            .map((bed) => formatAreaM2(bed.area_sqm as number, numberLocale)),
-        ],
-        95,
-        120,
-      ),
-      plants: estimateColumnWidth(
-        [t("plantingPlans:columns.plantsCount"), "≈ 9999"],
-        96,
-        122,
-      ),
-      notes: 220,
-    };
-  }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, hasMultipleLocationsWithBeds, numberLocale, t]);
-
   const getBedLabelForRow = useCallback(
     (row: PlantingPlanRow | null | undefined): string => {
       if (!row) {
@@ -959,45 +695,6 @@ function PlantingPlans() {
 
     urlParamProcessedRef.current = true;
   }, [initialSelection, replacePlantingPlanSearchParams, searchParams]);
-
-  /**
-   * Fetch cultures and beds for dropdowns
-   */
-  useEffect(() => {
-    if (shouldShowProjectRequiredState) {
-      setCultures([]);
-      setLocations([]);
-      setFields([]);
-      setBeds([]);
-      setIsHierarchyLoading(false);
-      return;
-    }
-    const fetchData = async (): Promise<void> => {
-      setIsHierarchyLoading(true);
-      try {
-        const [culturesResponse, locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
-          cultureAPI.list(),
-          locationAPI.list(),
-          fieldAPI.list(),
-          bedAPI.list(),
-        ]);
-        setCultures(culturesResponse.data.results);
-        setLocations(locationsResponse.data.results);
-        setFields(fieldsResponse.data.results);
-        setBeds(
-          bedsResponse.data.results.map((bed) => ({
-            ...bed,
-            area_sqm: toNumericValue(bed.area_sqm) ?? undefined,
-          })),
-        );
-      } catch (err) {
-        console.error("Error fetching hierarchy data:", err);
-      } finally {
-        setIsHierarchyLoading(false);
-      }
-    };
-    fetchData();
-  }, [shouldShowProjectRequiredState]);
 
   /**
    * Define columns for the Data Grid with inline editing
