@@ -8,7 +8,7 @@
  * @returns The Cultures page component
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link as RouterLink, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
@@ -48,19 +48,10 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
-import {
-  buildAllCulturesExport,
-  buildAllCulturesFilename,
-  buildSingleCultureExport,
-  buildSingleCultureFilename,
-  downloadJsonFile,
-} from '../cultures/exportUtils';
 import { useCommandContextTag, useRegisterCommands, useRegisterCreateActions } from '../commands/useCommandContext';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 import { extractApiErrorMessage } from '../api/errors';
 import {
-  buildImportSuccessMessage,
-  mapImportErrors,
   type SnackbarState,
 } from './culturesPageUtils';
 import {
@@ -68,7 +59,6 @@ import {
   formatSuggestionValue,
   getEnrichmentFieldLabel,
 } from './culturesEnrichmentUtils';
-import { analyzeCultureImportJson, readFileAsText } from './culturesImportUtils';
 import { createCulturesCommandSpecs } from './culturesCommandSpecs';
 import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
@@ -84,10 +74,10 @@ import {
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
 import { useAuth } from '../auth/useAuth';
-import { useCultureImportState } from './useCultureImportState';
 import { usePublicCultureLibrary } from './usePublicCultureLibrary';
 import { useEnrichmentFeature } from './useEnrichmentFeature';
 import { useCultureDelete } from './useCultureDelete';
+import { useCultureImportExport } from './useCultureImportExport';
 import { CulturesImportDialog } from './CulturesImportDialog';
 import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
@@ -117,26 +107,13 @@ function Cultures() {
   const [isCulturesLoading, setIsCulturesLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingCulture, setEditingCulture] = useState<Culture | undefined>(undefined);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const {
-    state: importState,
-    hasImportableEntries,
-    reset: resetImportState,
-    setErrorState: setImportErrorState,
-    setPreviewReadyState,
-    setUploading: setImportUploading,
-    setPartialFailure: setImportPartialFailure,
-    setSuccessState: setImportSuccessState,
-  } = useCultureImportState();
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
-  const [confirmUpdates, setConfirmUpdates] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [historyScope, setHistoryScope] = useState<HistoryScope>('culture');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [aiMenuAnchor, setAiMenuAnchor] = useState<null | HTMLElement>(null);
   const aiEnrichmentEnabled = FEATURES.AI_ENRICHMENT;
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [hasFields, setHasFields] = useState(false);
   const [hasBeds, setHasBeds] = useState(false);
   const selectedCulture = cultures.find((culture) => culture.id === selectedCultureId);
@@ -208,6 +185,25 @@ function Cultures() {
       setIsCulturesLoading(false);
     }
   }, [showSnackbar, t]);
+
+  const {
+    importDialogOpen,
+    fileInputRef,
+    importState,
+    hasImportableEntries,
+    confirmUpdates,
+    setConfirmUpdates,
+    handleImportFileTrigger,
+    handleExportCurrentCulture,
+    handleExportAllCultures,
+    handleImportFileChange,
+    handleImportStart,
+    handleImportDialogClose,
+  } = useCultureImportExport({
+    selectedCulture,
+    fetchCultures,
+    showSnackbar,
+  });
 
   const onPublicLibraryImportSuccess = useCallback(async (cultureId: number) => {
     await fetchCultures();
@@ -479,129 +475,6 @@ function Cultures() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
-
-  const handleImportFileTrigger = useCallback(() => {
-    resetImportState();
-    fileInputRef.current?.click();
-  }, [resetImportState]);
-
-  const handleExportCurrentCulture = useCallback(() => {
-    if (!selectedCulture) {
-      return;
-    }
-
-    const exportPayload = buildSingleCultureExport(selectedCulture);
-    const filename = buildSingleCultureFilename(selectedCulture);
-    downloadJsonFile(exportPayload, filename);
-    showSnackbar(t('messages.exportSuccess'), 'success');
-  }, [selectedCulture, showSnackbar, t]);
-
-  const handleExportAllCultures = useCallback(async () => {
-    try {
-      const allCultures: Culture[] = [];
-      let nextUrl: string | null = '/cultures/';
-
-      while (nextUrl) {
-        const response = await cultureAPI.list(nextUrl);
-        allCultures.push(...response.data.results);
-        nextUrl = response.data.next;
-      }
-
-      const exportPayload = buildAllCulturesExport(allCultures);
-      const filename = buildAllCulturesFilename();
-      downloadJsonFile(exportPayload, filename);
-      showSnackbar(t('messages.exportSuccess'), 'success');
-    } catch (error) {
-      console.error('Error exporting cultures:', error);
-      showSnackbar(t('messages.fetchError'), 'error');
-    }
-  }, [showSnackbar, t]);
-
-  const handleImportFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (!file) {
-      return;
-    }
-
-    try {
-      const jsonString = await readFileAsText(file);
-      const importAnalysis = analyzeCultureImportJson(jsonString, t);
-
-      if (importAnalysis.status === 'error') {
-        setImportErrorState({
-          error: t(importAnalysis.errorKey),
-          previewCount: importAnalysis.originalCount,
-          validCount: 0,
-          invalidEntries: importAnalysis.invalidEntries,
-        });
-        setImportDialogOpen(true);
-        return;
-      }
-
-      setImportUploading();
-      try {
-        const response = await cultureAPI.importPreview(importAnalysis.validEntries);
-
-        setPreviewReadyState({
-          previewCount: importAnalysis.originalCount,
-          validCount: importAnalysis.validEntries.length,
-          invalidEntries: importAnalysis.invalidEntries,
-          payload: importAnalysis.validEntries,
-          previewResults: response.data.results,
-        });
-        setImportDialogOpen(true);
-      } catch (error) {
-        console.error('Error calling preview endpoint:', error);
-        setImportErrorState({ error: t('import.errors.network') });
-        setImportDialogOpen(true);
-      }
-    } catch (error) {
-      console.error('Error reading JSON file:', error);
-      setImportErrorState({ error: t('import.errors.parse') });
-      setImportDialogOpen(true);
-    }
-  };
-
-  const handleImportStart = async () => {
-    if (!hasImportableEntries || importState.status === 'uploading') {
-      return;
-    }
-
-    setImportUploading();
-
-    try {
-      const response = await cultureAPI.importApply({
-        items: importState.payload,
-        confirm_updates: confirmUpdates,
-      });
-
-      const { created_count, updated_count, skipped_count, errors } = response.data;
-      
-      if (errors.length > 0) {
-        setImportPartialFailure({
-          failedEntries: mapImportErrors(errors, importState.payload),
-          error: t('import.errors.someFailures', {
-            failed: errors.length,
-          }),
-        });
-        return;
-      }
-
-      const successMessage = buildImportSuccessMessage(created_count, updated_count, skipped_count, t);
-
-      setImportSuccessState(successMessage || t('import.success'));
-      await fetchCultures();
-    } catch (error) {
-      console.error('Error importing cultures:', error);
-      setImportErrorState({ error: t('import.errors.network') });
-    }
-  };
-
-  const handleImportDialogClose = () => {
-    setImportDialogOpen(false);
-  };
 
   const firstMissingPlanRequirement = getFirstMissingCultivationPlanRequirement({
     hasFields,
