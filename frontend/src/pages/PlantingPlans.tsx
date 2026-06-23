@@ -1401,42 +1401,6 @@ function PlantingPlans() {
     return fallback?.label ?? "—";
   };
 
-  const getBedLabel = (row: PlantingPlanRow): string => {
-    const fieldById = new Map(
-      fields.filter((item) => item.id !== undefined).map((item) => [item.id as number, item]),
-    );
-    const locationById = new Map(
-      locations.filter((item) => item.id !== undefined).map((item) => [item.id as number, item]),
-    );
-    const locationIdsWithBeds = new Set<number>();
-    beds.forEach((item) => {
-      const field = fieldById.get(item.field);
-      if (field) {
-        locationIdsWithBeds.add(field.location);
-      }
-    });
-    const includeLocation = locationIdsWithBeds.size > 1;
-    const linkedBed = beds.find((bed) => bed.id === row.bed);
-    if (linkedBed) {
-      const linkedField = fieldById.get(linkedBed.field);
-      const locationName = linkedField
-        ? locationById.get(linkedField.location)?.name
-        : null;
-      return buildBedDisplayLabel(
-        locationName,
-        linkedBed.field_name ?? linkedField?.name,
-        linkedBed.name,
-        toNumericValue(linkedBed.area_sqm),
-        includeLocation,
-        numberLocale,
-      );
-    }
-    if (row.bed_name) {
-      return buildBedDisplayLabel(null, null, row.bed_name, null, includeLocation, numberLocale);
-    }
-    return bedLabelById.get(row.bed) ?? "—";
-  };
-
   const getDisplayArea = (row: PlantingPlanRow): string => {
     const explicitArea = toNumericValue(row.area_m2);
     if (explicitArea !== null) {
@@ -1476,7 +1440,7 @@ function PlantingPlans() {
     {
       field: "bed",
       headerName: areaColumnLabel,
-      getValue: getBedLabel,
+      getValue: getBedLabelForRow,
     },
     {
       field: "planting_date",
@@ -1510,7 +1474,7 @@ function PlantingPlans() {
     },
   ], [
     areaColumnLabel,
-    getBedLabel,
+    getBedLabelForRow,
     getCultureLabel,
     getCultivationTypeLabel,
     getDisplayArea,
@@ -2079,7 +2043,7 @@ function PlantingPlans() {
               expandedIds={expandedCardIds}
               onToggleExpanded={toggleCardExpanded}
               renderPrimary={(item) => getCultureLabel(item)}
-              renderSecondary={(item) => `${formatDateForDisplay(item.planting_date)} · ${getBedLabel(item)}`}
+              renderSecondary={(item) => `${formatDateForDisplay(item.planting_date)} · ${getBedLabelForRow(item)}`}
               renderHeaderAction={(item) => (
                 <Tooltip title={t("common:actions.actions")}>
                   <IconButton
@@ -2100,7 +2064,7 @@ function PlantingPlans() {
               renderDetails={(item) => (
                 <Stack spacing={0.75}>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.cultivationType")}:</strong> {t(`plantingPlans:cultivationTypes.${item.cultivation_type === "direct_sowing" ? "directSowing" : "preCultivation"}`)}</Typography>
-                  <Typography variant="body2"><strong>{t("plantingPlans:columns.bed")}:</strong> {getBedLabel(item)}</Typography>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.bed")}:</strong> {getBedLabelForRow(item)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.plantingDate")}:</strong> {formatDateForDisplay(item.planting_date)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.harvestStartDate")}:</strong> {formatDateForDisplay(item.harvest_date)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.harvestEndDate")}:</strong> {formatDateForDisplay(item.harvest_end_date)}</Typography>
