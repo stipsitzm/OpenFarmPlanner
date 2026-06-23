@@ -1573,7 +1573,7 @@ function FieldsBedsHierarchy({
           <EmptyStateCard
             title={t('messages.missingDimensionsHint')}
             description={t('messages.missingDimensionsHintOptional')}
-            containerSx={{ maxWidth: 'none', mx: 0 }}
+            containerSx={{ mx: 0 }}
           />
         )}
 
