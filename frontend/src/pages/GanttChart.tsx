@@ -18,6 +18,7 @@ import {
   Button,
   ButtonGroup,
   MenuItem,
+  Pagination,
   Select,
   Tooltip,
   Typography,
@@ -64,6 +65,7 @@ import {
   getSegmentedActionButtonSx,
   segmentedButtonGroupSx,
 } from '../components/buttons/segmentedControlStyles';
+import { buildGanttRenderWindows } from './ganttRenderWindow';
 
 type CalendarMode = 'occupancy' | 'seedlings';
 
@@ -153,6 +155,7 @@ function GanttChartPage() {
   const [plantingPlans, setPlantingPlans] = useState<PlantingPlan[]>([]);
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [ganttRenderKey, setGanttRenderKey] = useState(0);
+  const [renderWindowIndex, setRenderWindowIndex] = useState(0);
 
   const calendarViewStorageKey = useMemo(
     () => (canUseStoredCalendarView ? getCalendarViewStorageKey(activeProjectId) : null),
@@ -533,6 +536,60 @@ function GanttChartPage() {
   ), [calendarMode, editMode, t]);
 
   const activeTaskGroups = calendarMode === 'occupancy' ? occupancyTaskGroups : seedlingTaskGroups;
+  const renderWindows = useMemo(
+    () => buildGanttRenderWindows(activeTaskGroups),
+    [activeTaskGroups],
+  );
+  const renderedTaskGroups = useMemo(
+    () => renderWindows[renderWindowIndex] ?? renderWindows[0] ?? [],
+    [renderWindowIndex, renderWindows],
+  );
+  const totalTimelineItems = useMemo(
+    () => activeTaskGroups.reduce((total, group) => total + group.tasks.length, 0),
+    [activeTaskGroups],
+  );
+  const renderedTimelineItems = useMemo(
+    () => renderedTaskGroups.reduce((total, group) => total + group.tasks.length, 0),
+    [renderedTaskGroups],
+  );
+  const hasMultipleRenderWindows = renderWindows.length > 1;
+
+  useEffect(() => {
+    setRenderWindowIndex(0);
+  }, [calendarMode, activeProjectId]);
+
+  useEffect(() => {
+    if (renderWindowIndex >= renderWindows.length) {
+      setRenderWindowIndex(Math.max(0, renderWindows.length - 1));
+    }
+  }, [renderWindowIndex, renderWindows.length]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || loading) {
+      return;
+    }
+
+    console.debug('[Gantt diagnostics]', {
+      beds: beds.length,
+      plantingPlans: plantingPlans.length,
+      totalRows: activeTaskGroups.length,
+      totalTimelineItems,
+      renderedRows: renderedTaskGroups.length,
+      renderedTimelineItems,
+      renderWindow: renderWindowIndex + 1,
+      renderWindowCount: renderWindows.length,
+    });
+  }, [
+    activeTaskGroups.length,
+    beds.length,
+    loading,
+    plantingPlans.length,
+    renderWindowIndex,
+    renderWindows.length,
+    renderedTaskGroups.length,
+    renderedTimelineItems,
+    totalTimelineItems,
+  ]);
   const hasFields = fields.length > 0;
   const hasCultures = cultures.length > 0;
   const hasBeds = beds.length > 0;
@@ -661,16 +718,45 @@ function GanttChartPage() {
               bgcolor: 'surface.surfaceBackground',
             }}
           >
+            {hasMultipleRenderWindows ? (
+              <Box
+                sx={{
+                  px: 2,
+                  pt: 1.5,
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  alignItems: { xs: 'flex-start', sm: 'center' },
+                  justifyContent: 'space-between',
+                  gap: 1,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  {t('ganttChart:largeDataset.windowSummary', {
+                    visible: renderedTaskGroups.length,
+                    total: activeTaskGroups.length,
+                  })}
+                </Typography>
+                <Pagination
+                  count={renderWindows.length}
+                  page={renderWindowIndex + 1}
+                  size="small"
+                  color="primary"
+                  aria-label={t('ganttChart:largeDataset.paginationLabel')}
+                  onChange={(_, page) => setRenderWindowIndex(page - 1)}
+                />
+              </Box>
+            ) : null}
             <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
               <GanttChart
-                key={`${calendarMode}-${ganttRenderKey}`}
-                tasks={activeTaskGroups}
+                key={`${calendarMode}-${ganttRenderKey}-${renderWindowIndex}`}
+                tasks={renderedTaskGroups}
                 locale={resolvedLocale}
                 localeText={ganttLocaleText}
                 viewMode={ViewMode.MONTH}
                 leftColumnWidth={220}
                 startDate={startDate}
                 endDate={endDate}
+                maxHeight="calc(100vh - 240px)"
                 editMode={calendarMode === 'occupancy' ? editMode : false}
                 allowTaskResize={false}
                 allowTaskMove={calendarMode === 'occupancy' && editMode}

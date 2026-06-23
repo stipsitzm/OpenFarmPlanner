@@ -5,6 +5,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommandProvider } from '../commands/CommandProvider';
 import GanttChartPage from '../pages/GanttChart';
+import {
+  buildGanttRenderWindows,
+  MAX_GANTT_GROUPS_PER_WINDOW,
+} from '../pages/ganttRenderWindow';
 
 const mocks = vi.hoisted(() => ({
   locationList: vi.fn(),
@@ -93,6 +97,7 @@ vi.mock('react-modern-gantt', () => ({
     viewMode?: string;
     locale?: string;
     localeText?: { title?: string } & Record<string, unknown>;
+    maxHeight?: string | number;
   }) => {
     mocks.ganttProps(props);
     const firstTask = props.tasks[0]?.tasks[0];
@@ -159,6 +164,42 @@ beforeEach(() => {
 });
 
 describe('GanttChartPage', () => {
+  it('partitions large task collections into bounded render windows', () => {
+    const groups = Array.from({ length: MAX_GANTT_GROUPS_PER_WINDOW + 1 }, (_, index) => ({
+      id: `bed-${index + 1}`,
+      name: `Bed ${index + 1}`,
+      tasks: [{
+        id: `task-${index + 1}`,
+        name: 'Salat',
+        startDate: new Date('2026-04-01'),
+        endDate: new Date('2026-05-01'),
+      }],
+    }));
+
+    const windows = buildGanttRenderWindows(groups);
+
+    expect(windows).toHaveLength(2);
+    expect(windows[0]).toHaveLength(MAX_GANTT_GROUPS_PER_WINDOW);
+    expect(windows[1]).toHaveLength(1);
+  });
+
+  it('also bounds render windows by timeline item count', () => {
+    const createTasks = (prefix: string, count: number) => Array.from({ length: count }, (_, index) => ({
+      id: `${prefix}-${index}`,
+      name: 'Salat',
+      startDate: new Date('2026-04-01'),
+      endDate: new Date('2026-05-01'),
+    }));
+    const windows = buildGanttRenderWindows([
+      { id: 'bed-1', name: 'Bed 1', tasks: createTasks('first', 500) },
+      { id: 'bed-2', name: 'Bed 2', tasks: createTasks('second', 500) },
+    ]);
+
+    expect(windows).toHaveLength(2);
+    expect(windows[0]).toHaveLength(1);
+    expect(windows[1]).toHaveLength(1);
+  });
+
   it('shows field-specific guidance when no locations exist', async () => {
     mocks.planList.mockResolvedValue({ data: { results: [] } });
     mocks.cultureList.mockResolvedValue({ data: { results: [] } });
@@ -304,6 +345,63 @@ describe('GanttChartPage', () => {
     expect(latestProps?.editMode).toBe(false);
     expect(latestProps?.allowTaskMove).toBe(false);
     expect(latestProps?.onTaskUpdate).toBeUndefined();
+  });
+
+  it('keeps large projects renderable by paging the rows passed to the Gantt library', async () => {
+    const rowCount = MAX_GANTT_GROUPS_PER_WINDOW + 1;
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+    mocks.bedList.mockResolvedValue({
+      data: {
+        results: Array.from({ length: rowCount }, (_, index) => ({
+          id: index + 1,
+          name: `Beet ${index + 1}`,
+          field: 2,
+        })),
+      },
+    });
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: Array.from({ length: rowCount }, (_, index) => ({
+          id: index + 1,
+          culture: 5,
+          culture_name: 'Salat',
+          bed: index + 1,
+          planting_date: '2026-04-01',
+          harvest_date: '2026-05-01',
+        })),
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(`120 von ${rowCount} Zeilen werden angezeigt`)).toBeInTheDocument();
+    let latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
+    expect(latestProps?.tasks).toHaveLength(MAX_GANTT_GROUPS_PER_WINDOW);
+    expect(latestProps?.maxHeight).toBe('calc(100vh - 240px)');
+    expect(debugSpy).toHaveBeenCalledWith('[Gantt diagnostics]', expect.objectContaining({
+      beds: rowCount,
+      plantingPlans: rowCount,
+      totalRows: rowCount,
+      totalTimelineItems: rowCount,
+      renderedRows: MAX_GANTT_GROUPS_PER_WINDOW,
+      renderedTimelineItems: MAX_GANTT_GROUPS_PER_WINDOW,
+    }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Go to page 2' }));
+
+    await waitFor(() => {
+      latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
+      expect(latestProps?.tasks).toHaveLength(1);
+    });
+    expect(screen.getByText(`1 von ${rowCount} Zeilen werden angezeigt`)).toBeInTheDocument();
+    debugSpy.mockRestore();
   });
 
   it('switches to the seedling view and shows the seedling rows', async () => {
