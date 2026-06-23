@@ -87,6 +87,7 @@ import { useAuth } from '../auth/useAuth';
 import { useCultureImportState } from './useCultureImportState';
 import { usePublicCultureLibrary } from './usePublicCultureLibrary';
 import { useEnrichmentFeature } from './useEnrichmentFeature';
+import { useCultureDelete } from './useCultureDelete';
 import { CulturesImportDialog } from './CulturesImportDialog';
 import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
@@ -97,17 +98,7 @@ import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import {
   DeleteUndoSnackbar,
-  DELETE_UNDO_DURATION_MS,
 } from '../components/data-grid';
-
-interface PendingCultureDeletion {
-  id: string;
-  cultureId: number;
-  culture: Culture;
-  culturesBeforeDelete: Culture[];
-  selectedCultureIdBeforeDelete?: number;
-  visible: boolean;
-}
 
 function Cultures() {
   const { t } = useTranslation(['cultures', 'common']);
@@ -139,15 +130,12 @@ function Cultures() {
   } = useCultureImportState();
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
   const [confirmUpdates, setConfirmUpdates] = useState(false);
-  const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
-  const [pendingCultureDeletions, setPendingCultureDeletions] = useState<PendingCultureDeletion[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [historyScope, setHistoryScope] = useState<HistoryScope>('culture');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [aiMenuAnchor, setAiMenuAnchor] = useState<null | HTMLElement>(null);
   const aiEnrichmentEnabled = FEATURES.AI_ENRICHMENT;
-  const pendingCultureDeleteTimersRef = useRef<Map<string, number>>(new Map());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [hasFields, setHasFields] = useState(false);
   const [hasBeds, setHasBeds] = useState(false);
@@ -157,7 +145,21 @@ function Cultures() {
     setSnackbar({ open: true, message, severity });
   }, []);
 
-
+  const {
+    deleteDialogCulture,
+    setDeleteDialogCulture,
+    pendingCultureDeletions,
+    handleDelete,
+    handleDeleteConfirm,
+    undoPendingCultureDeletion,
+    closePendingCultureDeletionSnackbar,
+  } = useCultureDelete({
+    cultures,
+    setCultures,
+    selectedCultureId,
+    updateSelectedCultureId,
+    showSnackbar,
+  });
 
   const replaceSavedCulture = useCallback((savedCulture: Culture): void => {
     setCultures((currentCultures) => {
@@ -382,84 +384,6 @@ function Cultures() {
     );
   }, [handleEdit, location.pathname, location.search, navigate, selectedCulture, shouldShowProjectRequiredState, showForm]);
 
-  const handleDelete = (culture: Culture) => {
-    setDeleteDialogCulture(culture);
-  };
-
-  const removePendingCultureDeletion = useCallback((deletionId: string): void => {
-    setPendingCultureDeletions((currentDeletions) =>
-      currentDeletions.filter((deletion) => deletion.id !== deletionId),
-    );
-  }, []);
-
-  const restorePendingCultureDeletion = useCallback((deletion: PendingCultureDeletion): void => {
-    setCultures((currentCultures) => {
-      if (currentCultures.some((culture) => culture.id === deletion.cultureId)) {
-        return currentCultures;
-      }
-      const currentById = new Map<number, Culture>();
-      currentCultures.forEach((culture) => {
-        if (typeof culture.id === 'number') {
-          currentById.set(culture.id, culture);
-        }
-      });
-      currentById.set(deletion.cultureId, deletion.culture);
-      const restoredCultures = deletion.culturesBeforeDelete
-        .map((culture) => (typeof culture.id === 'number' ? currentById.get(culture.id) : culture))
-        .filter((culture): culture is Culture => Boolean(culture));
-      const restoredIds = new Set(restoredCultures.map((culture) => culture.id));
-      return [
-        ...restoredCultures,
-        ...currentCultures.filter((culture) => !restoredIds.has(culture.id)),
-      ];
-    });
-    if (deletion.selectedCultureIdBeforeDelete === deletion.cultureId) {
-      updateSelectedCultureId(deletion.cultureId, 'internal');
-    }
-  }, [updateSelectedCultureId]);
-
-  const expirePendingCultureDeletion = useCallback((deletion: PendingCultureDeletion): void => {
-    pendingCultureDeleteTimersRef.current.delete(deletion.id);
-    removePendingCultureDeletion(deletion.id);
-  }, [removePendingCultureDeletion]);
-
-  const undoPendingCultureDeletion = useCallback(async (deletionId: string): Promise<void> => {
-    const deletion = pendingCultureDeletions.find((pendingDeletion) => pendingDeletion.id === deletionId);
-    if (!deletion) {
-      return;
-    }
-
-    const timerId = pendingCultureDeleteTimersRef.current.get(deletionId);
-    if (timerId !== undefined) {
-      window.clearTimeout(timerId);
-      pendingCultureDeleteTimersRef.current.delete(deletionId);
-    }
-
-    try {
-      await cultureAPI.undelete(deletion.cultureId);
-      restorePendingCultureDeletion(deletion);
-      removePendingCultureDeletion(deletionId);
-    } catch (error) {
-      console.error('Error restoring culture:', error);
-      showSnackbar(extractApiErrorMessage(error, t, t('messages.restoreDeleteError')), 'error');
-    }
-  }, [pendingCultureDeletions, removePendingCultureDeletion, restorePendingCultureDeletion, showSnackbar, t]);
-
-  const closePendingCultureDeletionSnackbar = useCallback((deletionId: string): void => {
-    setPendingCultureDeletions((currentDeletions) =>
-      currentDeletions.map((deletion) =>
-        deletion.id === deletionId ? { ...deletion, visible: false } : deletion,
-      ),
-    );
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      pendingCultureDeleteTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
-      pendingCultureDeleteTimersRef.current.clear();
-    };
-  }, []);
-
   const handleOpenHistory = async () => {
     if (!selectedCulture?.id) {
       return;
@@ -495,55 +419,6 @@ function Cultures() {
     setHistoryOpen(false);
   };
 
-
-  const handleDeleteConfirm = async (): Promise<void> => {
-    if (!deleteDialogCulture?.id) {
-      return;
-    }
-
-    const cultureId = deleteDialogCulture.id;
-    if (pendingCultureDeletions.some((deletion) => deletion.cultureId === cultureId)) {
-      setDeleteDialogCulture(null);
-      return;
-    }
-
-    const deletionId = `culture-${cultureId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const currentCultures = cultures;
-    const deletedCultureIndex = currentCultures.findIndex((culture) => culture.id === cultureId);
-    const pendingDeletion: PendingCultureDeletion = {
-      id: deletionId,
-      cultureId,
-      culture: deleteDialogCulture,
-      culturesBeforeDelete: currentCultures,
-      selectedCultureIdBeforeDelete: selectedCultureId,
-      visible: true,
-    };
-
-    setDeleteDialogCulture(null);
-
-    try {
-      await cultureAPI.delete(cultureId);
-    } catch (error) {
-      console.error('Error deleting culture:', error);
-      showSnackbar(extractApiErrorMessage(error, t, t('messages.deleteError')), 'error');
-      return;
-    }
-
-    setCultures((currentItems) => currentItems.filter((culture) => culture.id !== cultureId));
-    if (selectedCultureId === cultureId) {
-      const nextSelectedCulture =
-        currentCultures[deletedCultureIndex + 1] ??
-        currentCultures[deletedCultureIndex - 1] ??
-        null;
-      updateSelectedCultureId(nextSelectedCulture?.id, 'internal');
-    }
-    setPendingCultureDeletions((currentDeletions) => [...currentDeletions, pendingDeletion]);
-
-    const timerId = window.setTimeout(() => {
-      expirePendingCultureDeletion(pendingDeletion);
-    }, DELETE_UNDO_DURATION_MS);
-    pendingCultureDeleteTimersRef.current.set(deletionId, timerId);
-  };
 
   const handleSave = async (culture: Culture) => {
     try {
