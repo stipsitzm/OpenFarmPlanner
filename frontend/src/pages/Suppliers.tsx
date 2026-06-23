@@ -497,15 +497,6 @@ export default function Suppliers() {
     });
   }, [markContextMenuHintUsed]);
 
-  const handleContextMenuEdit = useCallback((): void => {
-    if (!contextMenuState) {
-      return;
-    }
-    const { supplier } = contextMenuState;
-    closeContextMenu();
-    openEdit(supplier);
-  }, [closeContextMenu, contextMenuState, openEdit]);
-
   const handleContextMenuDelete = useCallback((): void => {
     if (!contextMenuState) {
       return;
@@ -590,9 +581,22 @@ export default function Suppliers() {
                     key={supplier.id}
                     hover
                     tabIndex={0}
+                    onClick={(event) => {
+                      if ((event.target as HTMLElement).closest('a, button')) {
+                        return;
+                      }
+                      openEdit(supplier);
+                    }}
                     onContextMenu={(event) => openSupplierContextMenu(event, supplier)}
-                    onKeyDown={(event) => openSupplierKeyboardContextMenu(event, supplier)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        openEdit(supplier);
+                        return;
+                      }
+                      openSupplierKeyboardContextMenu(event, supplier);
+                    }}
                     sx={{
+                      cursor: 'pointer',
                       WebkitTouchCallout: 'none',
                       '&:hover .supplier-row-actions': { opacity: 1, pointerEvents: 'auto' },
                       '&:focus-within .supplier-row-actions': { opacity: 1, pointerEvents: 'auto' },
@@ -665,12 +669,6 @@ export default function Suppliers() {
             : undefined
         }
       >
-        <MenuItem onClick={handleContextMenuEdit}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary={t('editAction')} />
-        </MenuItem>
         <MenuItem onClick={handleContextMenuDelete}>
           <ListItemIcon sx={{ color: 'error.main' }}>
             <DeleteIcon fontSize="small" />

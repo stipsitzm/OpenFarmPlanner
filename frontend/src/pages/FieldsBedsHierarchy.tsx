@@ -63,6 +63,7 @@ import { fieldAPI, bedAPI, locationAPI, type Bed, type Field, type Location as F
 import {
   buildHierarchyIndex,
   createHierarchyRowsProjector,
+  hasPersistedEntityId,
   type HierarchySortConfig,
 } from "../components/hierarchy/utils/hierarchyUtils";
 import {
@@ -107,7 +108,7 @@ interface FieldsBedsHierarchyProps {
 interface HierarchyRowAction {
   id: string;
   label: string;
-  group: "create" | "edit" | "destructive";
+  group: "create" | "destructive";
   color?: "default" | "error";
   onClick: () => void;
 }
@@ -285,6 +286,9 @@ function FieldsBedsHierarchy({
     setError,
     onPendingDeletionCountChange,
     t,
+    rowSnapshotRef,
+    setRowModesModel,
+    setDraftValidationWarning,
   });
 
   const hierarchyIndex = useMemo(
@@ -991,19 +995,8 @@ function FieldsBedsHierarchy({
     }));
   }, [rememberRowSnapshot, selectedRow]);
 
-  const startRowEdit = useCallback((row: HierarchyRow): void => {
-    rememberRowSnapshot(row.id);
-    setSelectedRowId(row.id);
-    setTreeActive(true);
-    setRowModesModel((previous) => ({
-      ...previous,
-      [row.id]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
-    }));
-  }, [rememberRowSnapshot]);
-
   const getHierarchyRowActions = useCallback((row: HierarchyRow): HierarchyRowAction[] => {
     const createActions: HierarchyRowAction[] = [];
-    const editActions: HierarchyRowAction[] = [];
 
     if (row.type === "location" && row.locationId) {
       createActions.push({
@@ -1032,13 +1025,6 @@ function FieldsBedsHierarchy({
       });
     }
 
-    editActions.push({
-      id: "edit",
-      label: t("common:actions.edit"),
-      group: "edit",
-      onClick: () => startRowEdit(row),
-    });
-
     const destructiveActions: HierarchyRowAction[] = [{
       id: "delete",
       label: t("common:actions.delete"),
@@ -1049,13 +1035,12 @@ function FieldsBedsHierarchy({
       },
     }];
 
-    return [...createActions, ...editActions, ...destructiveActions];
+    return [...createActions, ...destructiveActions];
   }, [
     deleteHierarchyRowWithUndo,
     handleAddBed,
     handleAddField,
     handleCreatePlantingPlan,
-    startRowEdit,
     t,
   ]);
 

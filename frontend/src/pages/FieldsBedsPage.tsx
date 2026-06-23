@@ -19,6 +19,7 @@ import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { type SxProps, type Theme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
+import { hasPersistedEntityId } from '../components/hierarchy/utils/hierarchyUtils';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 const ADD_PARCEL_ACTION = 'add-parcel';
@@ -36,9 +37,6 @@ const CONTENT_ALIGNED_EMPTY_STATE_SX: SxProps<Theme> = {
 };
 
 type ViewMode = 'table' | 'graphical';
-
-const hasPersistedEntityId = (id: number | undefined): id is number =>
-  typeof id === 'number' && id > 0;
 
 export default function FieldsBedsPage() {
   const { t } = useTranslation(['fields', 'hierarchy', 'common']);

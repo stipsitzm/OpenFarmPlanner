@@ -619,7 +619,7 @@ describe('EditableDataGrid', () => {
     const stopPropagationSpy = vi.spyOn(contextMenuEvent, 'stopPropagation');
     fireEvent(screen.getByTestId('row-1'), contextMenuEvent);
 
-    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Duplizieren' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
     expect(contextMenuEvent.defaultPrevented).toBe(true);
@@ -643,7 +643,7 @@ describe('EditableDataGrid', () => {
 
     fireEvent.contextMenu(screen.getByTestId('row-1'));
 
-    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Duplizieren' })).toBeInTheDocument();
   });
 

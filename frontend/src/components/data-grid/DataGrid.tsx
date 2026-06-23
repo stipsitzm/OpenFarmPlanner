@@ -35,7 +35,6 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
@@ -660,8 +659,8 @@ export function EditableDataGrid<T extends EditableRow>({
     if (initialRow && !initialRowProcessedRef.current && dataFetched && !loading) {
       initialRowProcessedRef.current = true;
       const newRow = { ...createNewRow(), ...initialRow };
-      setRows((oldRows) => [newRow, ...oldRows]);
-      setStableRowOrder((previousOrder) => [newRow.id, ...previousOrder]);
+      setRows((oldRows) => [...oldRows, newRow]);
+      setStableRowOrder((previousOrder) => [...previousOrder, newRow.id]);
       // Set row to edit mode after a small delay to ensure row is added first
       setTimeout(() => {
         setRowModesModel((oldModel) => ({
@@ -677,8 +676,8 @@ export function EditableDataGrid<T extends EditableRow>({
    */
   const handleAddClick = (): void => {
     const newRow = createNewRow();
-    setRows((oldRows) => [newRow, ...oldRows]);
-    setStableRowOrder((previousOrder) => [newRow.id, ...previousOrder]);
+    setRows((oldRows) => [...oldRows, newRow]);
+    setStableRowOrder((previousOrder) => [...previousOrder, newRow.id]);
     setRowModesModel((oldModel) => ({
       ...oldModel,
       [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus: columns[0]?.field },
@@ -1473,14 +1472,7 @@ export function EditableDataGrid<T extends EditableRow>({
   }), [handleDeleteClick, handleDuplicateRow, handleStartRowEdit]);
 
   const defaultRowActions = useCallback((row: T): EditableDataGridRowAction<T>[] => {
-    const actions: EditableDataGridRowAction<T>[] = [
-      {
-        id: 'edit',
-        label: t('actions.edit'),
-        icon: <EditIcon fontSize="small" />,
-        onClick: (_row, helpers) => helpers.startEdit(row.id),
-      },
-    ];
+    const actions: EditableDataGridRowAction<T>[] = [];
 
     if (duplicateRow) {
       actions.push({
