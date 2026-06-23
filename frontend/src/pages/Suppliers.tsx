@@ -581,7 +581,7 @@ export default function Suppliers() {
                 <TableRow>
                   <TableCell sx={{ py: 1.5, minWidth: { xs: 140, sm: 180 } }}>{t('name')}</TableCell>
                   <TableCell sx={{ py: 1.5, minWidth: { xs: 180, sm: 280 } }}>{t('homepage')}</TableCell>
-                  <TableCell align="right" sx={{ py: 1.5, width: 1, whiteSpace: 'nowrap' }}>{t('actions')}</TableCell>
+                  <TableCell align="right" sx={{ py: 1.5, width: 1, whiteSpace: 'nowrap' }} />
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -592,7 +592,11 @@ export default function Suppliers() {
                     tabIndex={0}
                     onContextMenu={(event) => openSupplierContextMenu(event, supplier)}
                     onKeyDown={(event) => openSupplierKeyboardContextMenu(event, supplier)}
-                    sx={{ WebkitTouchCallout: 'none' }}
+                    sx={{
+                      WebkitTouchCallout: 'none',
+                      '&:hover .supplier-row-actions': { opacity: 1, pointerEvents: 'auto' },
+                      '&:focus-within .supplier-row-actions': { opacity: 1, pointerEvents: 'auto' },
+                    }}
                   >
                     <TableCell sx={{ py: 1.25 }}>{supplier.name}</TableCell>
                     <TableCell sx={{ py: 1.25 }}>
@@ -603,23 +607,33 @@ export default function Suppliers() {
                       ) : null}
                     </TableCell>
                     <TableCell align="right" sx={{ py: 1.25 }}>
-                      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        aria-label={t('editAction')}
-                        onClick={() => openEdit(supplier)}
+                      <Box
+                        className="supplier-row-actions"
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          opacity: 0,
+                          pointerEvents: 'none',
+                          transition: 'opacity 120ms ease-in-out',
+                        }}
                       >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        aria-label={t('deleteAction')}
-                        onClick={() => void deleteSupplier(supplier)}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          aria-label={t('editAction')}
+                          onClick={() => openEdit(supplier)}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          aria-label={t('deleteAction')}
+                          onClick={() => void deleteSupplier(supplier)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
                       </Box>
                     </TableCell>
                   </TableRow>

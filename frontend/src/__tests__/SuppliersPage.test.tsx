@@ -105,7 +105,6 @@ describe('Suppliers page empty and table states', () => {
     await waitFor(() => expect(screen.getByText('Reinsaat')).toBeInTheDocument());
     expect(screen.getByText('Name')).toBeInTheDocument();
     expect(screen.getByText('Webseite')).toBeInTheDocument();
-    expect(screen.getByText('Aktionen')).toBeInTheDocument();
   });
 
   it('opens supplier row actions from the right-click context menu', async () => {
