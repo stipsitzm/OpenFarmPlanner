@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldOverviewPage from "../pages/YieldOverview";
@@ -91,6 +91,35 @@ describe("YieldOverviewPage", () => {
     expect(screen.getByText("W13")).toBeInTheDocument();
     expect(screen.getByText("W14")).toBeInTheDocument();
     expect(screen.getByText("W15")).toBeInTheDocument();
+    expect(screen.getByTestId("yield-chart-plot")).toHaveStyle({
+      width: "100%",
+    });
+    expect(screen.getByLabelText("Kultur")).toHaveTextContent("Alle Kulturen");
+    expect(screen.getByLabelText("Jahr")).toHaveTextContent(
+      String(new Date().getFullYear()),
+    );
+    expect(screen.getByRole("button", { name: "Woche" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Ertragsübersicht" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Bereit für weitere Ertragsauswertungen"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Zum Anbaukalender" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Monat" }));
+
+    expect(screen.getByRole("button", { name: "Monat" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("Mär")).toBeInTheDocument();
+    expect(screen.getByText("Apr")).toBeInTheDocument();
   });
 
   it("shows a helpful empty state when no planting plans exist", async () => {
@@ -107,7 +136,7 @@ describe("YieldOverviewPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Ertragsprognosen werden verfügbar, sobald du Anbaupläne erstellst. Danach werden die erwarteten Erntemengen automatisch aus den Kulturdaten und Planungszeiträumen berechnet.",
+        "Ertragsprognosen werden verfügbar, sobald Anbaupläne mit Erntezeiträumen vorhanden sind.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -127,8 +156,26 @@ describe("YieldOverviewPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Für die vorhandenen Anbaupläne gibt es aktuell keine berechenbaren Erträge. Prüfe die Ertragsangaben deiner Kulturen und die Erntezeiträume der Anbaupläne.",
+        "Ertragsprognosen werden verfügbar, sobald Anbaupläne mit Erntezeiträumen vorhanden sind.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("reloads yield data when the year changes", async () => {
+    render(
+      <MemoryRouter>
+        <YieldOverviewPage />
+      </MemoryRouter>,
+    );
+
+    await screen.findByText("Keine erwarteten Erträge vorhanden");
+    const previousYear = new Date().getFullYear() - 1;
+
+    fireEvent.mouseDown(screen.getByLabelText("Jahr"));
+    fireEvent.click(screen.getByRole("option", { name: String(previousYear) }));
+
+    await waitFor(() => {
+      expect(mocks.yieldList).toHaveBeenLastCalledWith(previousYear);
+    });
   });
 });

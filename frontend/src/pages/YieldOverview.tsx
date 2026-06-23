@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
-import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
 import {
   Alert,
   Box,
-  Button,
   Card,
   CardContent,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -18,6 +21,10 @@ import {
   type PlantingPlan,
   type YieldCalendarWeek,
 } from "../api/api";
+import {
+  segmentedToggleButtonGroupSx,
+  segmentedToggleButtonSx,
+} from "../components/buttons/segmentedControlStyles";
 import PageContainer from "../components/layout/PageContainer";
 import PageSurface from "../components/layout/PageSurface";
 import EmptyStateCard from "../components/project/EmptyStateCard";
@@ -26,19 +33,25 @@ import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { useTranslation } from "../i18n";
 import { parseDateString } from "./ganttChartUtils";
 
-interface WeeklyYieldCultureMeta {
+type ChartPeriod = "week" | "month";
+type YieldCalendarCulture = YieldCalendarWeek["cultures"][number];
+
+interface YieldCultureMeta {
   id: number;
   name: string;
   color: string;
 }
 
-interface WeeklyYieldChartColumn {
-  isoWeek: string;
-  weekLabel: string;
-  monthLabel: string;
-  cultures: YieldCalendarWeek["cultures"];
+interface YieldChartColumn {
+  id: string;
+  startDate: string;
+  primaryLabel: string;
+  secondaryLabel: string;
+  cultures: YieldCalendarCulture[];
   totalYield: number;
 }
+
+const ALL_CULTURES = "all";
 
 function formatDateToAPI(date: Date): string {
   const year = date.getFullYear();
@@ -60,122 +73,187 @@ function formatIsoWeek(date: Date): string {
   return `${utcDate.getUTCFullYear()}-W${String(weekNumber).padStart(2, "0")}`;
 }
 
-function useWeeklyYieldChartData(weeklyYield: YieldCalendarWeek[]) {
+function mergeCultureYields(
+  cultures: YieldCalendarCulture[],
+): YieldCalendarCulture[] {
+  const totals = new Map<number, YieldCalendarCulture>();
+
+  cultures.forEach((culture) => {
+    const existing = totals.get(culture.culture_id);
+    totals.set(culture.culture_id, {
+      ...culture,
+      yield: (existing?.yield ?? 0) + culture.yield,
+    });
+  });
+
+  return [...totals.values()];
+}
+
+function useYieldChartData(
+  weeklyYield: YieldCalendarWeek[],
+  selectedCultureId: string,
+  period: ChartPeriod,
+  locale: string,
+) {
   return useMemo(() => {
-    const cultureMeta = new Map<number, WeeklyYieldCultureMeta>();
-    const weekMap = new Map(weeklyYield.map((week) => [week.week_start, week]));
+    const cultureMeta = new Map<number, YieldCultureMeta>();
+    weeklyYield.forEach((week) => {
+      week.cultures.forEach((culture) => {
+        cultureMeta.set(culture.culture_id, {
+          id: culture.culture_id,
+          name: culture.culture_name,
+          color: culture.color,
+        });
+      });
+    });
+
+    const availableCultures = [...cultureMeta.values()].sort((left, right) =>
+      left.name.localeCompare(right.name, locale),
+    );
+    const selectedCulture =
+      selectedCultureId === ALL_CULTURES
+        ? null
+        : Number(selectedCultureId);
+    const filterCultures = (
+      cultures: YieldCalendarCulture[],
+    ): YieldCalendarCulture[] =>
+      selectedCulture === null
+        ? cultures
+        : cultures.filter((culture) => culture.culture_id === selectedCulture);
+
     const sortedByStart = [...weeklyYield].sort((left, right) =>
       left.week_start.localeCompare(right.week_start),
     );
     if (sortedByStart.length === 0) {
       return {
-        chartData: [] as WeeklyYieldChartColumn[],
-        chartCultures: [] as WeeklyYieldCultureMeta[],
+        chartData: [] as YieldChartColumn[],
+        chartCultures: [] as YieldCultureMeta[],
+        availableCultures,
         maxTotalYield: 0,
       };
     }
 
-    const startDateRange = parseDateString(sortedByStart[0].week_start);
-    const endDateRange = parseDateString(
+    const startDate = parseDateString(sortedByStart[0].week_start);
+    const endDate = parseDateString(
       sortedByStart[sortedByStart.length - 1].week_start,
     );
+    const weekMap = new Map(weeklyYield.map((week) => [week.week_start, week]));
+    const weeklyColumns: YieldChartColumn[] = [];
+    const currentDate = new Date(startDate);
 
-    const rows: WeeklyYieldChartColumn[] = [];
-    const currentDate = new Date(startDateRange);
-    while (currentDate <= endDateRange) {
+    while (currentDate <= endDate) {
       const weekStart = formatDateToAPI(currentDate);
       const week = weekMap.get(weekStart);
-      const weekCultures = week?.cultures || [];
-      const culturesForWeek = weekCultures.map((entry) => {
-        if (!cultureMeta.has(entry.culture_id)) {
-          cultureMeta.set(entry.culture_id, {
-            id: entry.culture_id,
-            name: entry.culture_name,
-            color: entry.color,
-          });
-        }
-        return entry;
-      });
-      const totalYield = culturesForWeek.reduce(
-        (sum, item) => sum + item.yield,
-        0,
-      );
+      const cultures = filterCultures(week?.cultures ?? []);
       const weekStartDate = parseDateString(weekStart);
-      const monthLabel = weekStartDate.toLocaleDateString("de-DE", {
-        month: "short",
-      });
-      const isoWeek = week?.iso_week || formatIsoWeek(weekStartDate);
-      rows.push({
-        isoWeek,
-        weekLabel: isoWeek.split("-W")[1]
+      const isoWeek = week?.iso_week ?? formatIsoWeek(weekStartDate);
+      weeklyColumns.push({
+        id: isoWeek,
+        startDate: weekStart,
+        primaryLabel: isoWeek.split("-W")[1]
           ? `W${isoWeek.split("-W")[1]}`
           : isoWeek,
-        monthLabel,
-        cultures: culturesForWeek,
-        totalYield,
+        secondaryLabel: weekStartDate.toLocaleDateString(locale, {
+          month: "short",
+        }),
+        cultures,
+        totalYield: cultures.reduce((sum, culture) => sum + culture.yield, 0),
       });
       currentDate.setDate(currentDate.getDate() + 7);
     }
 
-    const sortedCultures = [...cultureMeta.values()].sort((left, right) =>
-      left.name.localeCompare(right.name, "de"),
+    const chartData =
+      period === "week"
+        ? weeklyColumns
+        : [...weeklyColumns.reduce((months, column) => {
+            const sourceDate = parseDateString(column.startDate);
+            const monthId = `${sourceDate.getFullYear()}-${String(sourceDate.getMonth() + 1).padStart(2, "0")}`;
+            const existing = months.get(monthId);
+            const cultures = mergeCultureYields([
+              ...(existing?.cultures ?? []),
+              ...column.cultures,
+            ]);
+            months.set(monthId, {
+              id: monthId,
+              startDate: `${monthId}-01`,
+              primaryLabel: sourceDate.toLocaleDateString(locale, {
+                month: "short",
+              }),
+              secondaryLabel: String(sourceDate.getFullYear()),
+              cultures,
+              totalYield: cultures.reduce(
+                (sum, culture) => sum + culture.yield,
+                0,
+              ),
+            });
+            return months;
+          }, new Map<string, YieldChartColumn>()).values()];
+
+    const visibleCultureIds = new Set(
+      chartData.flatMap((column) =>
+        column.cultures.map((culture) => culture.culture_id),
+      ),
     );
-    const maxYield = rows.reduce(
-      (max, row) => Math.max(max, row.totalYield),
-      0,
+    const chartCultures = availableCultures.filter((culture) =>
+      visibleCultureIds.has(culture.id),
     );
 
     return {
-      chartData: rows,
-      chartCultures: sortedCultures,
-      maxTotalYield: maxYield,
+      chartData,
+      chartCultures,
+      availableCultures,
+      maxTotalYield: chartData.reduce(
+        (max, column) => Math.max(max, column.totalYield),
+        0,
+      ),
     };
-  }, [weeklyYield]);
+  }, [locale, period, selectedCultureId, weeklyYield]);
+}
+
+interface YieldDistributionChartProps {
+  weeklyYield: YieldCalendarWeek[];
+  selectedCultureId: string;
+  period: ChartPeriod;
 }
 
 function YieldDistributionChart({
   weeklyYield,
-}: {
-  weeklyYield: YieldCalendarWeek[];
-}) {
-  const { t } = useTranslation("yieldOverview");
-  const { chartData, chartCultures, maxTotalYield } =
-    useWeeklyYieldChartData(weeklyYield);
+  selectedCultureId,
+  period,
+}: YieldDistributionChartProps) {
+  const { t, i18n } = useTranslation("yieldOverview");
+  const { chartData, chartCultures, maxTotalYield } = useYieldChartData(
+    weeklyYield,
+    selectedCultureId,
+    period,
+    i18n.resolvedLanguage ?? i18n.language,
+  );
   const yAxisTicks = useMemo(() => {
     const tickCount = 5;
     if (maxTotalYield <= 0) {
       return [0];
     }
-    return Array.from({ length: tickCount }, (_, idx) =>
-      Number(((maxTotalYield / (tickCount - 1)) * idx).toFixed(1)),
+    return Array.from({ length: tickCount }, (_, index) =>
+      Number(((maxTotalYield / (tickCount - 1)) * index).toFixed(1)),
     );
   }, [maxTotalYield]);
 
   return (
     <Card
       variant="outlined"
-      sx={{ borderColor: "surface.surfaceSoftBorder", boxShadow: "none" }}
+      sx={{
+        width: "100%",
+        borderColor: "surface.surfaceSoftBorder",
+        boxShadow: "none",
+      }}
     >
       <CardContent
-        sx={{ p: { xs: 2, md: 3 }, "&:last-child": { pb: { xs: 2, md: 3 } } }}
+        sx={{ p: { xs: 1.5, sm: 2, lg: 3 }, "&:last-child": { pb: 2 } }}
       >
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={1.5}
-          justifyContent="space-between"
-          alignItems={{ xs: "flex-start", sm: "center" }}
-          sx={{ mb: 2 }}
-        >
-          <Box>
-            <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
-              {t("chart.title")}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {t("chart.description")}
-            </Typography>
-          </Box>
-        </Stack>
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
+        <Typography variant="h5" component="h2" sx={{ fontWeight: 700 }}>
+          {t("chart.title")}
+        </Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, my: 2 }}>
           {chartCultures.map((culture) => (
             <Box
               key={culture.id}
@@ -198,11 +276,12 @@ function YieldDistributionChart({
           sx={{
             display: "grid",
             gridTemplateColumns: {
-              xs: "56px minmax(0, 1fr)",
-              sm: "72px minmax(0, 1fr)",
+              xs: "52px minmax(0, 1fr)",
+              sm: "68px minmax(0, 1fr)",
             },
-            gap: 1,
+            gap: { xs: 0.5, sm: 1 },
             alignItems: "start",
+            width: "100%",
           }}
         >
           <Box>
@@ -211,7 +290,7 @@ function YieldDistributionChart({
                 display: "flex",
                 flexDirection: "column-reverse",
                 justifyContent: "space-between",
-                height: 260,
+                height: { xs: 300, md: 400 },
                 pr: 1,
               }}
             >
@@ -228,96 +307,115 @@ function YieldDistributionChart({
             <Box sx={{ height: 44 }} />
           </Box>
 
-          <Box sx={{ overflowX: "auto", pb: 0.5 }}>
-            <Box sx={{ width: Math.max(chartData.length * 40, 360) }}>
-              <Box
-                sx={{
-                  borderLeft: "1px solid #d1d5db",
-                  borderBottom: "1px solid #d1d5db",
-                  height: 260,
-                  px: 1,
-                  display: "flex",
-                  alignItems: "flex-end",
-                  gap: 0.75,
-                }}
-              >
-                {chartData.map((week) => (
+          <Box sx={{ minWidth: 0 }}>
+            <Box
+              data-testid="yield-chart-plot"
+              sx={{
+                width: "100%",
+                height: { xs: 300, md: 400 },
+                px: { xs: 0.25, sm: 0.75 },
+                borderLeft: "1px solid",
+                borderBottom: "1px solid",
+                borderColor: "divider",
+                display: "flex",
+                alignItems: "flex-end",
+                gap: { xs: "1px", sm: "2px" },
+              }}
+            >
+              {chartData.map((column) => (
+                <Box
+                  key={column.id}
+                  sx={{
+                    flex: "1 1 0",
+                    minWidth: 0,
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "flex-end",
+                  }}
+                >
                   <Box
-                    key={week.isoWeek}
                     sx={{
-                      width: 34,
-                      flex: "0 0 34px",
+                      width: "100%",
                       height: "100%",
                       display: "flex",
-                      alignItems: "flex-end",
+                      flexDirection: "column-reverse",
+                      justifyContent: "flex-start",
                     }}
                   >
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: "100%",
-                        display: "flex",
-                        flexDirection: "column-reverse",
-                        justifyContent: "flex-start",
-                      }}
-                    >
-                      {week.cultures.map((culture) => (
-                        <Tooltip
-                          key={`${week.isoWeek}-${culture.culture_id}`}
-                          title={`${culture.culture_name}: ${culture.yield.toFixed(2)} kg`}
-                        >
-                          <Box
-                            sx={{
-                              width: "100%",
-                              height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
-                              minHeight: culture.yield > 0 ? "2px" : 0,
-                              backgroundColor: culture.color,
-                            }}
-                          />
-                        </Tooltip>
-                      ))}
-                    </Box>
+                    {column.cultures.map((culture) => (
+                      <Tooltip
+                        key={`${column.id}-${culture.culture_id}`}
+                        title={`${culture.culture_name}: ${culture.yield.toFixed(2)} kg`}
+                      >
+                        <Box
+                          sx={{
+                            width: "100%",
+                            height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
+                            minHeight: culture.yield > 0 ? "2px" : 0,
+                            backgroundColor: culture.color,
+                          }}
+                        />
+                      </Tooltip>
+                    ))}
                   </Box>
-                ))}
-              </Box>
+                </Box>
+              ))}
+            </Box>
 
-              <Box
-                sx={{
-                  height: 44,
-                  px: 1,
-                  display: "flex",
-                  gap: 0.75,
-                  alignItems: "flex-start",
-                }}
-              >
-                {chartData.map((week) => (
-                  <Box
-                    key={`${week.isoWeek}-axis`}
-                    sx={{ width: 34, flex: "0 0 34px", textAlign: "center" }}
+            <Box
+              sx={{
+                height: 44,
+                px: { xs: 0.25, sm: 0.75 },
+                display: "flex",
+                gap: { xs: "1px", sm: "2px" },
+              }}
+            >
+              {chartData.map((column, index) => (
+                <Box
+                  key={`${column.id}-axis`}
+                  sx={{
+                    flex: "1 1 0",
+                    minWidth: 0,
+                    textAlign: "center",
+                    overflow: "visible",
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display:
+                        period === "month"
+                          ? "block"
+                          : {
+                              xs: index % 8 === 0 ? "block" : "none",
+                              sm: index % 4 === 0 ? "block" : "none",
+                            },
+                      fontWeight: 600,
+                      lineHeight: 1.2,
+                      whiteSpace: "nowrap",
+                    }}
                   >
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: "block",
-                        fontWeight: 600,
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {week.weekLabel}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: "block",
-                        color: "text.secondary",
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {week.monthLabel}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
+                    {column.primaryLabel}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display:
+                        period === "month"
+                          ? "block"
+                          : {
+                              xs: index % 8 === 0 ? "block" : "none",
+                              sm: index % 4 === 0 ? "block" : "none",
+                            },
+                      color: "text.secondary",
+                      lineHeight: 1.2,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {column.secondaryLabel}
+                  </Typography>
+                </Box>
+              ))}
             </Box>
           </Box>
         </Box>
@@ -326,43 +424,117 @@ function YieldDistributionChart({
   );
 }
 
-function FutureWidgetsPlaceholder() {
+interface YieldFilterBarProps {
+  cultures: YieldCultureMeta[];
+  selectedCultureId: string;
+  selectedYear: number;
+  period: ChartPeriod;
+  onCultureChange: (cultureId: string) => void;
+  onYearChange: (year: number) => void;
+  onPeriodChange: (period: ChartPeriod) => void;
+}
+
+function YieldFilterBar({
+  cultures,
+  selectedCultureId,
+  selectedYear,
+  period,
+  onCultureChange,
+  onYearChange,
+  onPeriodChange,
+}: YieldFilterBarProps) {
   const { t } = useTranslation("yieldOverview");
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from(
+    { length: 5 },
+    (_, index) => currentYear - 2 + index,
+  );
+
   return (
-    <Card
-      variant="outlined"
-      sx={{
-        borderStyle: "dashed",
-        borderColor: "surface.surfaceSoftBorder",
-        boxShadow: "none",
-      }}
+    <Stack
+      direction={{ xs: "column", sm: "row" }}
+      spacing={1.5}
+      alignItems={{ xs: "stretch", sm: "center" }}
+      sx={{ width: "100%" }}
     >
-      <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-        <Stack direction="row" spacing={1.5} alignItems="flex-start">
-          <AssessmentOutlinedIcon color="success" />
-          <Box>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              {t("future.title")}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {t("future.description")}
-            </Typography>
-          </Box>
-        </Stack>
-      </CardContent>
-    </Card>
+      <FormControl size="small" sx={{ minWidth: { sm: 220 } }}>
+        <InputLabel id="yield-culture-filter-label">
+          {t("filters.culture")}
+        </InputLabel>
+        <Select
+          labelId="yield-culture-filter-label"
+          value={selectedCultureId}
+          label={t("filters.culture")}
+          onChange={(event) => onCultureChange(String(event.target.value))}
+        >
+          <MenuItem value={ALL_CULTURES}>{t("filters.allCultures")}</MenuItem>
+          {cultures.map((culture) => (
+            <MenuItem key={culture.id} value={String(culture.id)}>
+              {culture.name}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <FormControl size="small" sx={{ minWidth: { sm: 120 } }}>
+        <InputLabel id="yield-year-filter-label">
+          {t("filters.year")}
+        </InputLabel>
+        <Select
+          labelId="yield-year-filter-label"
+          value={String(selectedYear)}
+          label={t("filters.year")}
+          onChange={(event) => onYearChange(Number(event.target.value))}
+        >
+          {yearOptions.map((year) => (
+            <MenuItem key={year} value={String(year)}>
+              {year}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <Stack spacing={0.5}>
+        <Typography variant="caption" color="text.secondary">
+          {t("filters.period")}
+        </Typography>
+        <ToggleButtonGroup
+          value={period}
+          exclusive
+          size="small"
+          color="primary"
+          aria-label={t("filters.period")}
+          sx={segmentedToggleButtonGroupSx}
+          onChange={(_, value: ChartPeriod | null) => {
+            if (value !== null) {
+              onPeriodChange(value);
+            }
+          }}
+        >
+          <ToggleButton value="week" sx={segmentedToggleButtonSx}>
+            {t("filters.week")}
+          </ToggleButton>
+          <ToggleButton value="month" sx={segmentedToggleButtonSx}>
+            {t("filters.month")}
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
+    </Stack>
   );
 }
 
 export default function YieldOverviewPage() {
-  const { t } = useTranslation("yieldOverview");
+  const { t, i18n } = useTranslation("yieldOverview");
   const { shouldShowProjectRequiredState, missingProjectReason } =
     useProjectRequirement();
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedCultureId, setSelectedCultureId] = useState(ALL_CULTURES);
+  const [period, setPeriod] = useState<ChartPeriod>("week");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [plantingPlans, setPlantingPlans] = useState<PlantingPlan[]>([]);
   const [weeklyYield, setWeeklyYield] = useState<YieldCalendarWeek[]>([]);
-  const displayYear = new Date().getFullYear();
 
   useEffect(() => {
     if (shouldShowProjectRequiredState) {
@@ -379,7 +551,7 @@ export default function YieldOverviewPage() {
         setError(null);
         const [plansRes, weeklyYieldRes] = await Promise.all([
           plantingPlanAPI.list(),
-          yieldCalendarAPI.list(displayYear),
+          yieldCalendarAPI.list(selectedYear),
         ]);
         setPlantingPlans(plansRes.data.results);
         setWeeklyYield(weeklyYieldRes.data);
@@ -392,7 +564,37 @@ export default function YieldOverviewPage() {
     };
 
     void fetchData();
-  }, [displayYear, shouldShowProjectRequiredState, t]);
+  }, [selectedYear, shouldShowProjectRequiredState, t]);
+
+  const cultures = useMemo(() => {
+    const cultureMap = new Map<number, YieldCultureMeta>();
+    weeklyYield.forEach((week) => {
+      week.cultures.forEach((culture) => {
+        cultureMap.set(culture.culture_id, {
+          id: culture.culture_id,
+          name: culture.culture_name,
+          color: culture.color,
+        });
+      });
+    });
+    return [...cultureMap.values()].sort((left, right) =>
+      left.name.localeCompare(
+        right.name,
+        i18n.resolvedLanguage ?? i18n.language,
+      ),
+    );
+  }, [i18n.language, i18n.resolvedLanguage, weeklyYield]);
+
+  useEffect(() => {
+    if (
+      selectedCultureId !== ALL_CULTURES &&
+      !cultures.some(
+        (culture) => String(culture.id) === selectedCultureId,
+      )
+    ) {
+      setSelectedCultureId(ALL_CULTURES);
+    }
+  }, [cultures, selectedCultureId]);
 
   if (loading) {
     return (
@@ -425,28 +627,21 @@ export default function YieldOverviewPage() {
         </Alert>
       ) : null}
       <PageSurface variant="fullWorkspace">
-        <Stack spacing={3}>
-          <Box>
-            <Typography
-              variant="h4"
-              component="h1"
-              sx={{ fontWeight: 700, mb: 0.75 }}
-            >
-              {t("title")}
-            </Typography>
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              sx={{ maxWidth: 840 }}
-            >
-              {t("intro")}
-            </Typography>
-          </Box>
+        <Stack spacing={2}>
+          <YieldFilterBar
+            cultures={cultures}
+            selectedCultureId={selectedCultureId}
+            selectedYear={selectedYear}
+            period={period}
+            onCultureChange={setSelectedCultureId}
+            onYearChange={setSelectedYear}
+            onPeriodChange={setPeriod}
+          />
 
           {!hasPlantingPlans ? (
             <EmptyStateCard
               title={t("empty.noPlansTitle")}
-              description={t("empty.noPlansDescription")}
+              description={t("empty.description")}
               actions={[
                 {
                   label: t("empty.createPlanAction"),
@@ -457,35 +652,21 @@ export default function YieldOverviewPage() {
               containerSx={{ maxWidth: "none", mb: 0 }}
             />
           ) : hasYieldData ? (
-            <YieldDistributionChart weeklyYield={weeklyYield} />
+            <YieldDistributionChart
+              weeklyYield={weeklyYield}
+              selectedCultureId={selectedCultureId}
+              period={period}
+            />
           ) : (
             <EmptyStateCard
               title={t("empty.noYieldTitle")}
-              description={t("empty.noYieldDescription")}
+              description={t("empty.description")}
               actions={[
                 { label: t("empty.openPlansAction"), to: "/app/anbauplaene" },
               ]}
               containerSx={{ maxWidth: "none", mb: 0 }}
             />
           )}
-
-          <FutureWidgetsPlaceholder />
-
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: { xs: "stretch", sm: "flex-start" },
-            }}
-          >
-            <Button
-              component={RouterLink}
-              to="/app/gantt-chart"
-              variant="outlined"
-              sx={{ width: { xs: "100%", sm: "auto" } }}
-            >
-              {t("backToCalendar")}
-            </Button>
-          </Box>
         </Stack>
       </PageSurface>
     </PageContainer>
