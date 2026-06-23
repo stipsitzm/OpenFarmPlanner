@@ -34,7 +34,7 @@ export function ContextMenuHint({
     <Box
       role="note"
       sx={{
-        display: prominent ? 'flex' : 'inline-flex',
+        display: 'inline-flex',
         alignItems: 'center',
         gap: 1,
         maxWidth: '100%',

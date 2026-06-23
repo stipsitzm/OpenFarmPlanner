@@ -1565,7 +1565,7 @@ function FieldsBedsHierarchy({
             message={t("common:messages.contextMenuTableHint")}
             onClose={closeContextMenuHint}
             prominent
-            sx={{ mb: 1.5, width: '100%' }}
+            sx={{ mb: 1.5, maxWidth: 560 }}
           />
         )}
 
