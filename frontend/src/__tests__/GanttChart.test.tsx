@@ -5,10 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommandProvider } from '../commands/CommandProvider';
 import GanttChartPage from '../pages/GanttChart';
-import {
-  buildGanttRenderWindows,
-  MAX_GANTT_GROUPS_PER_WINDOW,
-} from '../pages/ganttRenderWindow';
+import { getGanttRenderWindow } from '../pages/ganttRenderWindow';
 
 const mocks = vi.hoisted(() => ({
   locationList: vi.fn(),
@@ -53,11 +50,22 @@ vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
   return {
     ...actual,
-    locationAPI: { list: mocks.locationList },
-    fieldAPI: { list: mocks.fieldList },
-    bedAPI: { list: mocks.bedList },
-    plantingPlanAPI: { list: mocks.planList, update: mocks.planUpdate },
-    cultureAPI: { list: mocks.cultureList },
+    locationAPI: {
+      listAll: async () => (await mocks.locationList()).data,
+    },
+    fieldAPI: {
+      listAll: async () => (await mocks.fieldList()).data,
+    },
+    bedAPI: {
+      listAll: async () => (await mocks.bedList()).data,
+    },
+    plantingPlanAPI: {
+      listAll: async () => (await mocks.planList()).data,
+      update: mocks.planUpdate,
+    },
+    cultureAPI: {
+      listAll: async () => (await mocks.cultureList()).data,
+    },
   };
 });
 
@@ -164,8 +172,8 @@ beforeEach(() => {
 });
 
 describe('GanttChartPage', () => {
-  it('partitions large task collections into bounded render windows', () => {
-    const groups = Array.from({ length: MAX_GANTT_GROUPS_PER_WINDOW + 1 }, (_, index) => ({
+  it('limits Gantt rendering to the visible row window', () => {
+    const groups = Array.from({ length: 200 }, (_, index) => ({
       id: `bed-${index + 1}`,
       name: `Bed ${index + 1}`,
       tasks: [{
@@ -176,28 +184,49 @@ describe('GanttChartPage', () => {
       }],
     }));
 
-    const windows = buildGanttRenderWindows(groups);
+    const window = getGanttRenderWindow(groups, 0, 720);
 
-    expect(windows).toHaveLength(2);
-    expect(windows[0]).toHaveLength(MAX_GANTT_GROUPS_PER_WINDOW);
-    expect(windows[1]).toHaveLength(1);
+    expect(window.groups.length).toBeLessThan(groups.length);
+    expect(window.startIndex).toBe(0);
+    expect(window.totalHeight).toBeGreaterThan(720);
   });
 
-  it('also bounds render windows by timeline item count', () => {
+  it.each([
+    ['small', 5],
+    ['medium', 80],
+    ['large', 2400],
+  ])('keeps the %s dataset window non-empty', (_label, rowCount) => {
+    const groups = Array.from({ length: rowCount }, (_, index) => ({
+      id: `bed-${index + 1}`,
+      name: `Bed ${index + 1}`,
+      tasks: [{
+        id: `task-${index + 1}`,
+        name: 'Salat',
+        startDate: new Date('2026-04-01'),
+        endDate: new Date('2026-05-01'),
+      }],
+    }));
+    const scrollTop = Math.max(0, rowCount * 72 - 720);
+
+    const window = getGanttRenderWindow(groups, scrollTop, 720);
+
+    expect(window.groups.length).toBeGreaterThan(0);
+    expect(window.endIndex).toBeLessThanOrEqual(rowCount);
+  });
+
+  it('also bounds a visible Gantt window by timeline item count', () => {
     const createTasks = (prefix: string, count: number) => Array.from({ length: count }, (_, index) => ({
       id: `${prefix}-${index}`,
       name: 'Salat',
       startDate: new Date('2026-04-01'),
       endDate: new Date('2026-05-01'),
     }));
-    const windows = buildGanttRenderWindows([
+    const window = getGanttRenderWindow([
       { id: 'bed-1', name: 'Bed 1', tasks: createTasks('first', 500) },
       { id: 'bed-2', name: 'Bed 2', tasks: createTasks('second', 500) },
-    ]);
+    ], 0, 720);
 
-    expect(windows).toHaveLength(2);
-    expect(windows[0]).toHaveLength(1);
-    expect(windows[1]).toHaveLength(1);
+    expect(window.groups).toHaveLength(1);
   });
 
   it('shows field-specific guidance when no locations exist', async () => {
@@ -347,8 +376,8 @@ describe('GanttChartPage', () => {
     expect(latestProps?.onTaskUpdate).toBeUndefined();
   });
 
-  it('keeps large projects renderable by paging the rows passed to the Gantt library', async () => {
-    const rowCount = MAX_GANTT_GROUPS_PER_WINDOW + 1;
+  it('keeps large projects renderable by windowing rows passed to the Gantt library', async () => {
+    const rowCount = 200;
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
     mocks.bedList.mockResolvedValue({
       data: {
@@ -381,26 +410,27 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText(`120 von ${rowCount} Zeilen werden angezeigt`)).toBeInTheDocument();
+    expect(await screen.findByTestId('gantt-virtual-viewport')).toBeInTheDocument();
     let latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
-    expect(latestProps?.tasks).toHaveLength(MAX_GANTT_GROUPS_PER_WINDOW);
-    expect(latestProps?.maxHeight).toBe('calc(100vh - 240px)');
+    expect(latestProps?.tasks.length).toBeGreaterThan(0);
+    expect(latestProps?.tasks.length).toBeLessThan(rowCount);
     expect(debugSpy).toHaveBeenCalledWith('[Gantt diagnostics]', expect.objectContaining({
       beds: rowCount,
       plantingPlans: rowCount,
       totalRows: rowCount,
       totalTimelineItems: rowCount,
-      renderedRows: MAX_GANTT_GROUPS_PER_WINDOW,
-      renderedTimelineItems: MAX_GANTT_GROUPS_PER_WINDOW,
+      renderedRows: expect.any(Number),
+      renderedTimelineItems: expect.any(Number),
     }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Go to page 2' }));
+    fireEvent.scroll(screen.getByTestId('gantt-virtual-viewport'), {
+      target: { scrollTop: 7200 },
+    });
 
     await waitFor(() => {
       latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
-      expect(latestProps?.tasks).toHaveLength(1);
+      expect(latestProps?.tasks[0]?.id).not.toBe('bed-1');
     });
-    expect(screen.getByText(`1 von ${rowCount} Zeilen werden angezeigt`)).toBeInTheDocument();
     debugSpy.mockRestore();
   });
 

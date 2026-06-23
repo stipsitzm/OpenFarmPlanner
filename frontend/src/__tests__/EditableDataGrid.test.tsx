@@ -50,6 +50,9 @@ vi.mock('@mui/x-data-grid', async () => {
     onRowEditStop,
     rowModesModel,
     slots,
+    pagination,
+    paginationModel,
+    pageSizeOptions,
   }: unknown) => {
     const [, forceFocusRender] = React.useState(0);
 
@@ -87,6 +90,9 @@ vi.mock('@mui/x-data-grid', async () => {
     return (
       <div>
         <div data-testid="row-count">{rows.length}</div>
+        <div data-testid="pagination-enabled">{String(Boolean(pagination))}</div>
+        <div data-testid="pagination-page-size">{paginationModel?.pageSize ?? ''}</div>
+        <div data-testid="pagination-options">{pageSizeOptions?.join(',') ?? ''}</div>
         {rows.map((row: TestGridRow) => (
           <div key={row.id} role="row" data-id={String(row.id)} data-testid={`row-${row.id}`}>
             <span data-testid={`mode-${row.id}`}>{rowModesModel?.[row.id]?.mode ?? GridRowModes.View}</span>
@@ -225,6 +231,22 @@ describe('EditableDataGrid', () => {
     await waitFor(() => {
       expect(screen.getByTestId('row-count')).toHaveTextContent('1');
     });
+  });
+
+  it('configures explicit pagination page sizes when requested', async () => {
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        paginationPageSizeOptions={[25, 50, 100]}
+        initialPageSize={25}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('1'));
+    expect(screen.getByTestId('pagination-enabled')).toHaveTextContent('true');
+    expect(screen.getByTestId('pagination-page-size')).toHaveTextContent('25');
+    expect(screen.getByTestId('pagination-options')).toHaveTextContent('25,50,100');
   });
 
   it('supports add, blur/enter/tab commit flows and calls API save with payload', async () => {

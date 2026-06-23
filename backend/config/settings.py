@@ -311,7 +311,7 @@ REST_FRAMEWORK = {
         'invitation_accept': _env_str('THROTTLE_INVITATION_ACCEPT', '20/hour'),
         'agent_login_consume': _env_str('THROTTLE_AGENT_LOGIN_CONSUME', '30/hour'),
     },
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'config.pagination.OpenFarmPlannerPageNumberPagination',
     'PAGE_SIZE': 100,
 }
 

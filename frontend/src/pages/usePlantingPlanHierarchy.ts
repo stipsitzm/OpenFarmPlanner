@@ -67,16 +67,16 @@ export function usePlantingPlanHierarchy(shouldShowProjectRequiredState: boolean
       setIsHierarchyLoading(true);
       try {
         const [culturesResponse, locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
-          cultureAPI.list(),
-          locationAPI.list(),
-          fieldAPI.list(),
-          bedAPI.list(),
+          cultureAPI.listAll(),
+          locationAPI.listAll(),
+          fieldAPI.listAll(),
+          bedAPI.listAll(),
         ]);
-        setCultures(culturesResponse.data.results);
-        setLocations(locationsResponse.data.results);
-        setFields(fieldsResponse.data.results);
+        setCultures(culturesResponse.results);
+        setLocations(locationsResponse.results);
+        setFields(fieldsResponse.results);
         setBeds(
-          bedsResponse.data.results.map((bed) => ({
+          bedsResponse.results.map((bed) => ({
             ...bed,
             area_sqm: toNumericValue(bed.area_sqm) ?? undefined,
           })),

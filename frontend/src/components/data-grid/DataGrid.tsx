@@ -29,7 +29,7 @@ import {
 } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
-import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRowParams, GridFilterOperator } from '@mui/x-data-grid';
+import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRowParams, GridFilterOperator, GridPaginationModel } from '@mui/x-data-grid';
 import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -170,6 +170,8 @@ export interface EditableDataGridProps<T extends EditableRow> {
    * - compact: compact content-sized mode for small tables
    */
   surfaceSizing?: 'contentFit' | 'fullWorkspace' | 'compact';
+  paginationPageSizeOptions?: number[];
+  initialPageSize?: number;
 }
 
 const isUnsavedDraftRow = (row: EditableRow): boolean =>
@@ -362,6 +364,8 @@ export function EditableDataGrid<T extends EditableRow>({
   onBeforeSaveRow,
   isSaveErrorHandled,
   surfaceSizing,
+  paginationPageSizeOptions,
+  initialPageSize = 25,
 }: EditableDataGridProps<T>) {
   const gridApiRef = useGridApiRef();
   const resolvedSurfaceSizing = surfaceSizing ?? 'contentFit';
@@ -374,6 +378,10 @@ export function EditableDataGrid<T extends EditableRow>({
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [dataFetched, setDataFetched] = useState<boolean>(false);
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: initialPageSize,
+  });
   const initialRowProcessedRef = useRef<boolean>(false);
   const initialFetchDoneRef = useRef<boolean>(false);
   const [selectedRowIds, setSelectedRowIds] = useState<GridRowId[]>([]);
@@ -407,6 +415,37 @@ export function EditableDataGrid<T extends EditableRow>({
     () => orderRowsByStableIds(rows as T[], stableRowOrder),
     [rows, stableRowOrder],
   );
+  useEffect(() => {
+    if (!import.meta.env.DEV || !paginationPageSizeOptions || loading) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const visibleRowCount = Math.max(
+        0,
+        Math.min(
+          paginationModel.pageSize,
+          rowsForGrid.length - paginationModel.page * paginationModel.pageSize,
+        ),
+      );
+      console.debug('[DataGrid diagnostics]', {
+        table: tableKey ?? 'editableDataGrid',
+        totalRows: rowsForGrid.length,
+        visibleRows: visibleRowCount,
+        page: paginationModel.page + 1,
+        pageSize: paginationModel.pageSize,
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    gridApiRef,
+    loading,
+    paginationModel,
+    paginationPageSizeOptions,
+    rowsForGrid,
+    tableKey,
+  ]);
   const hasContextMenuHintRows = useMemo(
     () => rowsForGrid.some((row) => !isUnsavedDraftRow(row)),
     [rowsForGrid],
@@ -682,6 +721,12 @@ export function EditableDataGrid<T extends EditableRow>({
       ...oldModel,
       [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus: columns[0]?.field },
     }));
+    if (paginationPageSizeOptions) {
+      setPaginationModel((current) => ({
+        ...current,
+        page: Math.floor(rows.length / current.pageSize),
+      }));
+    }
   };
 
   const handleDiscardRowChanges = useCallback((rowId: GridRowId): void => {
@@ -1904,6 +1949,10 @@ export function EditableDataGrid<T extends EditableRow>({
           density={isMobile ? 'standard' : 'compact'}
           autoHeight
           hideFooter={false}
+          pagination={paginationPageSizeOptions ? true : undefined}
+          paginationModel={paginationPageSizeOptions ? paginationModel : undefined}
+          onPaginationModelChange={paginationPageSizeOptions ? setPaginationModel : undefined}
+          pageSizeOptions={paginationPageSizeOptions}
           sortModel={sortModel}
           onSortModelChange={handleSortModelChange}
           sortingMode="server"

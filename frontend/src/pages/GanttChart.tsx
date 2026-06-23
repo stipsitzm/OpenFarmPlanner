@@ -7,7 +7,7 @@
  * @returns The Gantt Chart page component
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
@@ -18,7 +18,6 @@ import {
   Button,
   ButtonGroup,
   MenuItem,
-  Pagination,
   Select,
   Tooltip,
   Typography,
@@ -65,7 +64,7 @@ import {
   getSegmentedActionButtonSx,
   segmentedButtonGroupSx,
 } from '../components/buttons/segmentedControlStyles';
-import { buildGanttRenderWindows } from './ganttRenderWindow';
+import { getGanttRenderWindow } from './ganttRenderWindow';
 
 type CalendarMode = 'occupancy' | 'seedlings';
 
@@ -155,7 +154,9 @@ function GanttChartPage() {
   const [plantingPlans, setPlantingPlans] = useState<PlantingPlan[]>([]);
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [ganttRenderKey, setGanttRenderKey] = useState(0);
-  const [renderWindowIndex, setRenderWindowIndex] = useState(0);
+  const [ganttScrollTop, setGanttScrollTop] = useState(0);
+  const [ganttViewportHeight, setGanttViewportHeight] = useState(640);
+  const ganttViewportRef = useRef<HTMLDivElement | null>(null);
 
   const calendarViewStorageKey = useMemo(
     () => (canUseStoredCalendarView ? getCalendarViewStorageKey(activeProjectId) : null),
@@ -254,18 +255,18 @@ function GanttChartPage() {
         setError(null);
 
         const [locationsRes, fieldsRes, bedsRes, plansRes, culturesRes] = await Promise.all([
-          locationAPI.list(),
-          fieldAPI.list(),
-          bedAPI.list(),
-          plantingPlanAPI.list(),
-          cultureAPI.list(),
+          locationAPI.listAll(),
+          fieldAPI.listAll(),
+          bedAPI.listAll(),
+          plantingPlanAPI.listAll(),
+          cultureAPI.listAll(),
         ]);
 
-        setLocations(locationsRes.data.results);
-        setFields(fieldsRes.data.results);
-        setBeds(bedsRes.data.results);
-        setPlantingPlans(plansRes.data.results);
-        setCultures(culturesRes.data.results);
+        setLocations(locationsRes.results);
+        setFields(fieldsRes.results);
+        setBeds(bedsRes.results);
+        setPlantingPlans(plansRes.results);
+        setCultures(culturesRes.results);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(t('ganttChart:errors.load'));
@@ -278,8 +279,8 @@ function GanttChartPage() {
   }, [displayYear, shouldShowProjectRequiredState, t]);
 
   const refreshPlantingPlans = useCallback(async (): Promise<void> => {
-    const plansRes = await plantingPlanAPI.list();
-    setPlantingPlans(plansRes.data.results);
+    const plans = await plantingPlanAPI.listAll();
+    setPlantingPlans(plans.results);
   }, []);
 
   const handleTaskUpdate = async (_groupId: string, updatedTask: GanttTask) => {
@@ -536,14 +537,15 @@ function GanttChartPage() {
   ), [calendarMode, editMode, t]);
 
   const activeTaskGroups = calendarMode === 'occupancy' ? occupancyTaskGroups : seedlingTaskGroups;
-  const renderWindows = useMemo(
-    () => buildGanttRenderWindows(activeTaskGroups),
-    [activeTaskGroups],
+  const renderWindow = useMemo(
+    () => getGanttRenderWindow(
+      activeTaskGroups,
+      ganttScrollTop,
+      ganttViewportHeight,
+    ),
+    [activeTaskGroups, ganttScrollTop, ganttViewportHeight],
   );
-  const renderedTaskGroups = useMemo(
-    () => renderWindows[renderWindowIndex] ?? renderWindows[0] ?? [],
-    [renderWindowIndex, renderWindows],
-  );
+  const renderedTaskGroups = renderWindow.groups;
   const totalTimelineItems = useMemo(
     () => activeTaskGroups.reduce((total, group) => total + group.tasks.length, 0),
     [activeTaskGroups],
@@ -552,17 +554,32 @@ function GanttChartPage() {
     () => renderedTaskGroups.reduce((total, group) => total + group.tasks.length, 0),
     [renderedTaskGroups],
   );
-  const hasMultipleRenderWindows = renderWindows.length > 1;
 
   useEffect(() => {
-    setRenderWindowIndex(0);
+    setGanttScrollTop(0);
+    if (ganttViewportRef.current) {
+      ganttViewportRef.current.scrollTop = 0;
+    }
   }, [calendarMode, activeProjectId]);
 
   useEffect(() => {
-    if (renderWindowIndex >= renderWindows.length) {
-      setRenderWindowIndex(Math.max(0, renderWindows.length - 1));
+    const viewport = ganttViewportRef.current;
+    if (!viewport) {
+      return undefined;
     }
-  }, [renderWindowIndex, renderWindows.length]);
+
+    const updateViewportHeight = (): void => {
+      setGanttViewportHeight(viewport.clientHeight);
+    };
+    updateViewportHeight();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateViewportHeight);
+      return () => window.removeEventListener('resize', updateViewportHeight);
+    }
+    const observer = new ResizeObserver(updateViewportHeight);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!import.meta.env.DEV || loading) {
@@ -576,16 +593,16 @@ function GanttChartPage() {
       totalTimelineItems,
       renderedRows: renderedTaskGroups.length,
       renderedTimelineItems,
-      renderWindow: renderWindowIndex + 1,
-      renderWindowCount: renderWindows.length,
+      firstRenderedRow: renderWindow.startIndex,
+      lastRenderedRow: renderWindow.endIndex,
     });
   }, [
     activeTaskGroups.length,
     beds.length,
     loading,
     plantingPlans.length,
-    renderWindowIndex,
-    renderWindows.length,
+    renderWindow.endIndex,
+    renderWindow.startIndex,
     renderedTaskGroups.length,
     renderedTimelineItems,
     totalTimelineItems,
@@ -718,88 +735,83 @@ function GanttChartPage() {
               bgcolor: 'surface.surfaceBackground',
             }}
           >
-            {hasMultipleRenderWindows ? (
-              <Box
-                sx={{
-                  px: 2,
-                  pt: 1.5,
-                  display: 'flex',
-                  flexDirection: { xs: 'column', sm: 'row' },
-                  alignItems: { xs: 'flex-start', sm: 'center' },
-                  justifyContent: 'space-between',
-                  gap: 1,
-                }}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  {t('ganttChart:largeDataset.windowSummary', {
-                    visible: renderedTaskGroups.length,
-                    total: activeTaskGroups.length,
-                  })}
-                </Typography>
-                <Pagination
-                  count={renderWindows.length}
-                  page={renderWindowIndex + 1}
-                  size="small"
-                  color="primary"
-                  aria-label={t('ganttChart:largeDataset.paginationLabel')}
-                  onChange={(_, page) => setRenderWindowIndex(page - 1)}
-                />
+            <Box
+              ref={ganttViewportRef}
+              data-testid="gantt-virtual-viewport"
+              onScroll={(event) => setGanttScrollTop(event.currentTarget.scrollTop)}
+              sx={{
+                position: 'relative',
+                height: 'calc(100vh - 220px)',
+                minHeight: 420,
+                overflowY: 'auto',
+                overflowX: 'hidden',
+              }}
+            >
+              <Box sx={{ height: Math.max(renderWindow.totalHeight, ganttViewportHeight), position: 'relative' }}>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: ganttScrollTop,
+                    left: 0,
+                    right: 0,
+                  }}
+                >
+                  <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
+                    <GanttChart
+                      key={`${calendarMode}-${ganttRenderKey}`}
+                      tasks={renderedTaskGroups}
+                      locale={resolvedLocale}
+                      localeText={ganttLocaleText}
+                      viewMode={ViewMode.MONTH}
+                      leftColumnWidth={220}
+                      startDate={startDate}
+                      endDate={endDate}
+                      editMode={calendarMode === 'occupancy' ? editMode : false}
+                      allowTaskResize={false}
+                      allowTaskMove={calendarMode === 'occupancy' && editMode}
+                      showProgress={false}
+                      darkMode={false}
+                      onTaskUpdate={calendarMode === 'occupancy' && editMode ? handleTaskUpdate : undefined}
+                      renderHeader={renderGanttHeader}
+                      renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
+                        ? renderSeedlingTooltip({ task })
+                        : renderOccupancyTooltip({ task }))}
+                      renderTask={calendarMode === 'seedlings'
+                        ? ({ task, leftPx, widthPx, topPx }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                left: `${leftPx}px`,
+                                top: `${topPx}px`,
+                                width: `${widthPx}px`,
+                                minWidth: `${widthPx}px`,
+                                height: 26,
+                                px: 1,
+                                borderRadius: 1,
+                                backgroundColor: task.color || '#3b82f6',
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap',
+                                textOverflow: 'ellipsis',
+                                boxSizing: 'border-box',
+                                cursor: 'default',
+                              }}
+                            >
+                              <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {typeof task.plantsCount === 'number' && task.plantsCount > 0
+                                  ? `${task.name} · ${formatPlantCount(task.plantsCount)} ${t('ganttChart:seedlings.plantsUnit')}`
+                                  : task.name}
+                              </Typography>
+                            </Box>
+                          )
+                        : undefined}
+                    />
+                  </GanttRenderBoundary>
+                </Box>
               </Box>
-            ) : null}
-            <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
-              <GanttChart
-                key={`${calendarMode}-${ganttRenderKey}-${renderWindowIndex}`}
-                tasks={renderedTaskGroups}
-                locale={resolvedLocale}
-                localeText={ganttLocaleText}
-                viewMode={ViewMode.MONTH}
-                leftColumnWidth={220}
-                startDate={startDate}
-                endDate={endDate}
-                maxHeight="calc(100vh - 240px)"
-                editMode={calendarMode === 'occupancy' ? editMode : false}
-                allowTaskResize={false}
-                allowTaskMove={calendarMode === 'occupancy' && editMode}
-                showProgress={false}
-                darkMode={false}
-                onTaskUpdate={calendarMode === 'occupancy' && editMode ? handleTaskUpdate : undefined}
-                renderHeader={renderGanttHeader}
-                renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
-                  ? renderSeedlingTooltip({ task })
-                  : renderOccupancyTooltip({ task }))}
-                renderTask={calendarMode === 'seedlings'
-                  ? ({ task, leftPx, widthPx, topPx }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          left: `${leftPx}px`,
-                          top: `${topPx}px`,
-                          width: `${widthPx}px`,
-                          minWidth: `${widthPx}px`,
-                          height: 26,
-                          px: 1,
-                          borderRadius: 1,
-                          backgroundColor: task.color || '#3b82f6',
-                          color: '#fff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          overflow: 'hidden',
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
-                          boxSizing: 'border-box',
-                          cursor: 'default',
-                        }}
-                      >
-                        <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {typeof task.plantsCount === 'number' && task.plantsCount > 0
-                            ? `${task.name} · ${formatPlantCount(task.plantsCount)} ${t('ganttChart:seedlings.plantsUnit')}`
-                            : task.name}
-                        </Typography>
-                      </Box>
-                    )
-                  : undefined}
-              />
-            </GanttRenderBoundary>
+            </Box>
           </Box>
           </PageSurface>
         )}

@@ -30,6 +30,31 @@ import type {
   SupplierUnlinkDeleteResponse,
 } from './types';
 
+export async function fetchAllPaginated<T>(
+  initialPath: string,
+): Promise<PaginatedResponse<T>> {
+  const results: T[] = [];
+  const initialSeparator = initialPath.includes('?') ? '&' : '?';
+  let nextPath: string | null = `${initialPath}${initialSeparator}page_size=1000`;
+  let count = 0;
+
+  while (nextPath) {
+    const response: { data: PaginatedResponse<T> } = await http.get<
+      PaginatedResponse<T>
+    >(nextPath);
+    results.push(...response.data.results);
+    count = response.data.count;
+    nextPath = response.data.next;
+  }
+
+  return {
+    count,
+    next: null,
+    previous: null,
+    results,
+  };
+}
+
 const getActiveProjectId = (): number | null => {
   if (typeof window === 'undefined') {
     return null;
@@ -56,6 +81,7 @@ const withActiveProject = <T extends object>(data: T): T | (T & { project: numbe
 
 export const cultureAPI = {
   list: (url = '/cultures/') => http.get<PaginatedResponse<Culture>>(url),
+  listAll: () => fetchAllPaginated<Culture>('/cultures/'),
   get: (id: number) => http.get<Culture>(`/cultures/${id}/`),
   duplicateCheck: (params: { name: string; variety: string; exclude_id?: number }, signal?: AbortSignal) =>
     http.get<CultureDuplicateCheckResponse>('/cultures/duplicate-check/', { params, signal }),
@@ -132,6 +158,7 @@ export const cultureSupplierDataAPI = {
 
 export const bedAPI = {
   list: () => http.get<PaginatedResponse<Bed>>('/beds/'),
+  listAll: () => fetchAllPaginated<Bed>('/beds/'),
   get: (id: number) => http.get<Bed>(`/beds/${id}/`),
   create: (data: Bed) => http.post<Bed>('/beds/', withActiveProject(data)),
   update: (id: number, data: Bed) => http.put<Bed>(`/beds/${id}/`, withActiveProject(data)),
@@ -140,6 +167,7 @@ export const bedAPI = {
 
 export const plantingPlanAPI = {
   list: () => http.get<PaginatedResponse<PlantingPlan>>('/planting-plans/'),
+  listAll: () => fetchAllPaginated<PlantingPlan>('/planting-plans/'),
   get: (id: number) => http.get<PlantingPlan>(`/planting-plans/${id}/`),
   create: (data: PlantingPlan) => http.post<PlantingPlan>('/planting-plans/', withActiveProject(data)),
   update: (id: number, data: PlantingPlan) => http.put<PlantingPlan>(`/planting-plans/${id}/`, withActiveProject(data)),
@@ -199,6 +227,7 @@ export const yieldCalendarAPI = {
 
 export const fieldAPI = {
   list: () => http.get<PaginatedResponse<Field>>('/fields/'),
+  listAll: () => fetchAllPaginated<Field>('/fields/'),
   get: (id: number) => http.get<Field>(`/fields/${id}/`),
   create: (data: Field) => http.post<Field>('/fields/', withActiveProject(data)),
   update: (id: number, data: Field) => http.put<Field>(`/fields/${id}/`, withActiveProject(data)),
@@ -207,6 +236,7 @@ export const fieldAPI = {
 
 export const locationAPI = {
   list: () => http.get<PaginatedResponse<Location>>('/locations/'),
+  listAll: () => fetchAllPaginated<Location>('/locations/'),
   get: (id: number) => http.get<Location>(`/locations/${id}/`),
   create: (data: Location) => http.post<Location>('/locations/', withActiveProject(data)),
   update: (id: number, data: Location) => http.put<Location>(`/locations/${id}/`, withActiveProject(data)),

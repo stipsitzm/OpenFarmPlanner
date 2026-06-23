@@ -101,10 +101,6 @@
     "emptyState": "Keine Anzuchtzeiträume für dieses Jahr vorhanden.",
     "plantsUnit": "Pflanzen"
   },
-  "largeDataset": {
-    "windowSummary": "{{visible}} von {{total}} Zeilen werden angezeigt",
-    "paginationLabel": "Anzeigebereich des Kalenders auswählen"
-  },
   "requirements": {
     "field": {
       "label": "Parzelle",

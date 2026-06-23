@@ -60,8 +60,24 @@ describe('useKeyboardNavigation', () => {
   });
 
 
-  it('navigates from gantt to seed-demand on Ctrl+Shift+ArrowDown', () => {
+  it('navigates from gantt to yield overview on Ctrl+Shift+ArrowDown', () => {
     window.history.pushState({}, '', '/gantt-chart');
+    render(<TestComponent />);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'ArrowDown',
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+      })
+    );
+
+    expect(navigateMock).toHaveBeenCalledWith('/app/yield-overview');
+  });
+
+  it('navigates from yield overview to seed demand on Ctrl+Shift+ArrowDown', () => {
+    window.history.pushState({}, '', '/yield-overview');
     render(<TestComponent />);
 
     window.dispatchEvent(
@@ -268,7 +284,7 @@ describe('useKeyboardNavigation', () => {
       })
     );
 
-    expect(navigateMock).toHaveBeenCalledWith('/app/seed-demand');
+    expect(navigateMock).toHaveBeenCalledWith('/app/yield-overview');
   });
 
   it('uses nested app routes to determine the active navigation item', () => {

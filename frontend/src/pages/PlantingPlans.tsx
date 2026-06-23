@@ -501,6 +501,13 @@ function PlantingPlans() {
   const [areaValidationDialog, setAreaValidationDialog] = useState<AreaValidationDialogState | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
+  const plantingPlanGridAPI = useMemo<DataGridAPI<PlantingPlanRow>>(() => ({
+    ...plantingPlanAPI,
+    list: async () => {
+      const data = await plantingPlanAPI.listAll();
+      return { data };
+    },
+  }) as unknown as DataGridAPI<PlantingPlanRow>, []);
   const [selectedPlan, setSelectedPlan] = useState<PlantingPlanRow | null>(
     null,
   );
@@ -1873,7 +1880,9 @@ function PlantingPlans() {
           <EditableDataGrid<PlantingPlanRow>
             surfaceSizing="contentFit"
             columns={columns}
-            api={plantingPlanAPI as unknown as DataGridAPI<PlantingPlanRow>}
+            api={plantingPlanGridAPI}
+            paginationPageSizeOptions={[25, 50, 100]}
+            initialPageSize={25}
             commandApiRef={gridCommandApiRef}
             onSelectedRowChange={setSelectedPlan}
             onRowsStateChange={(rows) => {
