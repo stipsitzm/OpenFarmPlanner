@@ -10,15 +10,12 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link as RouterLink, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
-import axios from 'axios';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
-import { bedAPI, cultureAPI, fieldAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
+import { bedAPI, cultureAPI, fieldAPI, type Culture, type EnrichmentResult } from '../api/api';
 import type {
   CultivationType,
   CultureHistoryEntry,
-  PublicCulture,
-  PublishPublicCultureDuplicateError,
 } from '../api/types';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
@@ -100,8 +97,8 @@ import {
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
 import { useAuth } from '../auth/useAuth';
-import { dedupePublicCultures } from './publicCultureUtils';
 import { useCultureImportState } from './useCultureImportState';
+import { usePublicCultureLibrary } from './usePublicCultureLibrary';
 import { useEnrichmentLoadingProgress } from './useEnrichmentLoadingProgress';
 import { CulturesImportDialog } from './CulturesImportDialog';
 import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
@@ -173,14 +170,6 @@ function Cultures() {
   const enrichmentAbortControllerRef = useRef<AbortController | null>(null);
   const pendingCultureDeleteTimersRef = useRef<Map<string, number>>(new Map());
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [publicLibraryOpen, setPublicLibraryOpen] = useState(false);
-  const [publicLibraryLoading, setPublicLibraryLoading] = useState(false);
-  const [publicLibraryError, setPublicLibraryError] = useState<string | null>(null);
-  const [publicCultures, setPublicCultures] = useState<PublicCulture[]>([]);
-  const [publicLibraryImportingId, setPublicLibraryImportingId] = useState<number | null>(null);
-  const [publicLibraryInitialSelectedId, setPublicLibraryInitialSelectedId] = useState<number | null>(null);
-  const [publicLibraryInitialQuery, setPublicLibraryInitialQuery] = useState('');
-  const [publishingCultureId, setPublishingCultureId] = useState<number | null>(null);
   const [hasFields, setHasFields] = useState(false);
   const [hasBeds, setHasBeds] = useState(false);
   const selectedCulture = cultures.find((culture) => culture.id === selectedCultureId);
@@ -250,6 +239,40 @@ function Cultures() {
       setIsCulturesLoading(false);
     }
   }, [showSnackbar, t]);
+
+  const onPublicLibraryImportSuccess = useCallback(async (cultureId: number) => {
+    await fetchCultures();
+    updateSelectedCultureId(cultureId, 'internal');
+  }, [fetchCultures, updateSelectedCultureId]);
+
+  const onClearFormForLibrary = useCallback(() => {
+    setShowForm(false);
+    setEditingCulture(undefined);
+  }, []);
+
+  const {
+    publicLibraryOpen,
+    setPublicLibraryOpen,
+    publicLibraryLoading,
+    publicLibraryError,
+    publicCultures,
+    publicLibraryImportingId,
+    publicLibraryInitialSelectedId,
+    publicLibraryInitialQuery,
+    publishingCultureId,
+    isUpdatingOwnPublicCulture,
+    fetchPublicCultures,
+    handleOpenPublicLibrary,
+    handleViewPublicLibraryMatch,
+    handleImportPublicCulture,
+    handlePublishCurrentCulture,
+  } = usePublicCultureLibrary({
+    shouldShowProjectRequiredState,
+    selectedCulture,
+    onImportSuccess: onPublicLibraryImportSuccess,
+    onClearForm: onClearFormForLibrary,
+    showSnackbar,
+  });
 
   // Fetch cultures on mount
   useEffect(() => {
@@ -582,112 +605,6 @@ function Cultures() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const fetchPublicCultures = useCallback(async (
-    query = '',
-    exactMatch?: { name: string; variety?: string },
-  ) => {
-    try {
-      setPublicLibraryLoading(true);
-      setPublicLibraryError(null);
-      const params = exactMatch
-        ? { name: exactMatch.name, variety: exactMatch.variety || '' }
-        : query ? { q: query } : undefined;
-      const response = await publicCultureAPI.list(params);
-      setPublicCultures(dedupePublicCultures(response.data.results));
-    } catch (error) {
-      console.error('Error fetching public cultures:', error);
-      setPublicLibraryError(t('library.loadError'));
-    } finally {
-      setPublicLibraryLoading(false);
-    }
-  }, [t]);
-
-  const handleOpenPublicLibrary = useCallback(async () => {
-    setPublicLibraryInitialSelectedId(null);
-    setPublicLibraryInitialQuery('');
-    setPublicLibraryOpen(true);
-    await fetchPublicCultures();
-  }, [fetchPublicCultures]);
-
-  const handleViewPublicLibraryMatch = useCallback(async (match: Pick<PublicCulture, 'id' | 'name' | 'variety'>) => {
-    setShowForm(false);
-    setEditingCulture(undefined);
-    setPublicLibraryInitialSelectedId(match.id);
-    setPublicLibraryInitialQuery(`${match.name} ${match.variety || ''}`.trim());
-    setPublicLibraryOpen(true);
-    await fetchPublicCultures('', { name: match.name, variety: match.variety });
-  }, [fetchPublicCultures]);
-
-  useEffect(() => {
-    if (shouldShowProjectRequiredState || publicLibraryOpen) {
-      return;
-    }
-    const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get('library') !== 'true') {
-      return;
-    }
-
-    void handleOpenPublicLibrary();
-    searchParams.delete('library');
-    const nextSearch = searchParams.toString();
-    navigate(
-      {
-        pathname: location.pathname,
-        search: nextSearch ? `?${nextSearch}` : '',
-      },
-      { replace: true },
-    );
-  }, [handleOpenPublicLibrary, location.pathname, location.search, navigate, publicLibraryOpen, shouldShowProjectRequiredState]);
-
-  const handleImportPublicCulture = async (publicCulture: PublicCulture) => {
-    try {
-      setPublicLibraryImportingId(publicCulture.id);
-      const response = await publicCultureAPI.importToProject(publicCulture.id);
-      await fetchCultures();
-      updateSelectedCultureId(response.data.id, 'internal');
-      setPublicLibraryOpen(false);
-      showSnackbar(t('library.importSuccess', { name: publicCulture.name }), 'success');
-    } catch (error) {
-      console.error('Error importing public culture:', error);
-      setPublicLibraryError(extractApiErrorMessage(error, t, t('library.importError')));
-    } finally {
-      setPublicLibraryImportingId(null);
-    }
-  };
-
-  const handlePublishCurrentCulture = async () => {
-    if (!selectedCulture?.id) {
-      return;
-    }
-
-    try {
-      setPublishingCultureId(selectedCulture.id);
-      const response = await cultureAPI.publishPublic(selectedCulture.id);
-      if (response.data.operation === 'updated') {
-        showSnackbar(t('library.updateSuccess', { name: selectedCulture.name }), 'success');
-      } else {
-        showSnackbar(t('library.publishSuccess', { name: selectedCulture.name }), 'success');
-      }
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 409) {
-        const duplicateError = error.response.data as PublishPublicCultureDuplicateError | undefined;
-        const duplicateNames = (duplicateError?.duplicates || [])
-          .map((entry) => entry.variety ? `${entry.name} (${entry.variety})` : entry.name)
-          .join(', ');
-        if (duplicateNames) {
-          showSnackbar(t('library.publishDuplicateErrorWithCandidates', { duplicates: duplicateNames }), 'info');
-        } else {
-          showSnackbar(t('library.publishDuplicateError'), 'info');
-        }
-        return;
-      }
-      console.error('Error publishing culture:', error);
-      showSnackbar(extractApiErrorMessage(error, t, t('library.publishError')), 'error');
-    } finally {
-      setPublishingCultureId(null);
-    }
-  };
-
   const handleImportFileTrigger = useCallback(() => {
     resetImportState();
     fileInputRef.current?.click();
@@ -820,7 +737,6 @@ function Cultures() {
     ? getProjectSetupAction(firstMissingPlanRequirement)
     : null;
   const canCreatePlantingPlan = Boolean(selectedCulture) && firstMissingPlanRequirement === null;
-  const isUpdatingOwnPublicCulture = Boolean(selectedCulture?.owned_public_culture_id);
   const dialogCostInfo = getDialogCostInfo(enrichmentResult);
 
   useCommandContextTag('cultures');
