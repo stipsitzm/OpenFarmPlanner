@@ -6,7 +6,7 @@ import { memo, useEffect, useRef } from 'react';
 import { TextField } from '@mui/material';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
 
-const toIsoDateString = (value: unknown): string | null => {
+export const toIsoDateString = (value: unknown): string | null => {
   if (value instanceof Date) {
     const year = value.getFullYear();
     const month = String(value.getMonth() + 1).padStart(2, '0');
