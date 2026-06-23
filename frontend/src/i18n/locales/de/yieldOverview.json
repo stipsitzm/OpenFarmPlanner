@@ -12,7 +12,8 @@
     "month": "Monat"
   },
   "chart": {
-    "title": "Ertragsverteilung"
+    "title": "Ertragsverteilung",
+    "tooltip": "{{period}} · {{culture}}: {{yield}} kg"
   },
   "empty": {
     "noPlansTitle": "Noch keine Ertragsprognose verfügbar",

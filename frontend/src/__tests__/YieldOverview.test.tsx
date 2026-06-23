@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldOverviewPage from "../pages/YieldOverview";
+import { getYieldAxisLabelStep } from "../pages/yieldOverviewUtils";
 
 const mocks = vi.hoisted(() => ({
   planList: vi.fn(),
@@ -47,6 +48,17 @@ beforeEach(() => {
 });
 
 describe("YieldOverviewPage", () => {
+  it("shows every label when columns have enough horizontal space", () => {
+    expect(getYieldAxisLabelStep(360, 3, "week")).toBe(1);
+    expect(getYieldAxisLabelStep(720, 12, "month")).toBe(1);
+  });
+
+  it("progressively reduces label density when columns become narrow", () => {
+    expect(getYieldAxisLabelStep(360, 20, "week")).toBe(2);
+    expect(getYieldAxisLabelStep(360, 40, "week")).toBe(4);
+    expect(getYieldAxisLabelStep(360, 12, "month")).toBe(2);
+  });
+
   it("fills empty yield weeks between available week entries", async () => {
     mocks.yieldList.mockResolvedValue({
       data: [
@@ -91,8 +103,17 @@ describe("YieldOverviewPage", () => {
     expect(screen.getByText("W13")).toBeInTheDocument();
     expect(screen.getByText("W14")).toBeInTheDocument();
     expect(screen.getByText("W15")).toBeInTheDocument();
+    expect(screen.getByText("W13")).toHaveStyle({ visibility: "visible" });
+    expect(screen.getByText("W14")).toHaveStyle({ visibility: "visible" });
+    expect(screen.getByText("W15")).toHaveStyle({ visibility: "visible" });
     expect(screen.getByTestId("yield-chart-plot")).toHaveStyle({
       width: "100%",
+    });
+    expect(screen.getByTestId("yield-bar-column-2026-W13")).toHaveStyle({
+      flex: "1 1 0",
+    });
+    expect(screen.getByTestId("yield-axis-column-2026-W13")).toHaveStyle({
+      flex: "1 1 0",
     });
     expect(screen.getByLabelText("Kultur")).toHaveTextContent("Alle Kulturen");
     expect(screen.getByLabelText("Jahr")).toHaveTextContent(
@@ -112,14 +133,19 @@ describe("YieldOverviewPage", () => {
       screen.queryByRole("link", { name: "Zum Anbaukalender" }),
     ).not.toBeInTheDocument();
 
+    fireEvent.mouseOver(screen.getByTestId("yield-bar-2026-W13-1"));
+    expect(
+      await screen.findByText("2026-W13 · Kohl: 0.70 kg"),
+    ).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole("button", { name: "Monat" }));
 
     expect(screen.getByRole("button", { name: "Monat" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(screen.getByText("Mär")).toBeInTheDocument();
-    expect(screen.getByText("Apr")).toBeInTheDocument();
+    expect(screen.getByText("Mär")).toHaveStyle({ visibility: "visible" });
+    expect(screen.getByText("Apr")).toHaveStyle({ visibility: "visible" });
   });
 
   it("shows a helpful empty state when no planting plans exist", async () => {

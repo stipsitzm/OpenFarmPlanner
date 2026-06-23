@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import {
   Alert,
@@ -32,8 +32,11 @@ import ProjectRequiredState from "../components/project/ProjectRequiredState";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { useTranslation } from "../i18n";
 import { parseDateString } from "./ganttChartUtils";
+import {
+  getYieldAxisLabelStep,
+  type ChartPeriod,
+} from "./yieldOverviewUtils";
 
-type ChartPeriod = "week" | "month";
 type YieldCalendarCulture = YieldCalendarWeek["cultures"][number];
 
 interface YieldCultureMeta {
@@ -228,6 +231,13 @@ function YieldDistributionChart({
     period,
     i18n.resolvedLanguage ?? i18n.language,
   );
+  const axisRef = useRef<HTMLDivElement | null>(null);
+  const [axisWidth, setAxisWidth] = useState(0);
+  const labelStep = getYieldAxisLabelStep(
+    axisWidth,
+    chartData.length,
+    period,
+  );
   const yAxisTicks = useMemo(() => {
     const tickCount = 5;
     if (maxTotalYield <= 0) {
@@ -237,6 +247,30 @@ function YieldDistributionChart({
       Number(((maxTotalYield / (tickCount - 1)) * index).toFixed(1)),
     );
   }, [maxTotalYield]);
+
+  useEffect(() => {
+    const axisElement = axisRef.current;
+    if (!axisElement) {
+      return undefined;
+    }
+
+    const updateAxisWidth = (): void => {
+      setAxisWidth(axisElement.getBoundingClientRect().width);
+    };
+
+    updateAxisWidth();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateAxisWidth);
+      return () => window.removeEventListener("resize", updateAxisWidth);
+    }
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      setAxisWidth(width ?? axisElement.getBoundingClientRect().width);
+    });
+    resizeObserver.observe(axisElement);
+    return () => resizeObserver.disconnect();
+  }, []);
 
   return (
     <Card
@@ -307,7 +341,7 @@ function YieldDistributionChart({
             <Box sx={{ height: 44 }} />
           </Box>
 
-          <Box sx={{ minWidth: 0 }}>
+          <Box ref={axisRef} sx={{ minWidth: 0 }}>
             <Box
               data-testid="yield-chart-plot"
               sx={{
@@ -325,6 +359,7 @@ function YieldDistributionChart({
               {chartData.map((column) => (
                 <Box
                   key={column.id}
+                  data-testid={`yield-bar-column-${column.id}`}
                   sx={{
                     flex: "1 1 0",
                     minWidth: 0,
@@ -345,9 +380,14 @@ function YieldDistributionChart({
                     {column.cultures.map((culture) => (
                       <Tooltip
                         key={`${column.id}-${culture.culture_id}`}
-                        title={`${culture.culture_name}: ${culture.yield.toFixed(2)} kg`}
+                        title={t("chart.tooltip", {
+                          period: column.id,
+                          culture: culture.culture_name,
+                          yield: culture.yield.toFixed(2),
+                        })}
                       >
                         <Box
+                          data-testid={`yield-bar-${column.id}-${culture.culture_id}`}
                           sx={{
                             width: "100%",
                             height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
@@ -373,6 +413,7 @@ function YieldDistributionChart({
               {chartData.map((column, index) => (
                 <Box
                   key={`${column.id}-axis`}
+                  data-testid={`yield-axis-column-${column.id}`}
                   sx={{
                     flex: "1 1 0",
                     minWidth: 0,
@@ -383,13 +424,9 @@ function YieldDistributionChart({
                   <Typography
                     variant="caption"
                     sx={{
-                      display:
-                        period === "month"
-                          ? "block"
-                          : {
-                              xs: index % 8 === 0 ? "block" : "none",
-                              sm: index % 4 === 0 ? "block" : "none",
-                            },
+                      display: "block",
+                      visibility:
+                        index % labelStep === 0 ? "visible" : "hidden",
                       fontWeight: 600,
                       lineHeight: 1.2,
                       whiteSpace: "nowrap",
@@ -400,13 +437,9 @@ function YieldDistributionChart({
                   <Typography
                     variant="caption"
                     sx={{
-                      display:
-                        period === "month"
-                          ? "block"
-                          : {
-                              xs: index % 8 === 0 ? "block" : "none",
-                              sm: index % 4 === 0 ? "block" : "none",
-                            },
+                      display: "block",
+                      visibility:
+                        index % labelStep === 0 ? "visible" : "hidden",
                       color: "text.secondary",
                       lineHeight: 1.2,
                       whiteSpace: "nowrap",

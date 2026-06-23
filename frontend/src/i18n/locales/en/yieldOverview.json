@@ -12,7 +12,8 @@
     "month": "Month"
   },
   "chart": {
-    "title": "Yield distribution"
+    "title": "Yield distribution",
+    "tooltip": "{{period}} · {{culture}}: {{yield}} kg"
   },
   "empty": {
     "noPlansTitle": "No yield forecast available yet",
