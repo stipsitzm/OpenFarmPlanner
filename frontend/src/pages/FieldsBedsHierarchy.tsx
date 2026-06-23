@@ -1564,17 +1564,17 @@ function FieldsBedsHierarchy({
           <ContextMenuHint
             message={t("common:messages.contextMenuTableHint")}
             onClose={closeContextMenuHint}
-            sx={{ mb: 1.25 }}
+            prominent
+            sx={{ mb: 1.5, width: '100%' }}
           />
         )}
 
         {shouldShowMissingDimensionsHint && (
-          <Box sx={{ mb: 2 }}>
-            <EmptyStateCard
-              title={t('messages.missingDimensionsHint')}
-              description={t('messages.missingDimensionsHintOptional')}
-            />
-          </Box>
+          <EmptyStateCard
+            title={t('messages.missingDimensionsHint')}
+            description={t('messages.missingDimensionsHintOptional')}
+            containerSx={{ maxWidth: 'none', mx: 0 }}
+          />
         )}
 
         {shouldShowHierarchyTable ? (

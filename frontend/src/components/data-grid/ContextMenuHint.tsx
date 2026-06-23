@@ -9,6 +9,7 @@ interface ContextMenuHintProps {
   secondary?: ReactNode;
   onClose?: () => void;
   compact?: boolean;
+  prominent?: boolean;
   sx?: SxProps<Theme>;
 }
 
@@ -17,6 +18,7 @@ export function ContextMenuHint({
   secondary,
   onClose,
   compact = false,
+  prominent = false,
   sx,
 }: ContextMenuHintProps) {
   const { t } = useTranslation('common');
@@ -32,7 +34,7 @@ export function ContextMenuHint({
     <Box
       role="note"
       sx={{
-        display: 'inline-flex',
+        display: prominent ? 'flex' : 'inline-flex',
         alignItems: 'center',
         gap: 1,
         maxWidth: '100%',
@@ -40,6 +42,7 @@ export function ContextMenuHint({
         py: compact ? 0.625 : 0.75,
         border: '1px solid',
         borderColor: 'success.200',
+        ...(prominent ? { borderLeft: '4px solid', borderLeftColor: 'success.main' } : {}),
         borderRadius: 1.5,
         bgcolor: 'success.50',
         color: 'text.secondary',
@@ -58,13 +61,13 @@ export function ContextMenuHint({
           height: compact ? 22 : 24,
           borderRadius: '50%',
           color: 'success.main',
-          bgcolor: 'success.50',
+          bgcolor: prominent ? 'success.100' : 'success.50',
         }}
       >
         <MouseOutlinedIcon sx={{ fontSize: compact ? 15 : 16 }} />
       </Box>
       <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 0.75, flexWrap: 'wrap' }}>
-        <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 600, lineHeight: 1.35 }}>
+        <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: prominent ? 700 : 600, lineHeight: 1.35 }}>
           {message}
         </Typography>
         {secondary ? (
