@@ -315,6 +315,11 @@
       "modeEdit": "Edit",
       "modeViewDescription": "Only view, navigate, and zoom",
       "modeEditDescription": "Move and arrange elements"
+    },
+    "yieldOverview": {
+      "title": "Help: Yield overview",
+      "intro": "The yield overview brings together expected harvest quantities from your planting plans. This keeps the planting calendar focused on planning while yield analysis has its own page.",
+      "points": []
     }
   }
 }

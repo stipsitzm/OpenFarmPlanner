@@ -51,6 +51,7 @@ import { HierarchyAddIcon } from '../hierarchy/HierarchyAddIcon';
 export type HelpPageKey =
   | 'dashboard'
   | 'calendar'
+  | 'yieldOverview'
   | 'locations'
   | 'fields'
   | 'beds'

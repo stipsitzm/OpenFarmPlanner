@@ -7,6 +7,7 @@
   "suppliers": "Lieferanten",
   "plantingPlans": "Anbaupläne",
   "ganttChart": "Anbaukalender",
+  "yieldOverview": "Ertragsübersicht",
   "seedDemand": "Saatgutbedarf",
   "graphicalFields": "Grafische Ansicht",
   "accountSettings": "Kontoeinstellungen",
@@ -57,6 +58,7 @@
     "cultures": "Hilfe zu Kulturen",
     "plantingPlans": "Hilfe zu Anbauplänen",
     "calendar": "Hilfe zu Anbaukalender",
+    "yieldOverview": "Hilfe zu Ertragsübersicht",
     "seedDemand": "Hilfe zu Saatgutbedarf",
     "suppliers": "Hilfe zu Lieferanten",
     "openAria": "{{label}} öffnen"

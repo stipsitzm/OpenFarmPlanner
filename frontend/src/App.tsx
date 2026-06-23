@@ -58,6 +58,7 @@ import LocalFloristOutlinedIcon from '@mui/icons-material/LocalFloristOutlined';
 import EventNoteOutlinedIcon from '@mui/icons-material/EventNoteOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined';
+import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -133,6 +134,7 @@ const Cultures = React.lazy(() => import('./pages/Cultures'));
 const PlantingPlans = React.lazy(() => import('./pages/PlantingPlans'));
 const GanttChart = React.lazy(() => import('./pages/GanttChart'));
 const SeedDemandPage = React.lazy(() => import('./pages/SeedDemand'));
+const YieldOverviewPage = React.lazy(() => import('./pages/YieldOverview'));
 const Suppliers = React.lazy(() => import('./pages/Suppliers'));
 
 interface SnackbarState {
@@ -362,6 +364,7 @@ function RootLayout() {
           : item.to.includes('cultures') ? <LocalFloristOutlinedIcon fontSize="small" />
             : item.to.includes('anbauplaene') ? <EventNoteOutlinedIcon fontSize="small" />
               : item.to.includes('gantt-chart') ? <CalendarMonthOutlinedIcon fontSize="small" />
+                : item.to.includes('yield-overview') ? <BarChartOutlinedIcon fontSize="small" />
                 : item.to.includes('seed-demand') ? <ScienceOutlinedIcon fontSize="small" />
                   : <LocalShippingOutlinedIcon fontSize="small" />,
     })),
@@ -804,6 +807,7 @@ function RootLayout() {
     if (location.pathname.startsWith('/app/cultures')) return { pageKey: 'cultures' as const, label: t('pageHelp.cultures') };
     if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { pageKey: 'plantingPlans' as const, label: t('pageHelp.plantingPlans') };
     if (location.pathname.startsWith('/app/gantt-chart')) return { pageKey: 'calendar' as const, label: t('pageHelp.calendar') };
+    if (location.pathname.startsWith('/app/yield-overview')) return { pageKey: 'yieldOverview' as const, label: t('pageHelp.yieldOverview') };
     if (location.pathname.startsWith('/app/seed-demand')) return { pageKey: 'seedDemand' as const, label: t('pageHelp.seedDemand') };
     if (location.pathname.startsWith('/app/suppliers')) return { pageKey: 'suppliers' as const, label: t('pageHelp.suppliers') };
     return null;
@@ -2127,6 +2131,7 @@ function createAppRouter(basename: string) {
                 { path: 'suppliers', element: withLazyFallback(<Suppliers />) },
                 { path: 'planting-plans', element: withLazyFallback(<PlantingPlans />) },
                 { path: 'gantt-chart', element: withLazyFallback(<GanttChart />) },
+                { path: 'yield-overview', element: withLazyFallback(<YieldOverviewPage />) },
                 { path: 'seed-demand', element: withLazyFallback(<SeedDemandPage />) },
                 { path: 'project-selection', element: withLazyFallback(<ProjectSelectionPage />) },
                 { path: 'account-settings', element: withLazyFallback(<AccountSettingsPage />) },

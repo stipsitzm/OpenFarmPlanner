@@ -10,6 +10,7 @@ export const MAIN_NAV_ITEMS: MainNavigationItem[] = [
   { to: '/app/cultures', labelKey: 'cultures', keywords: ['kulturen', 'kultur'] },
   { to: '/app/anbauplaene', labelKey: 'plantingPlans', activeAliases: ['/app/planting-plans'], keywords: ['anbaupläne', 'pläne', 'planung'] },
   { to: '/app/gantt-chart', labelKey: 'ganttChart', keywords: ['anbaukalender', 'kalender', 'gantt'] },
+  { to: '/app/yield-overview', labelKey: 'yieldOverview', keywords: ['ertragsübersicht', 'ertrag', 'ernte'] },
   { to: '/app/seed-demand', labelKey: 'seedDemand', keywords: ['saatgutbedarf', 'saatgut'] },
   { to: '/app/suppliers', labelKey: 'suppliers', keywords: ['lieferanten', 'einkauf'] },
 ];

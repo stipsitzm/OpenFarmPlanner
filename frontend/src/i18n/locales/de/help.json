@@ -185,6 +185,11 @@
       "modeEdit": "Bearbeiten",
       "modeViewDescription": "Nur ansehen, navigieren und zoomen",
       "modeEditDescription": "Elemente verschieben und anordnen"
+    },
+    "yieldOverview": {
+      "title": "Hilfe: Ertragsübersicht",
+      "intro": "Die Ertragsübersicht bündelt erwartete Erntemengen aus deinen Anbauplänen. So bleibt der Anbaukalender auf die Planung fokussiert, während Ertragsanalysen auf einer eigenen Seite sichtbar bleiben.",
+      "points": []
     }
   }
 }

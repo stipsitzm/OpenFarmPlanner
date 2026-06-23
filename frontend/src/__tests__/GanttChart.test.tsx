@@ -12,7 +12,6 @@ const mocks = vi.hoisted(() => ({
   bedList: vi.fn(),
   planList: vi.fn(),
   cultureList: vi.fn(),
-  yieldList: vi.fn(),
   planUpdate: vi.fn(),
   ganttProps: vi.fn(),
 }));
@@ -55,7 +54,6 @@ vi.mock('../api/api', async () => {
     bedAPI: { list: mocks.bedList },
     plantingPlanAPI: { list: mocks.planList, update: mocks.planUpdate },
     cultureAPI: { list: mocks.cultureList },
-    yieldCalendarAPI: { list: mocks.yieldList },
   };
 });
 
@@ -156,7 +154,6 @@ beforeEach(() => {
   mocks.fieldList.mockResolvedValue({ data: { results: [{ id: 2, name: 'Feld', location: 1 }] } });
   mocks.bedList.mockResolvedValue({ data: { results: [{ id: 3, name: 'Beet 1', field: 2 }] } });
   mocks.planUpdate.mockResolvedValue({ data: {} });
-  mocks.yieldList.mockResolvedValue({ data: [] });
   topbarContext.setTopbarContextActions.mockReset();
   topbarContext.latestActions = [];
 });
@@ -405,59 +402,6 @@ describe('GanttChartPage', () => {
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
     expect(latestProps?.editMode).toBe(true);
     expect(latestProps?.allowTaskMove).toBe(true);
-  });
-
-  it('fills empty yield weeks between available week entries', async () => {
-    mocks.planList.mockResolvedValue({ data: { results: [{ id: 10, culture: 1, culture_name: 'Kohl', bed: 3, planting_date: '2026-03-01' }] } });
-    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Kohl' }] } });
-    mocks.yieldList.mockResolvedValue({
-      data: [
-        {
-          iso_week: '2026-W13',
-          week_start: '2026-03-23',
-          cultures: [{ culture_id: 1, culture_name: 'Kohl', yield: 0.7, color: '#16a34a' }],
-        },
-        {
-          iso_week: '2026-W15',
-          week_start: '2026-04-06',
-          cultures: [{ culture_id: 1, culture_name: 'Kohl', yield: 0.9, color: '#16a34a' }],
-        },
-      ],
-    });
-
-    render(
-      <MemoryRouter>
-        <CommandProvider>
-          <GanttChartPage />
-        </CommandProvider>
-      </MemoryRouter>,
-    );
-
-    await waitFor(() => expect(screen.getByText('Ertragsverteilung')).toBeInTheDocument());
-    expect(screen.getByText('W13')).toBeInTheDocument();
-    expect(screen.getByText('W14')).toBeInTheDocument();
-    expect(screen.getByText('W15')).toBeInTheDocument();
-    expect(screen.getByTestId('yield-chart-scroll-content')).toHaveStyle({
-      boxSizing: 'border-box',
-      paddingRight: '16px',
-    });
-  });
-
-  it('hides yield distribution area when no yield data is available', async () => {
-    mocks.planList.mockResolvedValue({ data: { results: [{ id: 10, culture: 1, culture_name: 'Kohl', bed: 3, planting_date: '2026-03-01' }] } });
-    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Kohl' }] } });
-    mocks.yieldList.mockResolvedValue({ data: [] });
-
-    render(
-      <MemoryRouter>
-        <CommandProvider>
-          <GanttChartPage />
-        </CommandProvider>
-      </MemoryRouter>,
-    );
-
-    await waitFor(() => expect(screen.getByTestId('mock-gantt')).toBeInTheDocument());
-    expect(screen.queryByText('Ertragsverteilung')).not.toBeInTheDocument();
   });
 
   it('still shows a red load error for real API failures', async () => {

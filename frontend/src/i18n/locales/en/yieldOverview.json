@@ -1,0 +1,25 @@
+{
+  "title": "Yield overview",
+  "intro": "Analyze expected harvest quantities from your planting plans. More yield widgets can be added here later.",
+  "loading": "Loading...",
+  "backToCalendar": "Go to planting calendar",
+  "errors": {
+    "load": "Yield overview could not be loaded."
+  },
+  "chart": {
+    "title": "Yield distribution",
+    "description": "Expected yields per calendar week, calculated from the existing planting plans."
+  },
+  "empty": {
+    "noPlansTitle": "No yield forecast available yet",
+    "noPlansDescription": "Yield forecasts become available once you create planting plans. Expected harvest quantities are then calculated automatically from crop data and planning periods.",
+    "createPlanAction": "Add planting plan",
+    "noYieldTitle": "No expected yields available",
+    "noYieldDescription": "The current planting plans do not have calculable yields yet. Check crop yield data and harvest periods in your planting plans.",
+    "openPlansAction": "Open planting plans"
+  },
+  "future": {
+    "title": "Ready for more yield analysis",
+    "description": "This page is prepared for additional metrics such as weekly and monthly overviews, yield by crop, bed or location, and expected versus actual comparisons."
+  }
+}

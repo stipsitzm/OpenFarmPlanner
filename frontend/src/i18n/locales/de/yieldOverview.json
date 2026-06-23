@@ -1,0 +1,25 @@
+{
+  "title": "Ertragsübersicht",
+  "intro": "Analysiere erwartete Erntemengen aus deinen Anbauplänen. Weitere Auswertungen können hier später ergänzt werden.",
+  "loading": "Laden...",
+  "backToCalendar": "Zum Anbaukalender",
+  "errors": {
+    "load": "Ertragsübersicht konnte nicht geladen werden."
+  },
+  "chart": {
+    "title": "Ertragsverteilung",
+    "description": "Erwartete Erträge pro Kalenderwoche, berechnet aus den bestehenden Anbauplänen."
+  },
+  "empty": {
+    "noPlansTitle": "Noch keine Ertragsprognose verfügbar",
+    "noPlansDescription": "Ertragsprognosen werden verfügbar, sobald du Anbaupläne erstellst. Danach werden die erwarteten Erntemengen automatisch aus den Kulturdaten und Planungszeiträumen berechnet.",
+    "createPlanAction": "Anbauplan hinzufügen",
+    "noYieldTitle": "Keine erwarteten Erträge vorhanden",
+    "noYieldDescription": "Für die vorhandenen Anbaupläne gibt es aktuell keine berechenbaren Erträge. Prüfe die Ertragsangaben deiner Kulturen und die Erntezeiträume der Anbaupläne.",
+    "openPlansAction": "Anbaupläne öffnen"
+  },
+  "future": {
+    "title": "Bereit für weitere Ertragsauswertungen",
+    "description": "Diese Seite ist für zusätzliche Kennzahlen vorbereitet, zum Beispiel Wochen- und Monatsübersichten, Ertrag nach Kultur, Beet oder Standort sowie Soll-Ist-Vergleiche."
+  }
+}

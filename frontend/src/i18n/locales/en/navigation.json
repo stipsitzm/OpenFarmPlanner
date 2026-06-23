@@ -6,6 +6,7 @@
   "suppliers": "Suppliers",
   "plantingPlans": "Planting plans",
   "ganttChart": "Planting calendar",
+  "yieldOverview": "Yield overview",
   "seedDemand": "Seed demand",
   "graphicalFields": "Graphical view",
   "accountSettings": "Account settings",
@@ -56,6 +57,7 @@
     "cultures": "Help for cultures",
     "plantingPlans": "Help for planting plans",
     "calendar": "Help for planting calendar",
+    "yieldOverview": "Help for yield overview",
     "seedDemand": "Help for seed demand",
     "suppliers": "Help for suppliers",
     "openAria": "Open {{label}}"

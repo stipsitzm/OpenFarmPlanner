@@ -16,6 +16,7 @@ export const MAIN_ROUTES = [
   { key: 'kulturen', path: '/app/cultures', ready: /Kulturen/i },
   { key: 'anbauplaene', path: '/app/anbauplaene', ready: /Anbaupläne|Anbauplan/i },
   { key: 'anbaukalender', path: '/app/gantt-chart', ready: /Anbaukalender|Kalender/i },
+  { key: 'ertragsuebersicht', path: '/app/yield-overview', ready: /Ertragsübersicht|Ertragsverteilung|Ertragsprognose/i },
   { key: 'saatgutbedarf', path: '/app/seed-demand', ready: /Saatgutbedarf/i },
   { key: 'lieferanten', path: '/app/suppliers', ready: /Lieferanten/i },
 ] as const;

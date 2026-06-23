@@ -28,13 +28,11 @@ import {
   fieldAPI,
   locationAPI,
   plantingPlanAPI,
-  yieldCalendarAPI,
   type Bed,
   type Culture,
   type Field,
   type Location,
   type PlantingPlan,
-  type YieldCalendarWeek,
 } from '../api/api';
 import GanttChart, { ViewMode } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
@@ -66,20 +64,6 @@ import {
   getSegmentedActionButtonSx,
   segmentedButtonGroupSx,
 } from '../components/buttons/segmentedControlStyles';
-
-interface WeeklyYieldCultureMeta {
-  id: number;
-  name: string;
-  color: string;
-}
-
-interface WeeklyYieldChartColumn {
-  isoWeek: string;
-  weekLabel: string;
-  monthLabel: string;
-  cultures: YieldCalendarWeek['cultures'];
-  totalYield: number;
-}
 
 type CalendarMode = 'occupancy' | 'seedlings';
 
@@ -149,14 +133,7 @@ function formatDateToAPI(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function formatIsoWeek(date: Date): string {
-  const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const day = utcDate.getUTCDay() || 7;
-  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
-  const weekNumber = Math.ceil((((utcDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  return `${utcDate.getUTCFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
-}
+
 
 function GanttChartPage() {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
@@ -175,7 +152,6 @@ function GanttChartPage() {
   const [beds, setBeds] = useState<Bed[]>([]);
   const [plantingPlans, setPlantingPlans] = useState<PlantingPlan[]>([]);
   const [cultures, setCultures] = useState<Culture[]>([]);
-  const [weeklyYield, setWeeklyYield] = useState<YieldCalendarWeek[]>([]);
   const [ganttRenderKey, setGanttRenderKey] = useState(0);
 
   const calendarViewStorageKey = useMemo(
@@ -267,7 +243,6 @@ function GanttChartPage() {
       setBeds([]);
       setPlantingPlans([]);
       setCultures([]);
-      setWeeklyYield([]);
       return;
     }
     const fetchData = async (): Promise<void> => {
@@ -275,13 +250,12 @@ function GanttChartPage() {
         setLoading(true);
         setError(null);
 
-        const [locationsRes, fieldsRes, bedsRes, plansRes, culturesRes, weeklyYieldRes] = await Promise.all([
+        const [locationsRes, fieldsRes, bedsRes, plansRes, culturesRes] = await Promise.all([
           locationAPI.list(),
           fieldAPI.list(),
           bedAPI.list(),
           plantingPlanAPI.list(),
           cultureAPI.list(),
-          yieldCalendarAPI.list(displayYear),
         ]);
 
         setLocations(locationsRes.data.results);
@@ -289,7 +263,6 @@ function GanttChartPage() {
         setBeds(bedsRes.data.results);
         setPlantingPlans(plansRes.data.results);
         setCultures(culturesRes.data.results);
-        setWeeklyYield(weeklyYieldRes.data);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(t('ganttChart:errors.load'));
@@ -300,15 +273,6 @@ function GanttChartPage() {
 
     void fetchData();
   }, [displayYear, shouldShowProjectRequiredState, t]);
-
-  const refreshWeeklyYield = useCallback(async (): Promise<void> => {
-    try {
-      const weeklyYieldRes = await yieldCalendarAPI.list(displayYear);
-      setWeeklyYield(weeklyYieldRes.data);
-    } catch (err) {
-      console.error('Error refreshing weekly yield data:', err);
-    }
-  }, [displayYear]);
 
   const refreshPlantingPlans = useCallback(async (): Promise<void> => {
     const plansRes = await plantingPlanAPI.list();
@@ -357,8 +321,6 @@ function GanttChartPage() {
         entry.id === planId ? response.data : entry
       )));
       setError(null);
-
-      await refreshWeeklyYield();
     } catch (err) {
       console.error('Error updating planting plan:', err);
       setError(extractApiErrorMessage(err, t, t('ganttChart:errors.updatePlan')));
@@ -644,74 +606,8 @@ function GanttChartPage() {
     </Box>
   ), [t]);
 
-  const { chartData, chartCultures, maxTotalYield } = useMemo(() => {
-    const cultureMeta = new Map<number, WeeklyYieldCultureMeta>();
-    const weekMap = new Map(weeklyYield.map((week) => [week.week_start, week]));
-    const sortedByStart = [...weeklyYield].sort((left, right) => left.week_start.localeCompare(right.week_start));
-    if (sortedByStart.length === 0) {
-      return {
-        chartData: [] as WeeklyYieldChartColumn[],
-        chartCultures: [] as WeeklyYieldCultureMeta[],
-        maxTotalYield: 0,
-      };
-    }
-
-    const startDateRange = parseDateString(sortedByStart[0].week_start);
-    const endDateRange = parseDateString(sortedByStart[sortedByStart.length - 1].week_start);
-
-    const rows: WeeklyYieldChartColumn[] = [];
-    const currentDate = new Date(startDateRange);
-    while (currentDate <= endDateRange) {
-      const weekStart = formatDateToAPI(currentDate);
-      const week = weekMap.get(weekStart);
-      const weekCultures = week?.cultures || [];
-      const culturesForWeek = weekCultures.map((entry) => {
-        if (!cultureMeta.has(entry.culture_id)) {
-          cultureMeta.set(entry.culture_id, {
-            id: entry.culture_id,
-            name: entry.culture_name,
-            color: entry.color,
-          });
-        }
-        return entry;
-      });
-      const totalYield = culturesForWeek.reduce((sum, item) => sum + item.yield, 0);
-      const weekStartDate = parseDateString(weekStart);
-      const monthLabel = weekStartDate.toLocaleDateString('de-DE', { month: 'short' });
-      const isoWeek = week?.iso_week || formatIsoWeek(weekStartDate);
-      rows.push({
-        isoWeek,
-        weekLabel: isoWeek.split('-W')[1] ? `W${isoWeek.split('-W')[1]}` : isoWeek,
-        monthLabel,
-        cultures: culturesForWeek,
-        totalYield,
-      });
-      currentDate.setDate(currentDate.getDate() + 7);
-    }
-
-    const sortedCultures = [...cultureMeta.values()].sort((left, right) => left.name.localeCompare(right.name, 'de'));
-    const maxYield = rows.reduce((max, row) => Math.max(max, row.totalYield), 0);
-
-    return {
-      chartData: rows,
-      chartCultures: sortedCultures,
-      maxTotalYield: maxYield,
-    };
-  }, [weeklyYield]);
-  const hasYieldData = chartData.length > 0;
-
   useTopbarContextActions(setTopbarContextActions, viewModeActions);
 
-  const yAxisTicks = useMemo(() => {
-    const tickCount = 5;
-    if (maxTotalYield <= 0) {
-      return [0];
-    }
-    return Array.from({ length: tickCount }, (_, idx) => {
-      const value = (maxTotalYield / (tickCount - 1)) * idx;
-      return Number(value.toFixed(1));
-    });
-  }, [maxTotalYield]);
 
 
   if (loading) {
@@ -822,79 +718,6 @@ function GanttChartPage() {
           </PageSurface>
         )}
 
-        {hasCalendarRequirements && calendarMode === 'occupancy' && hasYieldData ? (
-          <PageSurface variant="fullWorkspace" sx={{ mt: 3 }}>
-          <Box className="gantt-container-wrapper" sx={{ p: 2, border: '1px solid', borderColor: 'surface.surfaceSoftBorder', borderRadius: 2, bgcolor: 'surface.surfaceBackground' }}>
-            <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
-              {t('ganttChart:yieldDistributionTitle')}
-            </Typography>
-              <Box sx={{ width: '100%' }}>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                  {chartCultures.map((culture) => (
-                    <Box key={culture.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <Box sx={{ width: 12, height: 12, borderRadius: '2px', backgroundColor: culture.color }} />
-                      <Typography variant="body2">{culture.name}</Typography>
-                    </Box>
-                  ))}
-                </Box>
-
-                <Box sx={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: 1, alignItems: 'start' }}>
-                  <Box>
-                    <Box sx={{ display: 'flex', flexDirection: 'column-reverse', justifyContent: 'space-between', height: 260, pr: 1 }}>
-                      {yAxisTicks.map((tick, index) => (
-                        <Typography key={`${tick}-${index}`} variant="caption" sx={{ textAlign: 'right', color: 'text.secondary' }}>
-                          {tick.toFixed(1)} kg
-                        </Typography>
-                      ))}
-                    </Box>
-                    <Box sx={{ height: 44 }} />
-                  </Box>
-
-                  <Box sx={{ overflowX: 'auto', pb: 0.5 }}>
-                    <Box
-                      data-testid="yield-chart-scroll-content"
-                      sx={{
-                        width: Math.max(chartData.length * 40 + 32, 420),
-                        boxSizing: 'border-box',
-                        pr: 2,
-                      }}
-                    >
-                      <Box sx={{ borderLeft: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db', height: 260, px: 1, display: 'flex', alignItems: 'flex-end', gap: 0.75 }}>
-                        {chartData.map((week) => (
-                          <Box key={week.isoWeek} sx={{ width: 34, flex: '0 0 34px', height: '100%', display: 'flex', alignItems: 'flex-end' }}>
-                            <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column-reverse', justifyContent: 'flex-start' }}>
-                              {week.cultures.map((culture) => (
-                                <Tooltip key={`${week.isoWeek}-${culture.culture_id}`} title={`${culture.culture_name}: ${culture.yield.toFixed(2)} kg`}>
-                                  <Box
-                                    sx={{
-                                      width: '100%',
-                                      height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
-                                      minHeight: culture.yield > 0 ? '2px' : 0,
-                                      backgroundColor: culture.color,
-                                    }}
-                                  />
-                                </Tooltip>
-                              ))}
-                            </Box>
-                          </Box>
-                        ))}
-                      </Box>
-
-                      <Box sx={{ height: 44, px: 1, display: 'flex', gap: 0.75, alignItems: 'flex-start' }}>
-                        {chartData.map((week) => (
-                          <Box key={`${week.isoWeek}-axis`} sx={{ width: 34, flex: '0 0 34px', textAlign: 'center' }}>
-                            <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, lineHeight: 1.2 }}>{week.weekLabel}</Typography>
-                            <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', lineHeight: 1.2 }}>{week.monthLabel}</Typography>
-                          </Box>
-                        ))}
-                      </Box>
-                    </Box>
-                  </Box>
-                </Box>
-              </Box>
-          </Box>
-          </PageSurface>
-        ) : null}
     </PageContainer>
   );
 }
