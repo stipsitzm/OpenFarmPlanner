@@ -171,7 +171,7 @@ describe('FieldsBedsPage', () => {
     expect(addLocationLink).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Parzelle hinzufügen' })).toHaveLength(1);
     expect(registeredUiState.topbarActions.find((action) => action.id === 'fields-global-add-field')?.menuActions?.map((action) => action.label))
-      .toEqual(['Parzelle hinzufügen', 'Standort hinzufügen']);
+      .toEqual(['Standort hinzufügen']);
     expect(registeredUiState.topbarActions.find((action) => action.id === 'fields-global-add-location')?.hidden).toBe(true);
     expect(screen.queryByText('Tipp: Rechtsklick auf eine Tabellenzeile öffnet weitere Aktionen.')).not.toBeInTheDocument();
     expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();

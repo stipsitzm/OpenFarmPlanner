@@ -284,11 +284,6 @@ export default function FieldsBedsPage() {
           ariaLabel: t('hierarchy:actions.addFieldDropdown'),
           menuActions: [
             {
-              id: 'fields-global-add-field-menu-item',
-              label: t('hierarchy:actions.addField'),
-              onClick: requestInlineFieldCreation,
-            },
-            {
               id: 'fields-global-add-location-menu-item',
               label: t('hierarchy:actions.createLocation'),
               onClick: openAddLocationDialog,
