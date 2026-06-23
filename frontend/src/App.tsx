@@ -1117,28 +1117,41 @@ function RootLayout() {
             });
           })()}
           {topbarPrimaryAction ? (
-            <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
-              <Button
-                size="small"
-                variant="contained"
-                onClick={(event) => {
-                  if (topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0) {
-                    setTopbarPrimaryActionMenuAnchor(event.currentTarget);
-                    return;
-                  }
-                  handleTopbarPrimaryAction();
-                }}
-                aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
-                aria-controls={topbarPrimaryActionMenuAnchor ? 'topbar-primary-action-menu' : undefined}
-                aria-haspopup={topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0 ? 'true' : undefined}
-                aria-expanded={Boolean(topbarPrimaryActionMenuAnchor)}
-                startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
-                endIcon={!isPhone && topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0 ? <KeyboardArrowDownIcon fontSize="small" /> : undefined}
-                sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
-              >
-                {isPhone ? <AddIcon fontSize="small" /> : topbarPrimaryAction.label}
-              </Button>
-            </Tooltip>
+            topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0 ? (
+              <ButtonGroup variant="contained" size="small" sx={{ flexShrink: 0 }}>
+                <Button
+                  startIcon={<AddIcon fontSize="small" />}
+                  onClick={topbarPrimaryAction.onClick}
+                  aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1.25 }}
+                >
+                  {topbarPrimaryAction.label}
+                </Button>
+                <Button
+                  aria-label="Weitere Optionen"
+                  aria-controls={topbarPrimaryActionMenuAnchor ? 'topbar-primary-action-menu' : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={Boolean(topbarPrimaryActionMenuAnchor)}
+                  onClick={(event) => setTopbarPrimaryActionMenuAnchor(event.currentTarget)}
+                  sx={{ px: 0.5, minWidth: 28 }}
+                >
+                  <KeyboardArrowDownIcon fontSize="small" />
+                </Button>
+              </ButtonGroup>
+            ) : (
+              <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={handleTopbarPrimaryAction}
+                  aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
+                  startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
+                >
+                  {isPhone ? <AddIcon fontSize="small" /> : topbarPrimaryAction.label}
+                </Button>
+              </Tooltip>
+            )
           ) : null}
             </Box>
           {topbarPrimaryAction?.menuActions && topbarPrimaryAction.menuActions.length > 0 ? (
@@ -1147,6 +1160,16 @@ function RootLayout() {
               anchorEl={topbarPrimaryActionMenuAnchor}
               open={Boolean(topbarPrimaryActionMenuAnchor)}
               onClose={() => setTopbarPrimaryActionMenuAnchor(null)}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              slotProps={{
+                paper: {
+                  sx: {
+                    mt: 0.5,
+                    minWidth: topbarPrimaryActionMenuAnchor?.parentElement?.offsetWidth,
+                  },
+                },
+              }}
             >
               {topbarPrimaryAction.menuActions.map((action) => (
                 <MenuItem
@@ -1374,6 +1397,9 @@ function RootLayout() {
                   anchorEl={topbarPrimaryActionMenuAnchor}
                   open={Boolean(topbarPrimaryActionMenuAnchor)}
                   onClose={() => setTopbarPrimaryActionMenuAnchor(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                  slotProps={{ paper: { sx: { mt: 0.5 } } }}
                 >
                   {topbarPrimaryAction.menuActions.map((action) => (
                     <MenuItem
