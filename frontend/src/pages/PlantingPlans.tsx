@@ -53,7 +53,7 @@ import {
   toNumericValue,
   formatAreaM2,
   buildBedDisplayLabel,
-  buildAreaColumnHeaderLabel,
+  getAllowedCultivationTypesForCulture,
 } from "./plantingPlansUtils";
 import { usePlantingPlanHierarchy, type CultivationTypeSelectOption } from "./usePlantingPlanHierarchy";
 import PageContainer from "../components/layout/PageContainer";
@@ -61,10 +61,9 @@ import PageSurface from "../components/layout/PageSurface";
 import {
   plantingPlanAPI,
   type PlantingPlan,
-  type Culture,
   type Bed,
 } from "../api/api";
-import type { CultivationType, Field, Location } from "../api/types";
+import type { CultivationType, Field } from "../api/types";
 import { extractApiErrorMessage } from "../api/errors";
 import {
   formatLocalizedNumber,
@@ -101,7 +100,6 @@ import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction, getProjectSetupActions } from "./requirementFlow";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
-import { collectHierarchyAvailability } from "../components/planting-plans/areaHierarchySelection";
 import EmptyStateCard from "../components/project/EmptyStateCard";
 
 export {
@@ -482,11 +480,9 @@ function PlantingPlans() {
     locationById,
     fieldById,
     bedById,
-    hierarchyAvailability,
     bedOptions,
     bedLabelById,
     cultivationTypeOptions,
-    cultivationTypeOptionsByCultureId,
     hasMultipleLocationsWithBeds,
     fieldBedColumnLabel,
     areaColumnLabel,

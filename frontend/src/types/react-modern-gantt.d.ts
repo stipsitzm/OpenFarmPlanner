@@ -71,6 +71,7 @@ declare module 'react-modern-gantt' {
     allowTaskMove?: boolean;
     showProgress?: boolean;
     darkMode?: boolean;
+    leftColumnWidth?: number;
     onTaskUpdate?: (groupId: string, task: GanttTaskLike) => void | Promise<void>;
     renderTooltip?: (props: GanttTooltipProps) => ReactNode;
     renderTask?: (props: GanttTaskRenderProps) => ReactNode;

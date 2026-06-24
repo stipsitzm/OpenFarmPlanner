@@ -75,7 +75,7 @@ export function usePublicCultureLibrary({
     try {
       setPublicLibraryImportingId(publicCulture.id);
       const response = await publicCultureAPI.importToProject(publicCulture.id);
-      await onImportSuccess(response.data.id);
+      await onImportSuccess(response.data.id!);
       setPublicLibraryOpen(false);
       showSnackbar(t('library.importSuccess', { name: publicCulture.name }), 'success');
     } catch (error) {

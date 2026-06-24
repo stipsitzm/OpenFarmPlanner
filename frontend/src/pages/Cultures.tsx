@@ -50,7 +50,6 @@ import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import { useCommandContextTag, useRegisterCommands, useRegisterCreateActions } from '../commands/useCommandContext';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
-import { extractApiErrorMessage } from '../api/errors';
 import {
   type SnackbarState,
 } from './culturesPageUtils';
@@ -60,7 +59,7 @@ import {
   getEnrichmentFieldLabel,
 } from './culturesEnrichmentUtils';
 import { createCulturesCommandSpecs } from './culturesCommandSpecs';
-import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
+import { canRunEnrichmentForCulture } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
 import {
   formatHistoryChangeValue,
@@ -259,7 +258,6 @@ function Cultures() {
     dialogCostInfo,
     enrichmentCostBanner,
     selectedCultureNeedsCompletion,
-    handleCancelEnrichment,
     handleEnrichCurrent,
     handleEnrichAll,
     toggleSuggestionField,

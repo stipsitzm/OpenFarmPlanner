@@ -57,13 +57,11 @@ import { useHierarchyData, type HierarchyDataState } from "../components/hierarc
 import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { useHierarchyDelete } from "../components/hierarchy/hooks/useHierarchyDelete";
-import type { PendingHierarchyDeletion } from "../components/hierarchy/hooks/useHierarchyDelete";
 import { usePersistentSortModel } from "../hooks/usePersistentSortModel";
-import { fieldAPI, bedAPI, locationAPI, type Bed, type Field, type Location as FarmLocation } from "../api/api";
+import { fieldAPI, bedAPI, locationAPI, type Field } from "../api/api";
 import {
   buildHierarchyIndex,
   createHierarchyRowsProjector,
-  hasPersistedEntityId,
   type HierarchySortConfig,
 } from "../components/hierarchy/utils/hierarchyUtils";
 import {
@@ -84,7 +82,6 @@ import {
   isPartiallyFilledNamelessNewHierarchyRow,
 } from "../components/hierarchy/utils/hierarchyRowDraft";
 import {
-  parseAreaExpression,
   normalizeAreaValue,
   parseAreaValue,
   parseDimensionValue,
