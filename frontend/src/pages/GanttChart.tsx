@@ -288,6 +288,37 @@ function GanttChartPage() {
   const currentYear = new Date().getFullYear();
   const [displayYear] = useState(currentYear);
 
+  const fetchCalendarData = useCallback(async (options: { showLoading?: boolean } = {}): Promise<void> => {
+    const { showLoading = true } = options;
+    try {
+      if (showLoading) {
+        setLoading(true);
+      }
+      setError(null);
+
+      const [locationsRes, fieldsRes, bedsRes, plansRes, culturesRes] = await Promise.all([
+        locationAPI.listAll(),
+        fieldAPI.listAll(),
+        bedAPI.listAll(),
+        plantingPlanAPI.listAll(),
+        cultureAPI.listAll(),
+      ]);
+
+      setLocations(locationsRes.results);
+      setFields(fieldsRes.results);
+      setBeds(bedsRes.results);
+      setPlantingPlans(plansRes.results);
+      setCultures(culturesRes.results);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError(t('ganttChart:errors.load'));
+    } finally {
+      if (showLoading) {
+        setLoading(false);
+      }
+    }
+  }, [t]);
+
   useEffect(() => {
     if (shouldShowProjectRequiredState) {
       setLoading(false);
@@ -299,34 +330,30 @@ function GanttChartPage() {
       setCultures([]);
       return;
     }
-    const fetchData = async (): Promise<void> => {
-      try {
-        setLoading(true);
-        setError(null);
 
-        const [locationsRes, fieldsRes, bedsRes, plansRes, culturesRes] = await Promise.all([
-          locationAPI.listAll(),
-          fieldAPI.listAll(),
-          bedAPI.listAll(),
-          plantingPlanAPI.listAll(),
-          cultureAPI.listAll(),
-        ]);
+    void fetchCalendarData();
+  }, [displayYear, fetchCalendarData, shouldShowProjectRequiredState]);
 
-        setLocations(locationsRes.results);
-        setFields(fieldsRes.results);
-        setBeds(bedsRes.results);
-        setPlantingPlans(plansRes.results);
-        setCultures(culturesRes.results);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError(t('ganttChart:errors.load'));
-      } finally {
-        setLoading(false);
+  useEffect(() => {
+    if (shouldShowProjectRequiredState) {
+      return undefined;
+    }
+
+    const refreshVisibleCalendar = (): void => {
+      if (document.visibilityState === 'hidden') {
+        return;
       }
+      void fetchCalendarData({ showLoading: false });
     };
 
-    void fetchData();
-  }, [displayYear, shouldShowProjectRequiredState, t]);
+    window.addEventListener('focus', refreshVisibleCalendar);
+    document.addEventListener('visibilitychange', refreshVisibleCalendar);
+
+    return () => {
+      window.removeEventListener('focus', refreshVisibleCalendar);
+      document.removeEventListener('visibilitychange', refreshVisibleCalendar);
+    };
+  }, [fetchCalendarData, shouldShowProjectRequiredState]);
 
   const refreshPlantingPlans = useCallback(async (): Promise<void> => {
     const plans = await plantingPlanAPI.listAll();

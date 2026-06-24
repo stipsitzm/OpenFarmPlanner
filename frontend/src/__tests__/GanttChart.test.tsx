@@ -471,6 +471,52 @@ describe('GanttChartPage', () => {
     expect(latestProps?.viewMode).toBe('week');
   });
 
+  it('refreshes calendar data on focus without resetting the timeline view mode', async () => {
+    const initialPlan = {
+      id: 10,
+      culture: 5,
+      culture_name: 'Salat',
+      bed: 3,
+      planting_date: '2026-04-01',
+      harvest_date: '2026-05-01',
+      harvest_end_date: '2026-05-05',
+    };
+    const refreshedPlan = {
+      ...initialPlan,
+      harvest_date: '2026-05-10',
+      harvest_end_date: '2026-05-20',
+    };
+    mocks.planList
+      .mockResolvedValueOnce({ data: { results: [initialPlan] } })
+      .mockResolvedValue({ data: { results: [refreshedPlan] } });
+    mocks.cultureList.mockResolvedValue({
+      data: {
+        results: [{
+          id: 5,
+          name: 'Salat',
+          growth_duration_days: 39,
+          harvest_duration_days: 10,
+        }],
+      },
+    });
+
+    renderWithAuth();
+
+    await screen.findByText('Feld / Beet 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Woche' }));
+    await waitFor(() => {
+      expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.viewMode).toBe('week');
+    });
+
+    fireEvent.focus(window);
+
+    await waitFor(() => expect(mocks.planList).toHaveBeenCalledTimes(2));
+    const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
+    expect(latestProps?.viewMode).toBe('week');
+    expect(latestProps?.tasks[0]?.tasks[0]?.endDate).toEqual(new Date('2026-05-10T00:00:00.000Z'));
+    expect(latestProps?.tasks[0]?.tasks[1]?.endDate).toEqual(new Date('2026-05-20T00:00:00.000Z'));
+  });
+
   it('keeps large projects renderable by windowing rows passed to the Gantt library', async () => {
     const rowCount = 200;
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => undefined);

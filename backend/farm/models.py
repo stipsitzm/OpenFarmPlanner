@@ -1034,6 +1034,30 @@ class Culture(TimestampedModel):
             changed_fields=changed_fields,
         )
 
+        if any(field in changed_fields for field in ('growth_duration_days', 'harvest_duration_days')):
+            self._recalculate_related_planting_plan_dates()
+
+    def _recalculate_related_planting_plan_dates(self) -> None:
+        """Update stored planting-plan harvest dates after culture timing changes."""
+        plans_to_update = []
+        now = timezone.now()
+        for plan in self.planting_plans.all():
+            previous_harvest_date = plan.harvest_date
+            previous_harvest_end_date = plan.harvest_end_date
+            plan.recalculate_harvest_dates()
+            if (
+                plan.harvest_date != previous_harvest_date
+                or plan.harvest_end_date != previous_harvest_end_date
+            ):
+                plan.updated_at = now
+                plans_to_update.append(plan)
+
+        if plans_to_update:
+            PlantingPlan.objects.bulk_update(
+                plans_to_update,
+                ['harvest_date', 'harvest_end_date', 'updated_at'],
+            )
+
     def _generate_display_color(self) -> str:
         """Generate a display color using a Golden Angle HSL strategy."""
         # Use the max ID as index to avoid race conditions (None -> 0).
@@ -1422,24 +1446,29 @@ class PlantingPlan(TimestampedModel):
             elif self.culture.cultivation_type:
                 self.cultivation_type = self.culture.cultivation_type
 
-        # Calculate harvest dates if needed.
         if should_recalculate and self.planting_date and self.culture:
-            # Calculate harvest start date using growth_duration_days only.
-            if self.culture.growth_duration_days:
-                self.harvest_date = self.planting_date + timedelta(
-                    days=self.culture.growth_duration_days
-                )
-            else:
-                self.harvest_date = self.planting_date  # Fallback: no offset when value is missing.
-            # Calculate harvest end date.
-            if self.culture.growth_duration_days and self.culture.harvest_duration_days:
-                self.harvest_end_date = self.harvest_date + timedelta(
-                    days=self.culture.harvest_duration_days
-                )
-            else:
-                self.harvest_end_date = self.harvest_date
+            self.recalculate_harvest_dates()
         
         super().save(*args, **kwargs)
+
+    def recalculate_harvest_dates(self) -> None:
+        """Calculate stored harvest dates from the current culture timing values."""
+        if not self.planting_date or not self.culture:
+            return
+
+        if self.culture.growth_duration_days:
+            self.harvest_date = self.planting_date + timedelta(
+                days=self.culture.growth_duration_days
+            )
+        else:
+            self.harvest_date = self.planting_date
+
+        if self.culture.growth_duration_days and self.culture.harvest_duration_days:
+            self.harvest_end_date = self.harvest_date + timedelta(
+                days=self.culture.harvest_duration_days
+            )
+        else:
+            self.harvest_end_date = self.harvest_date
 
     def __str__(self) -> str:
         """Return a string combining culture, bed, and planting date."""

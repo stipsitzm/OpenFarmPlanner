@@ -441,6 +441,25 @@ class PlantingPlanModelTest(TestCase):
         # Harvest date should recalculate with new culture's timing
         new_expected_harvest = planting_date + timedelta(days=90)
         self.assertEqual(plan.harvest_date, new_expected_harvest)
+
+    def test_harvest_dates_recalculate_when_culture_timing_changes(self):
+        planting_date = date(2024, 3, 1)
+        plan = PlantingPlan.objects.create(
+            culture=self.culture,
+            bed=self.bed,
+            planting_date=planting_date,
+            quantity=100,
+            project=self.project,
+        )
+
+        self.culture.growth_duration_days = 80
+        self.culture.harvest_duration_days = 5
+        self.culture.save(update_fields=['growth_duration_days', 'harvest_duration_days'])
+
+        plan.refresh_from_db()
+        expected_harvest_start = planting_date + timedelta(days=80)
+        self.assertEqual(plan.harvest_date, expected_harvest_start)
+        self.assertEqual(plan.harvest_end_date, expected_harvest_start + timedelta(days=5))
     
     def test_harvest_end_date_with_growth_and_harvest_duration(self):
         """Test that harvest_end_date is calculated from growth + harvest duration."""
