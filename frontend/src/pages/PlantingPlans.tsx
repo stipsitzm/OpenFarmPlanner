@@ -85,7 +85,6 @@ import {
   getPlainExcerpt,
   showClipboardSnackbar,
   toIsoDateString,
-  GermanDateEditCell,
   parseGermanDateText,
   formatDateAsGerman,
 } from "../components/data-grid";
@@ -912,7 +911,6 @@ function PlantingPlans() {
           const hasError = !params.props.value;
           return { ...params.props, error: hasError };
         },
-        renderEditCell: (params) => <GermanDateEditCell {...params} />,
       },
       {
         field: "harvest_date",

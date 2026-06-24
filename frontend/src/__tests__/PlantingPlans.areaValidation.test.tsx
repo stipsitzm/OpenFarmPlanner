@@ -271,6 +271,7 @@ describe("PlantingPlans save-time area validation", () => {
       expect.objectContaining({ minWidth: 142, width: 142, maxWidth: 142 }),
       expect.objectContaining({ minWidth: 142, width: 142, maxWidth: 142 }),
     ]);
+    expect(dateColumns.every((column) => column?.renderEditCell === undefined)).toBe(true);
   });
 
   it("shows bed-limit dialog when requested area exceeds bed area", async () => {
