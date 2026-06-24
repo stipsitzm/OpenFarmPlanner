@@ -2,9 +2,31 @@
  * Generic edit cell for date fields in editable data grids.
  */
 
-import { memo, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { TextField } from '@mui/material';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import { IconButton, InputAdornment, TextField } from '@mui/material';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FocusEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent,
+} from 'react';
+import { useTranslation } from '../../i18n';
+import { formatDateAsGerman, parseGermanDateText } from './GermanDateEditCell';
+
+type DateSegment = 'day' | 'month' | 'year';
+
+const DATE_SEGMENTS: DateSegment[] = ['day', 'month', 'year'];
+const SEGMENT_RANGES: Record<DateSegment, [number, number]> = {
+  day: [0, 2],
+  month: [3, 5],
+  year: [6, 10],
+};
 
 export const toIsoDateString = (value: unknown): string | null => {
   if (value instanceof Date) {
@@ -25,20 +47,66 @@ const toDateValue = (value: unknown): Date | null => {
   }
   if (typeof value === 'string' && value.trim().length > 0) {
     const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
+    return Number.isNaN(parsed.getTime()) ? parseGermanDateText(value) : parsed;
   }
   return null;
 };
 
-const addDays = (date: Date, days: number): Date => {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + days);
-  return nextDate;
+const getDaysInMonth = (year: number, monthIndex: number): number =>
+  new Date(year, monthIndex + 1, 0).getDate();
+
+const createValidDate = (year: number, monthIndex: number, day: number): Date => {
+  const clampedDay = Math.min(day, getDaysInMonth(year, monthIndex));
+  return new Date(year, monthIndex, clampedDay);
+};
+
+const adjustDateSegment = (date: Date, segment: DateSegment, delta: number): Date => {
+  if (segment === 'day') {
+    const nextDate = new Date(date);
+    nextDate.setDate(nextDate.getDate() + delta);
+    return nextDate;
+  }
+
+  if (segment === 'month') {
+    const targetMonthIndex = date.getMonth() + delta;
+    const targetYear = date.getFullYear() + Math.floor(targetMonthIndex / 12);
+    const normalizedMonthIndex = ((targetMonthIndex % 12) + 12) % 12;
+    return createValidDate(targetYear, normalizedMonthIndex, date.getDate());
+  }
+
+  return createValidDate(date.getFullYear() + delta, date.getMonth(), date.getDate());
+};
+
+const getSegmentFromSelection = (selectionStart: number | null): DateSegment => {
+  const cursor = selectionStart ?? 0;
+  if (cursor >= SEGMENT_RANGES.year[0]) {
+    return 'year';
+  }
+  if (cursor >= SEGMENT_RANGES.month[0]) {
+    return 'month';
+  }
+  return 'day';
 };
 
 function DateEditCellComponent(params: GridRenderEditCellParams) {
+  const { t } = useTranslation(['plantingPlans']);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const inputValue = toIsoDateString(params.value) ?? '';
+  const pickerInputRef = useRef<HTMLInputElement | null>(null);
+  const [text, setText] = useState(formatDateAsGerman(params.value as Date | string | null));
+  const [activeSegment, setActiveSegment] = useState<DateSegment>('day');
+
+  const selectSegment = useCallback((segment: DateSegment): void => {
+    const input = inputRef.current;
+    const [start, end] = SEGMENT_RANGES[segment];
+    setActiveSegment(segment);
+    window.requestAnimationFrame(() => {
+      input?.setSelectionRange(start, end);
+    });
+  }, []);
+
+  useEffect(() => {
+    setText(formatDateAsGerman(params.value as Date | string | null));
+  }, [params.value]);
 
   useEffect(() => {
     if (!params.hasFocus) {
@@ -46,52 +114,146 @@ function DateEditCellComponent(params: GridRenderEditCellParams) {
     }
 
     inputRef.current?.focus();
-  }, [params.hasFocus]);
+    selectSegment(activeSegment);
+  }, [activeSegment, params.hasFocus, selectSegment]);
+
+  const commitDate = useCallback(async (nextValue: Date | null): Promise<void> => {
+    setText(formatDateAsGerman(nextValue));
+    await params.api.setEditCellValue({
+      id: params.id,
+      field: params.field,
+      value: nextValue,
+    });
+  }, [params.api, params.field, params.id]);
+
+  const handleTextChange = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const nextText = event.target.value;
+    setText(nextText);
+
+    if (nextText.trim() === '') {
+      await params.api.setEditCellValue({
+        id: params.id,
+        field: params.field,
+        value: null,
+      });
+      return;
+    }
+
+    const parsedDate = parseGermanDateText(nextText);
+    if (parsedDate) {
+      await params.api.setEditCellValue({
+        id: params.id,
+        field: params.field,
+        value: parsedDate,
+      });
+    }
+  };
+
+  const handleKeyDown = async (event: ReactKeyboardEvent<HTMLInputElement>): Promise<void> => {
+    if (
+      !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)
+      || event.altKey
+      || event.ctrlKey
+      || event.metaKey
+    ) {
+      return;
+    }
+
+    // The DataGrid also consumes arrow keys for cell navigation. While this input is editing,
+    // stop propagation so section navigation and value changes stay inside the date editor.
+    event.preventDefault();
+    event.stopPropagation();
+
+    const currentSegment = getSegmentFromSelection(event.currentTarget.selectionStart);
+
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      const currentIndex = DATE_SEGMENTS.indexOf(currentSegment);
+      const nextIndex = event.key === 'ArrowLeft'
+        ? Math.max(0, currentIndex - 1)
+        : Math.min(DATE_SEGMENTS.length - 1, currentIndex + 1);
+      selectSegment(DATE_SEGMENTS[nextIndex]);
+      return;
+    }
+
+    const currentDate = parseGermanDateText(text) ?? toDateValue(params.value) ?? new Date();
+    const nextDate = adjustDateSegment(currentDate, currentSegment, event.key === 'ArrowUp' ? 1 : -1);
+    await commitDate(nextDate);
+    selectSegment(currentSegment);
+  };
+
+  const handleCalendarButtonClick = (): void => {
+    const pickerInput = pickerInputRef.current;
+    if (!pickerInput) {
+      return;
+    }
+
+    if (typeof pickerInput.showPicker === 'function') {
+      pickerInput.showPicker();
+      return;
+    }
+
+    pickerInput.click();
+  };
+
+  const pickerValue = toIsoDateString(parseGermanDateText(text) ?? params.value) ?? '';
 
   return (
-    <TextField
-      type="date"
-      fullWidth
-      size="small"
-      inputRef={inputRef}
-      value={inputValue}
-      slotProps={{
-        htmlInput: {
-          tabIndex: params.hasFocus ? 0 : -1,
-          onKeyDown: async (event: ReactKeyboardEvent<HTMLInputElement>) => {
-            if (
-              (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')
-              || event.altKey
-              || event.ctrlKey
-              || event.metaKey
-            ) {
-              return;
-            }
-
-            const currentDate = toDateValue(params.value) ?? toDateValue(event.currentTarget.value) ?? new Date();
-            const nextValue = addDays(currentDate, event.key === 'ArrowLeft' ? -1 : 1);
-
-            event.preventDefault();
-            event.stopPropagation();
-            await params.api.setEditCellValue({
-              id: params.id,
-              field: params.field,
-              value: nextValue,
-            });
+    <>
+      <TextField
+        type="text"
+        fullWidth
+        size="small"
+        inputRef={inputRef}
+        value={text}
+        placeholder="TT.MM.JJJJ"
+        slotProps={{
+          htmlInput: {
+            tabIndex: params.hasFocus ? 0 : -1,
+            inputMode: 'numeric',
+            onFocus: (event: FocusEvent<HTMLInputElement>) => selectSegment(getSegmentFromSelection(event.currentTarget.selectionStart)),
+            onClick: (event: MouseEvent<HTMLInputElement>) => selectSegment(getSegmentFromSelection(event.currentTarget.selectionStart)),
+            onKeyDown: handleKeyDown,
           },
-        },
-      }}
-      onChange={async (event) => {
-        const nextValue = event.target.value
-          ? new Date(`${event.target.value}T00:00:00`)
-          : null;
-        await params.api.setEditCellValue({
-          id: params.id,
-          field: params.field,
-          value: nextValue,
-        });
-      }}
-    />
+          input: {
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label={t('dateEditor.openCalendar')}
+                  edge="end"
+                  size="small"
+                  tabIndex={-1}
+                  onClick={handleCalendarButtonClick}
+                >
+                  <CalendarTodayIcon fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ),
+          },
+        }}
+        onChange={(event) => {
+          void handleTextChange(event as ChangeEvent<HTMLInputElement>);
+        }}
+      />
+      <input
+        ref={pickerInputRef}
+        type="date"
+        aria-hidden="true"
+        tabIndex={-1}
+        value={pickerValue}
+        onChange={(event) => {
+          const nextValue = event.target.value ? new Date(`${event.target.value}T00:00:00`) : null;
+          void commitDate(nextValue);
+          inputRef.current?.focus();
+        }}
+        style={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          opacity: 0,
+          pointerEvents: 'none',
+        }}
+      />
+    </>
   );
 }
 
