@@ -87,7 +87,6 @@ import {
   parseDimensionValue,
 } from "../components/hierarchy/utils/hierarchyAreaParsing";
 import {
-  useCommandContextTag,
   useRegisterCommands,
 } from "../commands/useCommandContext";
 import type { CommandSpec } from "../commands/types";
@@ -214,9 +213,6 @@ function FieldsBedsHierarchy({
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
   const touchLongPressTimeoutRef = useRef<number | null>(null);
   const contextMenuOriginRef = useRef<HTMLElement | null>(null);
-
-  useCommandContextTag("areas");
-
 
   // Data fetching
   const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
