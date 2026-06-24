@@ -19,7 +19,9 @@ const mocks = vi.hoisted(() => ({
 }));
 const topbarContext = vi.hoisted(() => ({
   setTopbarContextActions: vi.fn(),
+  setTopbarTitleActions: vi.fn(),
   latestActions: [] as Array<Record<string, unknown>>,
+  latestTitleActions: [] as Array<Record<string, unknown>>,
 }));
 const projectRequirementState = vi.hoisted(() => ({
   shouldShowProjectRequiredState: false,
@@ -30,6 +32,7 @@ const OCCUPANCY_MODE_TOOLTIP =
 const PROPAGATION_MODE_TOOLTIP =
   'Zeigt die Anzuchtphase der Kulturen vor der Pflanzung. Die dargestellten Zeiträume werden aus den Anbauplänen sowie den kulturspezifischen Angaben zur Anzuchtdauer berechnet.';
 const TIMELINE_VIEW_MODE_STORAGE_KEY = 'openFarmPlanner.ganttChart.timelineViewMode.42';
+const GANTT_STATE_STORAGE_KEY = 'openfarmplanner:gantt:42:state';
 
 interface TestTopbarAction {
   id: string;
@@ -41,7 +44,7 @@ interface TestTopbarAction {
 }
 
 const getTopbarAction = (id: string): TestTopbarAction => {
-  const action = topbarContext.latestActions.find((item) => item.id === id) as TestTopbarAction | undefined;
+  const action = topbarContext.latestTitleActions.find((item) => item.id === id) as TestTopbarAction | undefined;
   if (!action) {
     throw new Error(`Missing topbar action: ${id}`);
   }
@@ -112,6 +115,10 @@ vi.mock('react-router-dom', async () => {
         topbarContext.latestActions = actions;
         topbarContext.setTopbarContextActions(actions);
       },
+      setTopbarTitleActions: (actions: Array<Record<string, unknown>>) => {
+        topbarContext.latestTitleActions = actions;
+        topbarContext.setTopbarTitleActions(actions);
+      },
     }),
   };
 });
@@ -132,6 +139,7 @@ vi.mock('react-modern-gantt', () => ({
       showViewModeSelector: boolean;
     }) => ReactNode;
     viewMode?: string;
+    focusMode?: boolean;
     locale?: string;
     localeText?: { title?: string } & Record<string, unknown>;
     maxHeight?: string | number;
@@ -148,6 +156,17 @@ vi.mock('react-modern-gantt', () => ({
           onViewModeChange: vi.fn(),
           showViewModeSelector: true,
         })}
+        <div
+          className="rmg-container"
+          data-testid="mock-gantt-scroll-container"
+          ref={(node) => {
+            if (!node) {
+              return;
+            }
+            Object.defineProperty(node, 'clientWidth', { configurable: true, value: 1000 });
+            Object.defineProperty(node, 'scrollWidth', { configurable: true, value: 2000 });
+          }}
+        />
         {firstTask && props.onTaskUpdate ? (
           <button
             type="button"
@@ -198,7 +217,9 @@ beforeEach(() => {
   mocks.bedList.mockResolvedValue({ data: { results: [{ id: 3, name: 'Beet 1', field: 2 }] } });
   mocks.planUpdate.mockResolvedValue({ data: {} });
   topbarContext.setTopbarContextActions.mockReset();
+  topbarContext.setTopbarTitleActions.mockReset();
   topbarContext.latestActions = [];
+  topbarContext.latestTitleActions = [];
 });
 
 describe('GanttChartPage', () => {
@@ -377,7 +398,7 @@ describe('GanttChartPage', () => {
 
     await waitFor(() => expect(screen.getByText('Feldplanung')).toBeInTheDocument());
     expect(screen.queryByText(/Belegung von Parzellen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
-    await waitFor(() => expect(topbarContext.latestActions).toHaveLength(2));
+    await waitFor(() => expect(topbarContext.latestTitleActions).toHaveLength(2));
     expect(getTopbarAction('calendar-view-mode-occupancy')).toMatchObject({
       label: 'Feldbelegung',
       active: true,
@@ -431,6 +452,84 @@ describe('GanttChartPage', () => {
       expect(latestProps?.viewMode).toBe('day');
     });
     expect(screen.getByRole('button', { name: 'Tag' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('scrolls the first calendar open to the current period instead of the timeline end', async () => {
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-01',
+            harvest_date: '2026-05-01',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    renderWithAuth();
+
+    const scrollContainer = await screen.findByTestId('mock-gantt-scroll-container');
+    await waitFor(() => {
+      expect(scrollContainer.scrollLeft).toBeGreaterThan(0);
+      expect(scrollContainer.scrollLeft).toBeLessThan(900);
+    });
+    expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.focusMode).toBe(false);
+    expect(JSON.parse(window.localStorage.getItem(GANTT_STATE_STORAGE_KEY) ?? '{}')).toMatchObject({
+      calendarMode: 'occupancy',
+      timelineViewMode: 'month',
+      referenceDate: '2026-06-24',
+    });
+  });
+
+  it('restores the saved calendar mode, timeline period, and row scroll for the active project', async () => {
+    window.localStorage.setItem(GANTT_STATE_STORAGE_KEY, JSON.stringify({
+      calendarMode: 'seedlings',
+      timelineViewMode: 'week',
+      referenceDate: '2026-04-15',
+      rowScrollTop: 144,
+    }));
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            planting_date: '2026-04-20',
+            harvest_date: '2026-05-20',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({
+      data: {
+        results: [{
+          id: 5,
+          name: 'Salat',
+          propagation_days: 28,
+        }],
+      },
+    });
+
+    renderWithAuth();
+
+    const scrollContainer = await screen.findByTestId('mock-gantt-scroll-container');
+    const virtualViewport = await screen.findByTestId('gantt-virtual-viewport');
+    await waitFor(() => {
+      expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.viewMode).toBe('week');
+      expect(scrollContainer.scrollLeft).toBeGreaterThan(700);
+      expect(scrollContainer.scrollLeft).toBeLessThan(900);
+      expect(virtualViewport.scrollTop).toBe(144);
+    });
+    await waitFor(() => expect(topbarContext.latestTitleActions).toHaveLength(2));
+    expect(getTopbarAction('calendar-view-mode-seedlings')).toMatchObject({
+      active: true,
+    });
   });
 
   it('persists timeline view mode changes and keeps them during data updates', async () => {
@@ -613,7 +712,7 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(topbarContext.latestActions).toHaveLength(2));
+    await waitFor(() => expect(topbarContext.latestTitleActions).toHaveLength(2));
     act(() => {
       getTopbarAction('calendar-view-mode-seedlings').onClick();
     });
@@ -714,7 +813,7 @@ describe('GanttChartPage', () => {
 
     expect(await screen.findByRole('button', { name: 'Zeitraum verschieben' })).toBeInTheDocument();
 
-    await waitFor(() => expect(topbarContext.latestActions).toHaveLength(2));
+    await waitFor(() => expect(topbarContext.latestTitleActions).toHaveLength(2));
     expect(getTopbarAction('calendar-view-mode-occupancy').tooltip).toBe(OCCUPANCY_MODE_TOOLTIP);
     expect(getTopbarAction('calendar-view-mode-seedlings').tooltip).toBe(PROPAGATION_MODE_TOOLTIP);
   });

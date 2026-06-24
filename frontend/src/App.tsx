@@ -304,6 +304,7 @@ export interface TopbarContextAction {
 
 export interface RootLayoutOutletContext {
   setTopbarContextActions: (actions: TopbarContextAction[]) => void;
+  setTopbarTitleActions: (actions: TopbarContextAction[]) => void;
 }
 
 
@@ -348,6 +349,7 @@ function RootLayout() {
   const [newProjectName, setNewProjectName] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
+  const [topbarTitleActions, setTopbarTitleActions] = useState<TopbarContextAction[]>([]);
   const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileActionsOverflowAnchor, setMobileActionsOverflowAnchor] = useState<null | HTMLElement>(null);
   const [topbarPrimaryActionMenuAnchor, setTopbarPrimaryActionMenuAnchor] = useState<null | HTMLElement>(null);
@@ -355,6 +357,7 @@ function RootLayout() {
 
   useEffect(() => {
     setTopbarContextActions([]);
+    setTopbarTitleActions([]);
   }, [location.pathname]);
 
   const navItems = useMemo(() => ([
@@ -948,9 +951,9 @@ function RootLayout() {
         elevation={0}
         sx={{ borderBottom: '1px solid', borderColor: 'surface.surfaceBorder', bgcolor: 'surface.topbarBackground', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
-        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: 'nowrap', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: { xs: 'wrap', sm: 'nowrap' }, minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
           {!isDesktopUp ? <IconButton aria-label={t('globalMenu.openMobileMenu')} onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflow: 'hidden' }}>
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, flexWrap: 'wrap', overflow: 'visible' }}>
             {!isDesktopUp ? (
               <Typography
                 component="h1"
@@ -975,6 +978,29 @@ function RootLayout() {
               </Typography>
             )}
             {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={t('pageHelp.openAria', { label: topbarHelpConfig.label })} tooltip={topbarHelpConfig.label} /> : null}
+            {topbarTitleActions.length > 0 ? (
+              <ButtonGroup
+                size="small"
+                variant="outlined"
+                sx={{ ...segmentedButtonGroupSx, ml: 1, flexShrink: 0 }}
+              >
+                {topbarTitleActions.map((action) => (
+                  <Button
+                    key={action.id}
+                    size="small"
+                    variant={action.active ? 'contained' : 'outlined'}
+                    color={action.active ? 'success' : 'inherit'}
+                    onClick={action.onClick}
+                    aria-label={action.ariaLabel ?? action.label}
+                    aria-pressed={action.active}
+                    disabled={action.disabled}
+                    sx={getSegmentedActionButtonSx({ active: Boolean(action.active), hidden: Boolean(action.hidden) })}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </ButtonGroup>
+            ) : null}
           </Box>
           {!isCompactTopbar ? (
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, maxWidth: '100%', flex: 1, overflow: 'hidden' }}>
@@ -1652,7 +1678,7 @@ function RootLayout() {
           minWidth: 0,
         }}
       >
-        <Outlet context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
+        <Outlet context={{ setTopbarContextActions, setTopbarTitleActions } satisfies RootLayoutOutletContext} />
       </Box>
       </Box>
 

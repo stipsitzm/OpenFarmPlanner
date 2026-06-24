@@ -12,6 +12,7 @@ import PageContainer from '../components/layout/PageContainer';
 import { locationAPI } from '../api/api';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
+import { useTopbarTitleActions } from '../hooks/useTopbarTitleActions';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard, { type EmptyStateAction } from '../components/project/EmptyStateCard';
 import { getProjectSetupAction } from './requirementFlow';
@@ -66,6 +67,7 @@ export default function FieldsBedsPage() {
 
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
   const setTopbarContextActions = outletContext?.setTopbarContextActions;
+  const setTopbarTitleActions = outletContext?.setTopbarTitleActions;
 
   useCommandContextTag('areas');
 
@@ -296,7 +298,7 @@ export default function FieldsBedsPage() {
           hidden: isSingleLocationMode,
         },
       ];
-    return [...globalActions, ...viewModeActions];
+    return globalActions;
   }, [
     canUseGlobalAddField,
     requestInlineFieldCreation,
@@ -304,10 +306,10 @@ export default function FieldsBedsPage() {
     shouldShowProjectRequiredState,
     isSingleLocationMode,
     t,
-    viewModeActions,
   ]);
 
   useTopbarContextActions(setTopbarContextActions, contextActions);
+  useTopbarTitleActions(setTopbarTitleActions, viewModeActions);
 
   return (
     <>
