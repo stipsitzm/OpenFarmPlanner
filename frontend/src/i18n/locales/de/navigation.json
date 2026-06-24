@@ -133,7 +133,18 @@
       "openPageHelp": "Seitenhilfe öffnen",
       "logout": "Abmelden",
       "openShortcuts": "Seitenhilfe öffnen",
-      "closeDialog": "Dialog schließen"
+      "closeDialog": "Dialog schließen",
+      "calendarToday": "Zur aktuellen Periode springen",
+      "calendarPreviousPeriod": "Vorherige Kalenderperiode",
+      "calendarNextPeriod": "Nächste Kalenderperiode",
+      "calendarDayView": "Tagesansicht",
+      "calendarWeekView": "Wochenansicht",
+      "calendarMonthView": "Monatsansicht",
+      "calendarQuarterView": "Quartalsansicht",
+      "calendarYearView": "Jahresansicht",
+      "calendarOccupancy": "Feldbelegung anzeigen",
+      "calendarSeedlings": "Anzucht anzeigen",
+      "calendarToggleMove": "Zeiträume verschieben ein-/ausschalten"
     },
     "feedback": {
       "versionHistoryLoadError": "Versionsverlauf konnte nicht geladen werden.",

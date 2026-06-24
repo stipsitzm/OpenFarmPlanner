@@ -93,6 +93,13 @@ const GANTT_UNIT_WIDTH_BY_VIEW_MODE: Record<ViewMode, number> = {
   [ViewMode.QUARTER]: 180,
   [ViewMode.YEAR]: 200,
 };
+const CALENDAR_SHORTCUT_VIEW_MODES: Array<{ mode: ViewMode; shortcut: string; labelKey: string }> = [
+  { mode: ViewMode.DAY, shortcut: '1', labelKey: 'dayView' },
+  { mode: ViewMode.WEEK, shortcut: '2', labelKey: 'weekView' },
+  { mode: ViewMode.MONTH, shortcut: '3', labelKey: 'monthView' },
+  { mode: ViewMode.QUARTER, shortcut: '4', labelKey: 'quarterView' },
+  { mode: ViewMode.YEAR, shortcut: '5', labelKey: 'yearView' },
+];
 
 interface StoredGanttState {
   calendarMode?: CalendarMode;
@@ -292,6 +299,32 @@ function getTimelineScrollLeftForDate(date: Date, viewMode: ViewMode, startDate:
   return Math.max(0, Math.min(maxScroll, position - timelineViewportWidth / 2));
 }
 
+function addTimelinePeriod(date: Date, viewMode: ViewMode, direction: -1 | 1): Date {
+  const nextDate = new Date(date);
+
+  switch (viewMode) {
+    case ViewMode.DAY:
+      nextDate.setDate(nextDate.getDate() + direction);
+      break;
+    case ViewMode.WEEK:
+      nextDate.setDate(nextDate.getDate() + direction * 7);
+      break;
+    case ViewMode.MONTH:
+      nextDate.setMonth(nextDate.getMonth() + direction);
+      break;
+    case ViewMode.QUARTER:
+      nextDate.setMonth(nextDate.getMonth() + direction * 3);
+      break;
+    case ViewMode.YEAR:
+      nextDate.setFullYear(nextDate.getFullYear() + direction);
+      break;
+    default:
+      break;
+  }
+
+  return nextDate;
+}
+
 class GanttRenderBoundary extends React.Component<
   { fallback: React.ReactNode; children: React.ReactNode },
   { hasError: boolean }
@@ -470,23 +503,59 @@ function GanttChartPage() {
     applyViewModeChange(nextViewMode);
   }, [endDate, ganttStateStorageKey, startDate, storedGanttState, timelineViewMode, timelineViewModeStorageKey]);
 
-  const calendarCommands = useMemo<CommandSpec[]>(() => [
-    {
-      id: 'calendar.toggleEdit',
-      label: editMode
-        ? t('ganttChart:moveModeCommandDeactivate')
-        : t('ganttChart:moveModeCommandActivate'),
-      group: 'navigation',
-      keywords: ['kalender', 'verschieben', 'drag-and-drop'],
-      shortcutHint: 'Alt+E',
-      keys: { alt: true, key: 'e' },
-      contextTags: ['calendar'],
-      isEnabled: () => calendarMode === 'occupancy',
-      action: () => setEditMode((value) => !value),
-    },
-  ], [calendarMode, editMode, t]);
+  const getCurrentTimelineReferenceDate = useCallback((): Date => {
+    const scrollContainer = ganttViewportRef.current?.querySelector<HTMLElement>('.rmg-container') ?? null;
+    if (scrollContainer) {
+      return getReferenceDateFromScroll(
+        scrollContainer.scrollLeft,
+        scrollContainer.clientWidth,
+        timelineViewMode,
+        startDate,
+        endDate,
+      );
+    }
 
-  useRegisterCommands('calendar-page', calendarCommands);
+    return latestReferenceDateRef.current
+      ?? getInitialTimelineReferenceDate(getStoredGanttState(ganttStateStorageKey), startDate, endDate);
+  }, [endDate, ganttStateStorageKey, startDate, timelineViewMode]);
+
+  const scrollToTimelineReferenceDate = useCallback((date: Date): void => {
+    const referenceDate = clampDate(date, startDate, endDate);
+    latestReferenceDateRef.current = referenceDate;
+    storeGanttState(ganttStateStorageKey, {
+      calendarMode,
+      timelineViewMode,
+      referenceDate: formatDateToAPI(referenceDate),
+    });
+
+    const scrollContainer = ganttViewportRef.current?.querySelector<HTMLElement>('.rmg-container') ?? null;
+    if (!scrollContainer) {
+      return;
+    }
+
+    scrollContainer.scrollLeft = getTimelineScrollLeftForDate(referenceDate, timelineViewMode, startDate, scrollContainer);
+  }, [calendarMode, endDate, ganttStateStorageKey, startDate, timelineViewMode]);
+
+  const handleShortcutTimelineViewModeChange = useCallback((nextViewMode: ViewMode): void => {
+    const referenceDate = getCurrentTimelineReferenceDate();
+    setTimelineViewMode(nextViewMode);
+    if (timelineViewModeStorageKey) {
+      storeTimelineViewMode(timelineViewModeStorageKey, nextViewMode);
+    }
+    storeGanttState(ganttStateStorageKey, {
+      timelineViewMode: nextViewMode,
+      referenceDate: formatDateToAPI(referenceDate),
+    });
+    latestReferenceDateRef.current = referenceDate;
+    hasRestoredTimelineRef.current = false;
+  }, [ganttStateStorageKey, getCurrentTimelineReferenceDate, timelineViewModeStorageKey]);
+
+  const toggleCalendarEditMode = useCallback((): void => {
+    if (calendarMode !== 'occupancy') {
+      return;
+    }
+    setEditMode((value) => !value);
+  }, [calendarMode]);
 
   const fetchCalendarData = useCallback(async (options: { showLoading?: boolean } = {}): Promise<void> => {
     const { showLoading = true } = options;
@@ -843,6 +912,113 @@ function GanttChartPage() {
   const requirementActions = firstMissingRequirement
     ? getProjectSetupActions(firstMissingRequirement)
     : [];
+  const calendarCommands = useMemo<CommandSpec[]>(() => [
+    {
+      id: 'calendar.today',
+      label: t('ganttChart:shortcuts.today'),
+      group: 'navigation',
+      keywords: ['kalender', 'heute', 'aktuell', 'periode'],
+      shortcutHint: 'T',
+      keys: { key: 't' },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => scrollToTimelineReferenceDate(new Date()),
+    },
+    {
+      id: 'calendar.previousPeriod',
+      label: t('ganttChart:shortcuts.previousPeriod'),
+      group: 'navigation',
+      keywords: ['kalender', 'vorherige', 'periode', 'zurück'],
+      shortcutHint: '←',
+      keys: { key: 'ArrowLeft' },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => scrollToTimelineReferenceDate(addTimelinePeriod(getCurrentTimelineReferenceDate(), timelineViewMode, -1)),
+    },
+    {
+      id: 'calendar.nextPeriod',
+      label: t('ganttChart:shortcuts.nextPeriod'),
+      group: 'navigation',
+      keywords: ['kalender', 'nächste', 'periode', 'weiter'],
+      shortcutHint: '→',
+      keys: { key: 'ArrowRight' },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => scrollToTimelineReferenceDate(addTimelinePeriod(getCurrentTimelineReferenceDate(), timelineViewMode, 1)),
+    },
+    ...CALENDAR_SHORTCUT_VIEW_MODES.map<CommandSpec>(({ mode, shortcut, labelKey }) => ({
+      id: `calendar.viewMode.${mode}`,
+      label: t(`ganttChart:shortcuts.${labelKey}`),
+      group: 'navigation',
+      keywords: ['kalender', 'ansicht', mode],
+      shortcutHint: shortcut,
+      keys: { key: shortcut },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => handleShortcutTimelineViewModeChange(mode),
+    })),
+    {
+      id: 'calendar.showOccupancy',
+      label: t('ganttChart:shortcuts.showOccupancy'),
+      group: 'navigation',
+      keywords: ['kalender', 'feldbelegung', 'felder'],
+      shortcutHint: 'F',
+      keys: { key: 'f' },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => handleCalendarModeChange('occupancy'),
+    },
+    {
+      id: 'calendar.showSeedlings',
+      label: t('ganttChart:shortcuts.showSeedlings'),
+      group: 'navigation',
+      keywords: ['kalender', 'anzucht', 'jungpflanzen'],
+      shortcutHint: 'A',
+      keys: { key: 'a' },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => handleCalendarModeChange('seedlings'),
+    },
+    {
+      id: 'calendar.toggleEdit',
+      label: editMode
+        ? t('ganttChart:moveModeCommandDeactivate')
+        : t('ganttChart:moveModeCommandActivate'),
+      group: 'navigation',
+      keywords: ['kalender', 'verschieben', 'drag-and-drop'],
+      shortcutHint: 'Alt+E / Z',
+      keys: { alt: true, key: 'e' },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements && calendarMode === 'occupancy',
+      action: toggleCalendarEditMode,
+    },
+    {
+      id: 'calendar.toggleEditPlain',
+      label: editMode
+        ? t('ganttChart:moveModeCommandDeactivate')
+        : t('ganttChart:moveModeCommandActivate'),
+      group: 'navigation',
+      keywords: ['kalender', 'verschieben', 'drag-and-drop'],
+      shortcutHint: 'Z',
+      keys: { key: 'z' },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements && calendarMode === 'occupancy',
+      action: toggleCalendarEditMode,
+    },
+  ], [
+    calendarMode,
+    editMode,
+    getCurrentTimelineReferenceDate,
+    handleCalendarModeChange,
+    handleShortcutTimelineViewModeChange,
+    hasCalendarRequirements,
+    scrollToTimelineReferenceDate,
+    t,
+    timelineViewMode,
+    toggleCalendarEditMode,
+  ]);
+
+  useRegisterCommands('calendar-page', calendarCommands);
 
   useEffect(() => {
     if (loading || !hasCalendarRequirements) {

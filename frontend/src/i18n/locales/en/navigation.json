@@ -132,7 +132,18 @@
       "openPageHelp": "Open page help",
       "logout": "Logout",
       "openShortcuts": "Open page help",
-      "closeDialog": "Close dialog"
+      "closeDialog": "Close dialog",
+      "calendarToday": "Jump to current period",
+      "calendarPreviousPeriod": "Previous calendar period",
+      "calendarNextPeriod": "Next calendar period",
+      "calendarDayView": "Day view",
+      "calendarWeekView": "Week view",
+      "calendarMonthView": "Month view",
+      "calendarQuarterView": "Quarter view",
+      "calendarYearView": "Year view",
+      "calendarOccupancy": "Show field occupancy",
+      "calendarSeedlings": "Show seedlings",
+      "calendarToggleMove": "Toggle moving periods"
     },
     "feedback": {
       "versionHistoryLoadError": "Could not load version history.",

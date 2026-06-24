@@ -1826,6 +1826,20 @@ function RootLayout() {
             <List dense disablePadding>
               <ListItem><ListItemText primary={t('commandPalette.commands.toggleSidebar')} secondary="Ctrl+B" /></ListItem>
             </List>
+            <Typography variant="subtitle2">{t('commandPalette.contextTitles.calendar')}</Typography>
+            <List dense disablePadding>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarToday')} secondary="T" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarPreviousPeriod')} secondary="←" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarNextPeriod')} secondary="→" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarDayView')} secondary="1" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarWeekView')} secondary="2" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarMonthView')} secondary="3" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarQuarterView')} secondary="4" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarYearView')} secondary="5" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarOccupancy')} secondary="F" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarSeedlings')} secondary="A" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarToggleMove')} secondary="Z" /></ListItem>
+            </List>
             <Typography variant="subtitle2">{t('commandPalette.shortcutSections.dialogsHelp')}</Typography>
             <List dense disablePadding>
               <ListItem><ListItemText primary={t('commandPalette.commands.openPageHelp')} secondary="Alt+H" /></ListItem>
