@@ -17,5 +17,9 @@
     "supplierProjectMismatch": "The supplier does not belong to the active project.",
     "selectedSupplierProjectMismatch": "The selected seed supplier does not belong to the active project.",
     "cultureProjectMismatch": "The culture does not belong to the active project."
+  },
+  "runtime": {
+    "applicationUpdatedFallback": "The application could not be updated automatically. Please try again later.",
+    "routeErrorFallback": "The page could not be restored automatically. Please try again later."
   }
 }

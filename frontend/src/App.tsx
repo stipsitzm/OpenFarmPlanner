@@ -107,7 +107,12 @@ import {
 } from './navigation/navigationStyles';
 import { PanelLeft } from 'lucide-react';
 import RuntimeErrorState from './components/runtime/RuntimeErrorState';
-import { isDynamicImportLoadError, reloadOnceForDynamicImportError } from './runtime/chunkLoadErrors';
+import {
+  isDynamicImportLoadError,
+  reloadOnceForDynamicImportError,
+  reloadPage,
+  shouldAutomaticallyReloadForRouteLoadError,
+} from './runtime/chunkLoadErrors';
 
 const CONTENT_ALIGNMENT_MODE = 'centered';
 const ACTION_MENU_ITEM_ICON_SX = { minWidth: 32, color: 'text.secondary' } as const;
@@ -1978,13 +1983,20 @@ function withLazyFallback(element: React.ReactElement): React.ReactElement {
 
 function RouteErrorBoundary() {
   const error = useRouteError();
+  const location = useLocation();
   const isApplicationUpdateError = isDynamicImportLoadError(error);
+  const routeKey = `${location.pathname}${location.search}`;
+  const [isReloading] = useState(() => shouldAutomaticallyReloadForRouteLoadError(routeKey));
 
   useEffect(() => {
-    if (isApplicationUpdateError) {
-      reloadOnceForDynamicImportError(error);
+    if (isReloading) {
+      reloadPage();
     }
-  }, [error, isApplicationUpdateError]);
+  }, [isReloading]);
+
+  if (isReloading) {
+    return null;
+  }
 
   return <RuntimeErrorState variant={isApplicationUpdateError ? 'applicationUpdated' : 'routeError'} />;
 }

@@ -1,5 +1,6 @@
 const CHUNK_RELOAD_STORAGE_KEY = 'openFarmPlanner.lastChunkReloadAt';
 const CHUNK_RELOAD_WINDOW_MS = 60_000;
+const ROUTE_LOAD_RETRY_STORAGE_PREFIX = 'openFarmPlanner.routeLoadRetry.';
 
 const DYNAMIC_IMPORT_ERROR_PATTERNS = [
   'failed to fetch dynamically imported module',
@@ -39,6 +40,14 @@ function getSessionStorage(): Storage | null {
   }
 }
 
+function getRouteLoadRetryStorageKey(routeKey: string): string {
+  return `${ROUTE_LOAD_RETRY_STORAGE_PREFIX}${routeKey}`;
+}
+
+function getCurrentRouteKey(): string {
+  return `${window.location.pathname}${window.location.search}`;
+}
+
 export function isDynamicImportLoadError(error: unknown): boolean {
   const errorText = getErrorText(error);
   return DYNAMIC_IMPORT_ERROR_PATTERNS.some((pattern) => errorText.includes(pattern));
@@ -56,6 +65,22 @@ export function shouldAutomaticallyReloadForChunkError(now = Date.now()): boolea
   }
 
   storage.setItem(CHUNK_RELOAD_STORAGE_KEY, String(now));
+  return true;
+}
+
+export function shouldAutomaticallyReloadForRouteLoadError(routeKey = getCurrentRouteKey()): boolean {
+  const storage = getSessionStorage();
+  if (!storage) {
+    return false;
+  }
+
+  const storageKey = getRouteLoadRetryStorageKey(routeKey);
+  const retryCount = Number(storage.getItem(storageKey) ?? '0');
+  if (Number.isFinite(retryCount) && retryCount >= 1) {
+    return false;
+  }
+
+  storage.setItem(storageKey, String(retryCount + 1));
   return true;
 }
 
