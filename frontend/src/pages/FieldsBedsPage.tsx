@@ -74,11 +74,11 @@ export default function FieldsBedsPage() {
   const commands = useMemo<CommandSpec[]>(() => [
     {
       id: 'areas.showListView',
-      label: 'Listenansicht',
+      label: 'Listenansicht anzeigen',
       group: 'navigation',
       keywords: ['liste', 'tabelle', 'anbauflächen'],
-      shortcutHint: 'Alt+L',
-      keys: { alt: true, key: 'l' },
+      shortcutHint: 'L',
+      keys: { key: 'l' },
       contextTags: ['areas'],
       isEnabled: () => viewMode !== 'table',
       action: () => {
@@ -87,15 +87,15 @@ export default function FieldsBedsPage() {
     },
     {
       id: 'areas.showGraphicalView',
-      label: 'Grafikansicht',
+      label: 'Grafikansicht anzeigen',
       group: 'navigation',
       keywords: ['grafik', 'grafisch', 'anbauflächen'],
-      shortcutHint: 'Alt+G',
-      keys: { alt: true, key: 'g' },
+      shortcutHint: 'G',
+      keys: { key: 'g' },
       contextTags: ['areas'],
-      isEnabled: () => true,
+      isEnabled: () => viewMode !== 'graphical',
       action: () => {
-        setViewMode((prev) => (prev === 'graphical' ? 'table' : 'graphical'));
+        setViewMode('graphical');
       },
     },
   ], [viewMode]);
