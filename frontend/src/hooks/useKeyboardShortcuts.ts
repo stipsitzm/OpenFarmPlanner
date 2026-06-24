@@ -12,6 +12,7 @@ export interface ShortcutSpec {
   title: string;
   keys: ShortcutKeys;
   contexts: string[];
+  allowRepeat?: boolean;
   when?: () => boolean;
   action: () => void;
 }
@@ -95,15 +96,15 @@ export function useKeyboardShortcuts(
     }
 
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.repeat) {
-        return;
-      }
-
       if (!allowWhenTyping && isTypingInEditableElement(document.activeElement)) {
         return;
       }
 
       const matchedShortcut = shortcuts.find((shortcut) => {
+        if (event.repeat && !shortcut.allowRepeat) {
+          return false;
+        }
+
         const inContext = shortcut.contexts.every((context) => currentContexts.includes(context));
         if (!inContext) {
           return false;

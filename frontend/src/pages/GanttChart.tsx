@@ -325,6 +325,32 @@ function addTimelinePeriod(date: Date, viewMode: ViewMode, direction: -1 | 1): D
   return nextDate;
 }
 
+function addTimelinePeriodLarge(date: Date, viewMode: ViewMode, direction: -1 | 1): Date {
+  const nextDate = new Date(date);
+
+  switch (viewMode) {
+    case ViewMode.DAY:
+      nextDate.setDate(nextDate.getDate() + direction * 7);
+      break;
+    case ViewMode.WEEK:
+      nextDate.setMonth(nextDate.getMonth() + direction);
+      break;
+    case ViewMode.MONTH:
+      nextDate.setFullYear(nextDate.getFullYear() + direction);
+      break;
+    case ViewMode.QUARTER:
+      nextDate.setFullYear(nextDate.getFullYear() + direction);
+      break;
+    case ViewMode.YEAR:
+      nextDate.setFullYear(nextDate.getFullYear() + direction * 5);
+      break;
+    default:
+      break;
+  }
+
+  return nextDate;
+}
+
 class GanttRenderBoundary extends React.Component<
   { fallback: React.ReactNode; children: React.ReactNode },
   { hasError: boolean }
@@ -931,6 +957,7 @@ function GanttChartPage() {
       keywords: ['kalender', 'vorherige', 'periode', 'zurück'],
       shortcutHint: '←',
       keys: { key: 'ArrowLeft' },
+      allowRepeat: true,
       contextTags: ['calendar'],
       isEnabled: () => hasCalendarRequirements,
       action: () => scrollToTimelineReferenceDate(addTimelinePeriod(getCurrentTimelineReferenceDate(), timelineViewMode, -1)),
@@ -942,9 +969,34 @@ function GanttChartPage() {
       keywords: ['kalender', 'nächste', 'periode', 'weiter'],
       shortcutHint: '→',
       keys: { key: 'ArrowRight' },
+      allowRepeat: true,
       contextTags: ['calendar'],
       isEnabled: () => hasCalendarRequirements,
       action: () => scrollToTimelineReferenceDate(addTimelinePeriod(getCurrentTimelineReferenceDate(), timelineViewMode, 1)),
+    },
+    {
+      id: 'calendar.previousLargePeriod',
+      label: t('ganttChart:shortcuts.previousLargePeriod'),
+      group: 'navigation',
+      keywords: ['kalender', 'vorherige', 'große', 'periode', 'sprung', 'zurück'],
+      shortcutHint: 'Shift+←',
+      keys: { shift: true, key: 'ArrowLeft' },
+      allowRepeat: true,
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => scrollToTimelineReferenceDate(addTimelinePeriodLarge(getCurrentTimelineReferenceDate(), timelineViewMode, -1)),
+    },
+    {
+      id: 'calendar.nextLargePeriod',
+      label: t('ganttChart:shortcuts.nextLargePeriod'),
+      group: 'navigation',
+      keywords: ['kalender', 'nächste', 'große', 'periode', 'sprung', 'weiter'],
+      shortcutHint: 'Shift+→',
+      keys: { shift: true, key: 'ArrowRight' },
+      allowRepeat: true,
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => scrollToTimelineReferenceDate(addTimelinePeriodLarge(getCurrentTimelineReferenceDate(), timelineViewMode, 1)),
     },
     ...CALENDAR_SHORTCUT_VIEW_MODES.map<CommandSpec>(({ mode, shortcut, labelKey }) => ({
       id: `calendar.viewMode.${mode}`,

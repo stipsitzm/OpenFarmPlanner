@@ -181,6 +181,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         title: command.label,
         keys: command.keys,
         contexts: command.contextTags,
+        allowRepeat: command.allowRepeat,
         when: () => (command.isVisible?.() ?? true) && (command.isEnabled?.() ?? true),
         action: () => { void command.action(); },
       }));

@@ -97,6 +97,8 @@
     "today": "Zur aktuellen Periode springen",
     "previousPeriod": "Vorherige Kalenderperiode",
     "nextPeriod": "Nächste Kalenderperiode",
+    "previousLargePeriod": "Großen Zeitsprung zurück",
+    "nextLargePeriod": "Großen Zeitsprung vor",
     "dayView": "Tagesansicht anzeigen",
     "weekView": "Wochenansicht anzeigen",
     "monthView": "Monatsansicht anzeigen",
