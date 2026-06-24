@@ -69,6 +69,8 @@ import { getGanttRenderWindow } from './ganttRenderWindow';
 type CalendarMode = 'occupancy' | 'seedlings';
 
 const CALENDAR_VIEW_STORAGE_KEY = 'openFarmPlanner.ganttChart.view';
+const CALENDAR_TIMELINE_VIEW_MODE_STORAGE_KEY = 'openFarmPlanner.ganttChart.timelineViewMode';
+const DEFAULT_TIMELINE_VIEW_MODE = ViewMode.MONTH;
 const GANTT_HEADER_VIEW_MODES = [
   ViewMode.DAY,
   ViewMode.WEEK,
@@ -93,6 +95,12 @@ function getCalendarViewStorageKey(activeProjectId: number | null): string {
   return activeProjectId ? `${CALENDAR_VIEW_STORAGE_KEY}.${activeProjectId}` : CALENDAR_VIEW_STORAGE_KEY;
 }
 
+function getTimelineViewModeStorageKey(activeProjectId: number | null): string {
+  return activeProjectId
+    ? `${CALENDAR_TIMELINE_VIEW_MODE_STORAGE_KEY}.${activeProjectId}`
+    : CALENDAR_TIMELINE_VIEW_MODE_STORAGE_KEY;
+}
+
 function getStoredCalendarMode(storageKey: string): CalendarMode | null {
   const storedValue = window.localStorage.getItem(storageKey);
   return isCalendarViewParam(storedValue) ? getCalendarModeFromViewParam(storedValue) : null;
@@ -100,6 +108,19 @@ function getStoredCalendarMode(storageKey: string): CalendarMode | null {
 
 function storeCalendarMode(storageKey: string, mode: CalendarMode): void {
   window.localStorage.setItem(storageKey, getViewParamFromCalendarMode(mode));
+}
+
+function isTimelineViewMode(value: string | null): value is ViewMode {
+  return value !== null && (GANTT_HEADER_VIEW_MODES as readonly string[]).includes(value);
+}
+
+function getStoredTimelineViewMode(storageKey: string): ViewMode | null {
+  const storedValue = window.localStorage.getItem(storageKey);
+  return isTimelineViewMode(storedValue) ? storedValue : null;
+}
+
+function storeTimelineViewMode(storageKey: string, mode: ViewMode): void {
+  window.localStorage.setItem(storageKey, mode);
 }
 
 class GanttRenderBoundary extends React.Component<
@@ -162,6 +183,10 @@ function GanttChartPage() {
     () => (canUseStoredCalendarView ? getCalendarViewStorageKey(activeProjectId) : null),
     [activeProjectId, canUseStoredCalendarView],
   );
+  const timelineViewModeStorageKey = useMemo(
+    () => (canUseStoredCalendarView ? getTimelineViewModeStorageKey(activeProjectId) : null),
+    [activeProjectId, canUseStoredCalendarView],
+  );
   const [calendarMode, setCalendarMode] = useState<CalendarMode>(() => {
     const viewParam = searchParams.get('view');
     return isCalendarViewParam(viewParam)
@@ -170,6 +195,11 @@ function GanttChartPage() {
         ? getStoredCalendarMode(calendarViewStorageKey) ?? 'occupancy'
         : 'occupancy';
   });
+  const [timelineViewMode, setTimelineViewMode] = useState<ViewMode>(() => (
+    timelineViewModeStorageKey
+      ? getStoredTimelineViewMode(timelineViewModeStorageKey) ?? DEFAULT_TIMELINE_VIEW_MODE
+      : DEFAULT_TIMELINE_VIEW_MODE
+  ));
   const [editMode, setEditMode] = useState(false);
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
   const setTopbarContextActions = outletContext?.setTopbarContextActions;
@@ -202,6 +232,15 @@ function GanttChartPage() {
     }, { replace: true });
   }, [calendarViewStorageKey, isAuthLoading, searchParams, setSearchParams]);
 
+  useEffect(() => {
+    if (!timelineViewModeStorageKey || isAuthLoading) {
+      return;
+    }
+
+    const nextViewMode = getStoredTimelineViewMode(timelineViewModeStorageKey) ?? DEFAULT_TIMELINE_VIEW_MODE;
+    setTimelineViewMode((currentViewMode) => (currentViewMode === nextViewMode ? currentViewMode : nextViewMode));
+  }, [isAuthLoading, timelineViewModeStorageKey]);
+
   const handleCalendarModeChange = useCallback((nextMode: CalendarMode) => {
     setCalendarMode(nextMode);
     if (calendarViewStorageKey) {
@@ -216,6 +255,17 @@ function GanttChartPage() {
       return nextSearchParams;
     });
   }, [calendarViewStorageKey, setSearchParams]);
+
+  const handleTimelineViewModeChange = useCallback((
+    nextViewMode: ViewMode,
+    applyViewModeChange: (mode: ViewMode) => void,
+  ) => {
+    setTimelineViewMode(nextViewMode);
+    if (timelineViewModeStorageKey) {
+      storeTimelineViewMode(timelineViewModeStorageKey, nextViewMode);
+    }
+    applyViewModeChange(nextViewMode);
+  }, [timelineViewModeStorageKey]);
 
   const calendarCommands = useMemo<CommandSpec[]>(() => [
     {
@@ -434,7 +484,7 @@ function GanttChartPage() {
                 <Select
                   size="small"
                   value={viewMode}
-                  onChange={(event) => onViewModeChange(event.target.value as ViewMode)}
+                  onChange={(event) => handleTimelineViewModeChange(event.target.value as ViewMode, onViewModeChange)}
                   inputProps={{ 'aria-label': t('ganttChart:viewSelectorAriaLabel') }}
                   sx={{
                     display: { xs: 'inline-flex', md: 'none' },
@@ -521,7 +571,7 @@ function GanttChartPage() {
             {GANTT_HEADER_VIEW_MODES.map((mode) => (
               <Button
                 key={mode}
-                onClick={() => onViewModeChange(mode)}
+                onClick={() => handleTimelineViewModeChange(mode, onViewModeChange)}
                 aria-pressed={viewMode === mode}
                 variant={viewMode === mode ? 'contained' : 'outlined'}
                 color={viewMode === mode ? 'success' : 'inherit'}
@@ -534,7 +584,7 @@ function GanttChartPage() {
         ) : null}
       </Box>
     </Box>
-  ), [calendarMode, editMode, t]);
+  ), [calendarMode, editMode, handleTimelineViewModeChange, t]);
 
   const activeTaskGroups = calendarMode === 'occupancy' ? occupancyTaskGroups : seedlingTaskGroups;
   const renderWindow = useMemo(
@@ -762,7 +812,7 @@ function GanttChartPage() {
                       tasks={renderedTaskGroups}
                       locale={resolvedLocale}
                       localeText={ganttLocaleText}
-                      viewMode={ViewMode.MONTH}
+                      viewMode={timelineViewMode}
                       leftColumnWidth={220}
                       startDate={startDate}
                       endDate={endDate}
