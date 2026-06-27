@@ -37,6 +37,7 @@ import { cultureAPI, publicCultureAPI, supplierAPI } from '../api/api';
 import { useActiveSaveShortcut } from '../hooks/useActiveSaveShortcut';
 import { useDialogKeyboardScroll } from '../hooks/useDialogKeyboardScroll';
 import { useNavigate } from 'react-router-dom';
+import { hasEffectiveCultureFormChanges } from './cultureFormChangeDetection';
 import { validateCulture } from './validation';
 import { normalizeSeedRateUnit } from './enumNormalization';
 import { BasicInfoSection } from './sections/BasicInfoSection';
@@ -505,6 +506,10 @@ export function CultureForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSavingRef.current) return;
+    if (isEdit && !hasEffectiveCultureFormChanges(buildInitialFormData(culture), formData)) {
+      onCancel();
+      return;
+    }
     setHasSubmitted(true);
     if (!validateAndSet(formData, 'submit')) return;
     if (hasSupplierDataRowMissingSupplier(formData.supplier_data)) {

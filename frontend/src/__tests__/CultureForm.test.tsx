@@ -369,6 +369,59 @@ describe('CultureForm', () => {
     }));
   });
 
+  it('closes without saving when an edited culture has no effective changes', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onCancel = vi.fn();
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={onCancel} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats trim-only text edits as unchanged when saving an edited culture', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onCancel = vi.fn();
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={onCancel} />);
+
+    fireEvent.change(screen.getByLabelText('name-input'), { target: { value: '  Karotte  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('saves exactly once after a real edit and then treats the saved data as unchanged when reopened', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onCancel = vi.fn();
+    const { rerender } = render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={onCancel} />);
+
+    fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Neue Karotte' } });
+
+    await waitFor(() => expect(cultureDuplicateCheckMock).toHaveBeenCalledWith(
+      { name: 'Neue Karotte', variety: 'Nantaise', exclude_id: 1 },
+      expect.any(AbortSignal),
+    ));
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+
+    rerender(
+      <CultureForm
+        culture={{ ...CULTURE_A, name: 'Neue Karotte' }}
+        onSave={onSave}
+        onCancel={onCancel}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
   it('saves the active culture edit dialog with Ctrl+S', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
 
@@ -382,6 +435,7 @@ describe('CultureForm', () => {
       { name: 'Neue Karotte', variety: 'Nantaise', exclude_id: 1 },
       expect.any(AbortSignal),
     ));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'form.save' })).not.toBeDisabled());
     const event = dispatchSaveShortcut();
 
     expect(event.defaultPrevented).toBe(true);
@@ -399,7 +453,12 @@ describe('CultureForm', () => {
     render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
 
     const varietyInput = screen.getByLabelText('variety-input');
+    fireEvent.change(varietyInput, { target: { value: 'Nantaise 2' } });
     varietyInput.focus();
+    await waitFor(() => expect(cultureDuplicateCheckMock).toHaveBeenCalledWith(
+      { name: 'Karotte', variety: 'Nantaise 2', exclude_id: 1 },
+      expect.any(AbortSignal),
+    ));
     const event = dispatchSaveShortcut({ metaKey: true });
 
     expect(event.defaultPrevented).toBe(true);
@@ -444,7 +503,14 @@ describe('CultureForm', () => {
 
     render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
 
-    screen.getByLabelText('name-input').focus();
+    const nameInput = screen.getByLabelText('name-input');
+    fireEvent.change(nameInput, { target: { value: 'Neue Karotte' } });
+    nameInput.focus();
+    await waitFor(() => expect(cultureDuplicateCheckMock).toHaveBeenCalledWith(
+      { name: 'Neue Karotte', variety: 'Nantaise', exclude_id: 1 },
+      expect.any(AbortSignal),
+    ));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'form.save' })).not.toBeDisabled());
     const firstEvent = dispatchSaveShortcut();
     const secondEvent = dispatchSaveShortcut();
 
@@ -527,6 +593,7 @@ describe('CultureForm', () => {
     expect(screen.getByLabelText('name-input')).toHaveValue('Salat');
     expect(screen.getByLabelText('variety-input')).toHaveValue('Batavia');
 
+    fireEvent.change(screen.getByLabelText('row-spacing-input'), { target: { value: '42' } });
     fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
@@ -534,6 +601,7 @@ describe('CultureForm', () => {
       id: 2,
       name: 'Salat',
       variety: 'Batavia',
+      row_spacing_cm: 42,
       supplier: { id: 11, name: 'Dreschflegel' },
     }));
   });
@@ -543,26 +611,33 @@ describe('CultureForm', () => {
 
     render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
 
+    fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Neue Karotte' } });
+    await waitFor(() => expect(cultureDuplicateCheckMock).toHaveBeenCalledWith(
+      { name: 'Neue Karotte', variety: 'Nantaise', exclude_id: 1 },
+      expect.any(AbortSignal),
+    ));
     fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(await screen.findByText('messages.updateError')).toBeInTheDocument();
   });
 
-  it('ignores empty supplier information rows when saving', async () => {
+  it('ignores empty supplier information rows when detecting changes', () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
+    const onCancel = vi.fn();
 
     render(
       <CultureForm
         culture={{ ...CULTURE_A, supplier_data: [{ packaging_sizes: [] }] }}
         onSave={onSave}
-        onCancel={() => {}}
+        onCancel={onCancel}
       />
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
 
-    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledTimes(1);
     expect(screen.queryByText('form.supplierDataMissingSupplier')).not.toBeInTheDocument();
   });
 
@@ -577,6 +652,11 @@ describe('CultureForm', () => {
       />
     );
 
+    fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Neue Karotte' } });
+    await waitFor(() => expect(cultureDuplicateCheckMock).toHaveBeenCalledWith(
+      { name: 'Neue Karotte', variety: 'Nantaise', exclude_id: 1 },
+      expect.any(AbortSignal),
+    ));
     fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
 
     expect(await screen.findByText('form.supplierDataMissingSupplier')).toBeInTheDocument();
