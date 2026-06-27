@@ -171,6 +171,7 @@ describe("YieldOverviewPage", () => {
   });
 
   it("shows a yield-data empty state when planting plans have no calculable yields", async () => {
+    const currentYear = new Date().getFullYear();
     render(
       <MemoryRouter>
         <YieldOverviewPage />
@@ -178,23 +179,24 @@ describe("YieldOverviewPage", () => {
     );
 
     expect(
-      await screen.findByText("Keine erwarteten Erträge vorhanden"),
+      await screen.findByText(`Keine erwarteten Erträge für ${currentYear}`),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Ertragsprognosen werden verfügbar, sobald Anbaupläne mit Erntezeiträumen vorhanden sind.",
+        `Für das Jahr ${currentYear} sind keine Erntedaten vorhanden. Wähle ein anderes Jahr oder stelle sicher, dass deine Kulturen erwartete Erträge eingetragen haben.`,
       ),
     ).toBeInTheDocument();
   });
 
   it("reloads yield data when the year changes", async () => {
+    const currentYear = new Date().getFullYear();
     render(
       <MemoryRouter>
         <YieldOverviewPage />
       </MemoryRouter>,
     );
 
-    await screen.findByText("Keine erwarteten Erträge vorhanden");
+    await screen.findByText(`Keine erwarteten Erträge für ${currentYear}`);
     const previousYear = new Date().getFullYear() - 1;
 
     fireEvent.mouseDown(screen.getByLabelText("Jahr"));

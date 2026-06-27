@@ -151,11 +151,25 @@ describe('Cultures enrichment cost banner', () => {
     });
     expect(enrichMock.mock.calls.at(-1)?.[1]).toBe('complete');
 
+    // After Alt+U completes, the enrichment result dialog opens and steals focus.
+    // isTypingInEditableElement blocks shortcuts while a dialog has focus.
+    // Close the dialog first so keyboard shortcuts can fire again.
+    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
     fireEvent.keyDown(window, { altKey: true, key: 'r' });
     await waitFor(() => {
       expect(enrichMock.mock.calls.length).toBeGreaterThanOrEqual(2);
     });
     expect(enrichMock.mock.calls.at(-1)?.[1]).toBe('reresearch');
+
+    // Close the result dialog from Alt+R before firing Alt+A.
+    fireEvent.click(await screen.findByRole('button', { name: 'Schließen' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
 
     fireEvent.keyDown(window, { altKey: true, key: 'a' });
     expect(await screen.findByText('Alle Kulturen vervollständigen?')).toBeInTheDocument();

@@ -669,6 +669,52 @@ describe('EditableDataGrid', () => {
     expect(screen.getByRole('menuitem', { name: 'Duplizieren' })).toBeInTheDocument();
   });
 
+  it('renders configured inline row actions inside the requested cell', async () => {
+    const props = baseProps();
+    const deleteSpy = vi.spyOn(props.api, 'delete');
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        inlineRowActionField="name"
+        getInlineRowActions={(row, helpers) => [
+          {
+            id: 'delete',
+            label: 'Löschen',
+            onClick: () => helpers.delete(row.id),
+          },
+        ]}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+
+    await waitFor(() => expect(deleteSpy).toHaveBeenCalledWith(1));
+  });
+
+  it('opens the contextual row action menu from the configured inline actions cell', async () => {
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        inlineRowActionField="name"
+        showInlineRowActionMenu
+        duplicateRow={(row) => ({ ...row, id: -2, isNew: true })}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Aktionen' }));
+
+    expect(screen.getByRole('menuitem', { name: 'Duplizieren' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'actions.copyRow' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'actions.copyTable' })).toBeInTheDocument();
+  });
+
   it('duplicates a row from the contextual menu and starts editing the copy', async () => {
     const user = userEvent.setup();
     render(
@@ -744,7 +790,7 @@ describe('EditableDataGrid', () => {
     expect(deleteSpy).not.toHaveBeenCalled();
   });
 
-  it('finalizes optimistic delete after the 8000 ms undo window', async () => {
+  it('finalizes optimistic delete after the 10000 ms undo window', async () => {
     const props = baseProps();
     const deleteSpy = vi.spyOn(props.api, 'delete');
 
@@ -763,7 +809,7 @@ describe('EditableDataGrid', () => {
     vi.useFakeTimers();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Löschen' }));
 
-    vi.advanceTimersByTime(7999);
+    vi.advanceTimersByTime(9999);
     expect(deleteSpy).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(1);
@@ -828,7 +874,7 @@ describe('EditableDataGrid', () => {
     expect(screen.getByTestId('row-1')).toBeInTheDocument();
     expect(screen.queryByTestId('row-2')).not.toBeInTheDocument();
 
-    vi.advanceTimersByTime(8000);
+    vi.advanceTimersByTime(10000);
     await Promise.resolve();
     expect(deleteSpy).toHaveBeenCalledWith(2);
     expect(deleteSpy).not.toHaveBeenCalledWith(1);

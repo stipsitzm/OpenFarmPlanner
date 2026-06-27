@@ -128,7 +128,7 @@ describe('Suppliers page empty and table states', () => {
     const stopPropagationSpy = vi.spyOn(contextMenuEvent, 'stopPropagation');
     fireEvent(supplierRow as HTMLTableRowElement, contextMenuEvent);
 
-    expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
     expect(contextMenuEvent.defaultPrevented).toBe(true);
     expect(stopPropagationSpy).toHaveBeenCalled();
@@ -172,7 +172,7 @@ describe('Suppliers page empty and table states', () => {
 
     fireEvent.keyDown(supplierRow as HTMLTableRowElement, { key: 'F10', shiftKey: true });
 
-    expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
   });
 

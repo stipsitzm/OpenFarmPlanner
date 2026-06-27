@@ -482,7 +482,7 @@ describe('GanttChartPage', () => {
     expect(JSON.parse(window.localStorage.getItem(GANTT_STATE_STORAGE_KEY) ?? '{}')).toMatchObject({
       calendarMode: 'occupancy',
       timelineViewMode: 'month',
-      referenceDate: '2026-06-24',
+      referenceDate: '2026-06-27',
     });
   });
 

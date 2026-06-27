@@ -165,11 +165,15 @@ describe('hierarchy components and behaviors', () => {
     expect(screen.queryByLabelText('Pflanzplan erstellen')).not.toBeInTheDocument();
     await user.click(addBedButton!);
     expect(addBed).toHaveBeenCalledWith(10);
-    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
-    fireEvent.contextMenu(screen.getByTestId('hierarchy-name-text'));
+    const deleteFieldButton = screen.getAllByRole('button', { name: 'Löschen' })[0];
+    const fieldActionsButton = screen.getAllByRole('button', { name: 'Aktionen' })[0];
+    expect(deleteFieldButton).toBeDefined();
+    expect(fieldActionsButton).toBeDefined();
+    await user.click(fieldActionsButton!);
     expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 'field-10' }));
     expect(deleteField).not.toHaveBeenCalled();
+    await user.click(deleteFieldButton!);
+    expect(deleteField).toHaveBeenCalledWith(10);
 
     rerender(
       <>
@@ -184,11 +188,15 @@ describe('hierarchy components and behaviors', () => {
     const createPlantingPlanButton = screen.getByRole('button', { name: 'Pflanzplan erstellen' });
     await user.click(createPlantingPlanButton);
     expect(createPlan).toHaveBeenCalledWith(100);
-    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
-    fireEvent.contextMenu(screen.getByTestId('hierarchy-name-text'));
+    const deleteBedButton = screen.getAllByRole('button', { name: 'Löschen' })[0];
+    const bedActionsButton = screen.getAllByRole('button', { name: 'Aktionen' })[0];
+    expect(deleteBedButton).toBeDefined();
+    expect(bedActionsButton).toBeDefined();
+    await user.click(bedActionsButton!);
     expect(openContextMenu).toHaveBeenLastCalledWith(expect.any(Object), expect.objectContaining({ id: 100 }));
     expect(deleteBed).not.toHaveBeenCalled();
+    await user.click(deleteBedButton!);
+    expect(deleteBed).toHaveBeenCalledWith(100);
 
     const touchColumns = createHierarchyColumns(
       toggleExpand,
@@ -294,13 +302,13 @@ describe('hierarchy components and behaviors', () => {
         opacity: 1,
         pointerEvents: 'auto',
       },
-      '.MuiDataGrid-row:focus-within &': {
-        opacity: 1,
-        pointerEvents: 'auto',
+      '.MuiDataGrid-row--editing:hover &': {
+        opacity: 0,
+        pointerEvents: 'none',
       },
     });
-    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aktionen' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Löschen' })).toBeInTheDocument();
   });
 
   it('renders hover actions for empty unsaved row names even in edit mode', () => {
@@ -336,13 +344,13 @@ describe('hierarchy components and behaviors', () => {
         opacity: 1,
         pointerEvents: 'auto',
       },
-      '.MuiDataGrid-row:focus-within &': {
-        opacity: 1,
-        pointerEvents: 'auto',
+      '.MuiDataGrid-row--editing:hover &': {
+        opacity: 0,
+        pointerEvents: 'none',
       },
     });
-    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Löschen')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aktionen' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Löschen' })).toBeInTheDocument();
   });
 
   it('lets long hierarchy names use the full normal-state name cell width', () => {
@@ -397,9 +405,9 @@ describe('hierarchy components and behaviors', () => {
         opacity: 1,
         pointerEvents: 'auto',
       },
-      '.MuiDataGrid-row:focus-within &': {
-        opacity: 1,
-        pointerEvents: 'auto',
+      '.MuiDataGrid-row--editing:hover &': {
+        opacity: 0,
+        pointerEvents: 'none',
       },
     });
   });

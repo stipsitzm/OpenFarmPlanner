@@ -573,8 +573,8 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     await user.click(screen.getByRole('button', { name: 'Partial invalid -1700000000000' }));
     await user.click(screen.getByRole('button', { name: 'Escape -1700000000000' }));
 
-    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Löschen' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Aktionen' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Löschen' }).length).toBeGreaterThan(0);
   });
 
   it('opens hierarchy actions from the right-click context menu', async () => {
@@ -610,7 +610,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
     fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
-    expect(within(fieldRow).queryByLabelText('Aktionen')).not.toBeInTheDocument();
+    expect(within(fieldRow).getByLabelText('Aktionen')).toBeInTheDocument();
     fireEvent.contextMenu(fieldRow);
 
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
