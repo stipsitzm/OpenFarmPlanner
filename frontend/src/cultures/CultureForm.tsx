@@ -541,13 +541,19 @@ export function CultureForm({
   const getActiveSaveShortcutElement = useCallback((): HTMLElement | null => {
     const formElement = formRef.current;
     const dialogElement = formElement?.closest('[role="dialog"]') as HTMLElement | null;
-    const activeElement = document.activeElement as HTMLElement | null;
-    if (!formElement || !dialogElement || !activeElement || !dialogElement.contains(activeElement)) {
+    if (!formElement || !dialogElement || showDiscardConfirm) {
+      return null;
+    }
+
+    const openDialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"]'))
+      .filter((element) => element.getAttribute('aria-hidden') !== 'true');
+    const topDialog = openDialogs.at(-1);
+    if (topDialog && topDialog !== dialogElement) {
       return null;
     }
 
     return formElement;
-  }, []);
+  }, [showDiscardConfirm]);
 
   const submitActiveForm = useCallback((): void => {
     formRef.current?.requestSubmit();

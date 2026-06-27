@@ -483,16 +483,18 @@ describe('CultureForm', () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  it('does not intercept Ctrl+S when the culture edit dialog is not active', () => {
+  it('prevents browser save before any field receives focus in the edit dialog', () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
+    const onCancel = vi.fn();
 
-    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={onCancel} />);
 
     (document.activeElement as HTMLElement | null)?.blur();
     const event = dispatchSaveShortcut();
 
-    expect(event.defaultPrevented).toBe(false);
+    expect(event.defaultPrevented).toBe(true);
     expect(onSave).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
   it('does not start duplicate saves when Ctrl+S is pressed repeatedly', async () => {
