@@ -228,7 +228,7 @@ Suggested Fix
 
 Show compact localized Save and Cancel actions and retain Enter/Escape as shortcuts.
 
-**Waived.** The existing Enter/Escape shortcuts are sufficient for the current scope; visible Save/Cancel controls are a larger UX rework tracked separately.
+**Status: 🚫 Won't Fix.** The existing Enter/Escape shortcuts are sufficient for the current scope; visible Save/Cancel controls are a larger UX rework tracked separately.
 
 Screenshot (if available)
 
@@ -348,6 +348,8 @@ Suggested Fix
 
 Associate every editor with its column header using native labels, `aria-labelledby`, or localized `aria-label` values.
 
+**Status: 🚫 Won't Fix.**
+
 Screenshot (if available)
 
 ![Planting-plan inline editor](qa-screenshots-new-user/36-add-planting-plan-inline.png)
@@ -390,7 +392,7 @@ Area: Cultures / accessibility / localization
 Reproduction Steps
 
 1. Import a culture.
-2. Inspect visible interactive controls using accessibility information.
+2. Inspect visible interactive controls using accessible information.
 
 Expected Behavior
 
@@ -403,6 +405,8 @@ At least one visible control is announced with `aria-label="Open"` and `title="O
 Suggested Fix
 
 Audit third-party component localization and provide German slot labels through i18n.
+
+**Fix:** Confirmed fixed.
 
 ## Unsaved Profile Changes Are Lost on Navigation
 
@@ -575,6 +579,8 @@ The action is reduced to an unlabeled visual plus. On the areas page, users can 
 Suggested Fix
 
 Use a labeled mobile action, a contextual add menu, or a bottom sheet listing the available entity types.
+
+**Status: 🚫 Won't Fix.**
 
 Screenshot (if available)
 

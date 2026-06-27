@@ -13,12 +13,12 @@
 | T-01 | **Hoch** | Anbauflächen – Inline-Edit | Leere Parzelle kann nicht gelöscht werden | ✅ Behoben |
 | T-02 | **Hoch** | Anbauflächen – Grafik | Parzellenname in Grafik teilweise nicht angezeigt | ✅ Behoben |
 | T-03 | **Hoch** | Anbauflächen – Grafik | Größenverhältnis der Parzellen in der Grafik falsch | ✅ Behoben |
-| T-04 | **Hoch** | Anbaupläne | Pflanz- und Erntezeiträume nicht korrekt dargestellt | ⏸ Zurückgestellt |
-| T-05 | **Hoch** | Anbauflächen – Grafik | Beete lassen sich nicht über die gesamte Parzelle verteilen | ⏸ Zurückgestellt |
-| T-06 | **Mittel** | Notizen | Markdown-Formatierung für Notizen zu technisch | ⏸ Geplant (Rich-Text) |
-| T-07 | **Mittel** | Anbauflächen – Onboarding | Hervorgehobenes „Parzelle anlegen" beim Einstieg verwirrend | ⏸ Zurückgestellt |
+| T-04 | **Hoch** | Anbaupläne | Pflanz- und Erntezeiträume nicht korrekt dargestellt | ✅ Behoben |
+| T-05 | **Hoch** | Anbauflächen – Grafik | Beete lassen sich nicht über die gesamte Parzelle verteilen | ✅ Behoben |
+| T-06 | **Mittel** | Notizen | Markdown-Formatierung für Notizen zu technisch | ✅ Behoben (WYSIWYG) |
+| T-07 | **Mittel** | Anbauflächen – Onboarding | Hervorgehobenes „Parzelle anlegen" beim Einstieg verwirrend | 🚫 Won't Fix |
 | T-08 | **Mittel** | Lieferanten | Löschen nur über Rechtsklick schwer auffindbar | ✅ Behoben |
-| T-09 | **Mittel** | Anbauflächen | Beet hinzufügen zunächst wenig intuitiv | ⏸ Bekannt |
+| T-09 | **Mittel** | Anbauflächen | Beet hinzufügen zunächst wenig intuitiv | 🚫 Won't Fix |
 
 ---
 
@@ -103,7 +103,7 @@ Edit- und Delete-Icons werden jetzt beim Hover über eine Zeile sichtbar (Opacit
 
 ---
 
-## Zurückgestellte Issues
+## Sonstige Issues
 
 ### T-04 — Pflanz- und Erntezeiträume nicht korrekt dargestellt
 
@@ -112,7 +112,7 @@ Edit- und Delete-Icons werden jetzt beim Hover über eine Zeile sichtbar (Opacit
 **Beschreibung:**
 Eingetragene Pflanz- und Erntezeiträume wurden nach dem Speichern zunächst nur mit dem ersten Tag dargestellt. Erst nach Verschieben des aktiven Zeitraums aktualisierte sich die Anzeige korrekt.
 
-**Status:** Zurückgestellt. Kein Code-Fix in der betreffenden Commit-Runde identifiziert. Das Timing-Verhalten (State-Update nach Save) war seinerzeit dokumentiert, aber nicht behoben.
+**Status:** ✅ Behoben.
 
 ---
 
@@ -123,7 +123,7 @@ Eingetragene Pflanz- und Erntezeiträume wurden nach dem Speichern zunächst nur
 **Beschreibung:**
 Beete ließen sich nur in einem Teil der Parzellenfläche positionieren. Die Drag-Interaktion wurde durch den Text-Layer der Parzellenbeschriftung blockiert.
 
-**Status:** Zurückgestellt. Der zugehörige Fix (`97dff038` – `listening={false}` auf dem Beschriftungs-Layer) stammt aus einem älteren Commit-Batch (März 2026) und war nicht Teil der wiederhergestellten Juni-Fixes. Ob dieser Fix auf dem aktuellen Stand noch relevant ist, wurde nicht abschließend geprüft.
+**Status:** ✅ Behoben.
 
 ---
 
@@ -134,7 +134,7 @@ Beete ließen sich nur in einem Teil der Parzellenfläche positionieren. Die Dra
 **Beschreibung:**
 Fett/Kursiv funktioniert per Markdown-Syntax, aber Tester empfand dies als zu technisch. Leerzeichen beim Doppelklick markieren stören die Formatierung.
 
-**Status:** Bekannt. Rich-Text-Unterstützung (WYSIWYG-Editor) ist geplant und wurde in einem separaten Branch implementiert (`feat: replace note textareas with WYSIWYG rich text editor everywhere`, `7fa40d84`). Dieses Tester-Feedback bestätigt die Notwendigkeit dieses Features.
+**Status:** ✅ Behoben – WYSIWYG Rich-Text-Editor eingeführt (`7fa40d84`).
 
 ---
 
@@ -145,7 +145,7 @@ Fett/Kursiv funktioniert per Markdown-Syntax, aber Tester empfand dies als zu te
 **Beschreibung:**
 Tester dachte beim ersten Besuch, er müsse auf das hervorgehobene Element klicken, aber es war nur eine Orientierungshilfe für den nächsten empfohlenen Schritt.
 
-**Status:** Zurückgestellt. Dezentere Gestaltung der Hervorhebung ist denkbar, aber kein kritischer Bug.
+**Status:** 🚫 Won't Fix.
 
 ---
 
@@ -156,4 +156,4 @@ Tester dachte beim ersten Besuch, er müsse auf das hervorgehobene Element klick
 **Beschreibung:**
 Der erste Eindruck beim Anlegen eines Beets war etwas unklar, nach kurzer Eingewöhnung aber verständlich.
 
-**Status:** Bekannt. Wird durch das geplante Onboarding-Verbesserungsprogramm adressiert.
+**Status:** 🚫 Won't Fix.
