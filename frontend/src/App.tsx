@@ -119,6 +119,7 @@ const ACTION_MENU_ITEM_ICON_SX = { minWidth: 32, color: 'text.secondary' } as co
 const ACTION_MENU_ICON_PROPS = { fontSize: 'small' } as const;
 const HIERARCHY_CREATE_LOCATION_ACTION_ID = 'fields-global-add-location';
 const TOPBAR_ACTION_GROUP_GAP = 1.25;
+const COMPACT_TOPBAR_TOGGLE_SIZE = 44;
 const HomePage = React.lazy(() => import('./pages/public/HomePage'));
 const ImprintPage = React.lazy(() => import('./pages/public/ImprintPage'));
 const PrivacyPolicyPage = React.lazy(() => import('./pages/public/PrivacyPolicyPage'));
@@ -305,6 +306,21 @@ export interface TopbarContextAction {
 export interface RootLayoutOutletContext {
   setTopbarContextActions: (actions: TopbarContextAction[]) => void;
   setTopbarTitleActions: (actions: TopbarContextAction[]) => void;
+}
+
+function getCompactTopbarActionIcon(actionId: string): React.ReactNode {
+  switch (actionId) {
+    case 'fields-view-mode-list':
+      return <ViewListOutlinedIcon fontSize="small" />;
+    case 'fields-view-mode-graphical':
+      return <MapOutlinedIcon fontSize="small" />;
+    case 'calendar-view-mode-occupancy':
+      return <EventNoteOutlinedIcon fontSize="small" />;
+    case 'calendar-view-mode-seedlings':
+      return <LocalFloristOutlinedIcon fontSize="small" />;
+    default:
+      return null;
+  }
 }
 
 
@@ -951,9 +967,9 @@ function RootLayout() {
         elevation={0}
         sx={{ borderBottom: '1px solid', borderColor: 'surface.surfaceBorder', bgcolor: 'surface.topbarBackground', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
-        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: { xs: 'wrap', sm: 'nowrap' }, minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+        <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: 'nowrap', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
           {!isDesktopUp ? <IconButton aria-label={t('globalMenu.openMobileMenu')} onClick={() => setMobileNavOpen(true)}><MenuIcon /></IconButton> : null}
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, flexWrap: 'wrap', overflow: 'visible' }}>
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, flexWrap: 'nowrap', overflow: 'hidden' }}>
             {!isDesktopUp ? (
               <Typography
                 component="h1"
@@ -968,6 +984,7 @@ function RootLayout() {
                   fontSize: { xs: '0.98rem', sm: '1.02rem' },
                   fontWeight: 600,
                   lineHeight: 1.2,
+                  flexShrink: 1,
                 }}
               >
                 {currentPageTitle}
@@ -979,6 +996,59 @@ function RootLayout() {
             )}
             {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={t('pageHelp.openAria', { label: topbarHelpConfig.label })} tooltip={topbarHelpConfig.label} /> : null}
             {topbarTitleActions.length > 0 ? (
+              isCompactTopbar ? (
+                <ToggleButtonGroup
+                  exclusive
+                  size="small"
+                  value={topbarTitleActions.find((action) => action.active)?.id ?? null}
+                  aria-label={isCalendarPage ? t('ganttChart:modeAriaLabel') : t('fields:representation.ariaLabel')}
+                  sx={{
+                    ml: 0.5,
+                    flexShrink: 0,
+                    '& .MuiToggleButton-root': {
+                      width: COMPACT_TOPBAR_TOGGLE_SIZE,
+                      height: COMPACT_TOPBAR_TOGGLE_SIZE,
+                      p: 0,
+                      borderColor: 'divider',
+                      color: 'text.primary',
+                      visibility: 'visible',
+                      '&.Mui-selected': {
+                        bgcolor: 'success.main',
+                        color: 'success.contrastText',
+                        borderColor: 'success.dark',
+                        borderWidth: 2,
+                        boxShadow: 1,
+                      },
+                      '&.Mui-selected:hover': {
+                        bgcolor: 'success.dark',
+                      },
+                    },
+                  }}
+                >
+                  {topbarTitleActions.map((action) => {
+                    const icon = getCompactTopbarActionIcon(action.id);
+                    if (!icon) {
+                      return null;
+                    }
+                    return (
+                      <Tooltip key={action.id} title={action.tooltip ?? action.label} describeChild enterTouchDelay={0}>
+                        <ToggleButton
+                          value={action.id}
+                          aria-label={action.label}
+                          onClick={action.onClick}
+                          disabled={action.disabled}
+                          sx={action.hidden ? {
+                            visibility: 'hidden',
+                            pointerEvents: 'none',
+                          } : undefined}
+                        >
+                          {icon}
+                        </ToggleButton>
+                      </Tooltip>
+                    );
+                  })}
+                </ToggleButtonGroup>
+              ) : (
               <ButtonGroup
                 size="small"
                 variant="outlined"
@@ -1000,6 +1070,7 @@ function RootLayout() {
                   </Button>
                 ))}
               </ButtonGroup>
+              )
             ) : null}
           </Box>
           {!isCompactTopbar ? (
@@ -1294,8 +1365,8 @@ function RootLayout() {
                       sx={{
                         flexShrink: 0,
                         '& .MuiToggleButton-root': {
-                          width: 32,
-                          height: 32,
+                          width: COMPACT_TOPBAR_TOGGLE_SIZE,
+                          height: COMPACT_TOPBAR_TOGGLE_SIZE,
                           p: 0,
                           borderColor: 'divider',
                           color: 'text.primary',
@@ -1358,8 +1429,8 @@ function RootLayout() {
                         }}
                         disabled={fieldsGlobalAddAction.disabled}
                         sx={{
-                          width: 32,
-                          height: 32,
+                          width: COMPACT_TOPBAR_TOGGLE_SIZE,
+                          height: COMPACT_TOPBAR_TOGGLE_SIZE,
                           bgcolor: 'success.main',
                           color: 'success.contrastText',
                           boxShadow: 1,
@@ -1384,8 +1455,8 @@ function RootLayout() {
                         onClick={mobileFieldsAddLocationAction.onClick}
                         disabled={mobileFieldsAddLocationAction.disabled}
                         sx={{
-                          width: 32,
-                          height: 32,
+                          width: COMPACT_TOPBAR_TOGGLE_SIZE,
+                          height: COMPACT_TOPBAR_TOGGLE_SIZE,
                           bgcolor: 'success.main',
                           color: 'success.contrastText',
                           boxShadow: 1,
