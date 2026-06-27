@@ -65,6 +65,9 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     if (localStorage.getItem(SHORTCUT_HINT_KEY) !== null || !hasVisitedFeaturePageRef.current) {
       return;
     }
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches) {
+      return;
+    }
 
     const timerId = window.setTimeout(() => {
       setHintOpen(true);

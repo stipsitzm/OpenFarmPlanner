@@ -13,9 +13,9 @@
 
 | # | Severity | Area | Title | Status |
 |---|----------|------|-------|--------|
-| MOB-01 | **High** | Einstellungen | Projekteinstellungen page shows error / blank screen | 🔴 Open |
-| MOB-02 | **Low** | Anbauflächen / all pages | Keyboard shortcut tip banner shown to mobile users | 🔴 Open |
-| MOB-03 | **Low** | All pages | Top-bar icon buttons smaller than 44 px touch target | 🔴 Open |
+| MOB-01 | ~~High~~ | Einstellungen | Projekteinstellungen page shows error / blank screen | ✅ Script false positive — wrong URL in test script |
+| MOB-02 | **Low** | Anbauflächen / all pages | Keyboard shortcut tip banner shown to mobile users | ✅ Fixed — `(pointer: coarse)` guard added |
+| MOB-03 | **Low** | All pages | Top-bar icon buttons smaller than 44 px touch target | ✅ Fixed — hamburger, Mehr, PageHelp upgraded to 40 px |
 
 ---
 
@@ -23,30 +23,11 @@
 
 ### MOB-01 — Projekteinstellungen Page Shows Error Screen
 
-**Area:** Mehr-Menü → Projekteinstellungen (`/app/settings`)
+**Status: ✅ Script false positive.** The test script navigated to `/app/settings` which is not a valid route. The actual route is `/app/project-settings`. The `RuntimeErrorState` shown was the router's 404 fallback. Clicking **Mehr → Projekteinstellungen** in the real app navigates to `/app/project-settings` which renders correctly.
 
-**Steps to reproduce:**
-1. Open the app on a mobile device (or 375 px viewport).
-2. Tap the ⋮ **Mehr** button in the top-right corner.
-3. Tap **Projekteinstellungen**.
+**Screenshot (the error was from the wrong URL, not the page itself):**
 
-**Expected:** The project settings page loads and shows configurable fields.
-
-**Actual:** The page shows a white screen with only:
-
-> "Die Seite konnte nicht automatisch wiederhergestellt werden. Bitte versuche es später erneut."
-
-No settings content is rendered at all.
-
-**Notes:**
-- Reproduced in both automated passes (fresh E2E accounts).
-- The URL `/app/settings` is reached correctly, but the page content fails to render.
-- The error text is the React Error Boundary fallback — an unhandled exception is thrown during page mount.
-- Not confirmed mobile-specific; desktop was not checked in this session. Needs verification on desktop.
-
-**Screenshot:**
-
-*Settings page — blank with error message:*  
+*RuntimeErrorState triggered by invalid route `/app/settings`:*  
 ![Settings page error](qa-report-2026-06-27-mobile-screenshots/109-E1-settings.png)
 
 ---

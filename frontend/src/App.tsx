@@ -952,7 +952,7 @@ function RootLayout() {
         sx={{ borderBottom: '1px solid', borderColor: 'surface.surfaceBorder', bgcolor: 'surface.topbarBackground', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
         <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: { xs: 'wrap', sm: 'nowrap' }, minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
-          {!isDesktopUp ? <IconButton aria-label={t('globalMenu.openMobileMenu')} onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
+          {!isDesktopUp ? <IconButton aria-label={t('globalMenu.openMobileMenu')} onClick={() => setMobileNavOpen(true)}><MenuIcon /></IconButton> : null}
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, flexWrap: 'wrap', overflow: 'visible' }}>
             {!isDesktopUp ? (
               <Typography
@@ -1455,10 +1455,9 @@ function RootLayout() {
                 aria-controls={globalMenuAnchor ? 'global-actions-menu' : undefined}
                 aria-haspopup="true"
                 onClick={handleGlobalMenuOpen}
-                size="small"
                 sx={{ color: 'text.primary' }}
               >
-                <MoreVertIcon fontSize="small" />
+                <MoreVertIcon />
               </IconButton>
               <GlobalMenu
                 anchorEl={globalMenuAnchor}

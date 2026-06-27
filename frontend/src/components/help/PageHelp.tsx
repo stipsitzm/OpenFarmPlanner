@@ -424,7 +424,7 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
   return (
     <>
       <Tooltip title={tooltip ?? t('showTooltip')}>
-        <IconButton ref={triggerButtonRef} aria-label={ariaLabel ?? t('showTooltip')} onClick={handleOpen} size="small" sx={{ color: 'text.secondary' }}>
+        <IconButton ref={triggerButtonRef} aria-label={ariaLabel ?? t('showTooltip')} onClick={handleOpen} size={isMobile ? 'medium' : 'small'} sx={{ color: 'text.secondary' }}>
           <HelpOutlineIcon fontSize="small" />
         </IconButton>
       </Tooltip>
