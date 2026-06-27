@@ -206,6 +206,11 @@ function DateEditCellComponent(params: GridRenderEditCellParams) {
         inputRef={inputRef}
         value={text}
         placeholder="TT.MM.JJJJ"
+        sx={{
+          '& .MuiInputBase-input': {
+            paddingInline: '8px 0',
+          },
+        }}
         slotProps={{
           htmlInput: {
             tabIndex: params.hasFocus ? 0 : -1,
