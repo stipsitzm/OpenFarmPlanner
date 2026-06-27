@@ -107,6 +107,19 @@ const CULTURE_B: Culture = {
   supplier: { id: 11, name: 'Dreschflegel' },
 };
 
+const dispatchSaveShortcut = (options: { metaKey?: boolean; repeat?: boolean } = {}): KeyboardEvent => {
+  const event = new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    ctrlKey: !options.metaKey,
+    key: 's',
+    metaKey: Boolean(options.metaKey),
+    repeat: Boolean(options.repeat),
+  });
+  fireEvent(window, event);
+  return event;
+};
+
 describe('CultureForm', () => {
   beforeEach(() => {
     navigateMock.mockReset();
@@ -354,6 +367,104 @@ describe('CultureForm', () => {
       variety: 'Nantaise',
       supplier: { id: 10, name: 'Bingenheimer' },
     }));
+  });
+
+  it('saves the active culture edit dialog with Ctrl+S', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+
+    const nameInput = screen.getByLabelText('name-input');
+    fireEvent.change(nameInput, { target: { value: 'Neue Karotte' } });
+    nameInput.focus();
+
+    await waitFor(() => expect(cultureDuplicateCheckMock).toHaveBeenCalledWith(
+      { name: 'Neue Karotte', variety: 'Nantaise', exclude_id: 1 },
+      expect.any(AbortSignal),
+    ));
+    const event = dispatchSaveShortcut();
+
+    expect(event.defaultPrevented).toBe(true);
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      id: 1,
+      name: 'Neue Karotte',
+      variety: 'Nantaise',
+    }));
+  });
+
+  it('saves the active culture edit dialog with Cmd+S', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+
+    const varietyInput = screen.getByLabelText('variety-input');
+    varietyInput.focus();
+    const event = dispatchSaveShortcut({ metaKey: true });
+
+    expect(event.defaultPrevented).toBe(true);
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+  });
+
+  it('prevents browser save but does not submit when Ctrl+S save is disabled', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    cultureDuplicateCheckMock.mockResolvedValueOnce({ data: { exists: true } });
+
+    render(<CultureForm onSave={onSave} onCancel={() => {}} />);
+
+    const nameInput = screen.getByLabelText('name-input');
+    fireEvent.change(nameInput, { target: { value: 'Karotte' } });
+    fireEvent.change(screen.getByLabelText('variety-input'), { target: { value: 'Nantaise' } });
+    nameInput.focus();
+
+    await screen.findByText('form.duplicateNameVariety');
+    const event = dispatchSaveShortcut();
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('does not intercept Ctrl+S when the culture edit dialog is not active', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+
+    (document.activeElement as HTMLElement | null)?.blur();
+    const event = dispatchSaveShortcut();
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('does not start duplicate saves when Ctrl+S is pressed repeatedly', async () => {
+    let resolveSave: () => void = () => {};
+    const onSave = vi.fn().mockImplementation(() => new Promise<void>((resolve) => {
+      resolveSave = resolve;
+    }));
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+
+    screen.getByLabelText('name-input').focus();
+    const firstEvent = dispatchSaveShortcut();
+    const secondEvent = dispatchSaveShortcut();
+
+    expect(firstEvent.defaultPrevented).toBe(true);
+    expect(secondEvent.defaultPrevented).toBe(true);
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+
+    resolveSave();
+  });
+
+  it('keeps Enter behavior unchanged in culture edit inputs', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(<CultureForm culture={CULTURE_A} onSave={onSave} onCancel={() => {}} />);
+
+    const nameInput = screen.getByLabelText('name-input');
+    nameInput.focus();
+    fireEvent.keyDown(nameInput, { key: 'Enter' });
+
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it('saves spacing values for culture edit', async () => {

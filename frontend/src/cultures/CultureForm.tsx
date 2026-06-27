@@ -34,6 +34,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { cultureAPI, publicCultureAPI, supplierAPI } from '../api/api';
+import { useActiveSaveShortcut } from '../hooks/useActiveSaveShortcut';
 import { useDialogKeyboardScroll } from '../hooks/useDialogKeyboardScroll';
 import { useNavigate } from 'react-router-dom';
 import { validateCulture } from './validation';
@@ -227,6 +228,7 @@ export function CultureForm({
   const [isValid, setIsValid] = useState(true);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const isSavingRef = useRef(false);
   const userInteractedRef = useRef(false);
   const dialogContentRef = useDialogKeyboardScroll(true);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -291,6 +293,7 @@ export function CultureForm({
     setIsValid(true);
     setHasSubmitted(false);
     setSaveError('');
+    isSavingRef.current = false;
     userInteractedRef.current = false;
   }, [culture]);
 
@@ -501,6 +504,7 @@ export function CultureForm({
   // Handle manual save (for Save button)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSavingRef.current) return;
     setHasSubmitted(true);
     if (!validateAndSet(formData, 'submit')) return;
     if (hasSupplierDataRowMissingSupplier(formData.supplier_data)) {
@@ -508,6 +512,7 @@ export function CultureForm({
       return;
     }
     if (duplicateErrorKey || isDuplicateChecking) return;
+    isSavingRef.current = true;
     setIsSaving(true);
     try {
       await saveCulture(formData);
@@ -517,6 +522,7 @@ export function CultureForm({
     } catch (error) {
       setSaveError(extractApiErrorMessage(error, t, t('messages.updateError')));
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   };
@@ -525,6 +531,29 @@ export function CultureForm({
   const displayErrors = duplicateErrorKey
     ? { ...errors, variety: errors.variety || t(duplicateErrorKey) }
     : errors;
+  const isSaveDisabled = isSaving || !isValid || Boolean(duplicateErrorKey) || isDuplicateChecking;
+
+  const getActiveSaveShortcutElement = useCallback((): HTMLElement | null => {
+    const formElement = formRef.current;
+    const dialogElement = formElement?.closest('[role="dialog"]') as HTMLElement | null;
+    const activeElement = document.activeElement as HTMLElement | null;
+    if (!formElement || !dialogElement || !activeElement || !dialogElement.contains(activeElement)) {
+      return null;
+    }
+
+    return formElement;
+  }, []);
+
+  const submitActiveForm = useCallback((): void => {
+    formRef.current?.requestSubmit();
+  }, []);
+
+  useActiveSaveShortcut({
+    enabled: true,
+    disabled: isSaveDisabled,
+    getActiveElement: getActiveSaveShortcutElement,
+    onSave: submitActiveForm,
+  });
 
   const updateSupplierRow = (index: number, patch: Record<string, unknown>) => {
     const nextRows = supplierRows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row));
@@ -781,7 +810,7 @@ export function CultureForm({
           <Button
             type="submit"
             variant="contained"
-            disabled={isSaving || !isValid || Boolean(duplicateErrorKey) || isDuplicateChecking}
+            disabled={isSaveDisabled}
           >
             {isSaving
               ? t('messages.saving', { defaultValue: 'Speichern...' })
