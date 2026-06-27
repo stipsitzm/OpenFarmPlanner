@@ -36,7 +36,6 @@ function RootCommandFixture(props: {
   const commands = useMemo(() => createRootCommands({
     currentPath: props.currentPath ?? '/app/cultures',
     activeProjectId: 1,
-    isProjectAdmin: true,
     memberships: [
       { project_id: 1, project_name: 'Demo' },
       { project_id: 2, project_name: 'Garten' },
@@ -44,7 +43,6 @@ function RootCommandFixture(props: {
     onNextPage: props.onNextPage ?? vi.fn(),
     onPreviousPage: props.onPreviousPage ?? vi.fn(),
     onOpenProjectSettings: props.onOpenProjectSettings ?? vi.fn(),
-    onOpenProjectMembers: vi.fn(),
     onOpenCreateProject: vi.fn(),
     onSwitchProject: vi.fn(),
     onOpenAccountSettings: vi.fn(),
@@ -56,7 +54,6 @@ function RootCommandFixture(props: {
       nextPage: 'Nächste Seite',
       previousPage: 'Vorherige Seite',
       openProjectSettings: 'Projekteinstellungen',
-      openProjectMembers: 'Projektmitglieder',
       createProject: 'Projekt erstellen',
       switchProjectPrefix: 'Projekt wechseln',
       openAccountSettings: 'Kontoeinstellungen',

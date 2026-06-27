@@ -68,7 +68,6 @@ import AddIcon from '@mui/icons-material/Add';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
-import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import KeyboardOutlinedIcon from '@mui/icons-material/KeyboardOutlined';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -233,7 +232,6 @@ interface GlobalMenuProps {
   onOpenProjectSwitcher: () => void;
   onOpenCreateProject: () => void;
   onOpenProjectSettings: () => void;
-  onOpenProjectMembers: () => void;
   onOpenProjectHistory: () => Promise<void>;
   onOpenAccountSettings: () => void;
   onOpenShortcuts: () => void;
@@ -253,7 +251,6 @@ function GlobalMenu(props: GlobalMenuProps) {
     onOpenProjectSwitcher,
     onOpenCreateProject,
     onOpenProjectSettings,
-    onOpenProjectMembers,
     onOpenProjectHistory,
     onOpenAccountSettings,
     onOpenShortcuts,
@@ -267,7 +264,6 @@ function GlobalMenu(props: GlobalMenuProps) {
     <MenuItem key="mobile-project-switcher" onClick={onOpenProjectSwitcher}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SwapHorizIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('projectSwitcher.ariaLabel')}</MenuItem>,
     <MenuItem key="mobile-project-create" onClick={onOpenCreateProject}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><AddIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.create')}</MenuItem>,
     <MenuItem key="mobile-project-settings" onClick={onOpenProjectSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.settings')}</MenuItem>,
-    <MenuItem key="mobile-project-members" onClick={onOpenProjectMembers}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><GroupOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openProjectMembers')}</MenuItem>,
     <MenuItem key="mobile-project-history" onClick={() => void onOpenProjectHistory()} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
     <Divider key="mobile-divider-project-app" />,
     <MenuItem key="mobile-section-app" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.app')}</MenuItem>,
@@ -693,8 +689,6 @@ function RootLayout() {
     }
   }, [activeProjectId, applyProjectContextChange, handleProjectMenuClose, showSnackbar, t]);
 
-  const activeMembershipRole = activeMembership?.role ?? null;
-
   const getCurrentRouteFromLocation = useCallback((): string => {
     const pathname = currentPathnameRef.current;
     return getKeyboardNavigationRouteFromPathname(pathname) ?? normalizeMainRoutePath(pathname);
@@ -725,12 +719,10 @@ function RootLayout() {
   const globalCommands = useMemo(() => createRootCommands({
     currentPath: getCurrentRouteFromLocation(),
     activeProjectId,
-    isProjectAdmin: activeMembershipRole === 'admin',
     memberships,
     onNextPage: goToNextPage,
     onPreviousPage: goToPreviousPage,
     onOpenProjectSettings: handleOpenProjectSettings,
-    onOpenProjectMembers: handleOpenProjectSettings,
     onOpenCreateProject: handleOpenCreateProject,
     onSwitchProject: (projectId) => { void handleSwitchProject(projectId); },
     onOpenAccountSettings: () => navigate('/app/account-settings'),
@@ -742,7 +734,6 @@ function RootLayout() {
       nextPage: t('commandPalette.commands.nextPage'),
       previousPage: t('commandPalette.commands.previousPage'),
       openProjectSettings: t('commandPalette.commands.openProjectSettings'),
-      openProjectMembers: t('commandPalette.commands.openProjectMembers'),
       createProject: t('commandPalette.commands.createProject'),
       switchProjectPrefix: t('commandPalette.commands.switchProjectPrefix'),
       openAccountSettings: t('commandPalette.commands.openAccountSettings'),
@@ -752,7 +743,6 @@ function RootLayout() {
       openShortcuts: t('commandPalette.commands.openShortcuts'),
     },
   }), [
-    activeMembershipRole,
     activeProjectId,
     getCurrentRouteFromLocation,
     goToNextPage,
@@ -1342,7 +1332,6 @@ function RootLayout() {
             onOpenProjectSwitcher={handleOpenMobileProjectSwitcher}
             onOpenCreateProject={handleOpenCreateProject}
             onOpenProjectSettings={handleOpenProjectSettings}
-            onOpenProjectMembers={handleOpenProjectSettings}
             onOpenProjectHistory={handleOpenProjectHistory}
             onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
             onOpenShortcuts={handleOpenShortcuts}
@@ -1540,7 +1529,6 @@ function RootLayout() {
                 onOpenProjectSwitcher={handleOpenMobileProjectSwitcher}
                 onOpenCreateProject={handleOpenCreateProject}
                 onOpenProjectSettings={handleOpenProjectSettings}
-                onOpenProjectMembers={handleOpenProjectSettings}
                 onOpenProjectHistory={handleOpenProjectHistory}
                 onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
                 onOpenShortcuts={handleOpenShortcuts}
