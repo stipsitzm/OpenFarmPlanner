@@ -24,8 +24,10 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
@@ -40,7 +42,7 @@ import { useRegisterCreateActions } from '../commands/useCommandContext';
 import { ContextMenuHint, DELETE_UNDO_DURATION_MS, DeleteUndoSnackbar, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
 import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from '../components/data-grid/contextMenuFocus';
 import { extractApiErrorMessage } from '../api/errors';
-import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu, useCloseCustomContextMenuOnNativeContextMenu } from '../utils/contextMenu';
 
 interface SupplierDraft {
   id?: number;
@@ -460,11 +462,30 @@ export default function Suppliers() {
   }, []);
   const contextMenuListRef = useContextMenuFocus(contextMenuState !== null, closeContextMenu);
 
+  const isSupplierContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
+    shouldOpenCustomContextMenu(target) &&
+    target instanceof HTMLElement &&
+    target.closest('tr[data-supplier-id]') !== null
+  ), []);
+  const repositionOpenSupplierContextMenu = useCallback((event: globalThis.MouseEvent): void => {
+    setContextMenuState((currentState) => (
+      currentState
+        ? { supplier: currentState.supplier, mouseX: event.clientX + 2, mouseY: event.clientY - 6 }
+        : currentState
+    ));
+  }, []);
+  useCloseCustomContextMenuOnNativeContextMenu(
+    contextMenuState !== null,
+    closeContextMenu,
+    isSupplierContextMenuTarget,
+    repositionOpenSupplierContextMenu,
+  );
+
   const openSupplierContextMenu = useCallback((
     event: MouseEvent<HTMLTableRowElement>,
     supplier: Supplier,
   ): void => {
-    if (!shouldOpenCustomContextMenu(event.target)) {
+    if (!isSupplierContextMenuTarget(event.target)) {
       return;
     }
     suppressNativeContextMenu(event);
@@ -475,7 +496,7 @@ export default function Suppliers() {
       mouseX: event.clientX + 2,
       mouseY: event.clientY - 6,
     });
-  }, [markContextMenuHintUsed]);
+  }, [isSupplierContextMenuTarget, markContextMenuHintUsed]);
 
   const openSupplierKeyboardContextMenu = useCallback((
     event: KeyboardEvent<HTMLTableRowElement>,
@@ -505,6 +526,28 @@ export default function Suppliers() {
     closeContextMenu();
     void deleteSupplier(supplier);
   }, [closeContextMenu, contextMenuState, deleteSupplier]);
+
+  const handleContextMenuEdit = useCallback((): void => {
+    if (!contextMenuState) {
+      return;
+    }
+    const { supplier } = contextMenuState;
+    closeContextMenu();
+    openEdit(supplier);
+  }, [closeContextMenu, contextMenuState, openEdit]);
+
+  const openSupplierInlineActionMenu = useCallback((event: MouseEvent<HTMLButtonElement>, supplier: Supplier): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    markContextMenuHintUsed();
+    contextMenuOriginRef.current = event.currentTarget;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setContextMenuState({
+      supplier,
+      mouseX: rect.right - 8,
+      mouseY: rect.top + 12,
+    });
+  }, [markContextMenuHintUsed]);
 
   const getSupplierRowClipboardValues = useCallback((supplier: Supplier): string[] => [
     supplier.name,
@@ -570,15 +613,15 @@ export default function Suppliers() {
             <Table size="medium">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ py: 1.5, minWidth: { xs: 140, sm: 180 } }}>{t('name')}</TableCell>
-                  <TableCell sx={{ py: 1.5, minWidth: { xs: 180, sm: 280 } }}>{t('homepage')}</TableCell>
-                  <TableCell align="right" sx={{ py: 1.5, width: 1, whiteSpace: 'nowrap' }} />
+                  <TableCell sx={{ py: 1.5, minWidth: { xs: 150, sm: 180 } }}>{t('name')}</TableCell>
+                  <TableCell sx={{ py: 1.5, minWidth: { xs: 170, sm: 260 } }}>{t('homepage')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {suppliers.map((supplier) => (
                   <TableRow
                     key={supplier.id}
+                    data-supplier-id={supplier.id}
                     hover
                     tabIndex={0}
                     onClick={(event) => {
@@ -602,43 +645,102 @@ export default function Suppliers() {
                       '&:focus-within .supplier-row-actions': { opacity: 1, pointerEvents: 'auto' },
                     }}
                   >
-                    <TableCell sx={{ py: 1.25 }}>{supplier.name}</TableCell>
+                    <TableCell sx={{ py: 1.25, maxWidth: { xs: 180, sm: 240 } }}>
+                      <Box
+                        sx={{
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          minWidth: 0,
+                          width: '100%',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <Box
+                          component="span"
+                          sx={{
+                            display: 'block',
+                            flex: '1 1 auto',
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {supplier.name}
+                        </Box>
+                        <Box
+                          className="supplier-row-actions"
+                          sx={{
+                            position: 'absolute',
+                            right: 0,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                            py: 0.25,
+                            pl: 0.25,
+                            pr: 0.25,
+                            borderRadius: 1,
+                            bgcolor: 'background.paper',
+                            opacity: 0,
+                            pointerEvents: 'none',
+                            transition: 'background-color 120ms ease-in-out, opacity 120ms ease-in-out',
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              top: 0,
+                              bottom: 0,
+                              right: '100%',
+                              width: 16,
+                              pointerEvents: 'none',
+                              background: (theme) =>
+                                `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 100%)`,
+                            },
+                            'tr:hover &': {
+                              bgcolor: 'surface.surfaceHoverBackground',
+                            },
+                            'tr:hover &::before': {
+                              background: (theme) => {
+                                const hoverBackground = theme.palette.surface?.surfaceHoverBackground ?? theme.palette.action.hover;
+                                return `linear-gradient(90deg, ${alpha(hoverBackground, 0)} 0%, ${hoverBackground} 100%)`;
+                              },
+                            },
+                          }}
+                        >
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            aria-label={t('editAction')}
+                            onClick={() => openEdit(supplier)}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            aria-label={t('deleteAction')}
+                            onClick={() => void deleteSupplier(supplier)}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            aria-label={t('common:actions.actions')}
+                            onClick={(event) => openSupplierInlineActionMenu(event, supplier)}
+                          >
+                            <MoreVertIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                    </TableCell>
                     <TableCell sx={{ py: 1.25 }}>
                       {supplier.homepage_url ? (
                         <Link href={supplier.homepage_url} target="_blank" rel="noopener noreferrer" underline="hover">
                           {supplier.homepage_url}
                         </Link>
                       ) : null}
-                    </TableCell>
-                    <TableCell align="right" sx={{ py: 1.25 }}>
-                      <Box
-                        className="supplier-row-actions"
-                        sx={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 0.5,
-                          opacity: 0,
-                          pointerEvents: 'none',
-                          transition: 'opacity 120ms ease-in-out',
-                        }}
-                      >
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          aria-label={t('editAction')}
-                          onClick={() => openEdit(supplier)}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          aria-label={t('deleteAction')}
-                          onClick={() => void deleteSupplier(supplier)}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -652,9 +754,15 @@ export default function Suppliers() {
       <Menu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
+        hideBackdrop
+        sx={{ pointerEvents: 'none' }}
         autoFocus
         disableAutoFocusItem={false}
         slotProps={{
+          paper: {
+            className: 'ofp-custom-context-menu',
+            sx: { pointerEvents: 'auto' },
+          },
           list: {
             autoFocus: true,
             ref: contextMenuListRef,
@@ -669,6 +777,12 @@ export default function Suppliers() {
             : undefined
         }
       >
+        <MenuItem onClick={handleContextMenuEdit}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary={t('editAction')} />
+        </MenuItem>
         <MenuItem onClick={handleContextMenuDelete}>
           <ListItemIcon sx={{ color: 'error.main' }}>
             <DeleteIcon fontSize="small" />

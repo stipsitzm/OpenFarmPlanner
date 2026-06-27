@@ -69,7 +69,7 @@ import {
   DEFAULT_HIERARCHY_COLUMN_WIDTHS,
 } from "../components/hierarchy/HierarchyColumns";
 import { extractApiErrorMessage } from "../api/errors";
-import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from "../utils/contextMenu";
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu, useCloseCustomContextMenuOnNativeContextMenu } from "../utils/contextMenu";
 import type { HierarchyRow } from "../components/hierarchy/utils/types";
 import {
   calculateHierarchyNameColumnWidth,
@@ -825,21 +825,20 @@ function FieldsBedsHierarchy({
       }
 
       if (
-        typeof fieldArea !== "number" ||
-        fieldArea <= 0 ||
-        Number.isNaN(fieldArea)
+        fieldArea !== undefined &&
+        (typeof fieldArea !== "number" || fieldArea <= 0 || Number.isNaN(fieldArea))
       ) {
         setError(t("validation.areaMustBePositive"));
         throw new Error(t("validation.areaMustBePositive"));
       }
 
-      if (fieldArea > 1000000) {
+      if (fieldArea !== undefined && fieldArea > 1000000) {
         setError(t("validation.areaTooLarge"));
         throw new Error(t("validation.areaTooLarge"));
       }
 
       const sum = getBedAreaSum(newRow.fieldId!);
-      if (sum > fieldArea) {
+      if (fieldArea !== undefined && sum > fieldArea) {
         const sumStr = sum.toFixed(2);
         const maxStr = fieldArea.toFixed(2);
         setError(
@@ -1054,6 +1053,9 @@ function FieldsBedsHierarchy({
   }, [markContextMenuHintUsed]);
 
   const handleNameCellContextMenu = useCallback((event: React.MouseEvent<HTMLElement> | React.KeyboardEvent<HTMLElement>, row: HierarchyRow): void => {
+    if (!shouldOpenCustomContextMenu(event.target)) {
+      return;
+    }
     suppressNativeContextMenu(event);
     const hasPointerCoordinates =
       "clientX" in event &&
@@ -1072,8 +1074,17 @@ function FieldsBedsHierarchy({
     openContextMenuForRow(row, rect.right - 8, rect.top + 12, event.currentTarget);
   }, [openContextMenuForRow]);
 
+  const isHierarchyContextMenuTarget = useCallback((target: EventTarget | null): boolean => {
+    if (!shouldOpenCustomContextMenu(target) || !(target instanceof HTMLElement)) {
+      return false;
+    }
+    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
+    const rowId = rowElement?.dataset.id;
+    return Boolean(rowId && rows.some((row) => String(row.id) === rowId));
+  }, [rows]);
+
   const handleGridContextMenu = useCallback((event: React.MouseEvent<HTMLElement>): void => {
-    if (!shouldOpenCustomContextMenu(event.target)) {
+    if (!isHierarchyContextMenuTarget(event.target)) {
       return;
     }
     const target = event.target;
@@ -1094,7 +1105,7 @@ function FieldsBedsHierarchy({
     setSelectedRowId(targetRow.id);
     setTreeActive(true);
     openContextMenuForRow(targetRow, event.clientX + 2, event.clientY - 6, rowElement);
-  }, [openContextMenuForRow, rows]);
+  }, [isHierarchyContextMenuTarget, openContextMenuForRow, rows]);
 
   const handleGridTouchStart = useCallback((event: React.TouchEvent<HTMLElement>): void => {
     if (!shouldOpenCustomContextMenu(event.target)) {
@@ -1131,6 +1142,19 @@ function FieldsBedsHierarchy({
     setContextMenuState(null);
     focusContextMenuOrigin(contextMenuOriginRef.current);
   }, []);
+  const repositionOpenContextMenu = useCallback((event: globalThis.MouseEvent): void => {
+    setContextMenuState((currentState) => (
+      currentState
+        ? { row: currentState.row, mouseX: event.clientX + 2, mouseY: event.clientY - 6 }
+        : currentState
+    ));
+  }, []);
+  useCloseCustomContextMenuOnNativeContextMenu(
+    contextMenuState !== null,
+    closeContextMenu,
+    isHierarchyContextMenuTarget,
+    repositionOpenContextMenu,
+  );
   const contextMenuListRef = useContextMenuFocus(contextMenuState !== null, closeContextMenu);
 
   const areaCommands = useMemo<CommandSpec[]>(
@@ -1146,10 +1170,9 @@ function FieldsBedsHierarchy({
       },
       {
         id: "areas.edit",
-        label: "Bearbeiten (Alt+E)",
+        label: "Bearbeiten",
         group: 'navigation',
       keywords: ["bearbeiten", "edit"],
-                keys: { key: "Enter" },
         contextTags: ["areas"],
         isEnabled: () =>
           selectedRow !== null && selectedRow.type !== "location",
@@ -1688,9 +1711,15 @@ function FieldsBedsHierarchy({
       <Menu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
+        hideBackdrop
+        sx={{ pointerEvents: "none" }}
         autoFocus
         disableAutoFocusItem={false}
         slotProps={{
+          paper: {
+            className: "ofp-custom-context-menu",
+            sx: { pointerEvents: "auto" },
+          },
           list: {
             autoFocus: true,
             ref: contextMenuListRef,

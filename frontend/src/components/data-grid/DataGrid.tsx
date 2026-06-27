@@ -15,7 +15,7 @@
  * Navigation is blocked if there are unsaved changes (row in edit mode).
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type MutableRefObject, type TouchEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type MutableRefObject, type ReactNode, type TouchEvent } from 'react';
 import {
   DataGrid,
   GridRowEditStopReasons,
@@ -29,13 +29,15 @@ import {
 } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
-import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRowParams, GridFilterOperator, GridPaginationModel } from '@mui/x-data-grid';
+import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRenderCellParams, GridRowParams, GridFilterOperator, GridPaginationModel } from '@mui/x-data-grid';
 import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
 import { confirmAction } from '../../utils/confirmAction';
@@ -53,7 +55,7 @@ import { extractApiErrorMessage } from '../../api/errors';
 import { germanDataGridLocaleText } from './localeText';
 import { TableCopyMenuItems } from './TableCopyMenuItems';
 import { formatClipboardValue, type TableClipboardRow } from './tableClipboard';
-import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../../utils/contextMenu';
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu, useCloseCustomContextMenuOnNativeContextMenu } from '../../utils/contextMenu';
 import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from './contextMenuFocus';
 import { ContextMenuHint } from './ContextMenuHint';
 import { useContextMenuHint } from './useContextMenuHint';
@@ -156,6 +158,9 @@ export interface EditableDataGridProps<T extends EditableRow> {
   showFooterEditControls?: boolean;
   showRowEditActions?: boolean;
   getRowActions?: (row: T, helpers: EditableDataGridRowActionHelpers<T>) => EditableDataGridRowAction<T>[];
+  inlineRowActionField?: string;
+  getInlineRowActions?: (row: T, helpers: EditableDataGridRowActionHelpers<T>) => EditableDataGridRowAction<T>[];
+  showInlineRowActionMenu?: boolean;
   duplicateRow?: (row: T) => T;
   deleteUndoOptions?: DeleteUndoOptions;
   clipboardColumns?: EditableDataGridClipboardColumn<T>[];
@@ -356,6 +361,9 @@ export function EditableDataGrid<T extends EditableRow>({
   showFooterEditControls = true,
   showRowEditActions = false,
   getRowActions,
+  inlineRowActionField,
+  getInlineRowActions,
+  showInlineRowActionMenu = false,
   duplicateRow,
   deleteUndoOptions,
   clipboardColumns,
@@ -1579,12 +1587,32 @@ export function EditableDataGrid<T extends EditableRow>({
     setLongPressFeedbackRowId(null);
     focusContextMenuOrigin(rowActionMenuOriginRef.current);
   }, []);
+  const hasContextualRowActions = true;
+  const isRowActionContextMenuTarget = useCallback((target: EventTarget | null): boolean => {
+    if (!hasContextualRowActions || !shouldOpenCustomContextMenu(target)) {
+      return false;
+    }
+    const rowId = getRowIdFromElement(target);
+    return rowId !== null && rowsById.has(String(rowId));
+  }, [hasContextualRowActions, rowsById]);
+  const repositionOpenRowActionMenu = useCallback((event: globalThis.MouseEvent): void => {
+    setRowActionMenuState((currentState) => (
+      currentState
+        ? { rowId: currentState.rowId, mouseX: event.clientX + 2, mouseY: event.clientY - 6 }
+        : currentState
+    ));
+  }, []);
+  useCloseCustomContextMenuOnNativeContextMenu(
+    Boolean(rowActionMenuState),
+    closeRowActionMenu,
+    isRowActionContextMenuTarget,
+    repositionOpenRowActionMenu,
+  );
   const rowActionMenuListRef = useContextMenuFocus(Boolean(rowActionMenuState), closeRowActionMenu);
 
   const menuRow = rowActionMenuState ? rowsById.get(String(rowActionMenuState.rowId)) as T | undefined : undefined;
   const shouldUseRowActions = Boolean(getRowActions || duplicateRow);
   const menuActions = menuRow && shouldUseRowActions ? resolveRowActions(menuRow) : [];
-  const hasContextualRowActions = true;
   const resolvedClipboardColumns = useMemo<EditableDataGridClipboardColumn<T>[]>(() => {
     if (clipboardColumns) {
       return clipboardColumns;
@@ -1607,6 +1635,132 @@ export function EditableDataGrid<T extends EditableRow>({
     resolvedClipboardColumns.map((column) => column.headerName),
     ...(rowsForGrid as T[]).map(getClipboardRowValues),
   ], [getClipboardRowValues, resolvedClipboardColumns, rowsForGrid]);
+
+  const renderInlineActionCell = useCallback((
+    col: GridColDef,
+    params: GridRenderCellParams<T>,
+  ) => {
+    const row = params.row as T;
+    const actions = getInlineRowActions?.(row, rowActionHelpers) ?? [];
+    const hasInlineMenuAction = showInlineRowActionMenu && row.id !== undefined;
+    const baseContent: ReactNode = col.renderCell
+      ? col.renderCell(params)
+      : String(params.formattedValue ?? params.value ?? '');
+
+    if (actions.length === 0 && !hasInlineMenuAction) {
+      return baseContent;
+    }
+
+    return (
+      <Box
+        sx={{
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          minWidth: 0,
+          width: '100%',
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          sx={{
+            display: 'block',
+            flex: '1 1 auto',
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {baseContent}
+        </Box>
+        <Box
+          className="ofp-inline-row-actions"
+          sx={{
+            position: 'absolute',
+            right: 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.5,
+            py: 0.25,
+            pl: 0.25,
+            pr: 0.25,
+            borderRadius: 1,
+            bgcolor: 'background.paper',
+            opacity: 0,
+            pointerEvents: 'none',
+            transition: 'background-color 120ms ease-in-out, opacity 120ms ease-in-out',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              right: '100%',
+              width: 16,
+              pointerEvents: 'none',
+              background: (theme) =>
+                `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 100%)`,
+            },
+            '.MuiDataGrid-row:hover &': {
+              bgcolor: 'surface.surfaceHoverBackground',
+              opacity: 1,
+              pointerEvents: 'auto',
+            },
+            '.MuiDataGrid-row:hover &::before': {
+              background: (theme) => {
+                const hoverBackground = theme.palette.surface?.surfaceHoverBackground ?? theme.palette.action.hover;
+                return `linear-gradient(90deg, ${alpha(hoverBackground, 0)} 0%, ${hoverBackground} 100%)`;
+              },
+            },
+            '.MuiDataGrid-row--editing:hover &, .ofp-row-editing:hover &': {
+              opacity: 0,
+              pointerEvents: 'none',
+            },
+          }}
+        >
+          {actions.map((action) => (
+            <Tooltip key={action.id} title={action.label} arrow>
+              <span>
+                <IconButton
+                  size="small"
+                  color={action.color ?? 'default'}
+                  aria-label={action.label}
+                  disabled={action.disabled}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    action.onClick(row, rowActionHelpers);
+                  }}
+                >
+                  {action.icon}
+                </IconButton>
+              </span>
+            </Tooltip>
+          ))}
+          {hasInlineMenuAction ? (
+            <Tooltip title={t('actions.actions')} arrow>
+              <span>
+                <IconButton
+                  size="small"
+                  aria-label={t('actions.actions')}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    openRowActionMenuAt(row.id, event.currentTarget, rect.right - 8, rect.top + 12);
+                  }}
+                >
+                  <MoreVertIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          ) : null}
+        </Box>
+      </Box>
+    );
+  }, [getInlineRowActions, openRowActionMenuAt, rowActionHelpers, showInlineRowActionMenu, t]);
 
   const clearRowActionLongPressTimer = useCallback((): void => {
     if (rowActionLongPressTimerRef.current === null) {
@@ -1701,18 +1855,30 @@ export function EditableDataGrid<T extends EditableRow>({
    * Process columns to replace notes fields with NotesCell renderer
    */
   const processedColumns: GridColDef[] = useMemo(() => {
+    const prepareColumn = (col: GridColDef): GridColDef => {
+      const preparedColumn = prepareDataGridColumn(col);
+      if (preparedColumn.field !== inlineRowActionField || (!getInlineRowActions && !showInlineRowActionMenu)) {
+        return preparedColumn;
+      }
+
+      return {
+        ...preparedColumn,
+        renderCell: (params) => renderInlineActionCell(preparedColumn, params as GridRenderCellParams<T>),
+      };
+    };
+
     if (!notes || !notes.fields || notes.fields.length === 0) {
-      return columns.map((col) => prepareDataGridColumn(col));
+      return columns.map((col) => prepareColumn(col));
     }
 
     return columns.map((col) => {
       if (!notesFieldNames.includes(col.field)) {
-        return prepareDataGridColumn(col);
+        return prepareColumn(col);
       }
 
       const fieldConfig = notes.fields.find((f) => f.field === col.field);
 
-      return prepareDataGridColumn({
+      return prepareColumn({
         ...col,
         editable: false,
         renderCell: (params) => {
@@ -1745,7 +1911,7 @@ export function EditableDataGrid<T extends EditableRow>({
         },
       });
     });
-  }, [columns, notes, notesEditor, notesFieldNames]);
+  }, [columns, getInlineRowActions, inlineRowActionField, notes, notesEditor, notesFieldNames, renderInlineActionCell, showInlineRowActionMenu]);
 
   const columnsWithActions: GridColDef[] = [
     ...processedColumns,
@@ -1907,11 +2073,11 @@ export function EditableDataGrid<T extends EditableRow>({
           <Box
             ref={gridSurfaceRef}
             onContextMenu={hasContextualRowActions ? (event) => {
-              if (!shouldOpenCustomContextMenu(event.target)) {
+              if (!isRowActionContextMenuTarget(event.target)) {
                 return;
               }
               const rowId = getRowIdFromElement(event.target);
-              if (rowId === null || !rowsById.has(String(rowId))) {
+              if (rowId === null) {
                 return;
               }
               openRowActionContextMenu(rowId, event);
@@ -2102,9 +2268,15 @@ export function EditableDataGrid<T extends EditableRow>({
       <Menu
         open={Boolean(rowActionMenuState)}
         onClose={closeRowActionMenu}
+        hideBackdrop
+        sx={{ pointerEvents: 'none' }}
         autoFocus
         disableAutoFocusItem={false}
         slotProps={{
+          paper: {
+            className: 'ofp-custom-context-menu',
+            sx: { pointerEvents: 'auto' },
+          },
           list: {
             autoFocus: true,
             ref: rowActionMenuListRef,

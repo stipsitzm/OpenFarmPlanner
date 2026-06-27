@@ -10,6 +10,8 @@ import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
+import DeleteIcon from '@mui/icons-material/Delete';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import type { HierarchyRow } from './utils/types';
@@ -113,6 +115,101 @@ function renderPlantingPlanActionButton(
   );
 }
 
+function renderDeleteActionButton(
+  row: HierarchyRow,
+  callbacks: NameCellCallbacks,
+  t: TFunction,
+): ReactElement | null {
+  const label = t('common:actions.delete');
+
+  if (row.type === 'location' && row.locationId !== undefined) {
+    return (
+      <Tooltip title={label}>
+        <IconButton
+          size="small"
+          color="error"
+          aria-label={label}
+          tabIndex={-1}
+          onClick={(event) => {
+            event.stopPropagation();
+            callbacks.onDeleteLocation(row.locationId!);
+          }}
+          sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
+        >
+          <DeleteIcon />
+        </IconButton>
+      </Tooltip>
+    );
+  }
+
+  if (row.type === 'field' && row.fieldId !== undefined) {
+    return (
+      <Tooltip title={label}>
+        <IconButton
+          size="small"
+          color="error"
+          aria-label={label}
+          tabIndex={-1}
+          onClick={(event) => {
+            event.stopPropagation();
+            callbacks.onDeleteField(row.fieldId!);
+          }}
+          sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
+        >
+          <DeleteIcon />
+        </IconButton>
+      </Tooltip>
+    );
+  }
+
+  if (row.type === 'bed' && row.bedId !== undefined) {
+    return (
+      <Tooltip title={label}>
+        <IconButton
+          size="small"
+          color="error"
+          aria-label={label}
+          tabIndex={-1}
+          onClick={(event) => {
+            event.stopPropagation();
+            callbacks.onDeleteBed(row.bedId!);
+          }}
+          sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
+        >
+          <DeleteIcon />
+        </IconButton>
+      </Tooltip>
+    );
+  }
+
+  return null;
+}
+
+function renderMoreActionsButton(
+  row: HierarchyRow,
+  callbacks: NameCellCallbacks,
+  t: TFunction,
+): ReactElement {
+  const label = t('common:actions.actions');
+
+  return (
+    <Tooltip title={label}>
+      <IconButton
+        size="small"
+        aria-label={label}
+        tabIndex={-1}
+        onClick={(event) => {
+          event.stopPropagation();
+          callbacks.onOpenContextMenu(event, row);
+        }}
+        sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
+      >
+        <MoreVertIcon />
+      </IconButton>
+    </Tooltip>
+  );
+}
+
 function renderInlineActions(
   row: HierarchyRow,
   callbacks: NameCellCallbacks,
@@ -130,6 +227,8 @@ function renderInlineActions(
           label: t('hierarchy:addField'),
           onClick: () => callbacks.onAddField(row.locationId),
         })}
+        {renderDeleteActionButton(row, callbacks, t)}
+        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -141,6 +240,8 @@ function renderInlineActions(
           label: t('hierarchy:addBedToField'),
           onClick: () => callbacks.onAddBed(row.fieldId!),
         })}
+        {renderDeleteActionButton(row, callbacks, t)}
+        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -149,6 +250,8 @@ function renderInlineActions(
     return (
       <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
         {renderPlantingPlanActionButton(row, callbacks, t)}
+        {renderDeleteActionButton(row, callbacks, t)}
+        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -218,8 +321,6 @@ function renderNameCell(
           overflow: 'hidden',
         }}
         onContextMenu={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
           callbacks.onOpenContextMenu(event, row);
         }}
       >
@@ -287,9 +388,9 @@ function renderNameCell(
                   return `linear-gradient(90deg, ${alpha(hoverBackground, 0)} 0%, ${hoverBackground} 100%)`;
                 },
               },
-              '.MuiDataGrid-row:focus-within &': {
-                opacity: 1,
-                pointerEvents: 'auto',
+              '.MuiDataGrid-row--editing:hover &': {
+                opacity: 0,
+                pointerEvents: 'none',
               },
             }}
           >
