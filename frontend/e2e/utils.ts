@@ -39,7 +39,7 @@ export async function loginWithDeterministicProject(page: Page, request: APIRequ
 
   await page.goto(fixture.inviteUrl);
   await page.getByLabel('E-Mail').fill(fixture.invitee.email);
-  await page.getByLabel('Passwort').fill(fixture.invitee.password);
+  await page.locator('input[type="password"]').fill(fixture.invitee.password);
   await page.getByRole('button', { name: 'Anmelden' }).click();
   await expect(page).toHaveURL(/\/app\//);
 }
