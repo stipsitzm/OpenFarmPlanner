@@ -1,7 +1,7 @@
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { Box, Button, Portal, Snackbar, Typography } from '@mui/material';
 
-export const DELETE_UNDO_DURATION_MS = 8000;
+export const DELETE_UNDO_DURATION_MS = 10000;
 
 interface DeleteUndoSnackbarProps {
   open: boolean;

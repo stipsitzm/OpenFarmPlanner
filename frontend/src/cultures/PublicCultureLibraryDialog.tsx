@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
 import type { PublicCulture } from '../api/types';
 import {
@@ -327,9 +329,28 @@ export function PublicCultureLibraryDialog({
                 <Typography variant="body2" sx={{ mb: 0.75 }}>
                   <strong>{t('form.harvestDurationDays')}:</strong> {selectedCulture.harvest_duration_days ?? t('noData')}
                 </Typography>
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.45 }}>
-                  <strong>{t('form.notes')}:</strong> {(selectedCulture.notes ? stripCitationMarkers(selectedCulture.notes) : null) || t('noData')}
+                <Typography variant="body2" sx={{ mb: 0.25 }}>
+                  <strong>{t('form.notes')}:</strong>
                 </Typography>
+                {selectedCulture.notes ? (
+                  <Box
+                    sx={{
+                      '& h3': { mt: 1.5, mb: 0.5, fontSize: '0.9rem' },
+                      '& p': { mb: 0.75, lineHeight: 1.45 },
+                      '& ul': { pl: 2.5, mb: 0.75 },
+                      '& li': { mb: 0.25 },
+                      '& a': { color: 'primary.main' },
+                      '& em': { color: 'text.secondary' },
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {stripCitationMarkers(selectedCulture.notes)}
+                    </ReactMarkdown>
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">{t('noData')}</Typography>
+                )}
               </>
             ) : (
               <Typography color="text.secondary">{t('library.selectPrompt')}</Typography>

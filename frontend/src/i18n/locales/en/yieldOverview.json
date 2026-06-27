@@ -19,7 +19,8 @@
     "noPlansTitle": "No yield forecast available yet",
     "description": "Yield forecasts become available once planting plans with harvest periods exist.",
     "createPlanAction": "Add planting plan",
-    "noYieldTitle": "No expected yields available",
+    "noYieldTitle": "No expected yields for {{year}}",
+    "noYieldDescription": "No harvest data exists for {{year}}. Try a different year or make sure your crops have expected yields entered.",
     "openPlansAction": "Open planting plans"
   }
 }

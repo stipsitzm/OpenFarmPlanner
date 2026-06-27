@@ -19,7 +19,8 @@
     "noPlansTitle": "Noch keine Ertragsprognose verfügbar",
     "description": "Ertragsprognosen werden verfügbar, sobald Anbaupläne mit Erntezeiträumen vorhanden sind.",
     "createPlanAction": "Anbauplan hinzufügen",
-    "noYieldTitle": "Keine erwarteten Erträge vorhanden",
+    "noYieldTitle": "Keine erwarteten Erträge für {{year}}",
+    "noYieldDescription": "Für das Jahr {{year}} sind keine Erntedaten vorhanden. Wähle ein anderes Jahr oder stelle sicher, dass deine Kulturen erwartete Erträge eingetragen haben.",
     "openPlansAction": "Anbaupläne öffnen"
   }
 }

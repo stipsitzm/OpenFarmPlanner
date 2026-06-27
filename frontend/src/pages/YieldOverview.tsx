@@ -6,7 +6,6 @@ import {
   Card,
   CardContent,
   FormControl,
-  InputLabel,
   MenuItem,
   Select,
   Stack,
@@ -479,7 +478,7 @@ function YieldFilterBar({
   const { t } = useTranslation("yieldOverview");
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from(
-    { length: 5 },
+    { length: 6 },
     (_, index) => currentYear - 2 + index,
   );
 
@@ -487,48 +486,64 @@ function YieldFilterBar({
     <Stack
       direction={{ xs: "column", sm: "row" }}
       spacing={1.5}
-      alignItems={{ xs: "stretch", sm: "center" }}
-      sx={{ width: "100%" }}
+      alignItems={{ xs: "stretch", sm: "flex-start" }}
+      sx={{ width: "100%", flexWrap: "wrap" }}
     >
-      <FormControl size="small" sx={{ minWidth: { sm: 220 } }}>
-        <InputLabel id="yield-culture-filter-label">
+      <Stack spacing={0.5} sx={{ minWidth: { sm: 220 } }}>
+        <Typography
+          id="yield-culture-filter-label"
+          variant="caption"
+          color="text.secondary"
+          sx={{ lineHeight: 1 }}
+        >
           {t("filters.culture")}
-        </InputLabel>
-        <Select
-          labelId="yield-culture-filter-label"
-          value={selectedCultureId}
-          label={t("filters.culture")}
-          onChange={(event) => onCultureChange(String(event.target.value))}
-        >
-          <MenuItem value={ALL_CULTURES}>{t("filters.allCultures")}</MenuItem>
-          {cultures.map((culture) => (
-            <MenuItem key={culture.id} value={String(culture.id)}>
-              {culture.name}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+        </Typography>
+        <FormControl size="small" fullWidth>
+          <Select
+            labelId="yield-culture-filter-label"
+            value={selectedCultureId}
+            onChange={(event) => onCultureChange(String(event.target.value))}
+          >
+            <MenuItem value={ALL_CULTURES}>{t("filters.allCultures")}</MenuItem>
+            {cultures.map((culture) => (
+              <MenuItem key={culture.id} value={String(culture.id)}>
+                {culture.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Stack>
 
-      <FormControl size="small" sx={{ minWidth: { sm: 120 } }}>
-        <InputLabel id="yield-year-filter-label">
-          {t("filters.year")}
-        </InputLabel>
-        <Select
-          labelId="yield-year-filter-label"
-          value={String(selectedYear)}
-          label={t("filters.year")}
-          onChange={(event) => onYearChange(Number(event.target.value))}
+      <Stack spacing={0.5} sx={{ minWidth: { sm: 120 } }}>
+        <Typography
+          id="yield-year-filter-label"
+          variant="caption"
+          color="text.secondary"
+          sx={{ lineHeight: 1 }}
         >
-          {yearOptions.map((year) => (
-            <MenuItem key={year} value={String(year)}>
-              {year}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+          {t("filters.year")}
+        </Typography>
+        <FormControl size="small" fullWidth>
+          <Select
+            labelId="yield-year-filter-label"
+            value={String(selectedYear)}
+            onChange={(event) => onYearChange(Number(event.target.value))}
+          >
+            {yearOptions.map((year) => (
+              <MenuItem key={year} value={String(year)}>
+                {year}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Stack>
 
       <Stack spacing={0.5}>
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ lineHeight: 1 }}
+        >
           {t("filters.period")}
         </Typography>
         <ToggleButtonGroup
@@ -537,7 +552,7 @@ function YieldFilterBar({
           size="small"
           color="primary"
           aria-label={t("filters.period")}
-          sx={segmentedToggleButtonGroupSx}
+          sx={{ ...segmentedToggleButtonGroupSx, height: 40 }}
           onChange={(_, value: ChartPeriod | null) => {
             if (value !== null) {
               onPeriodChange(value);
@@ -692,8 +707,8 @@ export default function YieldOverviewPage() {
             />
           ) : (
             <EmptyStateCard
-              title={t("empty.noYieldTitle")}
-              description={t("empty.description")}
+              title={t("empty.noYieldTitle", { year: selectedYear })}
+              description={t("empty.noYieldDescription", { year: selectedYear })}
               actions={[
                 { label: t("empty.openPlansAction"), to: "/app/anbauplaene" },
               ]}

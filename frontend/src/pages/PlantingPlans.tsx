@@ -2130,6 +2130,17 @@ function PlantingPlans() {
           showDeleteAction={false}
           showFooterEditControls={false}
           showRowEditActions={false}
+          inlineRowActionField="culture"
+          showInlineRowActionMenu
+          getInlineRowActions={(row, helpers) => [
+            {
+              id: "delete",
+              label: t("common:actions.delete"),
+              icon: <DeleteIcon fontSize="small" />,
+              color: "error",
+              onClick: () => helpers.delete(row.id),
+            },
+          ]}
           duplicateRow={(row) => ({
             ...row,
             id: -Date.now(),
