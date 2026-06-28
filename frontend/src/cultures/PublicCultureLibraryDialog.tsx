@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
@@ -53,6 +53,8 @@ const previewBadgeSx = {
   fontSize: '0.72rem',
 } as const;
 
+const PUBLIC_CULTURE_LIBRARY_HISTORY_KEY = 'openFarmPlannerPublicCultureLibrary';
+
 export function PublicCultureLibraryDialog({
   open,
   loading,
@@ -77,6 +79,22 @@ export function PublicCultureLibraryDialog({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isMobileLandscape = useMediaQuery(`(orientation: landscape) and (max-height: 560px) and (max-width: 960px)`);
   const useMobileFilterLayout = isMobile || isMobileLandscape;
+  const modalHistoryIdRef = useRef<string | null>(null);
+  const closingFromHistoryRef = useRef(false);
+
+  const isCurrentModalHistoryEntry = useCallback((): boolean => {
+    const modalState = window.history.state as Record<string, unknown> | null;
+    return modalHistoryIdRef.current !== null
+      && modalState?.[PUBLIC_CULTURE_LIBRARY_HISTORY_KEY] === modalHistoryIdRef.current;
+  }, []);
+
+  const closeDialog = useCallback((): void => {
+    if (useMobileFilterLayout && isCurrentModalHistoryEntry()) {
+      window.history.back();
+      return;
+    }
+    onClose();
+  }, [isCurrentModalHistoryEntry, onClose, useMobileFilterLayout]);
 
   useEffect(() => {
     if (open) {
@@ -107,6 +125,48 @@ export function PublicCultureLibraryDialog({
       });
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !useMobileFilterLayout || typeof window === 'undefined') {
+      modalHistoryIdRef.current = null;
+      return undefined;
+    }
+
+    if (modalHistoryIdRef.current === null) {
+      const currentHistoryState = window.history.state;
+      modalHistoryIdRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      window.history.pushState(
+        {
+          ...(currentHistoryState && typeof currentHistoryState === 'object' ? currentHistoryState as Record<string, unknown> : {}),
+          [PUBLIC_CULTURE_LIBRARY_HISTORY_KEY]: modalHistoryIdRef.current,
+        },
+        '',
+        window.location.href,
+      );
+    }
+
+    const handlePopState = (): void => {
+      if (modalHistoryIdRef.current === null || isCurrentModalHistoryEntry()) {
+        return;
+      }
+      closingFromHistoryRef.current = true;
+      modalHistoryIdRef.current = null;
+      onClose();
+      queueMicrotask(() => {
+        closingFromHistoryRef.current = false;
+      });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (!closingFromHistoryRef.current && isCurrentModalHistoryEntry()) {
+        window.history.back();
+      }
+      modalHistoryIdRef.current = null;
+    };
+  }, [isCurrentModalHistoryEntry, onClose, open, useMobileFilterLayout]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const varietyOptions = useMemo(
@@ -161,8 +221,26 @@ export function PublicCultureLibraryDialog({
       setMobileStep('list');
       return;
     }
-    onClose();
+    closeDialog();
   };
+
+  const mobilePaperSx = useMobileFilterLayout
+    ? {
+      width: '100vw',
+      maxWidth: '100vw',
+      height: '100dvh',
+      maxHeight: '100dvh',
+      m: 0,
+      bgcolor: 'background.paper',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      '@supports not (height: 100dvh)': {
+        height: '100svh',
+        maxHeight: '100svh',
+      },
+    }
+    : undefined;
 
   const filterControls = (
     <Box
@@ -220,31 +298,27 @@ export function PublicCultureLibraryDialog({
       onClose={handleDialogClose}
       maxWidth={useMobileFilterLayout ? false : 'md'}
       fullWidth
-      fullScreen={useMobileFilterLayout && !isMobileLandscape}
-      PaperProps={{
-        sx: isMobileLandscape
-          ? {
-            width: 'calc(100vw - 32px)',
-            maxWidth: 'none',
-            height: 'calc(100vh - 24px)',
-            maxHeight: 'calc(100vh - 24px)',
-            m: 0,
-          }
-          : undefined,
+      fullScreen={useMobileFilterLayout}
+      slotProps={{
+        paper: {
+          sx: mobilePaperSx,
+        },
       }}
     >
-      <DialogTitle sx={{ py: isMobileLandscape ? 1 : 2, px: isMobileLandscape ? 1.5 : 3 }}>
+      <DialogTitle sx={{ py: isMobileLandscape ? 1 : 2, px: isMobileLandscape ? 1.5 : 3, flexShrink: 0, bgcolor: 'background.paper' }}>
         {t('library.dialogTitle')}
       </DialogTitle>
       <DialogContent
         dividers
         sx={{
-          minHeight: useMobileFilterLayout ? 'auto' : 560,
+          minHeight: useMobileFilterLayout ? 0 : 560,
           px: isMobileLandscape ? 1.25 : useMobileFilterLayout ? 1.25 : 3,
           py: isMobileLandscape ? 1 : 2,
           display: 'flex',
           flexDirection: 'column',
+          flex: useMobileFilterLayout ? '1 1 auto' : undefined,
           overflow: 'hidden',
+          bgcolor: 'background.paper',
         }}
       >
         <TextField
@@ -379,8 +453,8 @@ export function PublicCultureLibraryDialog({
           ) : null}
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: isMobileLandscape ? 1.25 : isMobile ? 1.25 : 3, py: isMobileLandscape ? 0.75 : isMobile ? 1 : 1.5 }}>
-        <Button onClick={onClose}>{t('form.cancel')}</Button>
+      <DialogActions sx={{ px: isMobileLandscape ? 1.25 : isMobile ? 1.25 : 3, py: isMobileLandscape ? 0.75 : isMobile ? 1 : 1.5, flexShrink: 0, bgcolor: 'background.paper' }}>
+        <Button onClick={closeDialog}>{t('form.cancel')}</Button>
         <Button
           variant="contained"
           onClick={() => selectedCulture && onImport(selectedCulture)}

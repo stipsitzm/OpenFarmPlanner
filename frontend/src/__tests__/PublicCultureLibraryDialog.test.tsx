@@ -1,0 +1,96 @@
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PublicCultureLibraryDialog } from '../cultures/PublicCultureLibraryDialog';
+import type { PublicCulture } from '../api/types';
+
+const culture: PublicCulture = {
+  id: 1,
+  status: 'published',
+  name: 'Tomate',
+  variety: 'Roma',
+  seed_supplier: 'Open Seeds',
+  growth_duration_days: 70,
+  harvest_duration_days: 28,
+  version: 1,
+};
+
+function mockMobileViewport(): void {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes('max-width:599.95px'),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
+describe('PublicCultureLibraryDialog', () => {
+  beforeEach(() => {
+    mockMobileViewport();
+    window.history.replaceState({ page: 'cultures' }, '', '/app/cultures');
+  });
+
+  it('closes the mobile dialog when the browser history entry is popped', async () => {
+    const onClose = vi.fn();
+
+    render(
+      <PublicCultureLibraryDialog
+        open
+        loading={false}
+        error={null}
+        cultures={[culture]}
+        importingId={null}
+        onClose={onClose}
+        onSearch={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(window.history.state).toMatchObject({
+        openFarmPlannerPublicCultureLibrary: expect.any(String),
+      });
+    });
+
+    act(() => {
+      window.history.back();
+    });
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(window.location.pathname).toBe('/app/cultures');
+    });
+  });
+
+  it('uses a full viewport mobile paper with an opaque background', async () => {
+    render(
+      <PublicCultureLibraryDialog
+        open
+        loading={false}
+        error={null}
+        cultures={[culture]}
+        importingId={null}
+        onClose={vi.fn()}
+        onSearch={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    const paper = dialog.closest('.MuiDialog-paper');
+
+    expect(paper).toHaveStyle({
+      width: '100vw',
+      maxWidth: '100vw',
+      height: '100dvh',
+      maxHeight: '100dvh',
+      margin: '0px',
+    });
+  });
+});
