@@ -411,7 +411,7 @@ export function PublicCultureLibraryDialog({
                     />
                   ) : null}
                 </Box>
-                <Box sx={{ display: 'grid', gap: 0.5, mb: selectedCulture.notes ? 1.25 : 0.75 }}>
+                <Box sx={{ display: 'grid', gap: 0.5, mb: selectedCulture.notes ? 1.5 : 0.75 }}>
                   <Typography variant="body2" sx={{ lineHeight: 1.35 }}>
                     <strong>{t('form.supplier')}:</strong> {selectedCulture.supplier_name || selectedCulture.seed_supplier || t('noData')}
                   </Typography>
@@ -422,11 +422,20 @@ export function PublicCultureLibraryDialog({
                     <strong>{t('form.harvestDurationDays')}:</strong> {selectedCulture.harvest_duration_days ?? t('noData')}
                   </Typography>
                 </Box>
-                <Typography variant="h6" gutterBottom sx={{ lineHeight: 1.25 }}>
+                <Typography
+                  variant="subtitle1"
+                  component="h3"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: useMobileFilterLayout ? '1rem' : '1.05rem',
+                    lineHeight: 1.3,
+                    mb: 0.75,
+                  }}
+                >
                   {t('form.notes')}
                 </Typography>
                 {selectedCulture.notes ? (
-                  <Box sx={{ borderTop: '1px solid', borderColor: 'divider', mt: 0.5, pt: 1.25 }}>
+                  <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 1.25 }}>
                     <Box
                       sx={{
                         '& h3': { mt: 1.35, mb: 0.5, fontSize: '0.9rem' },
@@ -445,7 +454,7 @@ export function PublicCultureLibraryDialog({
                     </Box>
                   </Box>
                 ) : (
-                  <Box sx={{ borderTop: '1px solid', borderColor: 'divider', mt: 0.5, pt: 1.25 }}>
+                  <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 1.25 }}>
                     <Typography variant="body2" color="text.secondary">{t('noData')}</Typography>
                   </Box>
                 )}
