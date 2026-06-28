@@ -10,6 +10,7 @@ function normalizeBasePath(input?: string): string {
 }
 
 const basePath = normalizeBasePath(process.env.VITE_BASE_PATH)
+const backendDevOrigin = process.env.DEV_BACKEND_ORIGIN || 'http://127.0.0.1:8000'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -32,19 +33,19 @@ export default defineConfig({
     },
     proxy: {
       '/admin': {
-        target: 'http://localhost:8000',
+        target: backendDevOrigin,
         changeOrigin: true,
       },
       '/api': {
-        target: 'http://localhost:8000',
+        target: backendDevOrigin,
         changeOrigin: true,
       },
       '/static': {
-        target: 'http://localhost:8000',
+        target: backendDevOrigin,
         changeOrigin: true,
       },
       '/media': {
-        target: 'http://localhost:8000',
+        target: backendDevOrigin,
         changeOrigin: true,
       },
     },

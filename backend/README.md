@@ -24,6 +24,14 @@ pdm run runserver
 API base path: `http://localhost:8000/api/`
 Admin path: `http://localhost:8000/admin/`
 
+For local LAN testing from another device, prefer the repository-level script:
+
+```bash
+../scripts/dev-lan.sh
+```
+
+It starts Django on `0.0.0.0:8000` and exports development-only `ALLOWED_HOSTS`, CORS, and CSRF origins for the detected LAN IP. You can override detection with `LAN_IP=192.168.178.125 ../scripts/dev-lan.sh`.
+
 ## Useful Commands
 
 ```bash
@@ -71,6 +79,7 @@ For production, configure these environment variables:
 - `EMAIL_HOST_PASSWORD` - SMTP password for `info@openfarmplanner.org`
 - `PUBLIC_FRONTEND_URL` - Public frontend base URL used in activation, password reset, and invitation links
 - `FRONTEND_URL` - Optional local/development fallback for frontend links
+- `DEV_LAN_HOSTS` - Optional comma-separated LAN hosts/IPs added to `ALLOWED_HOSTS`, CORS, and CSRF only when `DEBUG=True` and `DJANGO_ENV=development`
 - `URL_PREFIX` - Optional backend URL prefix (default: root). Example: `openfarmplanner` for legacy prefixed routing.
 
 ### SMTP configuration for Uberspace (production)
