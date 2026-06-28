@@ -15,21 +15,16 @@
  * Navigation is blocked if there are unsaved changes (row in edit mode).
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type ReactNode } from 'react';
 import {
   DataGrid,
   GridRowEditStopReasons,
   GridRowModes,
-  getGridBooleanOperators,
-  getGridDateOperators,
-  getGridNumericOperators,
-  getGridSingleSelectOperators,
-  getGridStringOperators,
   useGridApiRef,
 } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
-import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRenderCellParams, GridRowParams, GridFilterOperator, GridPaginationModel } from '@mui/x-data-grid';
+import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRenderCellParams, GridRowParams, GridPaginationModel } from '@mui/x-data-grid';
 import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
@@ -43,7 +38,6 @@ import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
 import { useTranslation } from '../../i18n';
 import { NotesCell } from './NotesCell';
 import { NotesDrawer } from './NotesDrawer';
-import { DateEditCell } from './DateEditCell';
 import {
   DeleteUndoSnackbar,
 } from './DeleteUndoSnackbar';
@@ -58,192 +52,33 @@ import { ContextMenuHint } from './ContextMenuHint';
 import { useContextMenuHint } from './useContextMenuHint';
 import { useDataGridDelete } from './hooks/useDataGridDelete';
 import { useDataGridRowActionMenu } from './hooks/useDataGridRowActionMenu';
+import {
+  getSortedRowIds,
+  isSaveBlockedError,
+  isUnsavedDraftRow,
+  orderRowsByStableIds,
+  prepareDataGridColumn,
+  SaveBlockedError,
+} from './dataGridUtils';
+import type {
+  EditableDataGridClipboardColumn,
+  EditableDataGridProps,
+  EditableDataGridRowAction,
+  EditableDataGridRowActionHelpers,
+  EditableRow,
+} from './types';
 
-export interface EditableRow {
-  id: number;
-  isNew?: boolean;
-  __draft?: boolean;
-  [key: string]: unknown;
-}
-
-export interface DataGridAPI<T> {
-  list: () => Promise<{ data: { results: Partial<T>[] } }>;
-  create: (data: Partial<T>) => Promise<{ data: T }>;
-  update: (id: number, data: Partial<T>) => Promise<{ data: T }>;
-  delete: (id: number) => Promise<void>;
-}
-
-
-export interface EditableDataGridCommandApi {
-  addRow: () => void;
-  editSelectedRow: () => void;
-  deleteSelectedRow: () => void;
-  deleteRow: (rowId: GridRowId) => void;
-  getSelectedRowId: () => GridRowId | null;
-  setDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => Promise<void>;
-  commitDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => Promise<void>;
-  reload: () => Promise<void>;
-  focusTable: () => void;
-}
-
-export interface EditableDataGridRowActionHelpers<T extends EditableRow> {
-  startEdit: (rowId: GridRowId, field?: string) => void;
-  duplicate: (row: T) => void;
-  delete: (rowId: GridRowId) => void;
-}
-
-export interface EditableDataGridRowAction<T extends EditableRow> {
-  id: string;
-  label: string;
-  icon?: React.ReactNode;
-  color?: 'default' | 'error' | 'primary';
-  onClick: (row: T, helpers: EditableDataGridRowActionHelpers<T>) => void;
-  disabled?: boolean;
-}
-
-interface DeleteUndoOptions {
-  message: string;
-  snackbarTestId?: string;
-}
-
-export interface EditableDataGridClipboardColumn<T extends EditableRow> {
-  field: string;
-  headerName: string;
-  getValue?: (row: T) => string;
-}
-
-export interface NotesFieldConfig {
-  field: string;
-  labelKey?: string;
-  titleKey?: string;
-  attachmentNoteIdField?: string;
-  attachmentCountField?: string;
-  compactIndicator?: boolean;
-}
-
-export interface EditableDataGridProps<T extends EditableRow> {
-  columns: GridColDef[]; // Column definitions for the grid (without actions column)
-  api: DataGridAPI<T>; // API handler for CRUD operations
-  createNewRow: () => T; // Function to create a new empty row
-  mapToRow: (item: T) => T; // Function to map API data to grid row
-  mapToApiData: (row: T) => Partial<T> | Promise<Partial<T>>; // Function to map grid row to API data for create/update
-  validateRow: (row: T) => string | null; // Function to validate row before save
-  loadErrorMessage: string; // Error message when loading fails
-  saveErrorMessage: string; // Error message when save fails
-  deleteErrorMessage: string; // Error message when delete fails
-  deleteConfirmMessage: string; // Delete confirmation message
-  addButtonLabel: string; // Aria label for add button
-  showDeleteAction?: boolean; // Whether to show delete action column (default: true)
-  initialRow?: Partial<T>; // Optional initial row to add on mount (e.g., pre-filled from another page)
-  tableKey?: string; // Optional key for persisting table sorting in session + URL
-  defaultSortModel?: GridSortModel; // Optional default sort model (used when no persisted state exists)
-  persistSortInUrl?: boolean; // Whether sorting should be persisted in URL query params
-  notes?: {
-    fields: NotesFieldConfig[];
-  };
-  commandApiRef?: MutableRefObject<EditableDataGridCommandApi | null>;
-  onSelectedRowChange?: (row: T | null) => void;
-  getRowValidationErrors?: (row: T) => Record<string, string>;
-  showAddAction?: boolean;
-  showFooterEditControls?: boolean;
-  showRowEditActions?: boolean;
-  getRowActions?: (row: T, helpers: EditableDataGridRowActionHelpers<T>) => EditableDataGridRowAction<T>[];
-  inlineRowActionField?: string;
-  getInlineRowActions?: (row: T, helpers: EditableDataGridRowActionHelpers<T>) => EditableDataGridRowAction<T>[];
-  showInlineRowActionMenu?: boolean;
-  duplicateRow?: (row: T) => T;
-  deleteUndoOptions?: DeleteUndoOptions;
-  clipboardColumns?: EditableDataGridClipboardColumn<T>[];
-  onRowsStateChange?: (rows: T[]) => void;
-  onLoadStateChange?: (state: { loading: boolean; dataFetched: boolean; error: string }) => void;
-  onBeforeSaveRow?: (row: T) => boolean | Partial<T> | Promise<boolean | Partial<T>>;
-  isSaveErrorHandled?: (error: unknown) => boolean;
-  /**
-   * Controls how the grid surface uses available page/workspace width:
-   * - contentFit: fit to content and center, but never exceed container width
-   * - fullWorkspace: fill available workspace width
-   * - compact: compact content-sized mode for small tables
-   */
-  surfaceSizing?: 'contentFit' | 'fullWorkspace' | 'compact';
-  paginationPageSizeOptions?: number[];
-  initialPageSize?: number;
-}
-
-const isUnsavedDraftRow = (row: EditableRow): boolean =>
-  Boolean(row.isNew || row.__draft || Number(row.id) < 0);
-
-class SaveBlockedError extends Error {
-  constructor() {
-    super('Save blocked by validation');
-    this.name = 'SaveBlockedError';
-  }
-}
-
-const isSaveBlockedError = (error: unknown): error is SaveBlockedError =>
-  error instanceof SaveBlockedError;
-
-const getDefaultFilterOperators = (column: GridColDef): GridFilterOperator[] => {
-  switch (column.type) {
-    case 'boolean':
-      return getGridBooleanOperators();
-    case 'date':
-      return getGridDateOperators();
-    case 'dateTime':
-      return getGridDateOperators(true);
-    case 'number':
-      return getGridNumericOperators();
-    case 'singleSelect':
-      return getGridSingleSelectOperators();
-    default:
-      return getGridStringOperators();
-  }
-};
-
-const keepDraftRowsVisibleForFilterOperators = (operators: readonly GridFilterOperator[]): GridFilterOperator[] =>
-  operators.map((operator) => ({
-    ...operator,
-    getApplyFilterFn: (filterItem, column) => {
-      const applyFilter = operator.getApplyFilterFn(filterItem, column);
-      if (!applyFilter) {
-        return null;
-      }
-
-      return (value, row, filterColumn, apiRef) => {
-        if (isUnsavedDraftRow(row as EditableRow)) {
-          return true;
-        }
-
-        return applyFilter(value, row, filterColumn, apiRef);
-      };
-    },
-  }));
-
-const keepDraftRowsVisibleForColumnFilters = (column: GridColDef): GridColDef => {
-  if (column.filterable === false) {
-    return column;
-  }
-
-  return {
-    ...column,
-    filterOperators: keepDraftRowsVisibleForFilterOperators(
-      column.filterOperators ?? getDefaultFilterOperators(column),
-    ),
-  };
-};
-
-const applyDefaultDateEditCell = (column: GridColDef): GridColDef => {
-  if (column.type !== 'date' || column.renderEditCell) {
-    return column;
-  }
-
-  return {
-    ...column,
-    renderEditCell: (params) => <DateEditCell {...params} />,
-  };
-};
-
-const prepareDataGridColumn = (column: GridColDef): GridColDef =>
-  keepDraftRowsVisibleForColumnFilters(applyDefaultDateEditCell(column));
+export type {
+  DataGridAPI,
+  DeleteUndoOptions,
+  EditableDataGridClipboardColumn,
+  EditableDataGridCommandApi,
+  EditableDataGridProps,
+  EditableDataGridRowAction,
+  EditableDataGridRowActionHelpers,
+  EditableRow,
+  NotesFieldConfig,
+} from './types';
 
 const editModeEditorArrowKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
 
@@ -259,70 +94,6 @@ const isComboboxInteractionTarget = (target: EventTarget | null): boolean => {
 
 const isEnterSaveInputTarget = (target: EventTarget | null): boolean =>
   target instanceof HTMLInputElement && !isComboboxInteractionTarget(target);
-
-const getSortableValue = (row: EditableRow, field: string): unknown => row[field];
-
-const compareSortableValues = (leftValue: unknown, rightValue: unknown): number => {
-  if (leftValue === rightValue) {
-    return 0;
-  }
-  if (leftValue === null || leftValue === undefined || leftValue === '') {
-    return 1;
-  }
-  if (rightValue === null || rightValue === undefined || rightValue === '') {
-    return -1;
-  }
-  if (leftValue instanceof Date || rightValue instanceof Date) {
-    const leftTime = leftValue instanceof Date ? leftValue.getTime() : new Date(String(leftValue)).getTime();
-    const rightTime = rightValue instanceof Date ? rightValue.getTime() : new Date(String(rightValue)).getTime();
-    if (Number.isFinite(leftTime) && Number.isFinite(rightTime)) {
-      return leftTime - rightTime;
-    }
-  }
-  if (typeof leftValue === 'number' && typeof rightValue === 'number') {
-    return leftValue - rightValue;
-  }
-  if (typeof leftValue === 'boolean' && typeof rightValue === 'boolean') {
-    return Number(leftValue) - Number(rightValue);
-  }
-  return String(leftValue).localeCompare(String(rightValue), undefined, {
-    numeric: true,
-    sensitivity: 'base',
-  });
-};
-
-const getSortedRowIds = <T extends EditableRow>(sourceRows: readonly T[], model: GridSortModel): GridRowId[] => {
-  const [sortItem] = model;
-  if (!sortItem?.field || !sortItem.sort) {
-    return sourceRows.map((row) => row.id);
-  }
-
-  const direction = sortItem.sort === 'desc' ? -1 : 1;
-  return sourceRows
-    .map((row, index) => ({ row, index }))
-    .sort((left, right) => {
-      const comparison = compareSortableValues(
-        getSortableValue(left.row, sortItem.field),
-        getSortableValue(right.row, sortItem.field),
-      );
-      return comparison === 0 ? left.index - right.index : comparison * direction;
-    })
-    .map(({ row }) => row.id);
-};
-
-const orderRowsByStableIds = <T extends EditableRow>(sourceRows: readonly T[], orderedIds: readonly GridRowId[]): T[] => {
-  if (orderedIds.length === 0) {
-    return [...sourceRows];
-  }
-
-  const rowsById = new Map(sourceRows.map((row) => [String(row.id), row]));
-  const orderedRows = orderedIds
-    .map((rowId) => rowsById.get(String(rowId)))
-    .filter((row): row is T => row !== undefined);
-  const orderedIdKeys = new Set(orderedIds.map(String));
-  const missingRows = sourceRows.filter((row) => !orderedIdKeys.has(String(row.id)));
-  return [...orderedRows, ...missingRows];
-};
 
 export function EditableDataGrid<T extends EditableRow>({
   columns,

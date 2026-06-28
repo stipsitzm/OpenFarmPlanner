@@ -3,13 +3,9 @@ import type { GridRowId, GridRowModesModel, GridRowsProp } from '@mui/x-data-gri
 import { extractApiErrorMessage } from '../../../api/errors';
 import { confirmAction } from '../../../utils/confirmAction';
 import { DELETE_UNDO_DURATION_MS } from '../DeleteUndoSnackbar';
+import { isUnsavedDraftRow } from '../dataGridUtils';
 import type { TFunction } from 'i18next';
-import type { DataGridAPI, EditableRow } from '../DataGrid';
-
-export interface DeleteUndoOptions {
-  message: string;
-  snackbarTestId?: string;
-}
+import type { DataGridAPI, DeleteUndoOptions, EditableRow } from '../types';
 
 interface PendingDeleteWithUndo<T extends EditableRow> {
   id: string;
@@ -20,9 +16,6 @@ interface PendingDeleteWithUndo<T extends EditableRow> {
   rowModeBeforeDelete?: GridRowModesModel[string];
   visible: boolean;
 }
-
-const isUnsavedDraftRow = (row: EditableRow): boolean =>
-  Boolean(row.isNew || row.__draft || Number(row.id) < 0);
 
 interface UseDataGridDeleteParams<T extends EditableRow> {
   rowsById: Map<string, T>;
@@ -64,9 +57,10 @@ export function useDataGridDelete<T extends EditableRow>({
   const deleteRowCommandRef = useRef<(rowId: GridRowId) => void>(() => undefined);
 
   useEffect(() => {
+    const pendingDeleteTimers = pendingDeleteTimersRef.current;
     return () => {
-      pendingDeleteTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
-      pendingDeleteTimersRef.current.clear();
+      pendingDeleteTimers.forEach((timerId) => window.clearTimeout(timerId));
+      pendingDeleteTimers.clear();
     };
   }, []);
 

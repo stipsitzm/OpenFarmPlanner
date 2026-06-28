@@ -13,7 +13,9 @@ export type {
   EditableDataGridRowActionHelpers,
   NotesFieldConfig,
   EditableDataGridCommandApi,
-} from './DataGrid';
+  EditableDataGridClipboardColumn,
+  DeleteUndoOptions,
+} from './types';
 export { NotesCell } from './NotesCell';
 export { NotesDrawer } from './NotesDrawer';
 export { MarkdownToolbar } from './MarkdownToolbar';
