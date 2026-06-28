@@ -50,6 +50,7 @@ import { formatClipboardValue, type TableClipboardRow } from './tableClipboard';
 import { handleContextMenuKeyboardNavigation } from './contextMenuFocus';
 import { ContextMenuHint } from './ContextMenuHint';
 import { useContextMenuHint } from './useContextMenuHint';
+import { useDataGridCommandApi } from './hooks/useDataGridCommandApi';
 import { useDataGridDelete } from './hooks/useDataGridDelete';
 import { useDataGridRowActionMenu } from './hooks/useDataGridRowActionMenu';
 import {
@@ -1072,65 +1073,41 @@ export function EditableDataGrid<T extends EditableRow>({
     handleDeleteClick(selectedRowId)();
   }, [handleDeleteClick, selectedRowIds]);
 
-  useEffect(() => {
-    if (!commandApiRef) {
-      return;
-    }
-
-    commandApiRef.current = {
-      addRow: handleAddClick,
-      editSelectedRow: handleEditSelectedRow,
-      deleteSelectedRow: handleDeleteSelectedRow,
-      deleteRow: (rowId) => deleteRowCommandRef.current(rowId),
-      getSelectedRowId: () => selectedRowIds[0] ?? null,
-      setDraftValues: async (rowId, values) => {
-        await applyDraftValues(rowId, values as Partial<T>);
-        setRowModesModel((previousModel) => ({
-          ...previousModel,
-          [rowId]: {
-            ...(previousModel[rowId] ?? {}),
-            mode: GridRowModes.Edit,
-          },
-        }));
-      },
-      commitDraftValues: async (rowId, values) => {
-        await commitDraftValues(rowId, values as Partial<T>);
-      },
-      reload: fetchData,
-      focusTable: () => {
-        const api = gridApiRef.current;
-        if (!api) return;
-        const targetId = selectedRowIds[0] ?? api.getAllRowIds()[0];
-        if (targetId == null) return;
-        setSelectedRowIds([targetId]);
-        const firstField = api.getVisibleColumns()
-          .find((col) => col.field !== 'actions' && col.field !== 'rowEditActions')?.field;
-        if (!firstField) return;
-        requestAnimationFrame(() => {
-          api.scrollToIndexes({
-            rowIndex: api.getRowIndexRelativeToVisibleRows(targetId),
-            colIndex: api.getColumnIndexRelativeToVisibleColumns(firstField),
-          });
-          api.setCellFocus(targetId, firstField);
-        });
-      },
-    };
-
-    return () => {
-      commandApiRef.current = null;
-    };
+  const focusTable = useCallback((): void => {
+    const api = gridApiRef.current;
+    if (!api) return;
+    const targetId = selectedRowIds[0] ?? api.getAllRowIds()[0];
+    if (targetId == null) return;
+    setSelectedRowIds([targetId]);
+    const firstField = api.getVisibleColumns()
+      .find((col) => col.field !== 'actions' && col.field !== 'rowEditActions')?.field;
+    if (!firstField) return;
+    requestAnimationFrame(() => {
+      api.scrollToIndexes({
+        rowIndex: api.getRowIndexRelativeToVisibleRows(targetId),
+        colIndex: api.getColumnIndexRelativeToVisibleColumns(firstField),
+      });
+      api.setCellFocus(targetId, firstField);
+    });
   }, [
-    applyDraftValues,
-    commandApiRef,
-    commitDraftValues,
-    deleteRowCommandRef,
-    fetchData,
     gridApiRef,
-    handleAddClick,
-    handleDeleteSelectedRow,
-    handleEditSelectedRow,
     selectedRowIds,
+    setSelectedRowIds,
   ]);
+
+  useDataGridCommandApi<T>({
+    commandApiRef,
+    selectedRowIds,
+    deleteRowCommandRef,
+    handleAddClick,
+    handleEditSelectedRow,
+    handleDeleteSelectedRow,
+    setRowModesModel,
+    applyDraftValues,
+    commitDraftValues,
+    reload: fetchData,
+    focusTable,
+  });
 
   const handleStartRowEdit = useCallback((rowId: GridRowId, field?: string): void => {
     const rowKey = String(rowId);
