@@ -30,6 +30,7 @@ const {
   locationListMock,
   getCapturedOnCellKeyDown,
   setCapturedOnCellKeyDown,
+  getSetCellFocusMock,
   getSelectRowImpl,
   setSelectRowImpl,
 } = vi.hoisted(() => {
@@ -39,6 +40,7 @@ const {
   // selectRowImpl bridges gridApiRef.current.selectRow() → DataGrid's React state.
   // DataGrid registers its setState on every render; useLayoutEffect calls it imperatively.
   let selectRowImpl: ((id: string | number, isSelected: boolean, reset: boolean) => void) | undefined;
+  const setCellFocusMock = vi.fn();
   return {
     bedListMock: vi.fn(),
     fieldListMock: vi.fn(),
@@ -47,6 +49,7 @@ const {
     setCapturedOnCellKeyDown: (fn: ((params: unknown, event: unknown) => void) | undefined) => {
       capturedOnCellKeyDown = fn;
     },
+    getSetCellFocusMock: () => setCellFocusMock,
     getSelectRowImpl: () => selectRowImpl,
     setSelectRowImpl: (fn: typeof selectRowImpl) => { selectRowImpl = fn; },
   };
@@ -90,7 +93,7 @@ vi.mock('@mui/x-data-grid', async () => {
   const GridRowEditStopReasons = { escapeKeyDown: 'escapeKeyDown', rowFocusOut: 'rowFocusOut' };
   const useGridApiRef = vi.fn(() => ({
     current: {
-      setCellFocus: vi.fn(),
+      setCellFocus: getSetCellFocusMock(),
       // Route imperative selectRow calls into DataGrid's React state so tests
       // can assert data-selected without a controlled rowSelectionModel prop.
       selectRow: vi.fn((id: string | number, isSelected: boolean = true, resetOtherRows: boolean = false) => {
@@ -143,20 +146,20 @@ vi.mock('@mui/x-data-grid', async () => {
               role="row"
             >
               <span data-testid={`mode-${row.id}`}>{mode}</span>
-              <button
-                type="button"
-                data-testid={`select-${row.id}`}
-                onClick={() => {
-                  const editable = isCellEditable?.({ row, field: 'name' }) ?? true;
-                  onCellClick?.({ id: row.id, field: 'name', isEditable: editable, row });
-                }}
-              >
-                {`Select ${row.id}`}
-              </button>
               {columns.map((col) => {
+                const editable = isCellEditable?.({ row, field: col.field }) ?? true;
                 if (typeof col.renderCell === 'function') {
                   return (
-                    <ReactModule.Fragment key={`${row.id}-${col.field}`}>
+                    <div key={`${row.id}-${col.field}`}>
+                      <button
+                        type="button"
+                        data-testid={`select-${row.id}-${col.field}`}
+                        onClick={() => {
+                          onCellClick?.({ id: row.id, field: col.field, isEditable: editable, row });
+                        }}
+                      >
+                        {`Select ${row.id} ${col.field}`}
+                      </button>
                       {col.renderCell({
                         api: {},
                         cellMode: mode === GridRowModes.Edit ? 'edit' : 'view',
@@ -165,10 +168,21 @@ vi.mock('@mui/x-data-grid', async () => {
                         row,
                         value: row[col.field],
                       } as never)}
-                    </ReactModule.Fragment>
+                    </div>
                   );
                 }
-                return null;
+                return (
+                  <button
+                    type="button"
+                    data-testid={`select-${row.id}-${col.field}`}
+                    key={`${row.id}-${col.field}`}
+                    onClick={() => {
+                      onCellClick?.({ id: row.id, field: col.field, isEditable: editable, row });
+                    }}
+                  >
+                    {`Select ${row.id} ${col.field}`}
+                  </button>
+                );
               })}
             </div>
           );
@@ -211,6 +225,7 @@ const pressArrowUp = () =>
 describe('FieldsBedsHierarchy keyboard navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getSetCellFocusMock().mockClear();
     window.sessionStorage.clear();
     vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
     // jsdom does not implement scrollIntoView
@@ -245,7 +260,7 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
 
     // Click the first field to select it and activate keyboard navigation
     await act(async () => {
-      fireEvent.click(screen.getByTestId('select-field-1'));
+      fireEvent.click(screen.getByTestId('select-field-1-name'));
     });
 
     // Navigate down 4 rows
@@ -267,7 +282,7 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
 
     // Select field-5 first by clicking it
-    await act(async () => { fireEvent.click(screen.getByTestId('select-field-5')); });
+    await act(async () => { fireEvent.click(screen.getByTestId('select-field-5-name')); });
 
     await pressArrowUp();
     await pressArrowUp();
@@ -283,7 +298,7 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
 
     // Select the last field
     await act(async () => {
-      fireEvent.click(screen.getByTestId(`select-field-${FIELD_COUNT}`));
+      fireEvent.click(screen.getByTestId(`select-field-${FIELD_COUNT}-name`));
     });
 
     // Try to go further — should stay on the last field
@@ -295,6 +310,25 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     );
   });
 
+  it('ArrowDown preserves the focused column when moving to the next row', async () => {
+    renderHierarchy();
+
+    await waitFor(() => expect(screen.getByTestId('row-field-2')).toBeInTheDocument());
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('select-field-2-width_m'));
+    });
+    getSetCellFocusMock().mockClear();
+
+    await pressArrowDown();
+
+    await waitFor(() =>
+      expect(screen.getByTestId('row-field-3')).toHaveAttribute('data-selected', 'true'),
+    );
+    expect(getSetCellFocusMock()).toHaveBeenLastCalledWith('field-3', 'width_m');
+    expect(getSetCellFocusMock()).not.toHaveBeenLastCalledWith('field-3', 'name');
+  });
+
   it('ArrowUp does not move past the first row', async () => {
     renderHierarchy();
     // With a single location the hierarchy renders fields directly without a location header,
@@ -302,7 +336,7 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
 
     // Select the first field
-    await act(async () => { fireEvent.click(screen.getByTestId('select-field-1')); });
+    await act(async () => { fireEvent.click(screen.getByTestId('select-field-1-name')); });
 
     // Pressing up multiple times should keep field-1 selected
     await pressArrowUp();
@@ -325,7 +359,7 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     const updatesBeforeNav = updates.length;
 
     // Activate navigation
-    await act(async () => { fireEvent.click(screen.getByTestId('select-field-1')); });
+    await act(async () => { fireEvent.click(screen.getByTestId('select-field-1-name')); });
 
     const updatesAfterClick = updates.length;
 
@@ -348,7 +382,7 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     renderHierarchy();
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
 
-    await act(async () => { fireEvent.click(screen.getByTestId('select-field-1')); });
+    await act(async () => { fireEvent.click(screen.getByTestId('select-field-1-name')); });
 
     const start = performance.now();
     for (let i = 0; i < FIELD_COUNT - 1; i++) {
@@ -386,7 +420,7 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     await waitFor(() => expect(screen.getByTestId('row-101')).toBeInTheDocument());
 
     // Select bed-101.
-    await act(async () => { fireEvent.click(screen.getByTestId('select-101')); });
+    await act(async () => { fireEvent.click(screen.getByTestId('select-101-name')); });
     expect(screen.getByTestId('row-101')).toHaveAttribute('data-selected', 'true');
 
     // Collapse field-1 by clicking its collapse button (rendered via renderCell).

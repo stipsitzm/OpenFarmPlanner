@@ -233,6 +233,7 @@ function FieldsBedsHierarchy({
   const handledCreateFieldRequestRef = useRef(0);
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
+  const selectedCellFieldRef = useRef("name");
 
   // Data fetching
   const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
@@ -639,7 +640,7 @@ function FieldsBedsHierarchy({
     );
 
     if (wasEditing && !isNowEditing && selectedRowId) {
-      gridApiRef.current?.setCellFocus?.(selectedRowId, "name");
+      gridApiRef.current?.setCellFocus?.(selectedRowId, selectedCellFieldRef.current);
     }
   }, [rowModesModel, selectedRowId, gridApiRef]);
 
@@ -649,7 +650,7 @@ function FieldsBedsHierarchy({
   // and without blocking the main thread like flushSync would.
   useLayoutEffect(() => {
     if (treeActive && selectedRowId != null) {
-      gridApiRef.current?.setCellFocus?.(selectedRowId, "name");
+      gridApiRef.current?.setCellFocus?.(selectedRowId, selectedCellFieldRef.current);
     }
     // Imperative selection avoids O(n) re-render of every row that the controlled
     // rowSelectionModel prop triggers. selectRow(..., true, true) deselects all
@@ -1115,6 +1116,7 @@ function FieldsBedsHierarchy({
                 if (editingRowId !== undefined && String(editingRowId) !== String(params.id)) {
                   discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
                 }
+                selectedCellFieldRef.current = params.field;
                 rememberRowSnapshot(params.id);
                 setSelectedRowId(params.id);
                 setTreeActive(true);
@@ -1122,6 +1124,7 @@ function FieldsBedsHierarchy({
               }}
               onCellKeyDown={(params: GridCellParams<HierarchyRow>, event) => {
                 const keyboardEvent = event as MuiEvent<React.KeyboardEvent>;
+                selectedCellFieldRef.current = params.field;
                 if (
                   keyboardEvent.key === "Escape" &&
                   rowModesModel[params.id]?.mode === GridRowModes.Edit
