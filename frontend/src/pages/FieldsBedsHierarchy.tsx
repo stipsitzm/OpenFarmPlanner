@@ -39,6 +39,7 @@ import Divider from "@mui/material/Divider";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import EmptyStateCard from '../components/project/EmptyStateCard';
+import { CALCULATED_COLUMN_CELL_CLASS } from "../components/data-grid/calculatedColumns";
 import { dataGridSx } from "../components/data-grid/styles";
 import {
   DeleteUndoSnackbar,
@@ -109,6 +110,9 @@ interface HierarchyRowAction {
   onClick: () => void;
 }
 
+const HIERARCHY_SELECTED_VIEW_ROW_SELECTOR =
+  "& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing)";
+
 const HIERARCHY_DATA_GRID_SX = {
   ...dataGridSx,
   width: "fit-content",
@@ -166,6 +170,28 @@ const HIERARCHY_DATA_GRID_SX = {
     {
       minHeight: "32px",
       height: "32px",
+    },
+  [HIERARCHY_SELECTED_VIEW_ROW_SELECTOR]: {
+    backgroundColor: "transparent",
+  },
+  [`${HIERARCHY_SELECTED_VIEW_ROW_SELECTOR} .MuiDataGrid-cell`]: {
+    backgroundColor: "transparent",
+  },
+  [`${HIERARCHY_SELECTED_VIEW_ROW_SELECTOR} .MuiDataGrid-cell.MuiDataGrid-cell--editable`]:
+    {
+      backgroundColor: "surface.surfaceBackground",
+    },
+  [`${HIERARCHY_SELECTED_VIEW_ROW_SELECTOR} .MuiDataGrid-cell.${CALCULATED_COLUMN_CELL_CLASS}`]:
+    {
+      backgroundColor: "#F5F5F5",
+    },
+  [`${HIERARCHY_SELECTED_VIEW_ROW_SELECTOR} .MuiDataGrid-cell.ofp-hierarchy-cell-missing-dimension`]:
+    {
+      backgroundColor: "#fbf2d5",
+    },
+  [`${HIERARCHY_SELECTED_VIEW_ROW_SELECTOR} .MuiDataGrid-cell:focus, ${HIERARCHY_SELECTED_VIEW_ROW_SELECTOR} .MuiDataGrid-cell:focus-within`]:
+    {
+      backgroundColor: "transparent",
     },
   "& .ofp-hierarchy-cell-missing-dimension": {
     backgroundColor: "#fbf2d5",
@@ -600,7 +626,7 @@ function FieldsBedsHierarchy({
 
   // After any row edit stops, MUI DataGrid v8 moves cell focus to the next row
   // ('cellToFocusAfter = below' for enterKeyDown). Re-sync focus back to
-  // selectedRowId so the highlight and the focus box always match.
+  // selectedRowId so keyboard selection and the focus box always match.
   useEffect(() => {
     const prevModel = prevRowModesModelRef.current;
     prevRowModesModelRef.current = rowModesModel;
@@ -619,7 +645,7 @@ function FieldsBedsHierarchy({
 
   // Sync DataGrid cell focus after navigation (ArrowDown/Up) or table focus (Alt+T).
   // useLayoutEffect runs after React commits to DOM but before the browser paints,
-  // so the highlight and the focus box update in the same frame with no visible lag,
+  // so selection and the focus box update in the same frame with no visible lag,
   // and without blocking the main thread like flushSync would.
   useLayoutEffect(() => {
     if (treeActive && selectedRowId != null) {
@@ -1136,7 +1162,7 @@ function FieldsBedsHierarchy({
                 // Prevent DataGrid from moving cell focus on ArrowDown/Up in view mode.
                 // Our window-level handleTreeNavigation handles navigation exclusively and
                 // explicitly syncs both selectedRowId and DataGrid cell focus, so the
-                // highlight and the focus box always move together.
+                // selection and the focus box always move together.
                 if (
                   (keyboardEvent.key === "ArrowDown" || keyboardEvent.key === "ArrowUp") &&
                   rowModesModel[params.id]?.mode !== GridRowModes.Edit
