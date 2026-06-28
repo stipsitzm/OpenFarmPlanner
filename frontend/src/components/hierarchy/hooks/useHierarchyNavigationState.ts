@@ -13,6 +13,7 @@ interface UseHierarchyNavigationStateResult {
   expandedRowsRef: MutableRefObject<Set<GridRowId>>;
   rowsRef: MutableRefObject<GridRowsProp<HierarchyRow>>;
   selectRow: (rowId: GridRowId) => void;
+  selectRowTransient: (rowId: GridRowId) => void;
   selectedRowId: GridRowId | null;
   selectedRowIdRef: MutableRefObject<GridRowId | null>;
   setSelectedRowId: Dispatch<SetStateAction<GridRowId | null>>;
@@ -49,10 +50,17 @@ export function useHierarchyNavigationState({
   }, [expandedRows]);
 
   const selectRow = useCallback((rowId: GridRowId): void => {
+    selectedRowIdRef.current = rowId;
     setSelectedRowId(rowId);
   }, []);
 
+  const selectRowTransient = useCallback((rowId: GridRowId): void => {
+    selectedRowIdRef.current = rowId;
+  }, []);
+
   const activateRow = useCallback((rowId: GridRowId): void => {
+    selectedRowIdRef.current = rowId;
+    treeActiveRef.current = true;
     setSelectedRowId(rowId);
     setTreeActive(true);
   }, []);
@@ -62,6 +70,7 @@ export function useHierarchyNavigationState({
     expandedRowsRef,
     rowsRef,
     selectRow,
+    selectRowTransient,
     selectedRowId,
     selectedRowIdRef,
     setSelectedRowId,

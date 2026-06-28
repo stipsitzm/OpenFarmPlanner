@@ -20,6 +20,7 @@ interface UseHierarchyGridFocusParams {
 }
 
 interface UseHierarchyGridFocusResult {
+  focusRow: (rowId: GridRowId) => void;
   rememberFocusedField: (field: string) => void;
 }
 
@@ -64,13 +65,17 @@ export function useHierarchyGridFocus({
     focusedFieldRef.current = field || DEFAULT_FOCUS_FIELD;
   }, []);
 
-  const focusSelectedCell = useCallback((): void => {
-    if (selectedRowId == null) {
-      return;
-    }
+  const focusRow = useCallback((rowId: GridRowId): void => {
+    const api = gridApiRef.current;
+    api?.setCellFocus?.(rowId, focusedFieldRef.current);
+    api?.selectRow?.(rowId, true, true);
+  }, [gridApiRef]);
 
-    gridApiRef.current?.setCellFocus?.(selectedRowId, focusedFieldRef.current);
-  }, [gridApiRef, selectedRowId]);
+  const focusSelectedCell = useCallback((): void => {
+    if (selectedRowId != null) {
+      focusRow(selectedRowId);
+    }
+  }, [focusRow, selectedRowId]);
 
   useEffect(() => {
     const prevModel = prevRowModesModelRef.current;
@@ -85,11 +90,7 @@ export function useHierarchyGridFocus({
     if (treeActive) {
       focusSelectedCell();
     }
-
-    if (selectedRowId != null) {
-      gridApiRef.current?.selectRow?.(selectedRowId, true, true);
-    }
-  }, [focusSelectedCell, gridApiRef, selectedRowId, treeActive]);
+  }, [focusSelectedCell, selectedRowId, treeActive]);
 
   useLayoutEffect(() => {
     const previousRows = prevRowsRef.current;
@@ -109,6 +110,7 @@ export function useHierarchyGridFocus({
   }, [rows, selectedRowId, setSelectedRowId, treeActive]);
 
   return {
+    focusRow,
     rememberFocusedField,
   };
 }

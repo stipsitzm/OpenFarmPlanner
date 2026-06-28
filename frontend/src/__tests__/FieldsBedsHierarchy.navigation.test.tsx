@@ -3,16 +3,16 @@
  *
  * These tests verify:
  * 1. ArrowDown/Up navigation moves to the correct rows.
- * 2. Navigation does not produce cascading React re-renders (render count
- *    must equal key-press count, not a multiple).
+ * 2. Navigation does not produce cascading React re-renders.
  * 3. Rapid navigation stays within a generous timing budget so infinite
  *    loops or O(n²) regressions are caught early.
  *
  * Note: the DataGrid is mocked, so absolute durations here are much lower
  * than in the browser. The real-browser performance benefit comes from:
- *   – stable callbacks (handleDeleteSelected / handleEditSelected use refs)
- *   – stable areaCommands memo (no selectedRow in its dependency array)
- * Those changes mean fewer expensive re-renders per keypress in the browser.
+ *   – transient keyboard selection updates refs instead of page state
+ *   – stable callbacks read the current row from refs
+ *   – focused grid cells are updated imperatively
+ * Those changes avoid expensive page re-renders per keypress in the browser.
  */
 
 import React, { Profiler } from 'react';
@@ -370,7 +370,8 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
 
     const navUpdates = updates.length - updatesAfterClick;
 
-    // Each ArrowDown triggers exactly 1 React update; no cascading allowed.
+    // The grid mock still updates its internal selected-row state, but
+    // navigation must not cascade into multiple React updates per keypress.
     expect(navUpdates).toBeLessThanOrEqual(FIELD_COUNT - 1);
     expect(navUpdates).toBeGreaterThan(0);
 

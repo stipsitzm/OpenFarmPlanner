@@ -295,6 +295,7 @@ function FieldsBedsHierarchy({
     expandedRowsRef,
     rowsRef,
     selectRow,
+    selectRowTransient,
     selectedRowId,
     selectedRowIdRef,
     setSelectedRowId,
@@ -625,7 +626,7 @@ function FieldsBedsHierarchy({
 
   }, [discardRowEdit]);
 
-  const { rememberFocusedField } = useHierarchyGridFocus({
+  const { focusRow, rememberFocusedField } = useHierarchyGridFocus({
     gridApiRef,
     rowModesModel,
     rows,
@@ -633,6 +634,11 @@ function FieldsBedsHierarchy({
     setSelectedRowId,
     treeActive,
   });
+
+  const selectRowForKeyboard = useCallback((rowId: GridRowId): void => {
+    selectRowTransient(rowId);
+    focusRow(rowId);
+  }, [focusRow, selectRowTransient]);
 
   // Read the current row from refs at call time so these callbacks are stable
   // and don't trigger re-renders of areaCommands on every navigation keypress.
@@ -766,7 +772,7 @@ function FieldsBedsHierarchy({
     selectedRowIdRef,
     expandedRowsRef,
     activateRow,
-    selectRow,
+    selectRow: selectRowForKeyboard,
     setTreeActive,
     toggleExpand,
     discardActiveRowEdit,
