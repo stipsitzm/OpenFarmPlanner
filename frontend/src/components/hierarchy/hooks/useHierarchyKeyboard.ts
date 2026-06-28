@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { GridRowId } from "@mui/x-data-grid";
 import type { HierarchyRow } from "../utils/types";
+import { getHierarchyKeyboardAction } from "../utils/hierarchyKeyboardNavigation";
 import { isTypingInEditableElement } from "../../../hooks/useKeyboardShortcuts";
 
 interface UseHierarchyKeyboardParams {
@@ -10,7 +11,8 @@ interface UseHierarchyKeyboardParams {
   rowsRef: React.MutableRefObject<HierarchyRow[]>;
   selectedRowIdRef: React.MutableRefObject<string | number | null>;
   expandedRowsRef: React.MutableRefObject<Set<string | number>>;
-  setSelectedRowId: (id: string | number) => void;
+  activateRow: (id: GridRowId) => void;
+  selectRow: (id: GridRowId) => void;
   setTreeActive: (active: boolean) => void;
   toggleExpand: (id: GridRowId) => void;
   discardActiveRowEdit: () => void;
@@ -29,7 +31,8 @@ export function useHierarchyKeyboard({
   rowsRef,
   selectedRowIdRef,
   expandedRowsRef,
-  setSelectedRowId,
+  activateRow,
+  selectRow,
   setTreeActive,
   toggleExpand,
   discardActiveRowEdit,
@@ -56,7 +59,7 @@ export function useHierarchyKeyboard({
 
       event.preventDefault();
       const targetId = selectedRowIdRef.current ?? firstRow.id;
-      setSelectedRowId(targetId);
+      activateRow(targetId);
       setTreeActive(true);
 
       const selectedElement = document.querySelector(`[data-id="${String(targetId)}"]`);
@@ -71,51 +74,24 @@ export function useHierarchyKeyboard({
       if (isTypingInEditableElement(document.activeElement)) return;
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
 
-      const currentRows = rowsRef.current;
-      const currentIndex = currentRows.findIndex((row) => row.id === currentSelectedRowId);
-      if (currentIndex === -1) return;
+      const action = getHierarchyKeyboardAction({
+        expandedRows: expandedRowsRef.current,
+        key: event.key,
+        rows: rowsRef.current,
+        selectedRowId: currentSelectedRowId,
+      });
+      if (!action) return;
 
-      let performedAction = false;
-      let targetRowId: string | number | null = currentSelectedRowId;
-
-      if (event.key === "ArrowDown") {
-        const nextRow = currentRows[currentIndex + 1];
-        if (nextRow) {
-          targetRowId = nextRow.id;
-          setSelectedRowId(nextRow.id);
-          performedAction = true;
-        }
-      } else if (event.key === "ArrowUp") {
-        const previousRow = currentRows[currentIndex - 1];
-        if (previousRow) {
-          targetRowId = previousRow.id;
-          setSelectedRowId(previousRow.id);
-          performedAction = true;
-        }
-      } else if (event.key === "ArrowRight") {
-        const row = currentRows[currentIndex];
-        if (
-          row &&
-          (row.type === "location" || row.type === "field") &&
-          row.hasChildren === true &&
-          !expandedRowsRef.current.has(row.id)
-        ) {
-          toggleExpand(row.id);
-          performedAction = true;
-        }
-      } else if (event.key === "ArrowLeft") {
-        const row = currentRows[currentIndex];
-        if (row && expandedRowsRef.current.has(row.id)) {
-          toggleExpand(row.id);
-          performedAction = true;
-        }
+      if (action.type === "select") {
+        selectRow(action.rowId);
+      } else {
+        toggleExpand(action.rowId);
       }
 
-      if (!performedAction) return;
       event.preventDefault();
 
       const selectedElement = document.querySelector(
-        `[data-id="${String(targetRowId ?? currentSelectedRowId)}"]`,
+        `[data-id="${String(action.rowId)}"]`,
       );
       if (selectedElement instanceof HTMLElement) {
         selectedElement.scrollIntoView({ block: "nearest" });
@@ -131,7 +107,7 @@ export function useHierarchyKeyboard({
       window.removeEventListener("keydown", handleFocusTable);
       window.removeEventListener("keydown", handleTreeNavigation);
     };
-  }, [contextMenuState, discardActiveRowEdit, expandedRowsRef, rowsRef, selectedRowIdRef, setSelectedRowId, setTreeActive, tableWrapperRef, toggleExpand, treeActive]);
+  }, [activateRow, contextMenuState, discardActiveRowEdit, expandedRowsRef, rowsRef, selectRow, selectedRowIdRef, setTreeActive, tableWrapperRef, toggleExpand, treeActive]);
 
   // Context-menu keyboard trigger (ContextMenu key / Shift+F10).
   useEffect(() => {

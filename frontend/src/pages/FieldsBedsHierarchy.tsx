@@ -11,7 +11,6 @@
 import React, {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -59,6 +58,7 @@ import { useHierarchyData, type HierarchyDataState } from "../components/hierarc
 import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { useHierarchyDelete } from "../components/hierarchy/hooks/useHierarchyDelete";
+import { useHierarchyGridFocus } from "../components/hierarchy/hooks/useHierarchyGridFocus";
 import { useHierarchyRowUpdate } from "../components/hierarchy/hooks/useHierarchyRowUpdate";
 import { useHierarchyContextMenu } from "../components/hierarchy/hooks/useHierarchyContextMenu";
 import { useHierarchyKeyboard } from "../components/hierarchy/hooks/useHierarchyKeyboard";
@@ -227,13 +227,11 @@ function FieldsBedsHierarchy({
     null,
   );
   const [treeActive, setTreeActive] = useState(false);
-  const prevRowModesModelRef = useRef<GridRowModesModel>({});
   const [draftValidationWarning, setDraftValidationWarning] = useState("");
   const hasInitiallyExpandedRef = useRef(false);
   const handledCreateFieldRequestRef = useRef(0);
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
-  const selectedCellFieldRef = useRef("name");
 
   // Data fetching
   const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
@@ -327,9 +325,6 @@ function FieldsBedsHierarchy({
   rowsRef.current = rows;
   const expandedRowsRef = useRef(expandedRows);
   expandedRowsRef.current = expandedRows;
-  // Tracks the previous rows list so we can detect when the selected row
-  // becomes hidden (parent collapsed) and re-select the nearest visible ancestor.
-  const prevRowsRef = useRef(rows);
 
   const shouldShowHierarchyTable = fields.length > 0 || createFieldRequest > 0;
   const hasUsableHierarchyRows = shouldShowHierarchyTable && (
@@ -625,72 +620,19 @@ function FieldsBedsHierarchy({
 
   }, [discardRowEdit]);
 
-  // After any row edit stops, MUI DataGrid v8 moves cell focus to the next row
-  // ('cellToFocusAfter = below' for enterKeyDown). Re-sync focus back to
-  // selectedRowId so keyboard selection and the focus box always match.
-  useEffect(() => {
-    const prevModel = prevRowModesModelRef.current;
-    prevRowModesModelRef.current = rowModesModel;
+  const { rememberFocusedField, selectRow } = useHierarchyGridFocus({
+    gridApiRef,
+    rowModesModel,
+    rows,
+    selectedRowId,
+    setSelectedRowId,
+    treeActive,
+  });
 
-    const wasEditing = Object.values(prevModel).some(
-      (mode) => mode.mode === GridRowModes.Edit,
-    );
-    const isNowEditing = Object.values(rowModesModel).some(
-      (mode) => mode.mode === GridRowModes.Edit,
-    );
-
-    if (wasEditing && !isNowEditing && selectedRowId) {
-      gridApiRef.current?.setCellFocus?.(selectedRowId, selectedCellFieldRef.current);
-    }
-  }, [rowModesModel, selectedRowId, gridApiRef]);
-
-  // Sync DataGrid cell focus after navigation (ArrowDown/Up) or table focus (Alt+T).
-  // useLayoutEffect runs after React commits to DOM but before the browser paints,
-  // so selection and the focus box update in the same frame with no visible lag,
-  // and without blocking the main thread like flushSync would.
-  useLayoutEffect(() => {
-    if (treeActive && selectedRowId != null) {
-      gridApiRef.current?.setCellFocus?.(selectedRowId, selectedCellFieldRef.current);
-    }
-    // Imperative selection avoids O(n) re-render of every row that the controlled
-    // rowSelectionModel prop triggers. selectRow(..., true, true) deselects all
-    // other rows and selects this one via DataGrid's internal state — only the 2
-    // affected rows re-render instead of the entire list.
-    if (selectedRowId != null) {
-      gridApiRef.current?.selectRow?.(selectedRowId, true, true);
-    }
-  }, [selectedRowId, treeActive, gridApiRef]);
-
-  // When rows change (expand/collapse) and the selected row is no longer visible,
-  // move selection to the nearest still-visible ancestor instead of leaving the
-  // selection pointing at a hidden row (which silently breaks ArrowDown/Up).
-  useLayoutEffect(() => {
-    const prevRows = prevRowsRef.current;
-    prevRowsRef.current = rows;
-
-    if (!selectedRowId || !treeActive) return;
-    if (rows.some((r) => r.id === selectedRowId)) return; // still visible
-
-    // Scan backward from the selected row's previous position to find the
-    // closest ancestor that is still visible (i.e. the row that was just collapsed).
-    const prevIndex = prevRows.findIndex((r) => r.id === selectedRowId);
-    let targetRow: HierarchyRow | undefined;
-    if (prevIndex > -1) {
-      for (let i = prevIndex - 1; i >= 0; i--) {
-        const candidate = prevRows[i] as HierarchyRow;
-        if (rows.some((r) => r.id === candidate.id)) {
-          targetRow = candidate;
-          break;
-        }
-      }
-    }
-    if (!targetRow) {
-      targetRow = rows[0] as HierarchyRow | undefined;
-    }
-    if (targetRow) {
-      setSelectedRowId(targetRow.id);
-    }
-  }, [rows, selectedRowId, treeActive]);
+  const activateRow = useCallback((rowId: GridRowId): void => {
+    selectRow(rowId);
+    setTreeActive(true);
+  }, [selectRow]);
 
   // Read the current row from refs at call time so these callbacks are stable
   // and don't trigger re-renders of areaCommands on every navigation keypress.
@@ -823,7 +765,8 @@ function FieldsBedsHierarchy({
     rowsRef,
     selectedRowIdRef,
     expandedRowsRef,
-    setSelectedRowId,
+    activateRow,
+    selectRow,
     setTreeActive,
     toggleExpand,
     discardActiveRowEdit,
@@ -1116,15 +1059,15 @@ function FieldsBedsHierarchy({
                 if (editingRowId !== undefined && String(editingRowId) !== String(params.id)) {
                   discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
                 }
-                selectedCellFieldRef.current = params.field;
+                rememberFocusedField(params.field);
                 rememberRowSnapshot(params.id);
-                setSelectedRowId(params.id);
+                selectRow(params.id);
                 setTreeActive(true);
                 handleEditableCellClick(params, rowModesModel, setRowModesModel);
               }}
               onCellKeyDown={(params: GridCellParams<HierarchyRow>, event) => {
                 const keyboardEvent = event as MuiEvent<React.KeyboardEvent>;
-                selectedCellFieldRef.current = params.field;
+                rememberFocusedField(params.field);
                 if (
                   keyboardEvent.key === "Escape" &&
                   rowModesModel[params.id]?.mode === GridRowModes.Edit
