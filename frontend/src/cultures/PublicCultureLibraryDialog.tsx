@@ -81,6 +81,11 @@ export function PublicCultureLibraryDialog({
   const useMobileFilterLayout = isMobile || isMobileLandscape;
   const modalHistoryIdRef = useRef<string | null>(null);
   const closingFromHistoryRef = useRef(false);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const isCurrentModalHistoryEntry = useCallback((): boolean => {
     const modalState = window.history.state as Record<string, unknown> | null;
@@ -89,12 +94,8 @@ export function PublicCultureLibraryDialog({
   }, []);
 
   const closeDialog = useCallback((): void => {
-    if (useMobileFilterLayout && isCurrentModalHistoryEntry()) {
-      window.history.back();
-      return;
-    }
     onClose();
-  }, [isCurrentModalHistoryEntry, onClose, useMobileFilterLayout]);
+  }, [onClose]);
 
   useEffect(() => {
     if (open) {
@@ -151,7 +152,7 @@ export function PublicCultureLibraryDialog({
       }
       closingFromHistoryRef.current = true;
       modalHistoryIdRef.current = null;
-      onClose();
+      onCloseRef.current();
       queueMicrotask(() => {
         closingFromHistoryRef.current = false;
       });
@@ -166,7 +167,7 @@ export function PublicCultureLibraryDialog({
       }
       modalHistoryIdRef.current = null;
     };
-  }, [isCurrentModalHistoryEntry, onClose, open, useMobileFilterLayout]);
+  }, [isCurrentModalHistoryEntry, open, useMobileFilterLayout]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const varietyOptions = useMemo(

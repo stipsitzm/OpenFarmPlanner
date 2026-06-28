@@ -1,4 +1,5 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PublicCultureLibraryDialog } from '../cultures/PublicCultureLibraryDialog';
 import type { PublicCulture } from '../api/types';
@@ -64,6 +65,35 @@ describe('PublicCultureLibraryDialog', () => {
 
     await waitFor(() => {
       expect(onClose).toHaveBeenCalledTimes(1);
+      expect(window.location.pathname).toBe('/app/cultures');
+    });
+  });
+
+  it('closes immediately when the mobile cancel button is clicked', async () => {
+    function ClosableDialog() {
+      const [open, setOpen] = useState(true);
+
+      return (
+        <PublicCultureLibraryDialog
+          open={open}
+          loading={false}
+          error={null}
+          cultures={[culture]}
+          importingId={null}
+          onClose={() => setOpen(false)}
+          onSearch={vi.fn()}
+          onImport={vi.fn()}
+        />
+      );
+    }
+
+    render(<ClosableDialog />);
+
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(window.location.pathname).toBe('/app/cultures');
     });
   });
