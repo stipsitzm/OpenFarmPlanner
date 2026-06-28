@@ -63,6 +63,7 @@ import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import PublicIcon from '@mui/icons-material/Public';
+import ImportExportIcon from '@mui/icons-material/ImportExport';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
@@ -1545,35 +1546,34 @@ function RootLayout() {
               {isCulturesPage ? (
                 <>
                   {cultureLibraryAction ? (
-                    <Tooltip title={t('cultureActions.openLibrary')}>
+                    <Tooltip title={t('cultureActions.openLibrary')} enterTouchDelay={0}>
                       <span>
-                        <Button
+                        <IconButton
                           size="small"
-                          variant="outlined"
                           onClick={() => cultureLibraryAction.onClick()}
                           aria-label={t('cultureActions.openLibrary')}
-                          startIcon={<PublicIcon fontSize="small" />}
-                          sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
+                          sx={{ color: 'text.primary' }}
                           disabled={cultureLibraryAction.disabled}
                         >
-                          {t('cultureActions.libraryShort')}
-                        </Button>
+                          <PublicIcon fontSize="small" />
+                        </IconButton>
                       </span>
                     </Tooltip>
                   ) : null}
                   {showCultureImportExportButton || isMobile ? (
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      aria-label={t('cultureActions.openImportExport')}
-                      aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
-                      aria-haspopup="true"
-                      aria-expanded={Boolean(cultureActionsMenuAnchor)}
-                      onClick={handleCultureActionsMenuOpen}
-                      sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
-                    >
-                      {t('cultureActions.importExport')}
-                    </Button>
+                    <Tooltip title={t('cultureActions.openImportExport')} enterTouchDelay={0}>
+                      <IconButton
+                        size="small"
+                        aria-label={t('cultureActions.openImportExport')}
+                        aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu-mobile' : undefined}
+                        aria-haspopup="true"
+                        aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                        onClick={handleCultureActionsMenuOpen}
+                        sx={{ color: 'text.primary' }}
+                      >
+                        <ImportExportIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   ) : null}
                   <Menu
                     id="culture-actions-menu-mobile"
