@@ -23,7 +23,6 @@ import RoomOutlinedIcon from '@mui/icons-material/RoomOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import TabIcon from '@mui/icons-material/Tab';
-import ToggleOnIcon from '@mui/icons-material/ToggleOn';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {
   Box,
@@ -124,7 +123,6 @@ const PAGE_SYMBOL_DEFINITIONS: Partial<Record<HelpPageKey, SymbolDefinition[]>> 
   ],
   calendar: [
     { key: 'tabs', icon: <TabIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
-    { key: 'switch', icon: <ToggleOnIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
     { key: 'tooltip', icon: <InfoOutlinedIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
   ],
   seedDemand: [

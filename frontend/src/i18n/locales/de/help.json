@@ -41,7 +41,7 @@
   "pages": {
     "dashboard": {
       "title": "Hilfe: Übersicht",
-      "intro": "Die Übersicht zeigt die nächsten wichtigen Aufgaben aus deiner Planung.\n\nSobald Anbaupläne vorhanden sind, erscheinen hier anstehende Termine für Aussaat, Pflanzung, Anzucht und Ernte.\n\nÄnderungen an den Daten erfolgen in den jeweiligen Bereichen wie Anbauflächen, Kulturen oder Anbaupläne."
+      "intro": "Sobald Anbaupläne vorhanden sind, erscheinen hier anstehende Termine für Aussaat, Pflanzung, Anzucht und Ernte."
     },
     "locations": {
       "title": "Hilfe: Standorte",
@@ -103,8 +103,15 @@
     },
     "areas": {
       "title": "Hilfe: Anbauflächen – Listenansicht",
-      "intro": "Hier verwaltest du die Flächenstruktur deines Betriebs – vom Standort über Parzellen bis zu einzelnen Beeten.\n\nNeue Standorte, Parzellen und Beete können über das {{addIcon}} hinzugefügt werden, das beim Überfahren eines Elements mit der Maus erscheint.\n\nEinträge können direkt in der Tabelle bearbeitet werden. Weitere Aktionen wie Umbenennen, Löschen oder das Anlegen von Anbauplänen findest du im Kontextmenü per Rechtsklick.\n\nDie angelegten Flächen bilden die Grundlage für deine Anbauplanung.",
-      "symbolsTitle": "Symbole und Bedienelemente"
+      "intro": "Hier verwaltest du die Flächenstruktur deines Betriebs – vom Standort über Parzellen bis zu einzelnen Beeten.\n\nNeue Standorte, Parzellen und Beete können über das {{addIcon}} hinzugefügt werden, das beim Überfahren eines Elements mit der Maus erscheint.\n\nEinträge können direkt in der Tabelle bearbeitet werden. Weitere Aktionen wie Umbenennen, Löschen oder das Anlegen von Anbauplänen findest du im Kontextmenü per Rechtsklick.",
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "expandToggle": "Abschnitt auf- oder zuklappen",
+        "add": "Neues Element erstellen",
+        "createPlan": "Anbauplan für dieses Beet erstellen",
+        "dimensions": "Längen- und Breitenausrichtung für die grafische Ansicht festlegen",
+        "delete": "Element löschen"
+      }
     },
     "cultures": {
       "title": "Hilfe: Kulturen",
@@ -132,24 +139,48 @@
         "library": "Kulturbibliothek öffnen",
         "createPlan": "Anbauplan für diese Kultur hinzufügen",
         "more": "Weitere Aktionen öffnen",
-        "edit": "Kulturdaten bearbeiten"
+        "edit": "Kulturdaten bearbeiten",
+        "delete": "Kultur löschen"
       }
     },
     "plantingPlans": {
       "title": "Hilfe: Anbaupläne",
-      "intro": "Hier planst du, welche Kultur wann auf welchem Beet angebaut wird. Die Seite verbindet Anbauflächen und Kulturen und bildet die Grundlage für Anbaukalender und Saatgutbedarf.\n\nEinträge können direkt in der Tabelle erstellt und bearbeitet werden.\n\nAnbaukalender und Saatgutbedarf werden automatisch aus diesen Planungen berechnet."
+      "intro": "Hier planst du, welche Kultur wann auf welchem Beet angebaut wird.\n\nEinträge können direkt in der Tabelle erstellt und bearbeitet werden.",
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "add": "Neuen Anbauplan erstellen",
+        "mobileAdd": "Auf Mobilgeräten schnell einen neuen Eintrag erstellen",
+        "notes": "Notizen und Anhänge zu einem Eintrag öffnen",
+        "edit": "Werte direkt in der Tabelle ändern"
+      }
     },
     "calendar": {
       "title": "Hilfe: Anbaukalender",
-      "intro": "Der Anbaukalender visualisiert die zeitliche Planung deiner Anbaupläne. So erkennst du Belegungen, Anzuchtphasen, Erntezeiträume und mögliche Überschneidungen.\n\nFahre über Einträge, um weitere Details anzuzeigen.\n\nÄnderungen in den Anbauplänen werden hier automatisch übernommen."
+      "intro": "Der Anbaukalender visualisiert die zeitliche Planung deiner Anbaupläne. So erkennst du Belegungen, Anzuchtphasen, Erntezeiträume und mögliche Überschneidungen.\n\nFahre über Einträge, um weitere Details anzuzeigen.",
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "tabs": "Zwischen Belegungs- und Anzuchtansicht wechseln",
+        "tooltip": "Weitere Details anzeigen"
+      }
     },
     "seedDemand": {
       "title": "Hilfe: Saatgutbedarf",
-      "intro": "Hier siehst du den berechneten Saatgutbedarf deiner Anbaupläne.\n\nDie Berechnung basiert auf den Kulturdaten und Anbauplänen. Änderungen werden automatisch übernommen."
+      "intro": "Hier siehst du den berechneten Saatgutbedarf deiner Anbaupläne.",
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "supplierSelect": "Lieferant pro Kultur festlegen",
+        "packageInfo": "Empfohlene Verpackungskombinationen einsehen"
+      }
     },
     "suppliers": {
       "title": "Hilfe: Lieferanten",
-      "intro": "Hier verwaltest du deine Lieferanten.\n\nLieferanten können in Kulturen hinterlegt werden, um kulturspezifische Artikel- und Verpackungsinformationen zu erfassen. Diese Daten werden für Saatgutbedarf und Bestellvorschläge verwendet."
+      "intro": "Hier verwaltest du deine Lieferanten.\n\nLieferanten können in Kulturen hinterlegt werden, um kulturspezifische Artikel- und Verpackungsinformationen zu erfassen.",
+      "symbolsTitle": "Symbole und Bedienelemente",
+      "symbols": {
+        "add": "Lieferant hinzufügen",
+        "edit": "Lieferantendaten bearbeiten",
+        "delete": "Lieferant löschen"
+      }
     },
     "graphical": {
       "title": "Hilfe: Anbauflächen – Grafische Ansicht",
@@ -188,7 +219,7 @@
     },
     "yieldOverview": {
       "title": "Hilfe: Ertragsübersicht",
-      "intro": "Die Ertragsübersicht bündelt erwartete Erntemengen aus deinen Anbauplänen. So bleibt der Anbaukalender auf die Planung fokussiert, während Ertragsanalysen auf einer eigenen Seite sichtbar bleiben.",
+      "intro": "Die Ertragsübersicht bündelt erwartete Erntemengen aus deinen Anbauplänen.",
       "points": []
     }
   }
