@@ -30,6 +30,8 @@ import {
   Paper,
   Snackbar,
   Stack,
+  SvgIcon,
+  type SvgIconProps,
   TextField,
   Drawer,
   ListItemButton,
@@ -63,7 +65,6 @@ import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import PublicIcon from '@mui/icons-material/Public';
-import ImportExportIcon from '@mui/icons-material/ImportExport';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
@@ -120,6 +121,15 @@ const ACTION_MENU_ICON_PROPS = { fontSize: 'small' } as const;
 const HIERARCHY_CREATE_LOCATION_ACTION_ID = 'fields-global-add-location';
 const TOPBAR_ACTION_GROUP_GAP = 1.25;
 const COMPACT_TOPBAR_TOGGLE_SIZE = 44;
+
+function FileExportIcon(props: SvgIconProps) {
+  return (
+    <SvgIcon {...props} viewBox="0 -960 960 960">
+      <path d="M480-480ZM202-65l-56-57 118-118h-90v-80h226v226h-80v-89L202-65Zm278-15v-80h240v-440H520v-200H240v400h-80v-400q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H480Z" />
+    </SvgIcon>
+  );
+}
+
 const HomePage = React.lazy(() => import('./pages/public/HomePage'));
 const ImprintPage = React.lazy(() => import('./pages/public/ImprintPage'));
 const PrivacyPolicyPage = React.lazy(() => import('./pages/public/PrivacyPolicyPage'));
@@ -637,12 +647,12 @@ function RootLayout() {
     () => (
       !isFieldsBedsPage
       && !isCalendarPage
+      && !isCulturesPage
       && (
-        (isCulturesPage && (Boolean(cultureLibraryAction) || showCultureImportExportButton))
-        || hasVisibleMobileContextActions
+        hasVisibleMobileContextActions
       )
     ),
-    [cultureLibraryAction, hasVisibleMobileContextActions, isCalendarPage, isCulturesPage, isFieldsBedsPage, showCultureImportExportButton],
+    [hasVisibleMobileContextActions, isCalendarPage, isCulturesPage, isFieldsBedsPage],
   );
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
@@ -1343,7 +1353,69 @@ function RootLayout() {
             </Box>
           </Box>
           ) : (
-            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP }}>
+            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: isCulturesPage ? 0.25 : TOPBAR_ACTION_GROUP_GAP, flexShrink: 0 }}>
+              {isCulturesPage ? (
+                <>
+                  {cultureLibraryAction ? (
+                    <Tooltip title={t('cultureActions.openLibrary')} enterTouchDelay={0}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={() => cultureLibraryAction.onClick()}
+                          aria-label={t('cultureActions.openLibrary')}
+                          sx={{
+                            width: COMPACT_TOPBAR_TOGGLE_SIZE,
+                            height: COMPACT_TOPBAR_TOGGLE_SIZE,
+                            color: 'text.primary',
+                          }}
+                          disabled={cultureLibraryAction.disabled}
+                        >
+                          <PublicIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  ) : null}
+                  {showCultureImportExportButton ? (
+                    <Tooltip title={t('cultureActions.openImportExport')} enterTouchDelay={0}>
+                      <IconButton
+                        size="small"
+                        aria-label={t('cultureActions.openImportExport')}
+                        aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu-mobile' : undefined}
+                        aria-haspopup="true"
+                        aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                        onClick={handleCultureActionsMenuOpen}
+                        sx={{
+                          width: COMPACT_TOPBAR_TOGGLE_SIZE,
+                          height: COMPACT_TOPBAR_TOGGLE_SIZE,
+                          color: 'text.primary',
+                        }}
+                      >
+                        <FileExportIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  ) : null}
+                  <Menu
+                    id="culture-actions-menu-mobile"
+                    anchorEl={cultureActionsMenuAnchor}
+                    open={Boolean(cultureActionsMenuAnchor)}
+                    onClose={handleCultureActionsMenuClose}
+                  >
+                    {cultureImportExportActions.map((action) => (
+                      <MenuItem
+                        key={`mobile-primary-${action.id}`}
+                        aria-label={action.ariaLabel ?? action.label}
+                        onClick={() => {
+                          action.onClick();
+                          handleCultureActionsMenuClose();
+                        }}
+                        disabled={action.disabled}
+                      >
+                        <ListItemText primary={action.label} secondary={action.shortcutHint} />
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                </>
+              ) : null}
               {showMobileTopbarViewActions ? (
                 <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP, flexShrink: 0 }}>
                   {mobileTopbarViewActions.length > 0 ? (
@@ -1571,7 +1643,7 @@ function RootLayout() {
                         onClick={handleCultureActionsMenuOpen}
                         sx={{ color: 'text.primary' }}
                       >
-                        <ImportExportIcon fontSize="small" />
+                        <FileExportIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                   ) : null}
