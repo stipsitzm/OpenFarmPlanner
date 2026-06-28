@@ -422,28 +422,32 @@ export function PublicCultureLibraryDialog({
                     <strong>{t('form.harvestDurationDays')}:</strong> {selectedCulture.harvest_duration_days ?? t('noData')}
                   </Typography>
                 </Box>
-                <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: selectedCulture.notes ? 0.25 : 0, fontWeight: 600 }}>
+                <Typography variant="h6" gutterBottom sx={{ lineHeight: 1.25 }}>
                   {t('form.notes')}
                 </Typography>
                 {selectedCulture.notes ? (
-                  <Box
-                    sx={{
-                      '& h3': { mt: 1.35, mb: 0.5, fontSize: '0.9rem' },
-                      '& h3:first-of-type': { mt: 0.25 },
-                      '& p': { mb: 0.75, lineHeight: 1.45 },
-                      '& ul': { pl: 2.5, mb: 0.75 },
-                      '& li': { mb: 0.25 },
-                      '& a': { color: 'primary.main' },
-                      '& em': { color: 'text.secondary' },
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {stripCitationMarkers(selectedCulture.notes)}
-                    </ReactMarkdown>
+                  <Box sx={{ borderTop: '1px solid', borderColor: 'divider', mt: 0.5, pt: 1.25 }}>
+                    <Box
+                      sx={{
+                        '& h3': { mt: 1.35, mb: 0.5, fontSize: '0.9rem' },
+                        '& h3:first-of-type': { mt: 0.25 },
+                        '& p': { mb: 0.75, lineHeight: 1.45 },
+                        '& ul': { pl: 2.5, mb: 0.75 },
+                        '& li': { mb: 0.25 },
+                        '& a': { color: 'primary.main' },
+                        '& em': { color: 'text.secondary' },
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {stripCitationMarkers(selectedCulture.notes)}
+                      </ReactMarkdown>
+                    </Box>
                   </Box>
                 ) : (
-                  <Typography variant="body2" color="text.secondary">{t('noData')}</Typography>
+                  <Box sx={{ borderTop: '1px solid', borderColor: 'divider', mt: 0.5, pt: 1.25 }}>
+                    <Typography variant="body2" color="text.secondary">{t('noData')}</Typography>
+                  </Box>
                 )}
               </>
             ) : (
