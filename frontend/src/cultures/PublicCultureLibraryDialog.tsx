@@ -46,6 +46,13 @@ interface PublicCultureLibraryDialogProps {
   onImport: (culture: PublicCulture) => void;
 }
 
+const previewBadgeSx = {
+  height: 22,
+  color: 'text.secondary',
+  borderColor: 'divider',
+  fontSize: '0.72rem',
+} as const;
+
 export function PublicCultureLibraryDialog({
   open,
   loading,
@@ -310,32 +317,45 @@ export function PublicCultureLibraryDialog({
             <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: isMobileLandscape ? 1.25 : useMobileFilterLayout ? 1.5 : 2, minHeight: useMobileFilterLayout ? '100%' : 420, maxHeight: useMobileFilterLayout ? 'none' : 420, overflowY: 'auto', scrollbarGutter: 'stable' }}>
             {selectedCulture ? (
               <>
-                <Typography variant="h6">{selectedCulture.name}</Typography>
+                <Typography variant="h6" sx={{ lineHeight: 1.25 }}>{selectedCulture.name}</Typography>
                 {selectedCulture.variety ? (
-                  <Typography color="text.secondary" sx={{ mb: 1 }}>{selectedCulture.variety}</Typography>
+                  <Typography color="text.secondary" sx={{ mb: 0.75, lineHeight: 1.35 }}>{selectedCulture.variety}</Typography>
                 ) : null}
-                <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1.5 }}>
-                  <Chip size="small" variant="outlined" label={`${t('library.versionLabel')} ${selectedCulture.version}`} />
+                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1.25 }}>
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={`${t('library.versionLabel')} ${selectedCulture.version}`}
+                    sx={previewBadgeSx}
+                  />
                   {selectedCulture.created_by_label ? (
-                    <Chip size="small" variant="outlined" label={`${t('library.createdByLabel')} ${selectedCulture.created_by_label}`} />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`${t('library.createdByLabel')} ${selectedCulture.created_by_label}`}
+                      sx={previewBadgeSx}
+                    />
                   ) : null}
                 </Box>
-                <Typography variant="body2" sx={{ mb: 0.75 }}>
-                  <strong>{t('form.supplier')}:</strong> {selectedCulture.supplier_name || selectedCulture.seed_supplier || t('noData')}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.75 }}>
-                  <strong>{t('form.growthDurationDays')}:</strong> {selectedCulture.growth_duration_days ?? t('noData')}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.75 }}>
-                  <strong>{t('form.harvestDurationDays')}:</strong> {selectedCulture.harvest_duration_days ?? t('noData')}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 0.25 }}>
-                  <strong>{t('form.notes')}:</strong>
+                <Box sx={{ display: 'grid', gap: 0.5, mb: selectedCulture.notes ? 1.25 : 0.75 }}>
+                  <Typography variant="body2" sx={{ lineHeight: 1.35 }}>
+                    <strong>{t('form.supplier')}:</strong> {selectedCulture.supplier_name || selectedCulture.seed_supplier || t('noData')}
+                  </Typography>
+                  <Typography variant="body2" sx={{ lineHeight: 1.35 }}>
+                    <strong>{t('form.growthDurationDays')}:</strong> {selectedCulture.growth_duration_days ?? t('noData')}
+                  </Typography>
+                  <Typography variant="body2" sx={{ lineHeight: 1.35 }}>
+                    <strong>{t('form.harvestDurationDays')}:</strong> {selectedCulture.harvest_duration_days ?? t('noData')}
+                  </Typography>
+                </Box>
+                <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: selectedCulture.notes ? 0.25 : 0, fontWeight: 600 }}>
+                  {t('form.notes')}
                 </Typography>
                 {selectedCulture.notes ? (
                   <Box
                     sx={{
-                      '& h3': { mt: 1.5, mb: 0.5, fontSize: '0.9rem' },
+                      '& h3': { mt: 1.35, mb: 0.5, fontSize: '0.9rem' },
+                      '& h3:first-of-type': { mt: 0.25 },
                       '& p': { mb: 0.75, lineHeight: 1.45 },
                       '& ul': { pl: 2.5, mb: 0.75 },
                       '& li': { mb: 0.25 },
