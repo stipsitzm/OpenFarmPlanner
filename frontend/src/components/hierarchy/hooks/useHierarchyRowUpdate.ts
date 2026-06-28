@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import type { GridRowId, GridRowModesModel } from "@mui/x-data-grid";
 import { GridRowModes } from "@mui/x-data-grid";
 import type { Bed, Field, Location } from "../../../api/api";
-import { fieldAPI, bedAPI, locationAPI } from "../../../api/api";
+import { fieldAPI, locationAPI } from "../../../api/api";
 import { extractApiErrorMessage } from "../../../api/errors";
 import type { HierarchyRow } from "../utils/types";
 import {

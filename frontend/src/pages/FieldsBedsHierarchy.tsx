@@ -386,7 +386,6 @@ function FieldsBedsHierarchy({
   }, [gridApiRef, rowsById]);
 
   const {
-    preservePartialNewBedDraft,
     discardRowEdit,
     discardActiveRowEdit,
     processRowUpdate,
