@@ -15,7 +15,7 @@
  * Navigation is blocked if there are unsaved changes (row in edit mode).
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type MutableRefObject, type ReactNode, type TouchEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react';
 import {
   DataGrid,
   GridRowEditStopReasons,
@@ -55,10 +55,11 @@ import { extractApiErrorMessage } from '../../api/errors';
 import { germanDataGridLocaleText } from './localeText';
 import { TableCopyMenuItems } from './TableCopyMenuItems';
 import { formatClipboardValue, type TableClipboardRow } from './tableClipboard';
-import { shouldOpenCustomContextMenu, suppressNativeContextMenu, useCloseCustomContextMenuOnNativeContextMenu } from '../../utils/contextMenu';
-import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from './contextMenuFocus';
+import { handleContextMenuKeyboardNavigation } from './contextMenuFocus';
 import { ContextMenuHint } from './ContextMenuHint';
 import { useContextMenuHint } from './useContextMenuHint';
+import { useDataGridDelete } from './hooks/useDataGridDelete';
+import { useDataGridRowActionMenu } from './hooks/useDataGridRowActionMenu';
 
 export interface EditableRow {
   id: number;
@@ -84,6 +85,7 @@ export interface EditableDataGridCommandApi {
   setDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => Promise<void>;
   commitDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => Promise<void>;
   reload: () => Promise<void>;
+  focusTable: () => void;
 }
 
 export interface EditableDataGridRowActionHelpers<T extends EditableRow> {
@@ -110,16 +112,6 @@ export interface EditableDataGridClipboardColumn<T extends EditableRow> {
   field: string;
   headerName: string;
   getValue?: (row: T) => string;
-}
-
-interface PendingDeleteWithUndo<T extends EditableRow> {
-  id: string;
-  rowId: GridRowId;
-  row: T;
-  rowsBeforeDelete: T[];
-  stableRowOrderBeforeDelete: GridRowId[];
-  rowModeBeforeDelete?: GridRowModesModel[string];
-  visible: boolean;
 }
 
 export interface NotesFieldConfig {
@@ -181,8 +173,6 @@ export interface EditableDataGridProps<T extends EditableRow> {
 
 const isUnsavedDraftRow = (row: EditableRow): boolean =>
   Boolean(row.isNew || row.__draft || Number(row.id) < 0);
-
-const ROW_ACTION_LONG_PRESS_MS = 550;
 
 class SaveBlockedError extends Error {
   constructor() {
@@ -395,18 +385,6 @@ export function EditableDataGrid<T extends EditableRow>({
   const [selectedRowIds, setSelectedRowIds] = useState<GridRowId[]>([]);
   const [dirtyRowIds, setDirtyRowIds] = useState<Set<string>>(new Set());
   const [activeValidationErrors, setActiveValidationErrors] = useState<Record<string, Record<string, string>>>({});
-  const [longPressFeedbackRowId, setLongPressFeedbackRowId] = useState<GridRowId | null>(null);
-  const [rowActionMenuState, setRowActionMenuState] = useState<{
-    rowId: GridRowId;
-    anchorEl?: HTMLElement;
-    mouseX?: number;
-    mouseY?: number;
-  } | null>(null);
-  const rowActionMenuOriginRef = useRef<HTMLElement | null>(null);
-  const [pendingDeleteWithUndo, setPendingDeleteWithUndo] = useState<PendingDeleteWithUndo<T>[]>([]);
-  const pendingDeleteTimersRef = useRef<Map<string, number>>(new Map());
-  const deleteRowCommandRef = useRef<(rowId: GridRowId) => void>(() => undefined);
-  const rowActionLongPressTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const rowSnapshotRef = useRef<Map<string, T>>(new Map());
   const canceledRowIdsRef = useRef<Set<string>>(new Set());
   const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
@@ -1220,11 +1198,35 @@ export function EditableDataGrid<T extends EditableRow>({
     }));
   }, [gridApiRef, rowModesModel, rowsById]);
 
-  const removePendingDeleteWithUndo = useCallback((deletionId: string): void => {
-    setPendingDeleteWithUndo((currentDeletions) =>
-      currentDeletions.filter((deletion) => deletion.id !== deletionId),
-    );
-  }, []);
+  const getRowIdFromElement = (target: EventTarget | null): GridRowId | null => {
+    if (!(target instanceof HTMLElement)) {
+      return null;
+    }
+    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
+    return rowElement?.dataset.id ?? null;
+  };
+
+  const hasContextualRowActions = true;
+
+  const {
+    rowActionMenuState,
+    longPressFeedbackRowId,
+    rowActionMenuListRef,
+    openRowActionMenuAt,
+    openRowActionContextMenu,
+    openRowActionKeyboardContextMenu,
+    closeRowActionMenu,
+    clearRowActionMenuForId,
+    handleGridTouchStart,
+    handleGridTouchMove,
+    handleGridTouchEnd,
+  } = useDataGridRowActionMenu({
+    rowsById,
+    hasContextualRowActions,
+    markContextMenuHintUsed,
+    setSelectedRowIds,
+    getRowIdFromElement,
+  });
 
   const clearRowInteractionState = useCallback((rowId: GridRowId): void => {
     const rowKey = String(rowId);
@@ -1248,11 +1250,8 @@ export function EditableDataGrid<T extends EditableRow>({
       return next;
     });
     rowSnapshotRef.current.delete(rowKey);
-    setLongPressFeedbackRowId((currentRowId) => (String(currentRowId) === rowKey ? null : currentRowId));
-    setRowActionMenuState((currentState) =>
-      currentState && String(currentState.rowId) === rowKey ? null : currentState,
-    );
-  }, []);
+    clearRowActionMenuForId(rowId);
+  }, [clearRowActionMenuForId]);
 
   const moveFocusAwayFromRemovedRow = useCallback((rowId: GridRowId, remainingRows: readonly T[]): void => {
     const rowKey = String(rowId);
@@ -1279,85 +1278,29 @@ export function EditableDataGrid<T extends EditableRow>({
     }
   }, [columns, gridApiRef]);
 
-  const restorePendingDeleteWithUndo = useCallback((deletion: PendingDeleteWithUndo<T>): void => {
-    setRows((currentRows) => {
-      if (currentRows.some((row) => String(row.id) === String(deletion.rowId))) {
-        return currentRows;
-      }
-      return orderRowsByStableIds(
-        [...currentRows, deletion.row],
-        deletion.rowsBeforeDelete.map((row) => row.id),
-      );
-    });
-    setStableRowOrder((currentOrder) => {
-      const currentOrderKeys = new Set(currentOrder.map(String));
-      currentOrderKeys.add(String(deletion.rowId));
-      const restoredOrder = deletion.stableRowOrderBeforeDelete.filter((orderedId) =>
-        currentOrderKeys.has(String(orderedId)),
-      );
-      const restoredOrderKeys = new Set(restoredOrder.map(String));
-      return [
-        ...restoredOrder,
-        ...currentOrder.filter((orderedId) => !restoredOrderKeys.has(String(orderedId))),
-      ];
-    });
-    if (deletion.rowModeBeforeDelete) {
-      setRowModesModel((currentModel) => ({
-        ...currentModel,
-        [deletion.rowId]: deletion.rowModeBeforeDelete!,
-      }));
-    }
-  }, []);
-
-  const finalizeDeleteWithUndo = useCallback(async (deletion: PendingDeleteWithUndo<T>): Promise<void> => {
-    pendingDeleteTimersRef.current.delete(deletion.id);
-    removePendingDeleteWithUndo(deletion.id);
-
-    const numericId = Number(deletion.rowId);
-    if (numericId < 0) {
-      return;
-    }
-
-    try {
-      await api.delete(numericId);
-      setError('');
-    } catch (err) {
-      restorePendingDeleteWithUndo(deletion);
-      setError(extractApiErrorMessage(err, t, deleteErrorMessage));
-      console.error('Error deleting data:', err);
-    }
-  }, [api, deleteErrorMessage, removePendingDeleteWithUndo, restorePendingDeleteWithUndo, t]);
-
-  const closeDeleteWithUndoSnackbar = useCallback((deletionId: string): void => {
-    setPendingDeleteWithUndo((currentDeletions) =>
-      currentDeletions.map((deletion) =>
-        deletion.id === deletionId ? { ...deletion, visible: false } : deletion,
-      ),
-    );
-  }, []);
-
-  const undoDeleteWithUndo = useCallback((deletionId: string): void => {
-    const deletion = pendingDeleteWithUndo.find((pendingDeletion) => pendingDeletion.id === deletionId);
-    if (!deletion) {
-      return;
-    }
-
-    const timerId = pendingDeleteTimersRef.current.get(deletionId);
-    if (timerId !== undefined) {
-      window.clearTimeout(timerId);
-      pendingDeleteTimersRef.current.delete(deletionId);
-    }
-
-    restorePendingDeleteWithUndo(deletion);
-    removePendingDeleteWithUndo(deletionId);
-  }, [pendingDeleteWithUndo, removePendingDeleteWithUndo, restorePendingDeleteWithUndo]);
-
-  useEffect(() => {
-    return () => {
-      pendingDeleteTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
-      pendingDeleteTimersRef.current.clear();
-    };
-  }, []);
+  const {
+    pendingDeleteWithUndo,
+    handleDeleteClick,
+    deleteRowCommandRef,
+    closeDeleteWithUndoSnackbar,
+    undoDeleteWithUndo,
+  } = useDataGridDelete<T>({
+    rowsById,
+    rows,
+    stableRowOrder,
+    rowModesModel,
+    api,
+    deleteConfirmMessage,
+    deleteErrorMessage,
+    deleteUndoOptions,
+    t,
+    setRows,
+    setStableRowOrder,
+    setRowModesModel,
+    setError,
+    clearRowInteractionState,
+    moveFocusAwayFromRemovedRow,
+  });
 
   useEffect(() => {
     if (!commandApiRef) {
@@ -1384,104 +1327,29 @@ export function EditableDataGrid<T extends EditableRow>({
         await commitDraftValues(rowId, values as Partial<T>);
       },
       reload: fetchData,
+      focusTable: () => {
+        const api = gridApiRef.current;
+        if (!api) return;
+        const targetId = selectedRowIds[0] ?? api.getAllRowIds()[0];
+        if (targetId == null) return;
+        setSelectedRowIds([targetId]);
+        const firstField = api.getVisibleColumns()
+          .find((col) => col.field !== 'actions' && col.field !== 'rowEditActions')?.field;
+        if (!firstField) return;
+        requestAnimationFrame(() => {
+          api.scrollToIndexes({
+            rowIndex: api.getRowIndexRelativeToVisibleRows(targetId),
+            colIndex: api.getColumnIndexRelativeToVisibleColumns(firstField),
+          });
+          api.setCellFocus(targetId, firstField);
+        });
+      },
     };
 
     return () => {
       commandApiRef.current = null;
     };
   }, [applyDraftValues, commandApiRef, commitDraftValues, fetchData, selectedRowIds]);
-
-  /**
-   * Handle row deletion
-   */
-  const handleDeleteClick = useCallback((id: GridRowId) => (): void => {
-    const rowKey = String(id);
-    const row = rowsById.get(rowKey) as T | undefined;
-    if (!row) {
-      return;
-    }
-
-    if (isUnsavedDraftRow(row)) {
-      const remainingRows = (rows as T[]).filter((currentRow) => String(currentRow.id) !== rowKey);
-      moveFocusAwayFromRemovedRow(id, remainingRows);
-      clearRowInteractionState(id);
-      setRows(remainingRows);
-      setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
-      setError('');
-      return;
-    }
-
-    if (deleteUndoOptions) {
-      const deletionId = `${rowKey}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const pendingDeletion: PendingDeleteWithUndo<T> = {
-        id: deletionId,
-        rowId: id,
-        row,
-        rowsBeforeDelete: rows as T[],
-        stableRowOrderBeforeDelete: stableRowOrder,
-        rowModeBeforeDelete: rowModesModel[id],
-        visible: true,
-      };
-
-      const remainingRows = (rows as T[]).filter((currentRow) => String(currentRow.id) !== rowKey);
-      moveFocusAwayFromRemovedRow(id, remainingRows);
-      setRows((prevRows) => prevRows.filter((currentRow) => String(currentRow.id) !== rowKey));
-      setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
-      clearRowInteractionState(id);
-      setError('');
-      setPendingDeleteWithUndo((currentDeletions) => [...currentDeletions, pendingDeletion]);
-
-      const timerId = window.setTimeout(() => {
-        void finalizeDeleteWithUndo(pendingDeletion);
-      }, DELETE_UNDO_DURATION_MS);
-      pendingDeleteTimersRef.current.set(deletionId, timerId);
-      return;
-    }
-
-    if (!confirmAction(deleteConfirmMessage)) return;
-
-    const numericId = Number(id);
-    if (numericId < 0) {
-      // If it's a new unsaved row, just remove it from the grid
-      const remainingRows = (rows as T[]).filter((currentRow) => String(currentRow.id) !== rowKey);
-      moveFocusAwayFromRemovedRow(id, remainingRows);
-      clearRowInteractionState(id);
-      setRows(remainingRows);
-      setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
-      return;
-    }
-
-    // Delete from API
-    api.delete(numericId)
-      .then(() => {
-        const remainingRows = (rows as T[]).filter((currentRow) => String(currentRow.id) !== rowKey);
-        moveFocusAwayFromRemovedRow(id, remainingRows);
-        clearRowInteractionState(id);
-        setRows(remainingRows);
-        setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
-        setError('');
-      })
-      .catch((err) => {
-        setError(deleteErrorMessage);
-        console.error('Error deleting data:', err);
-      });
-  }, [
-    api,
-    deleteConfirmMessage,
-    deleteErrorMessage,
-    deleteUndoOptions,
-    finalizeDeleteWithUndo,
-    clearRowInteractionState,
-    moveFocusAwayFromRemovedRow,
-    rowModesModel,
-    rows,
-    rowsById,
-    stableRowOrder,
-  ]);
-
-  useEffect(() => {
-    deleteRowCommandRef.current = (rowId) => handleDeleteClick(rowId)();
-  }, [handleDeleteClick]);
 
   const handleStartRowEdit = useCallback((rowId: GridRowId, field?: string): void => {
     const rowKey = String(rowId);
@@ -1550,65 +1418,6 @@ export function EditableDataGrid<T extends EditableRow>({
   const resolveRowActions = useCallback((row: T): EditableDataGridRowAction<T>[] => {
     return getRowActions ? getRowActions(row, rowActionHelpers) : defaultRowActions(row);
   }, [defaultRowActions, getRowActions, rowActionHelpers]);
-
-  const getRowIdFromElement = (target: EventTarget | null): GridRowId | null => {
-    if (!(target instanceof HTMLElement)) {
-      return null;
-    }
-    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
-    return rowElement?.dataset.id ?? null;
-  };
-
-  const openRowActionMenuAt = useCallback((
-    rowId: GridRowId,
-    originElement: HTMLElement | null,
-    mouseX: number,
-    mouseY: number,
-  ): void => {
-    markContextMenuHintUsed();
-    setSelectedRowIds([rowId]);
-    rowActionMenuOriginRef.current = originElement;
-    setRowActionMenuState({ rowId, mouseX, mouseY });
-  }, [markContextMenuHintUsed]);
-
-  const openRowActionContextMenu = useCallback((rowId: GridRowId, event: React.MouseEvent): void => {
-    suppressNativeContextMenu(event);
-    openRowActionMenuAt(rowId, event.currentTarget as HTMLElement, event.clientX + 2, event.clientY - 6);
-  }, [openRowActionMenuAt]);
-
-  const openRowActionKeyboardContextMenu = useCallback((rowId: GridRowId, originElement: HTMLElement): void => {
-    const rowElement = originElement.closest<HTMLElement>('[role="row"][data-id]') ?? originElement;
-    const rect = rowElement.getBoundingClientRect();
-    openRowActionMenuAt(rowId, rowElement, rect.left + Math.min(240, rect.width), rect.top + 12);
-  }, [openRowActionMenuAt]);
-
-  const closeRowActionMenu = useCallback((): void => {
-    setRowActionMenuState(null);
-    setLongPressFeedbackRowId(null);
-    focusContextMenuOrigin(rowActionMenuOriginRef.current);
-  }, []);
-  const hasContextualRowActions = true;
-  const isRowActionContextMenuTarget = useCallback((target: EventTarget | null): boolean => {
-    if (!hasContextualRowActions || !shouldOpenCustomContextMenu(target)) {
-      return false;
-    }
-    const rowId = getRowIdFromElement(target);
-    return rowId !== null && rowsById.has(String(rowId));
-  }, [hasContextualRowActions, rowsById]);
-  const repositionOpenRowActionMenu = useCallback((event: globalThis.MouseEvent): void => {
-    setRowActionMenuState((currentState) => (
-      currentState
-        ? { rowId: currentState.rowId, mouseX: event.clientX + 2, mouseY: event.clientY - 6 }
-        : currentState
-    ));
-  }, []);
-  useCloseCustomContextMenuOnNativeContextMenu(
-    Boolean(rowActionMenuState),
-    closeRowActionMenu,
-    isRowActionContextMenuTarget,
-    repositionOpenRowActionMenu,
-  );
-  const rowActionMenuListRef = useContextMenuFocus(Boolean(rowActionMenuState), closeRowActionMenu);
 
   const menuRow = rowActionMenuState ? rowsById.get(String(rowActionMenuState.rowId)) as T | undefined : undefined;
   const shouldUseRowActions = Boolean(getRowActions || duplicateRow);
@@ -1761,52 +1570,6 @@ export function EditableDataGrid<T extends EditableRow>({
       </Box>
     );
   }, [getInlineRowActions, openRowActionMenuAt, rowActionHelpers, showInlineRowActionMenu, t]);
-
-  const clearRowActionLongPressTimer = useCallback((): void => {
-    if (rowActionLongPressTimerRef.current === null) {
-      return;
-    }
-    window.clearTimeout(rowActionLongPressTimerRef.current);
-    rowActionLongPressTimerRef.current = null;
-  }, []);
-
-  const handleGridTouchStart = useCallback((event: TouchEvent<HTMLDivElement>): void => {
-    if (!hasContextualRowActions || event.touches.length !== 1) {
-      return;
-    }
-    if (!shouldOpenCustomContextMenu(event.target)) {
-      return;
-    }
-    const rowId = getRowIdFromElement(event.target);
-    if (rowId === null || !rowsById.has(String(rowId))) {
-      return;
-    }
-    const originElement = event.target instanceof HTMLElement
-      ? event.target.closest<HTMLElement>('[role="row"][data-id]')
-      : null;
-    const touch = event.touches[0];
-    clearRowActionLongPressTimer();
-    rowActionLongPressTimerRef.current = window.setTimeout(() => {
-      markContextMenuHintUsed();
-      setSelectedRowIds([rowId]);
-      setLongPressFeedbackRowId(rowId);
-      rowActionMenuOriginRef.current = originElement;
-      setRowActionMenuState({ rowId, mouseX: touch.clientX + 2, mouseY: touch.clientY - 6 });
-      rowActionLongPressTimerRef.current = null;
-    }, ROW_ACTION_LONG_PRESS_MS);
-  }, [clearRowActionLongPressTimer, hasContextualRowActions, markContextMenuHintUsed, rowsById]);
-
-  const handleGridTouchMove = useCallback((): void => {
-    clearRowActionLongPressTimer();
-  }, [clearRowActionLongPressTimer]);
-
-  const handleGridTouchEnd = useCallback((): void => {
-    clearRowActionLongPressTimer();
-  }, [clearRowActionLongPressTimer]);
-
-  useEffect(() => () => {
-    clearRowActionLongPressTimer();
-  }, [clearRowActionLongPressTimer]);
 
   /**
    * Custom footer component with add button

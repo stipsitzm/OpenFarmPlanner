@@ -8,6 +8,7 @@
  */
 
 import { memo, useCallback, useState, useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from "react";
+import { isTypingInEditableElement } from "../hooks/useKeyboardShortcuts";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type {
   GridCellParams,
@@ -563,6 +564,19 @@ function PlantingPlans() {
   }, [isMobile]);
 
   useCommandContextTag("plans");
+
+  useEffect(() => {
+    const handleAltT = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.key !== "t" && event.key !== "T") return;
+      if (isMobile) return;
+      if (isTypingInEditableElement(document.activeElement)) return;
+      event.preventDefault();
+      gridCommandApiRef.current?.focusTable();
+    };
+    window.addEventListener("keydown", handleAltT);
+    return () => window.removeEventListener("keydown", handleAltT);
+  }, [isMobile]);
 
   // Track which field was last edited (for determining API payload)
   const lastEditedFieldRef = useRef<"area_m2" | "plants_count" | null>(null);
