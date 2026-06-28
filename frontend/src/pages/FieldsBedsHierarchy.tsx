@@ -59,6 +59,7 @@ import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { useHierarchyDelete } from "../components/hierarchy/hooks/useHierarchyDelete";
 import { useHierarchyGridFocus } from "../components/hierarchy/hooks/useHierarchyGridFocus";
+import { useHierarchyNavigationState } from "../components/hierarchy/hooks/useHierarchyNavigationState";
 import { useHierarchyRowUpdate } from "../components/hierarchy/hooks/useHierarchyRowUpdate";
 import { useHierarchyContextMenu } from "../components/hierarchy/hooks/useHierarchyContextMenu";
 import { useHierarchyKeyboard } from "../components/hierarchy/hooks/useHierarchyKeyboard";
@@ -223,10 +224,6 @@ function FieldsBedsHierarchy({
   const isTouchLikePointer = useMediaQuery("(pointer: coarse)");
   const isMobileViewport = useMediaQuery("(max-width:900px)");
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
-  const [selectedRowId, setSelectedRowId] = useState<string | number | null>(
-    null,
-  );
-  const [treeActive, setTreeActive] = useState(false);
   const [draftValidationWarning, setDraftValidationWarning] = useState("");
   const hasInitiallyExpandedRef = useRef(false);
   const handledCreateFieldRequestRef = useRef(0);
@@ -278,6 +275,37 @@ function FieldsBedsHierarchy({
     useBedOperations(setBeds, setError, t);
   const [pendingFieldEditRow, setPendingFieldEditRow] = useState<string | number | null>(null);
 
+  const hierarchyIndex = useMemo(
+    () => buildHierarchyIndex(locations, fields, beds, hierarchySortConfig),
+    [locations, fields, beds, hierarchySortConfig],
+  );
+
+  const projectRows = useMemo(
+    () => createHierarchyRowsProjector(hierarchyIndex),
+    [hierarchyIndex],
+  );
+
+  const rows = useMemo<GridRowsProp<HierarchyRow>>(
+    () => projectRows(expandedRows),
+    [projectRows, expandedRows],
+  );
+
+  const {
+    activateRow,
+    expandedRowsRef,
+    rowsRef,
+    selectRow,
+    selectedRowId,
+    selectedRowIdRef,
+    setSelectedRowId,
+    setTreeActive,
+    treeActive,
+    treeActiveRef,
+  } = useHierarchyNavigationState({
+    expandedRows,
+    rows,
+  });
+
   // Delete with undo
   const {
     pendingDeletions,
@@ -302,29 +330,6 @@ function FieldsBedsHierarchy({
     setRowModesModel,
     setDraftValidationWarning,
   });
-
-  const hierarchyIndex = useMemo(
-    () => buildHierarchyIndex(locations, fields, beds, hierarchySortConfig),
-    [locations, fields, beds, hierarchySortConfig],
-  );
-
-  const projectRows = useMemo(
-    () => createHierarchyRowsProjector(hierarchyIndex),
-    [hierarchyIndex],
-  );
-
-  const rows = useMemo<GridRowsProp<HierarchyRow>>(
-    () => projectRows(expandedRows),
-    [projectRows, expandedRows],
-  );
-
-  // Refs so keyboard handlers always read latest values without re-registering listeners on every navigation press.
-  const selectedRowIdRef = useRef(selectedRowId);
-  selectedRowIdRef.current = selectedRowId;
-  const rowsRef = useRef(rows);
-  rowsRef.current = rows;
-  const expandedRowsRef = useRef(expandedRows);
-  expandedRowsRef.current = expandedRows;
 
   const shouldShowHierarchyTable = fields.length > 0 || createFieldRequest > 0;
   const hasUsableHierarchyRows = shouldShowHierarchyTable && (
@@ -620,7 +625,7 @@ function FieldsBedsHierarchy({
 
   }, [discardRowEdit]);
 
-  const { rememberFocusedField, selectRow } = useHierarchyGridFocus({
+  const { rememberFocusedField } = useHierarchyGridFocus({
     gridApiRef,
     rowModesModel,
     rows,
@@ -628,11 +633,6 @@ function FieldsBedsHierarchy({
     setSelectedRowId,
     treeActive,
   });
-
-  const activateRow = useCallback((rowId: GridRowId): void => {
-    selectRow(rowId);
-    setTreeActive(true);
-  }, [selectRow]);
 
   // Read the current row from refs at call time so these callbacks are stable
   // and don't trigger re-renders of areaCommands on every navigation keypress.
@@ -760,7 +760,7 @@ function FieldsBedsHierarchy({
 
   useHierarchyKeyboard({
     contextMenuState,
-    treeActive,
+    treeActiveRef,
     tableWrapperRef,
     rowsRef,
     selectedRowIdRef,

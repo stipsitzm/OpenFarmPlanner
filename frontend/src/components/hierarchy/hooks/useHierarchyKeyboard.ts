@@ -6,9 +6,9 @@ import { isTypingInEditableElement } from "../../../hooks/useKeyboardShortcuts";
 
 interface UseHierarchyKeyboardParams {
   contextMenuState: { row: HierarchyRow } | null;
-  treeActive: boolean;
+  treeActiveRef: React.MutableRefObject<boolean>;
   tableWrapperRef: React.RefObject<HTMLDivElement | null>;
-  rowsRef: React.MutableRefObject<HierarchyRow[]>;
+  rowsRef: React.MutableRefObject<readonly HierarchyRow[]>;
   selectedRowIdRef: React.MutableRefObject<string | number | null>;
   expandedRowsRef: React.MutableRefObject<Set<string | number>>;
   activateRow: (id: GridRowId) => void;
@@ -26,7 +26,7 @@ interface UseHierarchyKeyboardParams {
 
 export function useHierarchyKeyboard({
   contextMenuState,
-  treeActive,
+  treeActiveRef,
   tableWrapperRef,
   rowsRef,
   selectedRowIdRef,
@@ -60,7 +60,6 @@ export function useHierarchyKeyboard({
       event.preventDefault();
       const targetId = selectedRowIdRef.current ?? firstRow.id;
       activateRow(targetId);
-      setTreeActive(true);
 
       const selectedElement = document.querySelector(`[data-id="${String(targetId)}"]`);
       if (selectedElement instanceof HTMLElement) {
@@ -70,7 +69,7 @@ export function useHierarchyKeyboard({
 
     const handleTreeNavigation = (event: KeyboardEvent) => {
       const currentSelectedRowId = selectedRowIdRef.current;
-      if (contextMenuState !== null || !treeActive || !currentSelectedRowId) return;
+      if (contextMenuState !== null || !treeActiveRef.current || !currentSelectedRowId) return;
       if (isTypingInEditableElement(document.activeElement)) return;
       if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
 
@@ -107,7 +106,7 @@ export function useHierarchyKeyboard({
       window.removeEventListener("keydown", handleFocusTable);
       window.removeEventListener("keydown", handleTreeNavigation);
     };
-  }, [activateRow, contextMenuState, discardActiveRowEdit, expandedRowsRef, rowsRef, selectRow, selectedRowIdRef, setTreeActive, tableWrapperRef, toggleExpand, treeActive]);
+  }, [activateRow, contextMenuState, discardActiveRowEdit, expandedRowsRef, rowsRef, selectRow, selectedRowIdRef, setTreeActive, tableWrapperRef, toggleExpand, treeActiveRef]);
 
   // Context-menu keyboard trigger (ContextMenu key / Shift+F10).
   useEffect(() => {
@@ -117,7 +116,7 @@ export function useHierarchyKeyboard({
       const currentSelectedRowId = selectedRowIdRef.current;
       if (
         !shouldOpen ||
-        !treeActive ||
+        !treeActiveRef.current ||
         !currentSelectedRowId ||
         isTypingInEditableElement(document.activeElement)
       ) {
@@ -144,5 +143,5 @@ export function useHierarchyKeyboard({
 
     window.addEventListener("keydown", handleContextMenuKeyboard);
     return () => window.removeEventListener("keydown", handleContextMenuKeyboard);
-  }, [openContextMenuForRow, rowsRef, selectedRowIdRef, treeActive]);
+  }, [openContextMenuForRow, rowsRef, selectedRowIdRef, treeActiveRef]);
 }

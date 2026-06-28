@@ -21,7 +21,6 @@ interface UseHierarchyGridFocusParams {
 
 interface UseHierarchyGridFocusResult {
   rememberFocusedField: (field: string) => void;
-  selectRow: (rowId: GridRowId) => void;
 }
 
 const DEFAULT_FOCUS_FIELD = "name";
@@ -64,10 +63,6 @@ export function useHierarchyGridFocus({
   const rememberFocusedField = useCallback((field: string): void => {
     focusedFieldRef.current = field || DEFAULT_FOCUS_FIELD;
   }, []);
-
-  const selectRow = useCallback((rowId: GridRowId): void => {
-    setSelectedRowId(rowId);
-  }, [setSelectedRowId]);
 
   const focusSelectedCell = useCallback((): void => {
     if (selectedRowId == null) {
@@ -115,6 +110,5 @@ export function useHierarchyGridFocus({
 
   return {
     rememberFocusedField,
-    selectRow,
   };
 }
