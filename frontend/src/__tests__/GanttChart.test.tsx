@@ -34,6 +34,8 @@ const PROPAGATION_MODE_TOOLTIP =
 const TIMELINE_VIEW_MODE_STORAGE_KEY = 'openFarmPlanner.ganttChart.timelineViewMode.42';
 const GANTT_STATE_STORAGE_KEY = 'openfarmplanner:gantt:42:state';
 
+const getTodayIsoDate = (): string => new Date().toISOString().slice(0, 10);
+
 interface TestTopbarAction {
   id: string;
   label: string;
@@ -482,7 +484,7 @@ describe('GanttChartPage', () => {
     expect(JSON.parse(window.localStorage.getItem(GANTT_STATE_STORAGE_KEY) ?? '{}')).toMatchObject({
       calendarMode: 'occupancy',
       timelineViewMode: 'month',
-      referenceDate: '2026-06-27',
+      referenceDate: getTodayIsoDate(),
     });
   });
 

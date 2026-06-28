@@ -1216,6 +1216,7 @@ export function EditableDataGrid<T extends EditableRow>({
     openRowActionContextMenu,
     openRowActionKeyboardContextMenu,
     closeRowActionMenu,
+    isRowActionContextMenuTarget,
     clearRowActionMenuForId,
     handleGridTouchStart,
     handleGridTouchMove,
