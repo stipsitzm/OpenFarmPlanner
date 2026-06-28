@@ -1356,59 +1356,49 @@ function RootLayout() {
             <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: isCulturesPage ? 0.25 : TOPBAR_ACTION_GROUP_GAP, flexShrink: 0 }}>
               {isCulturesPage ? (
                 <>
-                  <Box
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      flexShrink: 0,
-                      mr: 0.5,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: 999,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {cultureLibraryAction ? (
-                      <Tooltip title={t('cultureActions.openLibrary')} enterTouchDelay={0}>
-                        <Box component="span" sx={{ display: 'inline-flex' }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => cultureLibraryAction.onClick()}
-                            aria-label={t('cultureActions.openLibrary')}
-                            sx={{
-                              width: COMPACT_TOPBAR_TOGGLE_SIZE,
-                              height: COMPACT_TOPBAR_TOGGLE_SIZE,
-                              color: 'success.main',
-                              borderRadius: 0,
-                            }}
-                            disabled={cultureLibraryAction.disabled}
-                          >
-                            <PublicIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </Tooltip>
-                    ) : null}
-                    {showCultureImportExportButton ? (
-                      <Tooltip title={t('cultureActions.openImportExport')} enterTouchDelay={0}>
+                  {cultureLibraryAction ? (
+                    <Tooltip title={t('cultureActions.openLibrary')} enterTouchDelay={0}>
+                      <Box component="span" sx={{ display: 'inline-flex' }}>
                         <IconButton
                           size="small"
-                          aria-label={t('cultureActions.openImportExport')}
-                          aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu-mobile' : undefined}
-                          aria-haspopup="true"
-                          aria-expanded={Boolean(cultureActionsMenuAnchor)}
-                          onClick={handleCultureActionsMenuOpen}
+                          onClick={() => cultureLibraryAction.onClick()}
+                          aria-label={t('cultureActions.openLibrary')}
                           sx={{
                             width: COMPACT_TOPBAR_TOGGLE_SIZE,
                             height: COMPACT_TOPBAR_TOGGLE_SIZE,
-                            color: 'success.main',
-                            borderRadius: 0,
+                            flexShrink: 0,
+                            color: 'text.primary',
+                            '& .MuiSvgIcon-root': { fontSize: 24 },
                           }}
+                          disabled={cultureLibraryAction.disabled}
                         >
-                          <FileExportIcon fontSize="small" />
+                          <PublicIcon />
                         </IconButton>
-                      </Tooltip>
-                    ) : null}
-                  </Box>
+                      </Box>
+                    </Tooltip>
+                  ) : null}
+                  {showCultureImportExportButton ? (
+                    <Tooltip title={t('cultureActions.openImportExport')} enterTouchDelay={0}>
+                      <IconButton
+                        size="small"
+                        aria-label={t('cultureActions.openImportExport')}
+                        aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu-mobile' : undefined}
+                        aria-haspopup="true"
+                        aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                        onClick={handleCultureActionsMenuOpen}
+                        sx={{
+                          width: COMPACT_TOPBAR_TOGGLE_SIZE,
+                          height: COMPACT_TOPBAR_TOGGLE_SIZE,
+                          flexShrink: 0,
+                          color: 'text.primary',
+                          mr: 0.5,
+                          '& .MuiSvgIcon-root': { fontSize: 24 },
+                        }}
+                      >
+                        <FileExportIcon />
+                      </IconButton>
+                    </Tooltip>
+                  ) : null}
                   <Menu
                     id="culture-actions-menu-mobile"
                     anchorEl={cultureActionsMenuAnchor}
