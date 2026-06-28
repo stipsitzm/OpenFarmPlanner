@@ -40,14 +40,12 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
-import { confirmAction } from '../../utils/confirmAction';
 import { useTranslation } from '../../i18n';
 import { NotesCell } from './NotesCell';
 import { NotesDrawer } from './NotesDrawer';
 import { DateEditCell } from './DateEditCell';
 import {
   DeleteUndoSnackbar,
-  DELETE_UNDO_DURATION_MS,
 } from './DeleteUndoSnackbar';
 import { getPlainExcerpt } from './markdown';
 import { useNotesEditor } from './useNotesEditor';
@@ -699,7 +697,7 @@ export function EditableDataGrid<T extends EditableRow>({
   /**
    * Handle adding a new row to the grid
    */
-  const handleAddClick = (): void => {
+  const handleAddClick = useCallback((): void => {
     const newRow = createNewRow();
     setRows((oldRows) => [...oldRows, newRow]);
     setStableRowOrder((previousOrder) => [...previousOrder, newRow.id]);
@@ -713,7 +711,7 @@ export function EditableDataGrid<T extends EditableRow>({
         page: Math.floor(rows.length / current.pageSize),
       }));
     }
-  };
+  }, [columns, createNewRow, paginationPageSizeOptions, rows.length]);
 
   const handleDiscardRowChanges = useCallback((rowId: GridRowId): void => {
     const rowKey = String(rowId);
@@ -1095,7 +1093,7 @@ export function EditableDataGrid<T extends EditableRow>({
       }));
       handleProcessRowUpdateError(error);
     }
-  }, [applyDraftValues, getDraftRow, handleProcessRowUpdateError, rowsById, saveResolvedRow]);
+  }, [applyDraftValues, getDraftRow, gridApiRef, handleProcessRowUpdateError, rowsById, saveResolvedRow]);
 
   const handleSaveRow = useCallback(async (rowId: GridRowId): Promise<void> => {
     const preparedRow = await prepareRowForSave(rowId);
@@ -1152,7 +1150,7 @@ export function EditableDataGrid<T extends EditableRow>({
     }
   }, [dirtyRowIds, handleSaveRow, prepareRowForSave, rowModesModel]);
 
-  const handleEditSelectedRow = (): void => {
+  const handleEditSelectedRow = useCallback((): void => {
     const selectedRowId = selectedRowIds[0];
     if (!selectedRowId) {
       return;
@@ -1162,16 +1160,7 @@ export function EditableDataGrid<T extends EditableRow>({
       ...oldModel,
       [selectedRowId]: { mode: GridRowModes.Edit, fieldToFocus: columns[0]?.field },
     }));
-  };
-
-  const handleDeleteSelectedRow = (): void => {
-    const selectedRowId = selectedRowIds[0];
-    if (!selectedRowId) {
-      return;
-    }
-
-    handleDeleteClick(selectedRowId)();
-  };
+  }, [columns, selectedRowIds]);
 
   const handleStartCellEditFromKeyboard = useCallback((params: GridCellParams<T>): void => {
     if (!params.isEditable || rowModesModel[params.id]?.mode === GridRowModes.Edit) {
@@ -1303,6 +1292,15 @@ export function EditableDataGrid<T extends EditableRow>({
     moveFocusAwayFromRemovedRow,
   });
 
+  const handleDeleteSelectedRow = useCallback((): void => {
+    const selectedRowId = selectedRowIds[0];
+    if (!selectedRowId) {
+      return;
+    }
+
+    handleDeleteClick(selectedRowId)();
+  }, [handleDeleteClick, selectedRowIds]);
+
   useEffect(() => {
     if (!commandApiRef) {
       return;
@@ -1350,7 +1348,18 @@ export function EditableDataGrid<T extends EditableRow>({
     return () => {
       commandApiRef.current = null;
     };
-  }, [applyDraftValues, commandApiRef, commitDraftValues, fetchData, selectedRowIds]);
+  }, [
+    applyDraftValues,
+    commandApiRef,
+    commitDraftValues,
+    deleteRowCommandRef,
+    fetchData,
+    gridApiRef,
+    handleAddClick,
+    handleDeleteSelectedRow,
+    handleEditSelectedRow,
+    selectedRowIds,
+  ]);
 
   const handleStartRowEdit = useCallback((rowId: GridRowId, field?: string): void => {
     const rowKey = String(rowId);
