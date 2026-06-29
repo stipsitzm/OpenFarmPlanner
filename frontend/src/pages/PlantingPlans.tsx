@@ -1646,7 +1646,7 @@ function PlantingPlans() {
   const canCreatePlan = firstMissingRequirement === null;
   const shouldShowPrerequisiteState = !canCreatePlan;
   const shouldShowNoPlansState = canCreatePlan && !hasPlans;
-  const isInitialLoading = !shouldShowProjectRequiredState && (isHierarchyLoading || isPlansLoading);
+  const isInitialLoading = !shouldShowProjectRequiredState && (isHierarchyLoading || (!shouldShowPrerequisiteState && isPlansLoading));
   const prerequisiteActions = firstMissingRequirement
     ? getProjectSetupActions(firstMissingRequirement)
     : [];
@@ -1881,9 +1881,9 @@ function PlantingPlans() {
           </Box>
         ) : null}
 
-        <PageSurface
+        {!shouldShowPrerequisiteState && <PageSurface
           variant="fullWorkspace"
-          sx={{ display: isMobile || shouldShowPrerequisiteState ? "none" : "block" }}
+          sx={{ display: isMobile ? "none" : "block" }}
         >
           <EditableDataGrid<PlantingPlanRow>
             surfaceSizing="contentFit"
@@ -2177,7 +2177,7 @@ function PlantingPlans() {
               ],
             }}
           />
-        </PageSurface>
+        </PageSurface>}
 
       </Box>
 
