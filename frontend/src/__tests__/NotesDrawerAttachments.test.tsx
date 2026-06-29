@@ -100,7 +100,7 @@ describe('NotesDrawer attachments', () => {
     });
 
     fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
-    await user.click(screen.getByRole('button', { name: 'Änderungen verwerfen und schließen' }));
+    await user.click(screen.getByRole('button', { name: 'Verwerfen' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });

@@ -4,7 +4,7 @@
       "title": "Unsaved notes",
       "message": "The notes contain unsaved changes. Continue editing or discard the changes?",
       "continueEditing": "Continue editing",
-      "discardAndClose": "Discard changes and close"
+      "discardAndClose": "Discard"
     }
   },
   "messages": {

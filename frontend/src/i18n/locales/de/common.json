@@ -80,7 +80,7 @@
       "title": "Ungespeicherte Notizen",
       "message": "Die Notizen enthalten ungespeicherte Änderungen. Möchten Sie weiter bearbeiten oder die Änderungen verwerfen?",
       "continueEditing": "Weiter bearbeiten",
-      "discardAndClose": "Änderungen verwerfen und schließen"
+      "discardAndClose": "Verwerfen"
     },
     "markdownToolbar": {
       "bold": "Fettdruck",
