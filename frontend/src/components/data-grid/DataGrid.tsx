@@ -288,6 +288,43 @@ export function EditableDataGrid<T extends EditableRow>({
     refreshStableRowOrder(rows as T[]);
   }, [refreshStableRowOrder, rows, setFilterModel]);
 
+  const clearSavedRowInteractionState = useCallback((rowId: GridRowId, savedRowId: GridRowId = rowId): void => {
+    const rowKey = String(rowId);
+    const savedRowKey = String(savedRowId);
+
+    setDirtyRowIds((prev) => {
+      const next = new Set(prev);
+      next.delete(rowKey);
+      next.delete(savedRowKey);
+      return next;
+    });
+    setActiveValidationErrors((prev) => {
+      const next = { ...prev };
+      delete next[rowKey];
+      delete next[savedRowKey];
+      return next;
+    });
+    setSelectedRowIds([]);
+
+    const api = gridApiRef.current as typeof gridApiRef.current & {
+      state?: { focus?: { cell?: { id?: GridRowId; field?: string } | null } };
+    };
+    const focusedCell = api?.state?.focus?.cell;
+    if (
+      focusedCell &&
+      (String(focusedCell.id) === rowKey || String(focusedCell.id) === savedRowKey)
+    ) {
+      api.state.focus.cell = null;
+    }
+
+    if (document.activeElement instanceof HTMLElement) {
+      const gridSurface = gridSurfaceRef.current;
+      if (!gridSurface || gridSurface.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
+    }
+  }, [gridApiRef]);
+
   const getFocusedCellFromEvent = useCallback((event: KeyboardEvent): { id: GridRowId; field: string } | null => {
     const api = gridApiRef.current;
     const focusedCell = api?.state.focus.cell;
@@ -775,11 +812,7 @@ export function EditableDataGrid<T extends EditableRow>({
         setStableRowOrder((previousOrder) =>
           previousOrder.map((orderedId) => (String(orderedId) === rowKey ? savedRow.id : orderedId)),
         );
-        setDirtyRowIds((prev) => {
-          const next = new Set(prev);
-          next.delete(rowKey);
-          return next;
-        });
+        clearSavedRowInteractionState(rowAfterSaveGate.id, savedRow.id);
 
         return savedRow;
       } else {
@@ -794,11 +827,7 @@ export function EditableDataGrid<T extends EditableRow>({
         // This is important for auto-calculated fields like harvest dates
         const mappedRow = mapToRow(response.data as T);
         rowSnapshotRef.current.set(String(mappedRow.id), mappedRow);
-        setDirtyRowIds((prev) => {
-          const next = new Set(prev);
-          next.delete(rowKey);
-          return next;
-        });
+        clearSavedRowInteractionState(rowAfterSaveGate.id, mappedRow.id);
         return mappedRow;
       }
     } catch (err) {
@@ -813,6 +842,7 @@ export function EditableDataGrid<T extends EditableRow>({
     }
   }, [
     api,
+    clearSavedRowInteractionState,
     getRowValidationErrors,
     isSaveErrorHandled,
     mapToApiData,
@@ -853,7 +883,12 @@ export function EditableDataGrid<T extends EditableRow>({
       throw new SaveBlockedError();
     }
 
-    return saveResolvedRow(rowAfterSaveGate);
+    const savedRow = await saveResolvedRow(rowAfterSaveGate);
+    setRowModesModel((oldModel) => ({
+      ...oldModel,
+      [newRow.id]: { mode: GridRowModes.View, ignoreModifications: true },
+    }));
+    return savedRow;
   }, [
     runBeforeSaveGate,
     saveResolvedRow,

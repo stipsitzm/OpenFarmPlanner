@@ -685,6 +685,38 @@ function FieldsBedsHierarchy({
     focusRow(rowId);
   }, [focusRow, selectRowTransient]);
 
+  const clearHierarchyInteractionState = useCallback((rowId: GridRowId): void => {
+    selectedRowIdRef.current = null;
+    treeActiveRef.current = false;
+    setSelectedRowId(null);
+    setTreeActive(false);
+
+    const api = gridApiRef.current as typeof gridApiRef.current & {
+      state?: { focus?: { cell?: { id?: GridRowId; field?: string } | null } };
+    };
+    const focusedCell = api?.state?.focus?.cell;
+    if (focusedCell && String(focusedCell.id) === String(rowId)) {
+      api.state.focus.cell = null;
+    }
+
+    if (document.activeElement instanceof HTMLElement) {
+      const tableWrapper = tableWrapperRef.current;
+      if (!tableWrapper || tableWrapper.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
+    }
+  }, [gridApiRef, selectedRowIdRef, setSelectedRowId, setTreeActive, treeActiveRef]);
+
+  const handleHierarchyProcessRowUpdate = useCallback(async (newRow: HierarchyRow): Promise<HierarchyRow> => {
+    const savedRow = await processRowUpdate(newRow);
+    setRowModesModel((previousModel) => ({
+      ...previousModel,
+      [newRow.id]: { mode: GridRowModes.View, ignoreModifications: true },
+    }));
+    clearHierarchyInteractionState(newRow.id);
+    return savedRow;
+  }, [clearHierarchyInteractionState, processRowUpdate]);
+
   const handleReadOnlyHierarchyCellMouseDown = useCallback((event: React.MouseEvent<HTMLElement>): void => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
@@ -1173,7 +1205,7 @@ function FieldsBedsHierarchy({
               rowModesModel={rowModesModel}
               onRowModesModelChange={setRowModesModel}
               onRowEditStop={handleHierarchyRowEditStop}
-              processRowUpdate={processRowUpdate}
+              processRowUpdate={handleHierarchyProcessRowUpdate}
               onProcessRowUpdateError={handleProcessRowUpdateError}
               loading={loading}
               editMode="row"

@@ -48,7 +48,9 @@ vi.mock('@mui/x-data-grid', async () => {
     onCellClick,
     onCellKeyDown,
     onRowEditStop,
+    onRowSelectionModelChange,
     rowModesModel,
+    rowSelectionModel,
     slots,
     pagination,
     paginationModel,
@@ -95,7 +97,13 @@ vi.mock('@mui/x-data-grid', async () => {
         <div data-testid="pagination-page-size">{paginationModel?.pageSize ?? ''}</div>
         <div data-testid="pagination-options">{pageSizeOptions?.join(',') ?? ''}</div>
         {rows.map((row: TestGridRow) => (
-          <div key={row.id} role="row" data-id={String(row.id)} data-testid={`row-${row.id}`}>
+          <div
+            key={row.id}
+            role="row"
+            data-id={String(row.id)}
+            data-selected={rowSelectionModel?.ids?.has(row.id) ? 'true' : 'false'}
+            data-testid={`row-${row.id}`}
+          >
             <span data-testid={`mode-${row.id}`}>{rowModesModel?.[row.id]?.mode ?? GridRowModes.View}</span>
             {columns.map((col: GridColDef) => {
               if (typeof col.getActions === 'function') {
@@ -128,6 +136,7 @@ vi.mock('@mui/x-data-grid', async () => {
                       if (apiRef?.current) {
                         apiRef.current.state.focus.cell = { id: row.id, field: col.field };
                       }
+                      onRowSelectionModelChange?.({ type: 'include', ids: new Set([row.id]) });
                       onCellClick?.({ id: row.id, field: col.field, isEditable: col.editable !== false });
                     }}
                     onKeyDown={(event) => {
@@ -661,8 +670,14 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'actions.save' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('row-1')).toHaveAttribute('data-selected', 'true'));
     await user.click(screen.getByRole('button', { name: /Tab speichern 1/i }));
-    await waitFor(() => expect(updateSpy).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalled();
+      expect(screen.getByTestId('mode-1')).toHaveTextContent('view');
+      expect(screen.getByTestId('row-1')).toHaveAttribute('data-selected', 'false');
+      expect(screen.getByTestId('focused-cell')).toHaveTextContent('none');
+    });
   });
 
   it('opens contextual row actions without rendering a permanent action column', async () => {
