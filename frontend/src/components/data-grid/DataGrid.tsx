@@ -61,6 +61,14 @@ import {
   prepareDataGridColumn,
   SaveBlockedError,
 } from './dataGridUtils';
+import {
+  focusKeyboardNavigableCell as focusDataGridKeyboardNavigableCell,
+  getKeyboardNavigationTarget,
+  getVerticalKeyboardNavigationTarget,
+  isCellKeyboardNavigable,
+  isInteractiveCellTarget,
+  preventReadOnlyCellMouseFocus,
+} from './keyboardNavigation';
 import type {
   EditableDataGridClipboardColumn,
   EditableDataGridProps,
@@ -82,6 +90,10 @@ export type {
 } from './types';
 
 const editModeEditorArrowKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
+
+type DataGridKeyboardEvent = KeyboardEvent & {
+  defaultMuiPrevented?: boolean;
+};
 
 const isComboboxInteractionTarget = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) {
@@ -303,6 +315,10 @@ export function EditableDataGrid<T extends EditableRow>({
     };
   }, [gridApiRef]);
 
+  const isActionCellKeyboardNavigable = useCallback((params: GridCellParams<T>): boolean => (
+    notesFieldNames.includes(params.field)
+  ), [notesFieldNames]);
+
   const getKeyboardNavigableFieldsForRow = useCallback((rowId: GridRowId): string[] => {
     const api = gridApiRef.current;
     if (!api) {
@@ -310,22 +326,15 @@ export function EditableDataGrid<T extends EditableRow>({
     }
     return api.getVisibleColumns()
       .filter((column) => {
-        if (notesFieldNames.includes(column.field)) {
-          return true;
-        }
-
-        if (!column.editable) {
-          return false;
-        }
-
-        try {
-          return api.isCellEditable(api.getCellParams(rowId, column.field));
-        } catch {
-          return false;
-        }
+        return isCellKeyboardNavigable<T>({
+          api,
+          field: column.field,
+          isActionCell: isActionCellKeyboardNavigable,
+          rowId,
+        });
       })
       .map((column) => column.field);
-  }, [gridApiRef, notesFieldNames]);
+  }, [gridApiRef, isActionCellKeyboardNavigable]);
 
   const focusKeyboardNavigableCell = useCallback((
     rowId: GridRowId,
@@ -379,6 +388,37 @@ export function EditableDataGrid<T extends EditableRow>({
 
     return null;
   }, [getKeyboardNavigableFieldsForRow]);
+
+  const handleReadOnlyCellMouseDown = useCallback((event: React.MouseEvent<HTMLElement>): void => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    if (isInteractiveCellTarget(target)) {
+      return;
+    }
+
+    const cellElement = target.closest<HTMLElement>('[role="gridcell"][data-field]');
+    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
+    const field = cellElement?.dataset.field;
+    const id = rowElement?.dataset.id;
+    if (!field || id === undefined) {
+      return;
+    }
+
+    const numericId = Number(id);
+    const rowId = Number.isNaN(numericId) ? id : numericId;
+    if (isCellKeyboardNavigable<T>({
+      api: gridApiRef.current,
+      field,
+      isActionCell: isActionCellKeyboardNavigable,
+      rowId,
+    })) {
+      return;
+    }
+
+    preventReadOnlyCellMouseFocus(event);
+  }, [gridApiRef, isActionCellKeyboardNavigable]);
 
   const hasInvalidRowInEditMode = useMemo(() => {
     if (!hasRowsInEditMode) return false;
@@ -1509,6 +1549,86 @@ export function EditableDataGrid<T extends EditableRow>({
       : []),
   ];
 
+  const handleViewModeCellNavigation = useCallback((params: GridCellParams<T>, event: DataGridKeyboardEvent): boolean => {
+    if (
+      rowModesModel[params.id]?.mode === GridRowModes.Edit ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey
+    ) {
+      return false;
+    }
+
+    const direction = event.shiftKey ? -1 : 1;
+    const target =
+      event.key === 'Tab'
+        ? getKeyboardNavigationTarget<T>({
+          api: gridApiRef.current,
+          columns: columnsWithActions,
+          current: { id: params.id, field: params.field },
+          direction,
+          isActionCell: isActionCellKeyboardNavigable,
+          rows: rowsForGrid,
+          wrapRows: true,
+        })
+        : event.key === 'ArrowRight'
+          ? getKeyboardNavigationTarget<T>({
+            api: gridApiRef.current,
+            columns: columnsWithActions,
+            current: { id: params.id, field: params.field },
+            direction: 1,
+            isActionCell: isActionCellKeyboardNavigable,
+            rows: rowsForGrid,
+          })
+          : event.key === 'ArrowLeft'
+            ? getKeyboardNavigationTarget<T>({
+              api: gridApiRef.current,
+              columns: columnsWithActions,
+              current: { id: params.id, field: params.field },
+              direction: -1,
+              isActionCell: isActionCellKeyboardNavigable,
+              rows: rowsForGrid,
+            })
+            : event.key === 'ArrowDown'
+              ? getVerticalKeyboardNavigationTarget<T>({
+                api: gridApiRef.current,
+                columns: columnsWithActions,
+                current: { id: params.id, field: params.field },
+                direction: 1,
+                isActionCell: isActionCellKeyboardNavigable,
+                rows: rowsForGrid,
+              })
+              : event.key === 'ArrowUp'
+                ? getVerticalKeyboardNavigationTarget<T>({
+                  api: gridApiRef.current,
+                  columns: columnsWithActions,
+                  current: { id: params.id, field: params.field },
+                  direction: -1,
+                  isActionCell: isActionCellKeyboardNavigable,
+                  rows: rowsForGrid,
+                })
+                : null;
+
+    if (!target) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.defaultMuiPrevented = true;
+    focusDataGridKeyboardNavigableCell<T>({
+      api: gridApiRef.current,
+      cell: target,
+    });
+    return true;
+  }, [
+    columnsWithActions,
+    gridApiRef,
+    isActionCellKeyboardNavigable,
+    rowModesModel,
+    rowsForGrid,
+  ]);
+
   const getNotesDrawerTitle = (): string => {
     if (!notesEditor.field || !notes) return 'Notizen';
     
@@ -1607,6 +1727,7 @@ export function EditableDataGrid<T extends EditableRow>({
             onTouchMove={hasContextualRowActions ? handleGridTouchMove : undefined}
             onTouchEnd={hasContextualRowActions ? handleGridTouchEnd : undefined}
             onTouchCancel={hasContextualRowActions ? handleGridTouchEnd : undefined}
+            onMouseDownCapture={handleReadOnlyCellMouseDown}
             sx={{
               position: 'relative',
               display: 'block',
@@ -1691,7 +1812,19 @@ export function EditableDataGrid<T extends EditableRow>({
             }
             return '';
           }}
-          onCellClick={(params) => {
+          onCellClick={(params, event) => {
+            if (!isCellKeyboardNavigable<T>({
+              api: gridApiRef.current,
+              field: params.field,
+              isActionCell: isActionCellKeyboardNavigable,
+              rowId: params.id,
+            })) {
+              event.preventDefault();
+              event.stopPropagation();
+              event.defaultMuiPrevented = true;
+              return;
+            }
+
             const rowKey = String(params.id);
             if (!rowSnapshotRef.current.has(rowKey)) {
               const row = rowsById.get(rowKey);
@@ -1713,6 +1846,19 @@ export function EditableDataGrid<T extends EditableRow>({
               event.defaultMuiPrevented = true;
               openRowActionKeyboardContextMenu(params.id, event.currentTarget as HTMLElement);
               return;
+            }
+
+            if (
+              event.key === 'Tab' ||
+              event.key === 'ArrowLeft' ||
+              event.key === 'ArrowRight' ||
+              event.key === 'ArrowUp' ||
+              event.key === 'ArrowDown'
+            ) {
+              const didNavigate = handleViewModeCellNavigation(params, event as unknown as DataGridKeyboardEvent);
+              if (didNavigate) {
+                return;
+              }
             }
 
             const shouldOpenNotes =

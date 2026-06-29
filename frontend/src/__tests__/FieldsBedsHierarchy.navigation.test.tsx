@@ -104,6 +104,7 @@ vi.mock('@mui/x-data-grid', async () => {
   }));
 
   const DataGrid = ({
+    apiRef,
     columns,
     isCellEditable,
     onCellClick,
@@ -111,6 +112,9 @@ vi.mock('@mui/x-data-grid', async () => {
     rowModesModel,
     rows,
   }: {
+    apiRef?: {
+      current?: Record<string, unknown>;
+    };
     columns: Array<{ field: string; renderCell?: (p: unknown) => unknown; editable?: boolean }>;
     isCellEditable?: (p: { row: Record<string, unknown>; field: string }) => boolean;
     onCellClick?: (p: { id: string | number; field: string; isEditable: boolean; row: Record<string, unknown> }) => void;
@@ -131,6 +135,26 @@ vi.mock('@mui/x-data-grid', async () => {
     });
     // Capture so tests can invoke it directly (e.g. letter-key guard test)
     setCapturedOnCellKeyDown(onCellKeyDown);
+    if (apiRef?.current) {
+      apiRef.current.getAllRowIds = () => rows.map((row) => row.id);
+      apiRef.current.getVisibleColumns = () => columns;
+      apiRef.current.getCellParams = (id: string | number, field: string) => {
+        const row = rows.find((currentRow) => String(currentRow.id) === String(id));
+        return {
+          id,
+          field,
+          row,
+          isEditable: row ? (isCellEditable?.({ row, field }) ?? true) : false,
+        };
+      };
+      apiRef.current.getRowIndexRelativeToVisibleRows = (id: string | number) =>
+        rows.findIndex((row) => String(row.id) === String(id));
+      apiRef.current.getColumnIndexRelativeToVisibleColumns = (field: string) =>
+        columns.findIndex((column) => column.field === field);
+      apiRef.current.isCellEditable = (params: { row?: Record<string, unknown>; field: string }) =>
+        params.row ? (isCellEditable?.({ row: params.row, field: params.field }) ?? true) : false;
+      apiRef.current.scrollToIndexes = vi.fn();
+    }
     return (
       <div data-testid="hierarchy-grid">
         <div data-testid="row-count">{rows.length}</div>
@@ -327,6 +351,53 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     );
     expect(getSetCellFocusMock()).toHaveBeenLastCalledWith('field-3', 'width_m');
     expect(getSetCellFocusMock()).not.toHaveBeenLastCalledWith('field-3', 'name');
+  });
+
+  it('does not select or edit calculated area cells on click', async () => {
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('select-field-1-area_sqm'));
+    });
+
+    expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-selected', 'false');
+    expect(screen.getByTestId('mode-field-1')).toHaveTextContent('view');
+    expect(getSetCellFocusMock()).not.toHaveBeenCalledWith('field-1', 'area_sqm');
+  });
+
+  it('ArrowRight skips calculated area cells', async () => {
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
+    const onCellKeyDown = getCapturedOnCellKeyDown();
+    expect(onCellKeyDown).toBeDefined();
+
+    const event = {
+      key: 'ArrowRight',
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      defaultMuiPrevented: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    act(() => {
+      onCellKeyDown!(
+        {
+          id: 'field-1',
+          field: 'width_m',
+          isEditable: true,
+          row: { id: 'field-1', type: 'field' },
+        },
+        event,
+      );
+    });
+
+    expect(event.defaultMuiPrevented).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(getSetCellFocusMock()).toHaveBeenLastCalledWith('field-1', 'notes');
   });
 
   it('ArrowUp does not move past the first row', async () => {

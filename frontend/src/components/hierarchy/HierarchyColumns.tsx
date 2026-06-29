@@ -18,7 +18,7 @@ import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
 import { HierarchyAddIcon } from './HierarchyAddIcon';
 import { getPlainExcerpt } from '../data-grid/markdown';
-import { getCalculatedColumnProps } from '../data-grid/calculatedColumns';
+import { CALCULATED_COLUMN_CELL_CLASS, getCalculatedColumnProps } from '../data-grid/calculatedColumns';
 
 export interface HierarchyColumnWidths {
   name: number;
@@ -474,11 +474,18 @@ const isDimensionCellIncomplete = (type: DimensionCellType, rowState: DimensionR
 
 const getDimensionCellClassName = (row: HierarchyRow, type: DimensionCellType): string => {
   const rowState = getDimensionRowState(row);
+  if (!rowState) {
+    return CALCULATED_COLUMN_CELL_CLASS;
+  }
   if (!rowState || !isDimensionCellIncomplete(type, rowState)) {
     return '';
   }
   return 'ofp-hierarchy-cell-missing-dimension';
 };
+
+const getNotesCellClassName = (row: HierarchyRow): string => (
+  row.type === 'location' ? CALCULATED_COLUMN_CELL_CLASS : ''
+);
 
 const renderDimensionCell = (
   params: GridRenderCellParams<HierarchyRow>,
@@ -645,6 +652,7 @@ export function createHierarchyColumns(
       minWidth: widths.notes,
       flex: 1,
       editable: false,
+      cellClassName: (params) => getNotesCellClassName(params.row),
       renderCell: (params) => {
         const value = (params.value as string) || '';
         const hasValue = value.trim().length > 0;

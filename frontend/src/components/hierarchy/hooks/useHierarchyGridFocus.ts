@@ -9,6 +9,7 @@ interface HierarchyGridFocusApi {
 }
 
 interface UseHierarchyGridFocusParams {
+  getFocusableField?: (rowId: GridRowId, preferredField: string) => string | null;
   gridApiRef: {
     current?: HierarchyGridFocusApi | null;
   };
@@ -50,6 +51,7 @@ const findFallbackVisibleRow = (
 };
 
 export function useHierarchyGridFocus({
+  getFocusableField,
   gridApiRef,
   rowModesModel,
   rows,
@@ -67,9 +69,11 @@ export function useHierarchyGridFocus({
 
   const focusRow = useCallback((rowId: GridRowId): void => {
     const api = gridApiRef.current;
-    api?.setCellFocus?.(rowId, focusedFieldRef.current);
+    const focusField = getFocusableField?.(rowId, focusedFieldRef.current) ?? DEFAULT_FOCUS_FIELD;
+    focusedFieldRef.current = focusField;
+    api?.setCellFocus?.(rowId, focusField);
     api?.selectRow?.(rowId, true, true);
-  }, [gridApiRef]);
+  }, [getFocusableField, gridApiRef]);
 
   const focusSelectedCell = useCallback((): void => {
     if (selectedRowId != null) {

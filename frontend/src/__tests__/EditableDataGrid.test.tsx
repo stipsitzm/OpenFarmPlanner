@@ -59,6 +59,7 @@ vi.mock('@mui/x-data-grid', async () => {
     if (apiRef?.current) {
       apiRef.current.state = apiRef.current.state ?? { focus: { cell: null } };
       apiRef.current.getVisibleColumns = () => columns;
+      apiRef.current.getAllRowIds = () => rows.map((row: TestGridRow) => row.id);
       apiRef.current.getRowWithUpdatedValues = (id: string | number) =>
         rows.find((row: TestGridRow) => String(row.id) === String(id)) ?? null;
       apiRef.current.getRowIndexRelativeToVisibleRows = (id: string | number) =>
@@ -128,6 +129,17 @@ vi.mock('@mui/x-data-grid', async () => {
                         apiRef.current.state.focus.cell = { id: row.id, field: col.field };
                       }
                       onCellClick?.({ id: row.id, field: col.field, isEditable: col.editable !== false });
+                    }}
+                    onKeyDown={(event) => {
+                      onCellKeyDown?.(
+                        {
+                          id: row.id,
+                          field: col.field,
+                          isEditable: col.editable !== false,
+                          row,
+                        },
+                        event,
+                      );
                     }}
                   >
                     Zelle {row.id}-{col.field}
@@ -524,6 +536,35 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('-1-culture'));
     expect(screen.queryByText(/Folgende Pflichtfelder müssen ausgefüllt werden/)).not.toBeInTheDocument();
     expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('skips read-only cells during keyboard navigation', async () => {
+    const props = baseProps();
+    const columnsWithReadOnlyMiddle: GridColDef[] = [
+      { field: 'name', headerName: 'Name', editable: true },
+      { field: 'area_sqm', headerName: 'Fläche', editable: false },
+      { field: 'notes', headerName: 'Notizen', editable: true },
+    ];
+
+    render(
+      <EditableDataGrid
+        {...props}
+        columns={columnsWithReadOnlyMiddle}
+        showDeleteAction={false}
+      />,
+    );
+
+    const nameCell = await screen.findByRole('button', { name: 'Zelle 1-name' });
+    fireEvent.keyDown(nameCell, {
+      key: 'ArrowRight',
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('1-notes'));
+    expect(screen.getByTestId('focused-cell')).not.toHaveTextContent('1-area_sqm');
   });
 
   it('shows required-field validation when explicitly saving an incomplete new row', async () => {

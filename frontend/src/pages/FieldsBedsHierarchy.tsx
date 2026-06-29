@@ -53,6 +53,12 @@ import { handleContextMenuKeyboardNavigation } from "../components/data-grid/con
 import {
   handleEditableCellClick,
 } from "../components/data-grid/handlers";
+import {
+  focusKeyboardNavigableCell,
+  getKeyboardNavigationTarget,
+  isInteractiveCellTarget,
+  preventReadOnlyCellMouseFocus,
+} from "../components/data-grid/keyboardNavigation";
 import { useNavigationBlocker } from "../hooks/autosave";
 import { useHierarchyData, type HierarchyDataState } from "../components/hierarchy/hooks/useHierarchyData";
 import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
@@ -110,6 +116,10 @@ interface HierarchyRowAction {
   color?: "default" | "error";
   onClick: () => void;
 }
+
+type HierarchyKeyboardEvent = React.KeyboardEvent & {
+  defaultMuiPrevented?: boolean;
+};
 
 const HIERARCHY_SELECTED_VIEW_ROW_SELECTOR =
   "& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing)";
@@ -625,7 +635,43 @@ function FieldsBedsHierarchy({
 
   }, [discardRowEdit]);
 
+  const isHierarchyCellAction = useCallback((params: GridCellParams<HierarchyRow>): boolean => (
+    params.field === "notes" && (params.row.type === "field" || params.row.type === "bed")
+  ), []);
+
+  const isCellEditable = useCallback((params: { row: HierarchyRow; field: string }) => {
+    if (params.row.type === "location") {
+      return params.field === "name";
+    }
+    if (params.row.type === "field" || params.row.type === "bed") {
+      return (
+        params.field === "name" ||
+        params.field === "length_m" ||
+        params.field === "width_m"
+      );
+    }
+    return false;
+  }, []);
+
+  const isHierarchyCellFocusable = useCallback((row: HierarchyRow, field: string): boolean => (
+    (field === "notes" && (row.type === "field" || row.type === "bed"))
+    || isCellEditable({ row, field })
+  ), [isCellEditable]);
+
+  const getHierarchyFocusableField = useCallback((rowId: GridRowId, preferredField: string): string | null => {
+    const row = rowsById.get(String(rowId));
+    if (!row) {
+      return null;
+    }
+
+    const focusableFields = row.type === "location"
+      ? ["name"]
+      : ["name", "length_m", "width_m", "notes"];
+    return focusableFields.includes(preferredField) ? preferredField : focusableFields[0] ?? null;
+  }, [rowsById]);
+
   const { focusRow, rememberFocusedField } = useHierarchyGridFocus({
+    getFocusableField: getHierarchyFocusableField,
     gridApiRef,
     rowModesModel,
     rows,
@@ -638,6 +684,31 @@ function FieldsBedsHierarchy({
     selectRowTransient(rowId);
     focusRow(rowId);
   }, [focusRow, selectRowTransient]);
+
+  const handleReadOnlyHierarchyCellMouseDown = useCallback((event: React.MouseEvent<HTMLElement>): void => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    if (isInteractiveCellTarget(target)) {
+      return;
+    }
+
+    const cellElement = target.closest<HTMLElement>('[role="gridcell"][data-field]');
+    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
+    const field = cellElement?.dataset.field;
+    const rowId = rowElement?.dataset.id;
+    if (!field || rowId === undefined) {
+      return;
+    }
+
+    const row = rowsById.get(String(rowId));
+    if (!row || isHierarchyCellFocusable(row, field)) {
+      return;
+    }
+
+    preventReadOnlyCellMouseFocus(event);
+  }, [isHierarchyCellFocusable, rowsById]);
 
   // Read the current row from refs at call time so these callbacks are stable
   // and don't trigger re-renders of areaCommands on every navigation keypress.
@@ -868,6 +939,76 @@ function FieldsBedsHierarchy({
     isMobileViewport,
   ]);
 
+  const handleHierarchyViewModeCellNavigation = useCallback((
+    params: GridCellParams<HierarchyRow>,
+    event: HierarchyKeyboardEvent,
+  ): boolean => {
+    if (
+      rowModesModel[params.id]?.mode === GridRowModes.Edit ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey
+    ) {
+      return false;
+    }
+
+    const target =
+      event.key === "Tab"
+        ? getKeyboardNavigationTarget<HierarchyRow>({
+          api: gridApiRef.current,
+          columns,
+          current: { id: params.id, field: params.field },
+          direction: event.shiftKey ? -1 : 1,
+          isActionCell: isHierarchyCellAction,
+          rows: rows as HierarchyRow[],
+          wrapRows: true,
+        })
+        : event.key === "ArrowRight"
+          ? getKeyboardNavigationTarget<HierarchyRow>({
+            api: gridApiRef.current,
+            columns,
+            current: { id: params.id, field: params.field },
+            direction: 1,
+            isActionCell: isHierarchyCellAction,
+            rows: rows as HierarchyRow[],
+          })
+          : event.key === "ArrowLeft"
+            ? getKeyboardNavigationTarget<HierarchyRow>({
+              api: gridApiRef.current,
+              columns,
+              current: { id: params.id, field: params.field },
+              direction: -1,
+              isActionCell: isHierarchyCellAction,
+              rows: rows as HierarchyRow[],
+            })
+            : null;
+
+    if (!target) {
+      return false;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.defaultMuiPrevented = true;
+    rememberFocusedField(target.field);
+    selectRow(target.id);
+    setTreeActive(true);
+    focusKeyboardNavigableCell<HierarchyRow>({
+      api: gridApiRef.current,
+      cell: target,
+    });
+    return true;
+  }, [
+    columns,
+    gridApiRef,
+    isHierarchyCellAction,
+    rememberFocusedField,
+    rowModesModel,
+    rows,
+    selectRow,
+    setTreeActive,
+  ]);
+
   const getRowHeight = useCallback((params: GridRowHeightParams) => {
     const row = params.model as HierarchyRow;
     if (row.type === "location") {
@@ -878,21 +1019,6 @@ function FieldsBedsHierarchy({
     }
     return BED_ROW_HEIGHT;
   }, []);
-
-  const isCellEditable = useCallback((params: { row: HierarchyRow; field: string }) => {
-    if (params.row.type === "location") {
-      return params.field === "name";
-    }
-    if (params.row.type === "field" || params.row.type === "bed") {
-      return (
-        params.field === "name" ||
-        params.field === "length_m" ||
-        params.field === "width_m"
-      );
-    }
-    return false;
-  }, []);
-
 
   const shouldShowMissingDimensionsHint = useMemo(() => {
     const hasBeds = beds.length > 0;
@@ -1031,6 +1157,7 @@ function FieldsBedsHierarchy({
             }}
             onClick={() => setTreeActive(true)}
             onContextMenu={handleGridContextMenu}
+            onMouseDownCapture={handleReadOnlyHierarchyCellMouseDown}
             onTouchStart={handleGridTouchStart}
             onTouchMove={handleGridTouchEnd}
             onTouchEnd={handleGridTouchEnd}
@@ -1059,7 +1186,16 @@ function FieldsBedsHierarchy({
               isCellEditable={isCellEditable}
               sx={HIERARCHY_DATA_GRID_SX}
               disableRowSelectionOnClick
-              onCellClick={(params) => {
+              onCellClick={(params, event) => {
+                if (!isHierarchyCellFocusable(params.row, params.field)) {
+                  event?.preventDefault();
+                  event?.stopPropagation();
+                  if (event) {
+                    event.defaultMuiPrevented = true;
+                  }
+                  return;
+                }
+
                 const editingRowId = Object.entries(rowModesModel).find(([, mode]) => mode.mode === GridRowModes.Edit)?.[0];
                 if (editingRowId !== undefined && String(editingRowId) !== String(params.id)) {
                   discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
@@ -1073,6 +1209,20 @@ function FieldsBedsHierarchy({
               onCellKeyDown={(params: GridCellParams<HierarchyRow>, event) => {
                 const keyboardEvent = event as MuiEvent<React.KeyboardEvent>;
                 rememberFocusedField(params.field);
+                if (
+                  keyboardEvent.key === "Tab" ||
+                  keyboardEvent.key === "ArrowLeft" ||
+                  keyboardEvent.key === "ArrowRight"
+                ) {
+                  const didNavigate = handleHierarchyViewModeCellNavigation(
+                    params,
+                    keyboardEvent as unknown as HierarchyKeyboardEvent,
+                  );
+                  if (didNavigate) {
+                    return;
+                  }
+                }
+
                 if (
                   keyboardEvent.key === "Escape" &&
                   rowModesModel[params.id]?.mode === GridRowModes.Edit
