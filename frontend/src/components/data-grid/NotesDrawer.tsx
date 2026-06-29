@@ -334,7 +334,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, has
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'Enter' || event.key === 's')) {
       event.preventDefault();
       void handleSaveClick();
       return;

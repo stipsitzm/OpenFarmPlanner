@@ -54,6 +54,15 @@ describe('NotesDrawer attachments', () => {
     expect(screen.getByTestId('crop-handle-se')).toBeInTheDocument();
   });
 
+  it('saves with Ctrl+S', () => {
+    const onSave = vi.fn();
+    render(<NotesDrawer open title="Notes" value="Some note" onChange={() => {}} onSave={onSave} onClose={() => {}} noteId={1} />);
+
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 's', ctrlKey: true });
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
   it('closes the drawer with Escape when notes are unchanged', () => {
     const onClose = vi.fn();
     render(<NotesDrawer open title="Notes" value="Existing note" onChange={() => {}} onSave={() => {}} onClose={onClose} noteId={1} />);
