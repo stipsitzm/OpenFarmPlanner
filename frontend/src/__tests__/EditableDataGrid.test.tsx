@@ -9,6 +9,7 @@ import { mockT } from './helpers/testI18n';
 
 const mockUseNavigationBlocker = vi.fn();
 const mockStopRowEditMode = vi.hoisted(() => vi.fn());
+const mockSetCellFocus = vi.hoisted(() => vi.fn());
 
 vi.mock('../hooks/autosave', () => ({
   useNavigationBlocker: (...args: unknown[]) => mockUseNavigationBlocker(...args),
@@ -76,6 +77,7 @@ vi.mock('@mui/x-data-grid', async () => {
         columns.find((column: GridColDef) => column.field === params.field)?.editable !== false;
       apiRef.current.scrollToIndexes = vi.fn();
       apiRef.current.setCellFocus = (id: string | number, field: string) => {
+        mockSetCellFocus(id, field);
         apiRef.current.state.focus.cell = { id, field };
         forceFocusRender((version) => version + 1);
       };
@@ -574,6 +576,41 @@ describe('EditableDataGrid', () => {
 
     await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('1-notes'));
     expect(screen.getByTestId('focused-cell')).not.toHaveTextContent('1-area_sqm');
+  });
+
+  it('focuses the next editable row cell once after Tab saves the edited row', async () => {
+    const props = baseProps(() => null);
+    vi.spyOn(props.api, 'list').mockResolvedValue({
+      data: {
+        results: [
+          createGridRow({ id: 1, name: 'Beet A', area_sqm: 12 }),
+          createGridRow({ id: 2, name: 'Beet B', area_sqm: 8 }),
+        ],
+      },
+    });
+    const updateSpy = vi.spyOn(props.api, 'update');
+
+    render(<EditableDataGrid {...props} showDeleteAction={false} />);
+
+    const lastEditableCell = await screen.findByRole('button', { name: 'Zelle 1-area_sqm' });
+    fireEvent.click(lastEditableCell);
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+
+    mockSetCellFocus.mockClear();
+    fireEvent.keyDown(lastEditableCell, {
+      key: 'Tab',
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalled();
+      expect(mockSetCellFocus).toHaveBeenCalledTimes(1);
+      expect(mockSetCellFocus).toHaveBeenCalledWith(2, 'name');
+      expect(screen.getByTestId('focused-cell')).toHaveTextContent('2-name');
+    });
   });
 
   it('shows required-field validation when explicitly saving an incomplete new row', async () => {

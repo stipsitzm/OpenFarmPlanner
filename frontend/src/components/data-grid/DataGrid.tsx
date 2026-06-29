@@ -729,47 +729,10 @@ export function EditableDataGrid<T extends EditableRow>({
       }));
     }
 
-    requestAnimationFrame(() => {
-      focusKeyboardNavigableCell(target.id, target.field, { startEdit: options.startTargetEdit });
-    });
+    focusKeyboardNavigableCell(target.id, target.field, { startEdit: options.startTargetEdit });
   }, [
     commitEditedRowDraftForKeyboardNavigation,
     focusKeyboardNavigableCell,
-    rowModesModel,
-  ]);
-
-  const handleGridEditNavigation = useCallback((event: KeyboardEvent): void => {
-    if (
-      event.key !== 'Tab'
-      || event.altKey
-      || event.ctrlKey
-      || event.metaKey
-      || event.nativeEvent.isComposing
-    ) {
-      return;
-    }
-
-    const focusedCell = getFocusedCellFromEvent(event);
-    if (!focusedCell || rowModesModel[focusedCell.id]?.mode !== GridRowModes.Edit) {
-      return;
-    }
-
-    const target = getHorizontalNavigationTarget(focusedCell.id, focusedCell.field, event.shiftKey ? -1 : 1);
-
-    if (!target) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    navigateFromEditedCell(focusedCell, target, {
-      startTargetEdit: !notesFieldNames.includes(target.field),
-    });
-  }, [
-    getFocusedCellFromEvent,
-    getHorizontalNavigationTarget,
-    navigateFromEditedCell,
-    notesFieldNames,
     rowModesModel,
   ]);
 
@@ -968,6 +931,94 @@ export function EditableDataGrid<T extends EditableRow>({
     handleProcessRowUpdateError,
     prepareRowForSave,
     processRowUpdate,
+  ]);
+
+  const saveEditedRowAndFocusTarget = useCallback(async (
+    current: { id: GridRowId; field: string },
+    target: { id: GridRowId; field: string },
+  ): Promise<void> => {
+    const preparedRow = await prepareRowForSave(current.id);
+    if (!preparedRow) {
+      return;
+    }
+
+    try {
+      const savedRow = await processRowUpdate(preparedRow);
+      setRows((prevRows) =>
+        prevRows.some((currentRow) => String(currentRow.id) === String(current.id))
+          ? prevRows.map((currentRow) =>
+            String(currentRow.id) === String(current.id) ? savedRow : currentRow,
+          )
+          : prevRows,
+      );
+      focusKeyboardNavigableCell(target.id, target.field, {
+        startEdit: !notesFieldNames.includes(target.field),
+      });
+    } catch (error) {
+      handleProcessRowUpdateError(error);
+    }
+  }, [
+    focusKeyboardNavigableCell,
+    handleProcessRowUpdateError,
+    notesFieldNames,
+    prepareRowForSave,
+    processRowUpdate,
+  ]);
+
+  const handleGridEditNavigation = useCallback((event: KeyboardEvent): void => {
+    if (
+      event.key !== 'Tab'
+      || event.altKey
+      || event.ctrlKey
+      || event.metaKey
+      || event.nativeEvent.isComposing
+    ) {
+      return;
+    }
+
+    const focusedCell = getFocusedCellFromEvent(event);
+    if (!focusedCell || rowModesModel[focusedCell.id]?.mode !== GridRowModes.Edit) {
+      return;
+    }
+
+    const direction = event.shiftKey ? -1 : 1;
+    const sameRowTarget = getHorizontalNavigationTarget(focusedCell.id, focusedCell.field, direction);
+    const target = sameRowTarget ?? getKeyboardNavigationTarget<T>({
+      api: gridApiRef.current,
+      current: focusedCell,
+      direction,
+      isActionCell: isActionCellKeyboardNavigable,
+      rows: rowsForGrid,
+      wrapRows: true,
+    });
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!target) {
+      void handleSaveRow(focusedCell.id);
+      return;
+    }
+
+    if (String(target.id) === String(focusedCell.id)) {
+      navigateFromEditedCell(focusedCell, target, {
+        startTargetEdit: !notesFieldNames.includes(target.field),
+      });
+      return;
+    }
+
+    void saveEditedRowAndFocusTarget(focusedCell, target);
+  }, [
+    getFocusedCellFromEvent,
+    getHorizontalNavigationTarget,
+    gridApiRef,
+    handleSaveRow,
+    isActionCellKeyboardNavigable,
+    navigateFromEditedCell,
+    notesFieldNames,
+    rowModesModel,
+    rowsForGrid,
+    saveEditedRowAndFocusTarget,
   ]);
 
   const handleSaveAllDirtyRows = useCallback(async (): Promise<void> => {
