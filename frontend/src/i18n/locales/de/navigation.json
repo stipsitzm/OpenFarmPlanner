@@ -150,6 +150,7 @@
       "versionRestored": "Projektversion wurde wiederhergestellt.",
       "versionRestoreError": "Projektversion konnte nicht wiederhergestellt werden.",
       "logoutError": "Abmeldung fehlgeschlagen. Bitte versuche es erneut."
-    }
+    },
+    "shortcutHint": "Tipp: Drücke Alt+K für die Command Palette."
   }
 }

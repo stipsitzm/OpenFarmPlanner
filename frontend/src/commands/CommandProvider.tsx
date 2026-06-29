@@ -290,7 +290,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert severity="info" onClose={() => setHintOpen(false)} closeText={t('common:actions.close')}>
-          💡 Tipp: Drücke Alt+K für die Command Palette.
+          💡 {t('commandPalette.shortcutHint')}
         </Alert>
       </Snackbar>
     </CommandContext.Provider>

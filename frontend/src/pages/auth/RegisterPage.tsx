@@ -143,7 +143,7 @@ export default function RegisterPage() {
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={t(showPassword ? 'auth:register.hidePassword' : 'auth:register.showPassword')}
                       edge="end"
                       tabIndex={-1}
                       onClick={() => setShowPassword((current) => !current)}
@@ -154,6 +154,7 @@ export default function RegisterPage() {
                   </InputAdornment>
                 ),
               },
+              htmlInput: { autoComplete: 'new-password' },
             }}
           />
           <TextField
@@ -168,7 +169,7 @@ export default function RegisterPage() {
                 endAdornment: (
                   <InputAdornment position="end">
                     <IconButton
-                      aria-label={showPasswordConfirm ? 'Hide password' : 'Show password'}
+                      aria-label={t(showPasswordConfirm ? 'auth:register.hidePassword' : 'auth:register.showPassword')}
                       edge="end"
                       tabIndex={-1}
                       onClick={() => setShowPasswordConfirm((current) => !current)}
@@ -179,6 +180,7 @@ export default function RegisterPage() {
                   </InputAdornment>
                 ),
               },
+              htmlInput: { autoComplete: 'new-password' },
             }}
           />
           <Button type="submit" variant="contained" disabled={submitting || isLoggedIn}>{submitting ? t('auth:register.submitting') : t('auth:register.submit')}</Button>
