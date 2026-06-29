@@ -1258,7 +1258,7 @@ function RootLayout() {
                   onClick={handleTopbarPrimaryAction}
                   aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
                   startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
-                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 44 : 'auto', minHeight: isPhone ? 44 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
                 >
                   {isPhone ? <AddIcon fontSize="small" /> : topbarPrimaryAction.label}
                 </Button>

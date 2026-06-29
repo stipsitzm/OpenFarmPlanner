@@ -28,6 +28,7 @@ export function BasicInfoSection({ formData, errors, onChange, t, identityHint }
           onChange={e => onChange('name', e.target.value)}
           error={Boolean(errors.name)}
           helperText={errors.name}
+          slotProps={{ htmlInput: { maxLength: 200 } }}
         />
         <TextField
           sx={fieldSx}
@@ -38,6 +39,7 @@ export function BasicInfoSection({ formData, errors, onChange, t, identityHint }
           onChange={e => onChange('variety', e.target.value)}
           error={Boolean(errors.variety)}
           helperText={errors.variety}
+          slotProps={{ htmlInput: { maxLength: 200 } }}
         />
       </Box>
       {identityHint}
