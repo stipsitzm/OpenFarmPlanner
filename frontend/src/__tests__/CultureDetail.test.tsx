@@ -502,4 +502,17 @@ describe('CultureDetail Component', () => {
     expect(screen.queryByText('9 %')).not.toBeInTheDocument();
   });
 
+  it('edit and plan action buttons have accessible aria-labels (ACC-01 regression guard)', () => {
+    renderCultureDetail(
+      <CultureDetail
+        cultures={mockCultures}
+        selectedCultureId={1}
+        onCultureSelect={vi.fn()}
+        onEditCulture={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Anbauplan hinzufügen' })).toBeInTheDocument();
+  });
 });

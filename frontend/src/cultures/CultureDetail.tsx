@@ -993,6 +993,7 @@ export function CultureDetail({
                     <span>
                       <IconButton
                         size="small"
+                        aria-label={t('buttons.edit')}
                         onClick={() => onEditCulture?.(selectedCulture)}
                         disabled={!onEditCulture}
                         sx={{
@@ -1010,6 +1011,7 @@ export function CultureDetail({
                     <span>
                       <IconButton
                         size="small"
+                        aria-label={t('buttons.createPlantingPlan')}
                         onClick={() => onCreatePlan?.()}
                         disabled={!canCreatePlan || !onCreatePlan}
                         sx={{

@@ -1203,7 +1203,7 @@ function FieldsBedsHierarchy({
             onTouchEnd={handleGridTouchEnd}
             onTouchCancel={handleGridTouchEnd}
           >
-            <Box sx={{ display: "inline-block", width: "fit-content", minWidth: 320, maxWidth: "100%" }}>
+            <Box sx={{ display: "inline-block", minWidth: "100%" }}>
             <DataGrid
               rows={rows}
               columns={columns}
