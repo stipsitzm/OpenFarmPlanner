@@ -117,4 +117,14 @@ describe('NotesDrawer attachments', () => {
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByRole('heading', { name: 'Ungespeicherte Notizen' })).toBeInTheDocument();
   });
+
+  it('focuses the text field after the drawer slide transition completes', async () => {
+    render(
+      <NotesDrawer open title="Notizen" value="" onChange={() => {}} onSave={() => {}} onClose={() => {}} />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox')).toHaveFocus();
+    });
+  });
 });

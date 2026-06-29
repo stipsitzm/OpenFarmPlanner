@@ -355,7 +355,13 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, has
   };
 
   return (
-    <Drawer anchor="right" open={open} onClose={requestClose} PaperProps={{ sx: { width: { xs: '100%', sm: '680px' }, maxWidth: '95vw' } }}>
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={requestClose}
+      PaperProps={{ sx: { width: { xs: '100%', sm: '680px' }, maxWidth: '95vw' } }}
+      SlideProps={{ onEntered: () => { textFieldRef.current?.focus(); } }}
+    >
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 3 }} onKeyDown={handleKeyDown}>
         <Typography variant="h6" gutterBottom>{title}</Typography>
         <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>

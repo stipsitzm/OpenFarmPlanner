@@ -483,9 +483,7 @@ const getDimensionCellClassName = (row: HierarchyRow, type: DimensionCellType): 
   return 'ofp-hierarchy-cell-missing-dimension';
 };
 
-const getNotesCellClassName = (row: HierarchyRow): string => (
-  row.type === 'location' ? CALCULATED_COLUMN_CELL_CLASS : ''
-);
+const getNotesCellClassName = (): string => '';
 
 const renderDimensionCell = (
   params: GridRenderCellParams<HierarchyRow>,
@@ -652,7 +650,7 @@ export function createHierarchyColumns(
       minWidth: widths.notes,
       flex: 1,
       editable: false,
-      cellClassName: (params) => getNotesCellClassName(params.row),
+      cellClassName: () => getNotesCellClassName(),
       renderCell: (params) => {
         const value = (params.value as string) || '';
         const hasValue = value.trim().length > 0;

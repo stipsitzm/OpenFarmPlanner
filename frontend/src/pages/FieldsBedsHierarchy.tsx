@@ -70,7 +70,7 @@ import { useHierarchyRowUpdate } from "../components/hierarchy/hooks/useHierarch
 import { useHierarchyContextMenu } from "../components/hierarchy/hooks/useHierarchyContextMenu";
 import { useHierarchyKeyboard } from "../components/hierarchy/hooks/useHierarchyKeyboard";
 import { usePersistentSortModel } from "../hooks/usePersistentSortModel";
-import { fieldAPI, bedAPI, type Field } from "../api/api";
+import { fieldAPI, bedAPI, locationAPI, type Field } from "../api/api";
 import {
   buildHierarchyIndex,
   createHierarchyRowsProjector,
@@ -459,8 +459,16 @@ function FieldsBedsHierarchy({
         setFields((prev) =>
           prev.map((f) => (f.id === row.fieldId ? { ...f, notes: value } : f)),
         );
+      } else if (row.type === "location" && row.locationId) {
+        const locationItem = locations.find((l) => l.id === row.locationId);
+        if (!locationItem) return;
+
+        await locationAPI.update(row.locationId, { ...locationItem, notes: value });
+
+        setLocations((prev) =>
+          prev.map((l) => (l.id === row.locationId ? { ...l, notes: value } : l)),
+        );
       }
-      // Note: locations don't have notes in this hierarchy
     },
     onError: setError,
   });
@@ -636,7 +644,7 @@ function FieldsBedsHierarchy({
   }, [discardRowEdit]);
 
   const isHierarchyCellAction = useCallback((params: GridCellParams<HierarchyRow>): boolean => (
-    params.field === "notes" && (params.row.type === "field" || params.row.type === "bed")
+    params.field === "notes"
   ), []);
 
   const isCellEditable = useCallback((params: { row: HierarchyRow; field: string }) => {
@@ -654,7 +662,7 @@ function FieldsBedsHierarchy({
   }, []);
 
   const isHierarchyCellFocusable = useCallback((row: HierarchyRow, field: string): boolean => (
-    (field === "notes" && (row.type === "field" || row.type === "bed"))
+    field === "notes"
     || isCellEditable({ row, field })
   ), [isCellEditable]);
 
@@ -665,7 +673,7 @@ function FieldsBedsHierarchy({
     }
 
     const focusableFields = row.type === "location"
-      ? ["name"]
+      ? ["name", "notes"]
       : ["name", "length_m", "width_m", "notes"];
     return focusableFields.includes(preferredField) ? preferredField : focusableFields[0] ?? null;
   }, [rowsById]);
