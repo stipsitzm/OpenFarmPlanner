@@ -239,6 +239,15 @@ export function CultureForm({
   const currentIdentityKeyRef = useRef<string | null>(null);
   const publicLibraryMatchCacheRef = useRef<Map<string, PublicCultureMatchResponse['culture']>>(new Map());
 
+  // Move focus to the first input after MUI's FocusTrap has settled
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      const firstInput = formRef.current?.querySelector<HTMLInputElement>('input:not([type="hidden"])');
+      firstInput?.focus();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   const loadSuppliers = useCallback(async () => {
     try {
       const response = await supplierAPI.list();

@@ -1825,6 +1825,11 @@ function RootLayout() {
       <Dialog open={projectHistoryOpen} onClose={() => setProjectHistoryOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t('commandPalette.commands.openVersionHistory')}</DialogTitle>
         <DialogContent sx={{ py: isPhonePortrait ? 1 : 2 }}>
+          {historyItems.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+              {t('commandPalette.versionHistoryEmpty')}
+            </Typography>
+          ) : null}
           <List>
             {historyItems.map((item, index) => {
               const isCurrentVersion = isCurrentHistoryEntry(item, index);

@@ -105,6 +105,7 @@
     "contextualShortcutsTitle": "Kontextbezogene Tastenkürzel (Alt+K)",
     "contextualShortcutsDescription": "Shortcuts sind browser-sicher und überschreiben keine üblichen Browser-Shortcuts.",
     "currentVersion": "Aktuelle Version",
+    "versionHistoryEmpty": "Noch keine Änderungen aufgezeichnet.",
     "restoreVersion": "Zu dieser Version wechseln",
     "contextTitles": {
       "global": "Global",
