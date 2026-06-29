@@ -488,9 +488,14 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
     await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+    await waitFor(() => expect(screen.getByTestId('row-1')).toHaveAttribute('data-selected', 'true'));
     fireEvent.click(screen.getByRole('button', { name: 'ESC 1' }));
 
-    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('view'));
+    await waitFor(() => {
+      expect(screen.getByTestId('mode-1')).toHaveTextContent('view');
+      expect(screen.getByTestId('row-1')).toHaveAttribute('data-selected', 'false');
+      expect(screen.getByTestId('focused-cell')).toHaveTextContent('none');
+    });
     expect(updateSpy).not.toHaveBeenCalled();
     expect(screen.queryByText('messages.validationErrors')).not.toBeInTheDocument();
     expect(screen.queryByText('Name ist erforderlich')).not.toBeInTheDocument();

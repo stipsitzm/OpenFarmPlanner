@@ -591,10 +591,11 @@ export function EditableDataGrid<T extends EditableRow>({
       ...oldModel,
       [rowId]: { mode: GridRowModes.View, ignoreModifications: true },
     }));
+    clearSavedRowInteractionState(rowId);
     window.setTimeout(() => {
       canceledRowIdsRef.current.delete(rowKey);
     }, 0);
-  }, [rowsById]);
+  }, [clearSavedRowInteractionState, rowsById]);
 
   const markRowDirty = useCallback((rowKey: string): void => {
     setDirtyRowIds((previous) => {
