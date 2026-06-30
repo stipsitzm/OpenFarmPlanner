@@ -64,7 +64,7 @@ export default function EmptyStateCard({
         {showInfoIcon ? <InfoOutlinedIcon fontSize="small" color="success" /> : null}
         <Typography variant="subtitle1" sx={{ fontWeight: 600, ...titleSx }}>{title}</Typography>
       </Box>
-      <Typography variant="body2" sx={{ mb: supplement || visibleActions.length > 0 || checklist.length > 0 ? 1.5 : 0 }}>
+      <Typography variant="body2" component="div" sx={{ mb: supplement || visibleActions.length > 0 || checklist.length > 0 ? 1.5 : 0 }}>
         {description}
       </Typography>
       {supplement ? (

@@ -1065,7 +1065,7 @@ function Cultures() {
               <ListItemText primary={t('shortcuts.openShortcuts')} secondary="?" />
             </ListItem>
             <ListItem>
-              <ListItemText primary={t('shortcuts.commandPalette')} secondary="Ctrl+K" />
+              <ListItemText primary={t('shortcuts.commandPalette')} secondary="Alt+K" />
             </ListItem>
             <ListItem>
               <ListItemText primary={t('shortcuts.closeDialog')} secondary="Esc" />

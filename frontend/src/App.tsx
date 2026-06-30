@@ -1930,7 +1930,7 @@ function RootLayout() {
                           </>
                         )}
                         secondary={(
-                          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
                             <PersonOutlineIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />
                             <Typography component="span" variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                               Von {actorLabel}
