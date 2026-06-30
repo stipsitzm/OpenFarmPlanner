@@ -1,4 +1,5 @@
 import { useCallback, useLayoutEffect, useRef } from "react";
+import type { MutableRefObject } from "react";
 import { GridRowModes } from "@mui/x-data-grid";
 import type { GridRowId, GridRowModesModel, GridRowsProp } from "@mui/x-data-grid";
 import type { HierarchyRow } from "../utils/types";
@@ -21,6 +22,7 @@ interface UseHierarchyGridFocusParams {
 
 interface UseHierarchyGridFocusResult {
   focusRow: (rowId: GridRowId, preferredField?: string) => void;
+  focusedFieldRef: MutableRefObject<string>;
   rememberFocusedField: (field: string) => void;
 }
 
@@ -117,6 +119,7 @@ export function useHierarchyGridFocus({
 
   return {
     focusRow,
+    focusedFieldRef,
     rememberFocusedField,
   };
 }

@@ -683,7 +683,7 @@ function FieldsBedsHierarchy({
     return focusableFields.includes(preferredField) ? preferredField : focusableFields[0] ?? null;
   }, []);
 
-  const { focusRow, rememberFocusedField } = useHierarchyGridFocus({
+  const { focusRow, focusedFieldRef, rememberFocusedField } = useHierarchyGridFocus({
     getFocusableField: getHierarchyFocusableField,
     gridApiRef,
     rowModesModel,
@@ -706,16 +706,28 @@ function FieldsBedsHierarchy({
     focusRow(rowId);
   }, [focusRow, selectRowTransient]);
 
-  const handleHierarchyProcessRowUpdate = useCallback(async (newRow: HierarchyRow): Promise<HierarchyRow> => {
-    const savedRow = await processRowUpdate(newRow);
-    setRowModesModel((previousModel) => ({
-      ...previousModel,
-      [newRow.id]: { mode: GridRowModes.View, ignoreModifications: true },
-    }));
-    // Do NOT clear treeActive/selectedRowId here. useHierarchyGridFocus's useEffect
-    // watches rowModesModel and restores focus to the saved row automatically.
-    return savedRow;
-  }, [processRowUpdate]);
+  const handleHierarchyProcessRowUpdate = useCallback(
+    async (newRow: HierarchyRow): Promise<HierarchyRow> => {
+      const savedRow = await processRowUpdate(newRow);
+      // Pre-focus the stable cell container div before switching the row back to
+      // View mode. When React removes the edit <input> from the DOM the browser
+      // would otherwise move focus to the nearest focusable ancestor (often the
+      // first row), causing a visible flash. Calling .focus() on the container
+      // now keeps DOM focus here through the transition. Note: this does NOT
+      // trigger MUI's cellFocusOut (which is a custom event fired only by
+      // setCellFocus), so no unintended edit-stop side-effect occurs.
+      const api = gridApiRef.current as unknown as {
+        getCellElement?: (id: GridRowId, field: string) => HTMLElement | null;
+      };
+      api.getCellElement?.(newRow.id, focusedFieldRef.current)?.focus({ preventScroll: true });
+      setRowModesModel((previousModel) => ({
+        ...previousModel,
+        [newRow.id]: { mode: GridRowModes.View, ignoreModifications: true },
+      }));
+      return savedRow;
+    },
+    [focusedFieldRef, gridApiRef, processRowUpdate],
+  );
 
   const handleReadOnlyHierarchyCellMouseDown = useCallback((event: React.MouseEvent<HTMLElement>): void => {
     const target = event.target;
