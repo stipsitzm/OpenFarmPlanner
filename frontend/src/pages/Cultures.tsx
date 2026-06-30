@@ -393,24 +393,21 @@ function Cultures() {
   };
 
   const handleRestoreVersion = async (historyId: number) => {
-    if (historyScope === 'project') {
-      await cultureAPI.projectRestore(historyId);
+    try {
+      if (historyScope === 'project') {
+        await cultureAPI.projectRestore(historyId);
+      } else if (historyScope === 'global') {
+        await cultureAPI.globalRestore(historyId);
+      } else {
+        if (!selectedCulture?.id) return;
+        await cultureAPI.restore(selectedCulture.id, historyId);
+      }
       await fetchCultures();
       setHistoryOpen(false);
-      return;
+      showSnackbar(t('messages.restoreSuccess'), 'success');
+    } catch {
+      showSnackbar(t('messages.restoreError'), 'error');
     }
-
-    if (historyScope === 'global') {
-      await cultureAPI.globalRestore(historyId);
-      await fetchCultures();
-      setHistoryOpen(false);
-      return;
-    }
-
-    if (!selectedCulture?.id) return;
-    await cultureAPI.restore(selectedCulture.id, historyId);
-    await fetchCultures();
-    setHistoryOpen(false);
   };
 
 

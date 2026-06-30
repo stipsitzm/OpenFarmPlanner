@@ -219,7 +219,9 @@
     "unsavedChanges": "Ungespeicherte Änderungen",
     "fixErrors": "Bitte beheben Sie die Validierungsfehler",
     "exportSuccess": "JSON exportiert",
-    "deleted": "Kultur gelöscht"
+    "deleted": "Kultur gelöscht",
+    "restoreSuccess": "Version wiederhergestellt",
+    "restoreError": "Version konnte nicht wiederhergestellt werden"
   },
   "deleteDialog": {
     "title": "Kultur löschen?",
