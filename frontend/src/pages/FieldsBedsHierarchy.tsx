@@ -1298,13 +1298,15 @@ function FieldsBedsHierarchy({
                   params.field !== "notes" &&
                   rowModesModel[params.id]?.mode !== GridRowModes.Edit
                 ) {
+                  // Always block MUI DataGrid's default spacebar behaviour (jumps focus to
+                  // first row) — we handle spacebar ourselves for expand/collapse only.
+                  keyboardEvent.preventDefault();
+                  keyboardEvent.defaultMuiPrevented = true;
                   const row = params.row as HierarchyRow;
                   if ((row.type === "location" || row.type === "field") && row.hasChildren) {
-                    keyboardEvent.preventDefault();
-                    keyboardEvent.defaultMuiPrevented = true;
                     toggleExpand(params.id);
-                    return;
                   }
+                  return;
                 }
 
                 // Prevent DataGrid from moving cell focus on ArrowDown/Up in view mode.

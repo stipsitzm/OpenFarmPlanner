@@ -622,4 +622,64 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     expect(altTEvent.defaultMuiPrevented).toBe(true);
     expect(screen.getByTestId('mode-field-1')).toHaveTextContent('view');
   });
+
+  it('pressing spacebar on a bed row does not let MUI DataGrid jump focus to the first row', async () => {
+    // Regression: bed rows have no children, so the old code skipped preventDefault
+    // for spacebar — MUI DataGrid then moved focus to the first row.
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
+
+    const onCellKeyDown = getCapturedOnCellKeyDown();
+    expect(onCellKeyDown).toBeDefined();
+
+    const event = {
+      key: ' ',
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      shiftKey: false,
+      defaultMuiPrevented: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    act(() => {
+      onCellKeyDown!(
+        { id: 101, field: 'name', isEditable: true, row: { type: 'bed', hasChildren: false } },
+        event,
+      );
+    });
+
+    expect(event.defaultMuiPrevented).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('pressing spacebar on a field row without children does not let MUI DataGrid jump focus', async () => {
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
+
+    const onCellKeyDown = getCapturedOnCellKeyDown();
+    expect(onCellKeyDown).toBeDefined();
+
+    const event = {
+      key: ' ',
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      shiftKey: false,
+      defaultMuiPrevented: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    act(() => {
+      onCellKeyDown!(
+        { id: 'field-1', field: 'name', isEditable: true, row: { type: 'field', hasChildren: false } },
+        event,
+      );
+    });
+
+    expect(event.defaultMuiPrevented).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
 });
