@@ -52,7 +52,7 @@
     "invalidLocationSelection": "Bitte wählen Sie einen gültigen Standort aus.",
     "noBedsHintTitle": "Es sind noch keine Beete vorhanden.",
     "noBedsHintBeforeIcon": "Füge Beete über das",
-    "noBedsHintAfterIcon": "Symbol bei der jeweiligen Parzelle hinzu.",
+    "noBedsHintAfterIcon": "Symbol bei der jeweiligen Parzelle hinzu. Es erscheint beim Darüberfahren.",
     "noBedsHintMobile": "Drücke lange auf die jeweilige Parzelle und wähle „Beet hinzufügen“.",
     "missingDimensionsHint": "Länge und Breite sind wichtig für Flächenberechnungen, Saatgutbedarf und Anbauplanung.",
     "missingDimensionsHintOptional": "Du kannst die Werte später ergänzen.",

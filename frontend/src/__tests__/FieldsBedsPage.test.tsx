@@ -211,7 +211,7 @@ describe('FieldsBedsPage', () => {
 
     renderPage();
     expect(await screen.findByText('Es sind noch keine Beete vorhanden.')).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu.'))).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu. Es erscheint beim Darüberfahren.'))).toBeInTheDocument();
     expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
     expect(screen.queryByText('Noch keine Anbauflächen vorhanden')).not.toBeInTheDocument();
   });
@@ -231,7 +231,7 @@ describe('FieldsBedsPage', () => {
     renderPage();
 
     expect(await screen.findByText('Es sind noch keine Beete vorhanden.')).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu.'))).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu. Es erscheint beim Darüberfahren.'))).toBeInTheDocument();
     expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
   });
 });
