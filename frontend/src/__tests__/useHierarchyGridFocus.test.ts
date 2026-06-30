@@ -1,0 +1,184 @@
+/**
+ * Unit tests for useHierarchyGridFocus.
+ *
+ * These tests verify focus-restoration behaviour that is difficult to cover
+ * at the component level because the critical scenarios depend on the
+ * internal relationship between selectedRowId React state and the
+ * selectedRowIdRef that is updated transiently during arrow-key navigation.
+ */
+
+import { renderHook, act } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { GridRowModes } from '@mui/x-data-grid';
+import type { GridRowModesModel } from '@mui/x-data-grid';
+import { useHierarchyGridFocus } from '../components/hierarchy/hooks/useHierarchyGridFocus';
+import type { HierarchyRow } from '../components/hierarchy/utils/types';
+
+const makeRow = (id: string, type: HierarchyRow['type'] = 'field'): HierarchyRow => ({
+  id,
+  type,
+  name: id,
+  level: 0,
+  hasChildren: false,
+  isNew: false,
+});
+
+const ROWS: HierarchyRow[] = [
+  makeRow('field-1'),
+  makeRow('field-2'),
+  makeRow('field-3'),
+];
+
+interface HookProps {
+  rowModesModel: GridRowModesModel;
+  selectedRowId: string | number | null;
+  treeActive: boolean;
+}
+
+const renderFocusHook = (initialProps: HookProps) => {
+  const setCellFocus = vi.fn();
+  const setSelectedRowId = vi.fn();
+  const gridApiRef = { current: { setCellFocus } };
+
+  const hookResult = renderHook(
+    ({ rowModesModel, selectedRowId, treeActive }: HookProps) =>
+      useHierarchyGridFocus({
+        gridApiRef,
+        rowModesModel,
+        rows: ROWS,
+        selectedRowId,
+        setSelectedRowId,
+        treeActive,
+      }),
+    { initialProps },
+  );
+
+  return { ...hookResult, setCellFocus, setSelectedRowId };
+};
+
+describe('useHierarchyGridFocus', () => {
+  it('focuses the edited row on Edit→View transition, not the stale selectedRowId', () => {
+    // Reproduce the bug: user arrow-navigated to field-2 (only ref updated),
+    // so selectedRowId state is still field-1 from the last click.
+    const { rerender, setCellFocus, setSelectedRowId } = renderFocusHook({
+      rowModesModel: { 'field-2': { mode: GridRowModes.Edit } },
+      selectedRowId: 'field-1', // stale — last clicked row
+      treeActive: true,
+    });
+
+    setCellFocus.mockClear();
+    setSelectedRowId.mockClear();
+
+    // Simulate save: row exits edit mode while selectedRowId state is still stale.
+    act(() => {
+      rerender({
+        rowModesModel: {},
+        selectedRowId: 'field-1', // still stale (state not updated yet)
+        treeActive: true,
+      });
+    });
+
+    // Must focus field-2 (the row that was being edited), not field-1 (the stale state).
+    expect(setCellFocus).toHaveBeenCalledWith('field-2', 'name');
+    const callsToField1 = setCellFocus.mock.calls.filter(([id]) => id === 'field-1');
+    expect(callsToField1).toHaveLength(0);
+
+    // State must be synced so subsequent arrow navigation starts from field-2.
+    expect(setSelectedRowId).toHaveBeenCalledWith('field-2');
+  });
+
+  it('focuses selectedRowId when no editing row is identifiable in prevModel', () => {
+    // Degenerate case: rowModesModel transitions from {} to {} (no editing row ever set).
+    const { rerender, setCellFocus } = renderFocusHook({
+      rowModesModel: {},
+      selectedRowId: 'field-1',
+      treeActive: true,
+    });
+
+    setCellFocus.mockClear();
+
+    act(() => {
+      rerender({
+        rowModesModel: {},
+        selectedRowId: 'field-2',
+        treeActive: true,
+      });
+    });
+
+    // No Edit→View transition — the selectedRowId change should trigger
+    // the selectedRowId/treeActive effect and focus field-2.
+    expect(setCellFocus).toHaveBeenCalledWith('field-2', 'name');
+  });
+
+  it('does not focus when treeActive is false', () => {
+    const { rerender, setCellFocus } = renderFocusHook({
+      rowModesModel: {},
+      selectedRowId: 'field-1',
+      treeActive: false,
+    });
+
+    setCellFocus.mockClear();
+
+    act(() => {
+      rerender({
+        rowModesModel: {},
+        selectedRowId: 'field-2',
+        treeActive: false,
+      });
+    });
+
+    expect(setCellFocus).not.toHaveBeenCalled();
+  });
+
+  it('does not trigger Edit→View restoration when only entering edit mode', () => {
+    // Entering Edit mode must NOT call focusRow (that would fight with MUI's own
+    // focus management for the edit cell).
+    const { rerender, setCellFocus } = renderFocusHook({
+      rowModesModel: {},
+      selectedRowId: 'field-1',
+      treeActive: true,
+    });
+
+    setCellFocus.mockClear();
+
+    act(() => {
+      rerender({
+        rowModesModel: { 'field-1': { mode: GridRowModes.Edit } },
+        selectedRowId: 'field-1',
+        treeActive: true,
+      });
+    });
+
+    // No Edit→View transition occurred — no restoration focus call expected.
+    // (The existing cell click / MUI focus management handles the edit focus.)
+    const restorationCalls = setCellFocus.mock.calls;
+    // It's OK if setCellFocus was called (e.g. by the selectedRowId/treeActive effect),
+    // but there must be no spurious call that would fight with the edit input focus.
+    // Since field-1 was already selected and treeActive was already true, the
+    // selectedRowId/treeActive effect also should not fire (deps didn't change).
+    expect(restorationCalls).toHaveLength(0);
+  });
+
+  it('syncs selectedRowId state after focusing the edited row', () => {
+    // After Edit→View, setSelectedRowId must be called so that subsequent
+    // arrow navigation and useLayoutEffect([selectedRowId]) start from the
+    // correct row.
+    const { rerender, setSelectedRowId } = renderFocusHook({
+      rowModesModel: { 'field-3': { mode: GridRowModes.Edit } },
+      selectedRowId: 'field-1',
+      treeActive: true,
+    });
+
+    setSelectedRowId.mockClear();
+
+    act(() => {
+      rerender({
+        rowModesModel: {},
+        selectedRowId: 'field-1',
+        treeActive: true,
+      });
+    });
+
+    expect(setSelectedRowId).toHaveBeenCalledWith('field-3');
+  });
+});
