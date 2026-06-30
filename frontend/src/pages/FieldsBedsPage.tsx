@@ -260,7 +260,6 @@ export default function FieldsBedsPage() {
       label: t('fields:representation.table'),
       onClick: () => setViewMode('table'),
       active: viewMode === 'table',
-      ariaLabel: t('fields:representation.ariaLabel'),
       groupId: 'fields-view-mode',
     },
     {
@@ -268,7 +267,6 @@ export default function FieldsBedsPage() {
       label: t('fields:representation.graphical'),
       onClick: () => setViewMode('graphical'),
       active: viewMode === 'graphical',
-      ariaLabel: t('fields:representation.ariaLabel'),
       groupId: 'fields-view-mode',
     },
   ]), [t, viewMode]);
