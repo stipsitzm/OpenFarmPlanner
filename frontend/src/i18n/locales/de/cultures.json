@@ -83,6 +83,10 @@
     "cancel": "Abbrechen",
     "save": "Speichern",
     "create": "Erstellen",
+    "discardChangesTitle": "Änderungen verwerfen?",
+    "discardChangesMessage": "Alle nicht gespeicherten Änderungen gehen verloren.",
+    "discardCancel": "Weiter bearbeiten",
+    "discardConfirm": "Verwerfen",
     "sectionGeneral": "Allgemein / Details",
     "sectionTiming": "Zeitplanung",
     "sectionHarvest": "Ernteinformationen",
@@ -215,7 +219,9 @@
     "unsavedChanges": "Ungespeicherte Änderungen",
     "fixErrors": "Bitte beheben Sie die Validierungsfehler",
     "exportSuccess": "JSON exportiert",
-    "deleted": "Kultur gelöscht"
+    "deleted": "Kultur gelöscht",
+    "restoreSuccess": "Version wiederhergestellt",
+    "restoreError": "Version konnte nicht wiederhergestellt werden"
   },
   "deleteDialog": {
     "title": "Kultur löschen?",
@@ -250,7 +256,7 @@
     "progressive": {
       "fields": {
         "title": "Noch kein Saatgutbedarf berechenbar",
-        "description": "Öffne die Anbauflächen und füge dort eine Parzelle beim passenden Standort hinzu.",
+        "description": "Öffne die Anbauflächen und füge dort eine Parzelle hinzu.",
         "action": "Parzelle hinzufügen"
       },
       "beds": {
@@ -319,8 +325,9 @@
     "unknownUser": "Unbekannter Nutzer",
     "meta": "Version vom {{timestamp}}",
     "emptyState": {
-      "title": "Keine weiteren Versionen verfügbar.",
-      "description": "Für diese Sorte existiert aktuell nur diese Version."
+      "title": "Kein Versionsverlauf verfügbar.",
+      "description": "Für diese Sorte existiert aktuell noch kein Versionsverlauf.",
+      "onlyCurrentVersion": "Noch keine ältere Version verfügbar."
     },
     "title": {
       "withName": "{{objectType}} „{{objectName}}“ {{action}}",

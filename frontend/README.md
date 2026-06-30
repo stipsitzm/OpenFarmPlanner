@@ -25,6 +25,14 @@ npm run dev
 
 Local app URL: `http://localhost:5173/`
 
+For phone/tablet testing in the same LAN, use the repository-level script:
+
+```bash
+../scripts/dev-lan.sh
+```
+
+It starts Vite with `--host 0.0.0.0` and prints the LAN URL. Leave `VITE_API_BASE_URL` unset unless you intentionally need a direct backend URL; `/api` is proxied by Vite and works from LAN clients.
+
 ## Available Scripts
 
 ```bash
@@ -41,7 +49,7 @@ npm run test:e2e:headed
 ## API Integration
 
 - Frontend API client targets `/api` by default.
-- In development, `VITE_API_BASE_URL` can override the API base URL.
+- In development, `VITE_API_BASE_URL` can override the API base URL. If it points to `localhost` and the app is opened via a LAN IP, the frontend rewrites it to the current LAN host for local testing.
 - Requests include credentials and CSRF token handling for write operations.
 - Active project context is sent via `X-Project-Id` when available.
 

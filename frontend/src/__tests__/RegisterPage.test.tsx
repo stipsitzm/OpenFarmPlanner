@@ -51,6 +51,8 @@ vi.mock('../i18n', () => ({
         'auth:register.submit': 'Konto erstellen',
         'auth:register.resendActivation': 'Aktivierungs-E-Mail erneut senden',
         'auth:register.hasAccount': 'Bereits ein Konto? Anmelden',
+        'auth:register.showPassword': 'Passwort anzeigen',
+        'auth:register.hidePassword': 'Passwort verbergen',
       };
       return map[key] ?? key;
     },
@@ -60,6 +62,37 @@ vi.mock('../i18n', () => ({
 describe('RegisterPage', () => {
   beforeEach(() => {
     logoutMock.mockClear();
+  });
+
+  it('password toggle buttons use translated German aria-labels (BUG-M02 regression guard)', () => {
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>,
+    );
+
+    const toggleButtons = screen.getAllByRole('button', { name: /Passwort anzeigen/i });
+    expect(toggleButtons).toHaveLength(2);
+    toggleButtons.forEach((btn) => {
+      expect(btn).not.toHaveAttribute('aria-label', 'Show password');
+      expect(btn).not.toHaveAttribute('aria-label', 'Hide password');
+    });
+  });
+
+  it('password fields carry autocomplete="new-password" (BUG-L02 regression guard)', () => {
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>,
+    );
+
+    const passwordInputs = screen
+      .getAllByLabelText(/Passwort/i)
+      .filter((el) => el.tagName === 'INPUT' && (el as HTMLInputElement).type === 'password');
+    expect(passwordInputs.length).toBeGreaterThanOrEqual(1);
+    passwordInputs.forEach((input) => {
+      expect(input).toHaveAttribute('autocomplete', 'new-password');
+    });
   });
 
   it('shows logged-in info banner and account-switch actions instead of redirecting', async () => {

@@ -62,6 +62,7 @@ import { SearchableSelect } from '../components/inputs/SearchableSelect';
 import type { SearchableSelectOption } from '../components/inputs/SearchableSelect';
 import { UI_LABEL_SEPARATOR } from '../utils/uiLabelSeparator';
 import EmptyStateCard from '../components/project/EmptyStateCard';
+import { stripCitationMarkers } from '../components/data-grid/markdown';
 
 interface CultureDetailProps {
   cultures: Culture[];
@@ -992,6 +993,7 @@ export function CultureDetail({
                     <span>
                       <IconButton
                         size="small"
+                        aria-label={t('buttons.edit')}
                         onClick={() => onEditCulture?.(selectedCulture)}
                         disabled={!onEditCulture}
                         sx={{
@@ -1009,6 +1011,7 @@ export function CultureDetail({
                     <span>
                       <IconButton
                         size="small"
+                        aria-label={t('buttons.createPlantingPlan')}
                         onClick={() => onCreatePlan?.()}
                         disabled={!canCreatePlan || !onCreatePlan}
                         sx={{
@@ -1405,7 +1408,7 @@ export function CultureDetail({
                           ),
                         }}
                       >
-                        {selectedCulture.notes}
+                        {stripCitationMarkers(selectedCulture.notes)}
                       </ReactMarkdown>
                     </Box>
                   </Box>

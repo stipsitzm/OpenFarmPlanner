@@ -133,6 +133,21 @@ npm run dev
 
 Frontend dev server: `http://localhost:5173/`
 
+### Local LAN testing
+
+To test the development app from a phone or tablet in the same network, start both servers with:
+
+```bash
+scripts/dev-lan.sh
+```
+
+The script detects the local LAN IP, starts Django on `0.0.0.0:8000`, starts Vite on `0.0.0.0:5173`, and prints URLs such as:
+
+- Frontend: `http://<LAN-IP>:5173`
+- Backend: `http://<LAN-IP>:8000`
+
+Keep `VITE_API_BASE_URL` unset for normal development so browser requests use `/api` and Vite proxies them to the backend. If you do set `VITE_API_BASE_URL` to `http://localhost:8000/api`, the frontend rewrites that development-only localhost URL to the current LAN host when opened from another device.
+
 ## Backend / Frontend Overview
 
 - The frontend sends credentialed requests to `/api/` and includes CSRF headers for write operations.

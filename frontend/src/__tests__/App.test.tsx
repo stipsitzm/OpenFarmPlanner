@@ -158,7 +158,7 @@ describe('App', () => {
     expect(logoLinks[0]).toHaveAttribute('href', '/app/dashboard');
   });
 
-  it('shows account settings in three-dot menu without project settings', async () => {
+  it('shows account settings and project settings in three-dot menu on desktop', async () => {
     authState.user = {
       id: 1,
       email: 'demo@example.com',
@@ -178,7 +178,7 @@ describe('App', () => {
     render(<CommandProvider><App /></CommandProvider>);
     fireEvent.click(await screen.findByLabelText('Mehr'));
     expect(await screen.findByText('Kontoeinstellungen')).toBeInTheDocument();
-    expect(screen.queryByText('Projekteinstellungen')).not.toBeInTheDocument();
+    expect(screen.getByText('Projekteinstellungen')).toBeInTheDocument();
   });
 
 
@@ -208,6 +208,31 @@ describe('App', () => {
     expect(await screen.findByText('Neues Projekt')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Neues Projekt'));
     expect(await screen.findByRole('heading', { name: 'Projekt anlegen' })).toBeInTheDocument();
+  });
+
+  it('opens project settings from the project switcher menu', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: 1,
+      last_project_id: 1,
+      resolved_project_id: 1,
+      needs_project_selection: false,
+      memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+    };
+    authState.activeProjectId = 1;
+    window.history.pushState({}, '', '/app/anbauplaene');
+
+    render(<CommandProvider><App /></CommandProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
+    fireEvent.click(await screen.findByText('Projekteinstellungen'));
+
+    expect(window.location.pathname).toBe('/app/project-settings');
   });
 
   it('opens the create-project dialog from the project switcher for users without projects', async () => {
@@ -379,5 +404,38 @@ describe('App', () => {
     window.history.pushState({}, '', '/app');
     render(<CommandProvider><App /></CommandProvider>);
     expect(await screen.findByRole('heading', { name: 'Anmelden' })).toBeInTheDocument();
+  });
+
+  it('redirects authenticated users from unknown /app/* routes to dashboard (BUG-M01 regression guard)', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: null,
+      last_project_id: null,
+      resolved_project_id: null,
+      needs_project_selection: false,
+      memberships: [],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+    };
+    authState.activeProjectId = null;
+    window.history.pushState({}, '', '/app/this-does-not-exist');
+
+    render(<CommandProvider><App /></CommandProvider>);
+
+    await screen.findByText('Anbauflächen');
+    expect(window.location.pathname).toBe('/app/dashboard');
+  });
+
+  it('redirects unknown top-level routes to home', async () => {
+    window.history.pushState({}, '', '/this-page-does-not-exist');
+
+    render(<CommandProvider><App /></CommandProvider>);
+
+    expect(await screen.findByText('OpenFarmPlanner')).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/');
   });
 });

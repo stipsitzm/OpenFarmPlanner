@@ -12,6 +12,7 @@ export interface ShortcutSpec {
   title: string;
   keys: ShortcutKeys;
   contexts: string[];
+  allowRepeat?: boolean;
   when?: () => boolean;
   action: () => void;
 }
@@ -50,8 +51,23 @@ export const isTypingInEditableElement = (element: Element | null): boolean => {
     return true;
   }
 
-  const editableAncestor = element.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]');
-  return Boolean(editableAncestor);
+  const blockedAncestor = element.closest([
+    'input',
+    'textarea',
+    'select',
+    '[contenteditable="true"]',
+    '[role="textbox"]',
+    '[role="dialog"]',
+    '[role="menu"]',
+    '[role="listbox"]',
+    '[role="combobox"]',
+    '.MuiPopover-root',
+    '.MuiMenu-root',
+    '.MuiDialog-root',
+    '.MuiDataGrid-cell--editing',
+    '.MuiDataGrid-row--editing',
+  ].join(', '));
+  return Boolean(blockedAncestor);
 };
 
 export const matchesShortcut = (event: KeyboardEvent, keys: ShortcutKeys): boolean => {
@@ -80,15 +96,15 @@ export function useKeyboardShortcuts(
     }
 
     const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.repeat) {
-        return;
-      }
-
       if (!allowWhenTyping && isTypingInEditableElement(document.activeElement)) {
         return;
       }
 
       const matchedShortcut = shortcuts.find((shortcut) => {
+        if (event.repeat && !shortcut.allowRepeat) {
+          return false;
+        }
+
         const inContext = shortcut.contexts.every((context) => currentContexts.includes(context));
         if (!inContext) {
           return false;

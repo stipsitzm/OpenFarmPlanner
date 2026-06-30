@@ -5,6 +5,7 @@ import { NotesSection } from '../cultures/sections/NotesSection';
 import { SpacingSection } from '../cultures/sections/SpacingSection';
 import { SeedingSection } from '../cultures/sections/SeedingSection';
 import { HarvestSection } from '../cultures/sections/HarvestSection';
+import { BasicInfoSection } from '../cultures/sections/BasicInfoSection';
 
 const translations: Record<string, string> = {
   'form.sowingCalculationSafetyPercentLabel': 'Sicherheitszuschlag für Saatgut (%)',
@@ -257,5 +258,22 @@ describe('culture form UI sections', () => {
     expect(onChange).toHaveBeenCalledWith('expected_yield', undefined);
     expect(screen.getByText('Ungültig')).toBeInTheDocument();
     expect(screen.getByLabelText('form.expectedYield (kg)')).toBeInTheDocument();
+  });
+
+  it('name and variety fields enforce maxLength=200 (K-01 regression guard)', () => {
+    render(
+      <BasicInfoSection
+        formData={{ name: '', variety: '' }}
+        errors={{}}
+        onChange={vi.fn()}
+        t={t}
+      />
+    );
+
+    const nameInput = screen.getByLabelText(/form\.name/i);
+    const varietyInput = screen.getByLabelText(/form\.variety/i);
+
+    expect(nameInput).toHaveAttribute('maxlength', '200');
+    expect(varietyInput).toHaveAttribute('maxlength', '200');
   });
 });

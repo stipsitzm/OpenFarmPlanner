@@ -113,5 +113,6 @@
     "redirectingToLogin": "Weiterleitung zur Anmeldung…",
     "redirectingBack": "Anmeldung erfolgreich. Einladung wird jetzt verarbeitet…",
     "addedToProject": "Du wurdest dem Projekt hinzugefügt."
-  }
+  },
+  "memberManagementNoAccess": "Du siehst diese Seite als Mitglied. Für die Mitgliederverwaltung benötigst du Admin-Rechte."
 }

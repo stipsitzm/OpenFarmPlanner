@@ -41,22 +41,27 @@ vi.mock("../api/api", async () => {
     cultureAPI: {
       ...actual.cultureAPI,
       list: apiMocks.cultureList,
+      listAll: async () => (await apiMocks.cultureList()).data,
     },
     locationAPI: {
       ...actual.locationAPI,
       list: apiMocks.locationList,
+      listAll: async () => (await apiMocks.locationList()).data,
     },
     fieldAPI: {
       ...actual.fieldAPI,
       list: apiMocks.fieldList,
+      listAll: async () => (await apiMocks.fieldList()).data,
     },
     bedAPI: {
       ...actual.bedAPI,
       list: apiMocks.bedList,
+      listAll: async () => (await apiMocks.bedList()).data,
     },
     plantingPlanAPI: {
       ...actual.plantingPlanAPI,
       list: apiMocks.planList,
+      listAll: async () => (await apiMocks.planList()).data,
     },
   };
 });

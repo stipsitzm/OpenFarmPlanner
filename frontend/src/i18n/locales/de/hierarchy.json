@@ -30,6 +30,8 @@
     "areaTooLarge": "Die eingegebene Fläche ist zu groß. Bitte einen kleineren Wert eingeben.",
     "lengthNonNegative": "Länge muss größer oder gleich 0 sein.",
     "widthNonNegative": "Breite muss größer oder gleich 0 sein.",
+    "lengthNotANumber": "Länge muss eine gültige Zahl sein.",
+    "widthNotANumber": "Breite muss eine gültige Zahl sein.",
     "duplicateFieldName": "Eine Parzelle mit diesem Namen existiert in diesem Standort bereits.",
     "duplicateBedName": "Ein Beet mit diesem Namen existiert in dieser Parzelle bereits."
   },
@@ -50,7 +52,8 @@
     "invalidLocationSelection": "Bitte wählen Sie einen gültigen Standort aus.",
     "noBedsHintTitle": "Es sind noch keine Beete vorhanden.",
     "noBedsHintBeforeIcon": "Füge Beete über das",
-    "noBedsHintAfterIcon": "Symbol bei der jeweiligen Parzelle hinzu.",
+    "noBedsHintAfterIcon": "Symbol bei der jeweiligen Parzelle hinzu. Es erscheint beim Darüberfahren.",
+    "noBedsHintMobile": "Drücke lange auf die jeweilige Parzelle und wähle „Beet hinzufügen“.",
     "missingDimensionsHint": "Länge und Breite sind wichtig für Flächenberechnungen, Saatgutbedarf und Anbauplanung.",
     "missingDimensionsHintOptional": "Du kannst die Werte später ergänzen.",
     "missingDimensionsCellTooltip": "Für Flächenberechnung erforderlich.",
@@ -58,11 +61,13 @@
     "locationCreated": "Standort wurde angelegt.",
     "unsavedMissingName": "Zeile wurde nicht gespeichert, da der Name fehlt.",
     "unsavedInvalidRowsNavigationWarning": "Es gibt eine nicht gespeicherte Zeile ohne Namen. Beim Verlassen der Seite geht sie verloren.",
+    "unsavedRowEditNavigationWarning": "Eine Zeile wird gerade bearbeitet. Beim Verlassen der Seite gehen die Änderungen verloren.",
     "locationDeleted": "Standort gelöscht",
     "fieldDeleted": "Parzelle gelöscht",
     "bedDeleted": "Beet gelöscht",
     "locationAndBedsDeleted": "Standort und {{count}} Beete gelöscht",
-    "fieldAndBedsDeleted": "Parzelle und {{count}} Beete gelöscht"
+    "fieldAndBedsDeleted": "Parzelle und {{count}} Beete gelöscht",
+    "locationsNowVisible": "Standorte werden nun angezeigt, da mehrere Standorte vorhanden sind."
   },
   "prompts": {
     "newFieldName": "Name der neuen Parzelle:",
@@ -73,7 +78,8 @@
     "addBed": "Beet hinzufügen",
     "createLocation": "Standort hinzufügen",
     "addAdditionalLocation": "Mehrere Orte? Weiteren Standort hinzufügen",
-    "undo": "Rückgängig"
+    "undo": "Rückgängig",
+    "addFieldDropdown": "Parzelle hinzufügen"
   },
   "dialogs": {
     "addField": {
@@ -94,8 +100,11 @@
     "missingLocationTitle": "Standort fehlt",
     "missingLocationDescription": "Der Hauptstandort ist für dieses Projekt noch nicht verfügbar.",
     "missingFieldTitle": "Parzelle fehlt",
-    "missingFieldSingleLocationDescription": "Lege zuerst eine Parzelle an, um deine Anbauflächen zu strukturieren.",
-    "missingFieldMultipleLocationsDescription": "Füge beim gewünschten Standort über das ➕-Symbol eine Parzelle hinzu.",
+    "missingFieldSingleLocationDescription": "Lege eine Parzelle an, um zu starten.",
+    "additionalLocationHint": "Falls du Flächen an mehreren Orten bewirtschaftest, kannst du auch",
+    "additionalLocationLink": "zusätzliche Standorte anlegen",
+    "missingFieldMultipleLocationsBeforeIcon": "Füge beim gewünschten Standort über das",
+    "missingFieldMultipleLocationsAfterIcon": "Symbol oder das Kontextmenü eine Parzelle hinzu.",
     "actions": {
       "createLocation": "Standort hinzufügen",
       "createField": "Parzelle hinzufügen",

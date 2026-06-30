@@ -1,0 +1,26 @@
+{
+  "loading": "Laden...",
+  "errors": {
+    "load": "Ertragsübersicht konnte nicht geladen werden."
+  },
+  "filters": {
+    "culture": "Kultur",
+    "allCultures": "Alle Kulturen",
+    "year": "Jahr",
+    "period": "Darstellung",
+    "week": "Woche",
+    "month": "Monat"
+  },
+  "chart": {
+    "title": "Ertragsverteilung",
+    "tooltip": "{{period}} · {{culture}}: {{yield}} kg"
+  },
+  "empty": {
+    "noPlansTitle": "Noch keine Ertragsprognose verfügbar",
+    "description": "Ertragsprognosen werden verfügbar, sobald Anbaupläne mit Erntezeiträumen vorhanden sind.",
+    "createPlanAction": "Anbauplan hinzufügen",
+    "noYieldTitle": "Keine erwarteten Erträge für {{year}}",
+    "noYieldDescription": "Für das Jahr {{year}} sind keine Erntedaten vorhanden. Wähle ein anderes Jahr oder stelle sicher, dass deine Kulturen erwartete Erträge eingetragen haben.",
+    "openPlansAction": "Anbaupläne öffnen"
+  }
+}

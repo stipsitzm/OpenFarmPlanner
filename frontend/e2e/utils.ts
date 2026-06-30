@@ -16,6 +16,7 @@ export const MAIN_ROUTES = [
   { key: 'kulturen', path: '/app/cultures', ready: /Kulturen/i },
   { key: 'anbauplaene', path: '/app/anbauplaene', ready: /Anbaupläne|Anbauplan/i },
   { key: 'anbaukalender', path: '/app/gantt-chart', ready: /Anbaukalender|Kalender/i },
+  { key: 'ertragsuebersicht', path: '/app/yield-overview', ready: /Ertragsübersicht|Ertragsverteilung|Ertragsprognose/i },
   { key: 'saatgutbedarf', path: '/app/seed-demand', ready: /Saatgutbedarf/i },
   { key: 'lieferanten', path: '/app/suppliers', ready: /Lieferanten/i },
 ] as const;
@@ -38,7 +39,7 @@ export async function loginWithDeterministicProject(page: Page, request: APIRequ
 
   await page.goto(fixture.inviteUrl);
   await page.getByLabel('E-Mail').fill(fixture.invitee.email);
-  await page.getByLabel('Passwort').fill(fixture.invitee.password);
+  await page.locator('input[type="password"]').fill(fixture.invitee.password);
   await page.getByRole('button', { name: 'Anmelden' }).click();
   await expect(page).toHaveURL(/\/app\//);
 }

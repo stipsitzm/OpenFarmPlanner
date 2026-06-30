@@ -64,6 +64,14 @@ vi.mock('../hooks/useProjectRequirement', () => ({
   useProjectRequirement: () => projectRequirementState,
 }));
 
+const registeredUiState: { topbarActions: { id: string; label: string; hidden?: boolean; menuActions?: { id: string; label: string }[] }[] } = { topbarActions: [] };
+
+vi.mock('../hooks/useTopbarContextActions', () => ({
+  useTopbarContextActions: (_setter: unknown, actions: typeof registeredUiState.topbarActions) => {
+    registeredUiState.topbarActions = actions;
+  },
+}));
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
   return {
@@ -157,17 +165,31 @@ describe('FieldsBedsPage', () => {
 
     renderPage();
     expect(await screen.findByText('Parzelle fehlt')).toBeInTheDocument();
-    expect(screen.getByText('Lege zuerst eine Parzelle an, um deine Anbauflächen zu strukturieren.')).toBeInTheDocument();
+    expect(screen.getByText('Lege eine Parzelle an, um zu starten.')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Falls du Flächen an mehreren Orten bewirtschaftest, kannst du auch'))).toBeInTheDocument();
+    const addLocationLink = screen.getByRole('link', { name: 'zusätzliche Standorte anlegen' });
+    expect(addLocationLink).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Parzelle hinzufügen' })).toHaveLength(1);
+    expect(registeredUiState.topbarActions.find((action) => action.id === 'fields-global-add-field')?.menuActions?.map((action) => action.label))
+      .toEqual(['Standort hinzufügen']);
+    expect(registeredUiState.topbarActions.find((action) => action.id === 'fields-global-add-location')?.hidden).toBe(true);
     expect(screen.queryByText('Tipp: Rechtsklick auf eine Tabellenzeile öffnet weitere Aktionen.')).not.toBeInTheDocument();
     expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
 
+    await user.click(addLocationLink);
+    expect(screen.getByRole('dialog', { name: 'Weiteren Standort hinzufügen' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Weiteren Standort hinzufügen' })).not.toBeInTheDocument();
+    });
     await user.click(screen.getByRole('button', { name: 'Parzelle hinzufügen' }));
 
     expect(await screen.findByText('Hierarchieansicht')).toBeInTheDocument();
     expect(screen.getByTestId('create-field-request')).toHaveTextContent('1');
   });
 
-  it('shows missing field guidance without an action when multiple locations exist', async () => {
+  it('shows location rows and missing field guidance without an action when multiple locations exist', async () => {
     locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hofstelle' }, { id: 2, name: 'Außenfeld' }] } });
     fieldListMock.mockResolvedValue({ data: { results: [] } });
     bedListMock.mockResolvedValue({ data: { results: [] } });
@@ -175,9 +197,12 @@ describe('FieldsBedsPage', () => {
     renderPage();
 
     expect(await screen.findByText('Parzelle fehlt')).toBeInTheDocument();
-    expect(screen.getByText('Füge beim gewünschten Standort über das ➕-Symbol eine Parzelle hinzu.')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Füge beim gewünschten Standort über das') && content.includes('Symbol oder das Kontextmenü eine Parzelle hinzu.'))).toBeInTheDocument();
+    expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
+    expect(registeredUiState.topbarActions.find((action) => action.id === 'fields-global-add-field')).toBeUndefined();
+    expect(registeredUiState.topbarActions.find((action) => action.id === 'fields-global-add-location')?.hidden).toBe(false);
+    expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
   });
 
   it('shows missing bed requirement when fields exist but no beds exist', async () => {
@@ -187,7 +212,7 @@ describe('FieldsBedsPage', () => {
 
     renderPage();
     expect(await screen.findByText('Es sind noch keine Beete vorhanden.')).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu.'))).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu. Es erscheint beim Darüberfahren.'))).toBeInTheDocument();
     expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
     expect(screen.queryByText('Noch keine Anbauflächen vorhanden')).not.toBeInTheDocument();
   });
@@ -207,7 +232,7 @@ describe('FieldsBedsPage', () => {
     renderPage();
 
     expect(await screen.findByText('Es sind noch keine Beete vorhanden.')).toBeInTheDocument();
-    expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu.'))).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Füge Beete über das') && content.includes('Symbol bei der jeweiligen Parzelle hinzu. Es erscheint beim Darüberfahren.'))).toBeInTheDocument();
     expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
   });
 });

@@ -26,6 +26,8 @@ import fieldsEN from './locales/en/fields.json';
 import bedsDE from './locales/de/beds.json';
 import hierarchyDE from './locales/de/hierarchy.json';
 import ganttChartDE from './locales/de/ganttChart.json';
+import yieldOverviewDE from './locales/de/yieldOverview.json';
+import yieldOverviewEN from './locales/en/yieldOverview.json';
 import suppliersDE from './locales/de/suppliers.json';
 import helpDE from './locales/de/help.json';
 import authDE from './locales/de/auth.json';
@@ -46,7 +48,7 @@ i18n
     debug: import.meta.env.DEV && import.meta.env.MODE !== 'test',
     
     // Namespaces for organizing translations
-    ns: ['common', 'navigation', 'home', 'dashboard', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart', 'suppliers', 'help', 'auth', 'account', 'projectInvitations'],
+    ns: ['common', 'navigation', 'home', 'dashboard', 'locations', 'cultures', 'plantingPlans', 'fields', 'beds', 'hierarchy', 'ganttChart', 'yieldOverview', 'suppliers', 'help', 'auth', 'account', 'projectInvitations'],
     defaultNS: 'common',
     
     // Translation resources
@@ -63,6 +65,7 @@ i18n
         beds: bedsDE,
         hierarchy: hierarchyDE,
         ganttChart: ganttChartDE,
+        yieldOverview: yieldOverviewDE,
         suppliers: suppliersDE,
         help: helpDE,
         auth: authDE,
@@ -76,6 +79,7 @@ i18n
         cultures: culturesEN,
         fields: fieldsEN,
         help: helpEN,
+        yieldOverview: yieldOverviewEN,
         projectInvitations: projectInvitationsEN,
       },
     },

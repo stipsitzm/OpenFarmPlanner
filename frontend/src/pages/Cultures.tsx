@@ -8,29 +8,17 @@
  * @returns The Cultures page component
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link as RouterLink, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
-import axios from 'axios';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
-import { bedAPI, cultureAPI, fieldAPI, publicCultureAPI, type Culture, type EnrichmentResult } from '../api/api';
+import { bedAPI, cultureAPI, fieldAPI, type Culture } from '../api/api';
 import type {
-  CultivationType,
   CultureHistoryEntry,
-  PublicCulture,
-  PublishPublicCultureDuplicateError,
 } from '../api/types';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
 import { PublicCultureLibraryDialog } from '../cultures/PublicCultureLibraryDialog';
-import {
-  normalizeCultivationType,
-  normalizeHarvestMethod,
-  normalizeNutrientDemand,
-  normalizeSeedingRequirementType,
-  normalizeSeedRateUnit,
-  normalizeSuggestedSeedPackages,
-} from '../cultures/enumNormalization';
 import {
   Alert,
   Box,
@@ -60,33 +48,18 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
-import {
-  buildAllCulturesExport,
-  buildAllCulturesFilename,
-  buildSingleCultureExport,
-  buildSingleCultureFilename,
-  downloadJsonFile,
-} from '../cultures/exportUtils';
 import { useCommandContextTag, useRegisterCommands, useRegisterCreateActions } from '../commands/useCommandContext';
 import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
-import { extractApiErrorMessage, isApiRequestCanceled } from '../api/errors';
 import {
-  buildImportSuccessMessage,
-  mapImportErrors,
   type SnackbarState,
 } from './culturesPageUtils';
 import {
-  formatBatchCostMessage,
-  formatCostMessage,
   formatEnrichmentWarning,
   formatSuggestionValue,
-  getDialogCostInfo,
   getEnrichmentFieldLabel,
-  sanitizeSeedRateByCultivationForMethods,
 } from './culturesEnrichmentUtils';
-import { analyzeCultureImportJson, readFileAsText } from './culturesImportUtils';
 import { createCulturesCommandSpecs } from './culturesCommandSpecs';
-import { canRunEnrichmentForCulture, cultureHasMissingEnrichmentFields } from './culturesAiUtils';
+import { canRunEnrichmentForCulture } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
 import {
   formatHistoryChangeValue,
@@ -100,9 +73,10 @@ import {
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { FEATURES } from '../config/features';
 import { useAuth } from '../auth/useAuth';
-import { dedupePublicCultures } from './publicCultureUtils';
-import { useCultureImportState } from './useCultureImportState';
-import { useEnrichmentLoadingProgress } from './useEnrichmentLoadingProgress';
+import { usePublicCultureLibrary } from './usePublicCultureLibrary';
+import { useEnrichmentFeature } from './useEnrichmentFeature';
+import { useCultureDelete } from './useCultureDelete';
+import { useCultureImportExport } from './useCultureImportExport';
 import { CulturesImportDialog } from './CulturesImportDialog';
 import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
@@ -113,17 +87,7 @@ import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import {
   DeleteUndoSnackbar,
-  DELETE_UNDO_DURATION_MS,
 } from '../components/data-grid';
-
-interface PendingCultureDeletion {
-  id: string;
-  cultureId: number;
-  culture: Culture;
-  culturesBeforeDelete: Culture[];
-  selectedCultureIdBeforeDelete?: number;
-  visible: boolean;
-}
 
 function Cultures() {
   const { t } = useTranslation(['cultures', 'common']);
@@ -142,45 +106,13 @@ function Cultures() {
   const [isCulturesLoading, setIsCulturesLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingCulture, setEditingCulture] = useState<Culture | undefined>(undefined);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const {
-    state: importState,
-    hasImportableEntries,
-    reset: resetImportState,
-    setErrorState: setImportErrorState,
-    setPreviewReadyState,
-    setUploading: setImportUploading,
-    setPartialFailure: setImportPartialFailure,
-    setSuccessState: setImportSuccessState,
-  } = useCultureImportState();
   const [snackbar, setSnackbar] = useState<SnackbarState>({ open: false, message: '', severity: 'success' });
-  const [confirmUpdates, setConfirmUpdates] = useState(false);
-  const [deleteDialogCulture, setDeleteDialogCulture] = useState<Culture | null>(null);
-  const [pendingCultureDeletions, setPendingCultureDeletions] = useState<PendingCultureDeletion[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [historyScope, setHistoryScope] = useState<HistoryScope>('culture');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [aiMenuAnchor, setAiMenuAnchor] = useState<null | HTMLElement>(null);
   const aiEnrichmentEnabled = FEATURES.AI_ENRICHMENT;
-  const [enrichmentDialogOpen, setEnrichmentDialogOpen] = useState(false);
-  const [enrichmentResult, setEnrichmentResult] = useState<EnrichmentResult | null>(null);
-  const [selectedSuggestionFields, setSelectedSuggestionFields] = useState<string[]>([]);
-  const [enrichmentLoading, setEnrichmentLoading] = useState(false);
-  const [enrichmentCostBanner, setEnrichmentCostBanner] = useState<string | null>(null);
-  const [enrichAllConfirmOpen, setEnrichAllConfirmOpen] = useState(false);
-  const enrichmentLoadingRef = useRef(false);
-  const enrichmentAbortControllerRef = useRef<AbortController | null>(null);
-  const pendingCultureDeleteTimersRef = useRef<Map<string, number>>(new Map());
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [publicLibraryOpen, setPublicLibraryOpen] = useState(false);
-  const [publicLibraryLoading, setPublicLibraryLoading] = useState(false);
-  const [publicLibraryError, setPublicLibraryError] = useState<string | null>(null);
-  const [publicCultures, setPublicCultures] = useState<PublicCulture[]>([]);
-  const [publicLibraryImportingId, setPublicLibraryImportingId] = useState<number | null>(null);
-  const [publicLibraryInitialSelectedId, setPublicLibraryInitialSelectedId] = useState<number | null>(null);
-  const [publicLibraryInitialQuery, setPublicLibraryInitialQuery] = useState('');
-  const [publishingCultureId, setPublishingCultureId] = useState<number | null>(null);
   const [hasFields, setHasFields] = useState(false);
   const [hasBeds, setHasBeds] = useState(false);
   const selectedCulture = cultures.find((culture) => culture.id === selectedCultureId);
@@ -189,19 +121,21 @@ function Cultures() {
     setSnackbar({ open: true, message, severity });
   }, []);
 
-
-
-  useEffect(() => {
-    enrichmentLoadingRef.current = enrichmentLoading;
-  }, [enrichmentLoading]);
-
   const {
-    activeStepIndex: enrichmentActiveStepIndex,
-    elapsedSeconds: enrichmentElapsedSeconds,
-    progressPercent: enrichmentProgressPercent,
-    steps: enrichmentLoadingSteps,
-  } = useEnrichmentLoadingProgress(enrichmentLoading);
-
+    deleteDialogCulture,
+    setDeleteDialogCulture,
+    pendingCultureDeletions,
+    handleDelete,
+    handleDeleteConfirm,
+    undoPendingCultureDeletion,
+    closePendingCultureDeletionSnackbar,
+  } = useCultureDelete({
+    cultures,
+    setCultures,
+    selectedCultureId,
+    updateSelectedCultureId,
+    showSnackbar,
+  });
 
   const replaceSavedCulture = useCallback((savedCulture: Culture): void => {
     setCultures((currentCultures) => {
@@ -250,6 +184,91 @@ function Cultures() {
       setIsCulturesLoading(false);
     }
   }, [showSnackbar, t]);
+
+  const {
+    importDialogOpen,
+    fileInputRef,
+    importState,
+    hasImportableEntries,
+    confirmUpdates,
+    setConfirmUpdates,
+    handleImportFileTrigger,
+    handleExportCurrentCulture,
+    handleExportAllCultures,
+    handleImportFileChange,
+    handleImportStart,
+    handleImportDialogClose,
+  } = useCultureImportExport({
+    selectedCulture,
+    fetchCultures,
+    showSnackbar,
+  });
+
+  const onPublicLibraryImportSuccess = useCallback(async (cultureId: number) => {
+    await fetchCultures();
+    updateSelectedCultureId(cultureId, 'internal');
+  }, [fetchCultures, updateSelectedCultureId]);
+
+  const onClearFormForLibrary = useCallback(() => {
+    setShowForm(false);
+    setEditingCulture(undefined);
+  }, []);
+
+  const {
+    publicLibraryOpen,
+    setPublicLibraryOpen,
+    publicLibraryLoading,
+    publicLibraryError,
+    publicCultures,
+    publicLibraryImportingId,
+    publicLibraryInitialSelectedId,
+    publicLibraryInitialQuery,
+    publishingCultureId,
+    isUpdatingOwnPublicCulture,
+    fetchPublicCultures,
+    handleOpenPublicLibrary,
+    handleViewPublicLibraryMatch,
+    handleImportPublicCulture,
+    handlePublishCurrentCulture,
+  } = usePublicCultureLibrary({
+    shouldShowProjectRequiredState,
+    selectedCulture,
+    onImportSuccess: onPublicLibraryImportSuccess,
+    onClearForm: onClearFormForLibrary,
+    showSnackbar,
+  });
+
+  const handleAiMenuClose = () => {
+    setAiMenuAnchor(null);
+  };
+
+  const {
+    enrichAllConfirmOpen,
+    setEnrichAllConfirmOpen,
+    enrichableCultureIds,
+    enrichmentLoading,
+    enrichmentActiveStepIndex,
+    enrichmentElapsedSeconds,
+    enrichmentProgressPercent,
+    enrichmentLoadingSteps,
+    enrichmentDialogOpen,
+    setEnrichmentDialogOpen,
+    enrichmentResult,
+    selectedSuggestionFields,
+    dialogCostInfo,
+    enrichmentCostBanner,
+    selectedCultureNeedsCompletion,
+    handleEnrichCurrent,
+    handleEnrichAll,
+    toggleSuggestionField,
+    handleApplySuggestions,
+  } = useEnrichmentFeature({
+    selectedCulture,
+    cultures,
+    onRefreshCultures: fetchCultures,
+    onCloseAiMenu: handleAiMenuClose,
+    showSnackbar,
+  });
 
   // Fetch cultures on mount
   useEffect(() => {
@@ -359,90 +378,12 @@ function Cultures() {
     );
   }, [handleEdit, location.pathname, location.search, navigate, selectedCulture, shouldShowProjectRequiredState, showForm]);
 
-  const handleDelete = (culture: Culture) => {
-    setDeleteDialogCulture(culture);
-  };
-
-  const removePendingCultureDeletion = useCallback((deletionId: string): void => {
-    setPendingCultureDeletions((currentDeletions) =>
-      currentDeletions.filter((deletion) => deletion.id !== deletionId),
-    );
-  }, []);
-
-  const restorePendingCultureDeletion = useCallback((deletion: PendingCultureDeletion): void => {
-    setCultures((currentCultures) => {
-      if (currentCultures.some((culture) => culture.id === deletion.cultureId)) {
-        return currentCultures;
-      }
-      const currentById = new Map<number, Culture>();
-      currentCultures.forEach((culture) => {
-        if (typeof culture.id === 'number') {
-          currentById.set(culture.id, culture);
-        }
-      });
-      currentById.set(deletion.cultureId, deletion.culture);
-      const restoredCultures = deletion.culturesBeforeDelete
-        .map((culture) => (typeof culture.id === 'number' ? currentById.get(culture.id) : culture))
-        .filter((culture): culture is Culture => Boolean(culture));
-      const restoredIds = new Set(restoredCultures.map((culture) => culture.id));
-      return [
-        ...restoredCultures,
-        ...currentCultures.filter((culture) => !restoredIds.has(culture.id)),
-      ];
-    });
-    if (deletion.selectedCultureIdBeforeDelete === deletion.cultureId) {
-      updateSelectedCultureId(deletion.cultureId, 'internal');
-    }
-  }, [updateSelectedCultureId]);
-
-  const expirePendingCultureDeletion = useCallback((deletion: PendingCultureDeletion): void => {
-    pendingCultureDeleteTimersRef.current.delete(deletion.id);
-    removePendingCultureDeletion(deletion.id);
-  }, [removePendingCultureDeletion]);
-
-  const undoPendingCultureDeletion = useCallback(async (deletionId: string): Promise<void> => {
-    const deletion = pendingCultureDeletions.find((pendingDeletion) => pendingDeletion.id === deletionId);
-    if (!deletion) {
-      return;
-    }
-
-    const timerId = pendingCultureDeleteTimersRef.current.get(deletionId);
-    if (timerId !== undefined) {
-      window.clearTimeout(timerId);
-      pendingCultureDeleteTimersRef.current.delete(deletionId);
-    }
-
-    try {
-      await cultureAPI.undelete(deletion.cultureId);
-      restorePendingCultureDeletion(deletion);
-      removePendingCultureDeletion(deletionId);
-    } catch (error) {
-      console.error('Error restoring culture:', error);
-      showSnackbar(extractApiErrorMessage(error, t, t('messages.restoreDeleteError')), 'error');
-    }
-  }, [pendingCultureDeletions, removePendingCultureDeletion, restorePendingCultureDeletion, showSnackbar, t]);
-
-  const closePendingCultureDeletionSnackbar = useCallback((deletionId: string): void => {
-    setPendingCultureDeletions((currentDeletions) =>
-      currentDeletions.map((deletion) =>
-        deletion.id === deletionId ? { ...deletion, visible: false } : deletion,
-      ),
-    );
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      pendingCultureDeleteTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
-      pendingCultureDeleteTimersRef.current.clear();
-    };
-  }, []);
-
   const handleOpenHistory = async () => {
     if (!selectedCulture?.id) {
       return;
     }
     const response = await cultureAPI.history(selectedCulture.id);
-    if (response.data.length <= 1) {
+    if (response.data.length === 0) {
       showSnackbar(t('history.emptyState.title'), 'info');
       return;
     }
@@ -452,75 +393,23 @@ function Cultures() {
   };
 
   const handleRestoreVersion = async (historyId: number) => {
-    if (historyScope === 'project') {
-      await cultureAPI.projectRestore(historyId);
-      await fetchCultures();
-      setHistoryOpen(false);
-      return;
-    }
-
-    if (historyScope === 'global') {
-      await cultureAPI.globalRestore(historyId);
-      await fetchCultures();
-      setHistoryOpen(false);
-      return;
-    }
-
-    if (!selectedCulture?.id) return;
-    await cultureAPI.restore(selectedCulture.id, historyId);
-    await fetchCultures();
-    setHistoryOpen(false);
-  };
-
-
-  const handleDeleteConfirm = async (): Promise<void> => {
-    if (!deleteDialogCulture?.id) {
-      return;
-    }
-
-    const cultureId = deleteDialogCulture.id;
-    if (pendingCultureDeletions.some((deletion) => deletion.cultureId === cultureId)) {
-      setDeleteDialogCulture(null);
-      return;
-    }
-
-    const deletionId = `culture-${cultureId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const currentCultures = cultures;
-    const deletedCultureIndex = currentCultures.findIndex((culture) => culture.id === cultureId);
-    const pendingDeletion: PendingCultureDeletion = {
-      id: deletionId,
-      cultureId,
-      culture: deleteDialogCulture,
-      culturesBeforeDelete: currentCultures,
-      selectedCultureIdBeforeDelete: selectedCultureId,
-      visible: true,
-    };
-
-    setDeleteDialogCulture(null);
-
     try {
-      await cultureAPI.delete(cultureId);
-    } catch (error) {
-      console.error('Error deleting culture:', error);
-      showSnackbar(extractApiErrorMessage(error, t, t('messages.deleteError')), 'error');
-      return;
+      if (historyScope === 'project') {
+        await cultureAPI.projectRestore(historyId);
+      } else if (historyScope === 'global') {
+        await cultureAPI.globalRestore(historyId);
+      } else {
+        if (!selectedCulture?.id) return;
+        await cultureAPI.restore(selectedCulture.id, historyId);
+      }
+      await fetchCultures();
+      setHistoryOpen(false);
+      showSnackbar(t('messages.restoreSuccess'), 'success');
+    } catch {
+      showSnackbar(t('messages.restoreError'), 'error');
     }
-
-    setCultures((currentItems) => currentItems.filter((culture) => culture.id !== cultureId));
-    if (selectedCultureId === cultureId) {
-      const nextSelectedCulture =
-        currentCultures[deletedCultureIndex + 1] ??
-        currentCultures[deletedCultureIndex - 1] ??
-        null;
-      updateSelectedCultureId(nextSelectedCulture?.id, 'internal');
-    }
-    setPendingCultureDeletions((currentDeletions) => [...currentDeletions, pendingDeletion]);
-
-    const timerId = window.setTimeout(() => {
-      expirePendingCultureDeletion(pendingDeletion);
-    }, DELETE_UNDO_DURATION_MS);
-    pendingCultureDeleteTimersRef.current.set(deletionId, timerId);
   };
+
 
   const handleSave = async (culture: Culture) => {
     try {
@@ -582,235 +471,6 @@ function Cultures() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const fetchPublicCultures = useCallback(async (
-    query = '',
-    exactMatch?: { name: string; variety?: string },
-  ) => {
-    try {
-      setPublicLibraryLoading(true);
-      setPublicLibraryError(null);
-      const params = exactMatch
-        ? { name: exactMatch.name, variety: exactMatch.variety || '' }
-        : query ? { q: query } : undefined;
-      const response = await publicCultureAPI.list(params);
-      setPublicCultures(dedupePublicCultures(response.data.results));
-    } catch (error) {
-      console.error('Error fetching public cultures:', error);
-      setPublicLibraryError(t('library.loadError'));
-    } finally {
-      setPublicLibraryLoading(false);
-    }
-  }, [t]);
-
-  const handleOpenPublicLibrary = useCallback(async () => {
-    setPublicLibraryInitialSelectedId(null);
-    setPublicLibraryInitialQuery('');
-    setPublicLibraryOpen(true);
-    await fetchPublicCultures();
-  }, [fetchPublicCultures]);
-
-  const handleViewPublicLibraryMatch = useCallback(async (match: Pick<PublicCulture, 'id' | 'name' | 'variety'>) => {
-    setShowForm(false);
-    setEditingCulture(undefined);
-    setPublicLibraryInitialSelectedId(match.id);
-    setPublicLibraryInitialQuery(`${match.name} ${match.variety || ''}`.trim());
-    setPublicLibraryOpen(true);
-    await fetchPublicCultures('', { name: match.name, variety: match.variety });
-  }, [fetchPublicCultures]);
-
-  useEffect(() => {
-    if (shouldShowProjectRequiredState || publicLibraryOpen) {
-      return;
-    }
-    const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get('library') !== 'true') {
-      return;
-    }
-
-    void handleOpenPublicLibrary();
-    searchParams.delete('library');
-    const nextSearch = searchParams.toString();
-    navigate(
-      {
-        pathname: location.pathname,
-        search: nextSearch ? `?${nextSearch}` : '',
-      },
-      { replace: true },
-    );
-  }, [handleOpenPublicLibrary, location.pathname, location.search, navigate, publicLibraryOpen, shouldShowProjectRequiredState]);
-
-  const handleImportPublicCulture = async (publicCulture: PublicCulture) => {
-    try {
-      setPublicLibraryImportingId(publicCulture.id);
-      const response = await publicCultureAPI.importToProject(publicCulture.id);
-      await fetchCultures();
-      updateSelectedCultureId(response.data.id, 'internal');
-      setPublicLibraryOpen(false);
-      showSnackbar(t('library.importSuccess', { name: publicCulture.name }), 'success');
-    } catch (error) {
-      console.error('Error importing public culture:', error);
-      setPublicLibraryError(extractApiErrorMessage(error, t, t('library.importError')));
-    } finally {
-      setPublicLibraryImportingId(null);
-    }
-  };
-
-  const handlePublishCurrentCulture = async () => {
-    if (!selectedCulture?.id) {
-      return;
-    }
-
-    try {
-      setPublishingCultureId(selectedCulture.id);
-      const response = await cultureAPI.publishPublic(selectedCulture.id);
-      if (response.data.operation === 'updated') {
-        showSnackbar(t('library.updateSuccess', { name: selectedCulture.name }), 'success');
-      } else {
-        showSnackbar(t('library.publishSuccess', { name: selectedCulture.name }), 'success');
-      }
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 409) {
-        const duplicateError = error.response.data as PublishPublicCultureDuplicateError | undefined;
-        const duplicateNames = (duplicateError?.duplicates || [])
-          .map((entry) => entry.variety ? `${entry.name} (${entry.variety})` : entry.name)
-          .join(', ');
-        if (duplicateNames) {
-          showSnackbar(t('library.publishDuplicateErrorWithCandidates', { duplicates: duplicateNames }), 'info');
-        } else {
-          showSnackbar(t('library.publishDuplicateError'), 'info');
-        }
-        return;
-      }
-      console.error('Error publishing culture:', error);
-      showSnackbar(extractApiErrorMessage(error, t, t('library.publishError')), 'error');
-    } finally {
-      setPublishingCultureId(null);
-    }
-  };
-
-  const handleImportFileTrigger = useCallback(() => {
-    resetImportState();
-    fileInputRef.current?.click();
-  }, [resetImportState]);
-
-  const handleExportCurrentCulture = useCallback(() => {
-    if (!selectedCulture) {
-      return;
-    }
-
-    const exportPayload = buildSingleCultureExport(selectedCulture);
-    const filename = buildSingleCultureFilename(selectedCulture);
-    downloadJsonFile(exportPayload, filename);
-    showSnackbar(t('messages.exportSuccess'), 'success');
-  }, [selectedCulture, showSnackbar, t]);
-
-  const handleExportAllCultures = useCallback(async () => {
-    try {
-      const allCultures: Culture[] = [];
-      let nextUrl: string | null = '/cultures/';
-
-      while (nextUrl) {
-        const response = await cultureAPI.list(nextUrl);
-        allCultures.push(...response.data.results);
-        nextUrl = response.data.next;
-      }
-
-      const exportPayload = buildAllCulturesExport(allCultures);
-      const filename = buildAllCulturesFilename();
-      downloadJsonFile(exportPayload, filename);
-      showSnackbar(t('messages.exportSuccess'), 'success');
-    } catch (error) {
-      console.error('Error exporting cultures:', error);
-      showSnackbar(t('messages.fetchError'), 'error');
-    }
-  }, [showSnackbar, t]);
-
-  const handleImportFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (!file) {
-      return;
-    }
-
-    try {
-      const jsonString = await readFileAsText(file);
-      const importAnalysis = analyzeCultureImportJson(jsonString, t);
-
-      if (importAnalysis.status === 'error') {
-        setImportErrorState({
-          error: t(importAnalysis.errorKey),
-          previewCount: importAnalysis.originalCount,
-          validCount: 0,
-          invalidEntries: importAnalysis.invalidEntries,
-        });
-        setImportDialogOpen(true);
-        return;
-      }
-
-      setImportUploading();
-      try {
-        const response = await cultureAPI.importPreview(importAnalysis.validEntries);
-
-        setPreviewReadyState({
-          previewCount: importAnalysis.originalCount,
-          validCount: importAnalysis.validEntries.length,
-          invalidEntries: importAnalysis.invalidEntries,
-          payload: importAnalysis.validEntries,
-          previewResults: response.data.results,
-        });
-        setImportDialogOpen(true);
-      } catch (error) {
-        console.error('Error calling preview endpoint:', error);
-        setImportErrorState({ error: t('import.errors.network') });
-        setImportDialogOpen(true);
-      }
-    } catch (error) {
-      console.error('Error reading JSON file:', error);
-      setImportErrorState({ error: t('import.errors.parse') });
-      setImportDialogOpen(true);
-    }
-  };
-
-  const handleImportStart = async () => {
-    if (!hasImportableEntries || importState.status === 'uploading') {
-      return;
-    }
-
-    setImportUploading();
-
-    try {
-      const response = await cultureAPI.importApply({
-        items: importState.payload,
-        confirm_updates: confirmUpdates,
-      });
-
-      const { created_count, updated_count, skipped_count, errors } = response.data;
-      
-      if (errors.length > 0) {
-        setImportPartialFailure({
-          failedEntries: mapImportErrors(errors, importState.payload),
-          error: t('import.errors.someFailures', {
-            failed: errors.length,
-          }),
-        });
-        return;
-      }
-
-      const successMessage = buildImportSuccessMessage(created_count, updated_count, skipped_count, t);
-
-      setImportSuccessState(successMessage || t('import.success'));
-      await fetchCultures();
-    } catch (error) {
-      console.error('Error importing cultures:', error);
-      setImportErrorState({ error: t('import.errors.network') });
-    }
-  };
-
-  const handleImportDialogClose = () => {
-    setImportDialogOpen(false);
-  };
-
   const firstMissingPlanRequirement = getFirstMissingCultivationPlanRequirement({
     hasFields,
     hasBeds,
@@ -820,9 +480,6 @@ function Cultures() {
     ? getProjectSetupAction(firstMissingPlanRequirement)
     : null;
   const canCreatePlantingPlan = Boolean(selectedCulture) && firstMissingPlanRequirement === null;
-  const isUpdatingOwnPublicCulture = Boolean(selectedCulture?.owned_public_culture_id);
-  const dialogCostInfo = getDialogCostInfo(enrichmentResult);
-
   useCommandContextTag('cultures');
 
   const goToRelativeCulture = useCallback((direction: 'next' | 'previous') => {
@@ -845,102 +502,6 @@ function Cultures() {
   const handleAiMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAiMenuAnchor(event.currentTarget);
   };
-
-  const handleAiMenuClose = () => {
-    setAiMenuAnchor(null);
-  };
-
-
-  const openEnrichmentDialog = (result: EnrichmentResult) => {
-    setEnrichmentResult(result);
-    setSelectedSuggestionFields(Object.keys(result.suggested_fields || {}));
-    setEnrichmentDialogOpen(true);
-  };
-
-  const enrichableCultureIds = useMemo(
-    () => cultures.filter((culture) => culture.id && canRunEnrichmentForCulture(culture) && cultureHasMissingEnrichmentFields(culture)).map((culture) => culture.id as number),
-    [cultures],
-  );
-
-
-
-  const selectedCultureNeedsCompletion = useMemo(
-    () => (selectedCulture ? cultureHasMissingEnrichmentFields(selectedCulture) : false),
-    [selectedCulture],
-  );
-
-  const handleCancelEnrichment = useCallback(() => {
-    if (!enrichmentLoadingRef.current) {
-      return;
-    }
-    enrichmentAbortControllerRef.current?.abort();
-    enrichmentAbortControllerRef.current = null;
-    setEnrichmentLoading(false);
-    showSnackbar(t('ai.cancelled'), 'success');
-  }, [showSnackbar, t]);
-
-  const handleEnrichCurrent = async (mode: 'complete' | 'reresearch') => {
-    if (!selectedCulture?.id) return;
-    const controller = new AbortController();
-    enrichmentAbortControllerRef.current = controller;
-    setEnrichmentLoading(true);
-    handleAiMenuClose();
-    try {
-      const response = await cultureAPI.enrich(selectedCulture.id, mode, controller.signal);
-      openEnrichmentDialog(response.data);
-      const costMessage = formatCostMessage(response.data.costEstimate, response.data.usage);
-      setEnrichmentCostBanner(costMessage);
-      showSnackbar(costMessage, 'info');
-    } catch (error) {
-      if (isApiRequestCanceled(error)) {
-        return;
-      }
-      console.error('Error enriching culture:', error);
-      showSnackbar(extractApiErrorMessage(error, t, t('ai.runError')), 'error');
-    } finally {
-      if (enrichmentAbortControllerRef.current === controller) {
-        enrichmentAbortControllerRef.current = null;
-      }
-      setEnrichmentLoading(false);
-    }
-  };
-
-  const handleEnrichAll = async () => {
-    if (enrichableCultureIds.length === 0) {
-      setEnrichAllConfirmOpen(false);
-      showSnackbar(t('ai.batchNoMissing'), 'success');
-      return;
-    }
-
-    const controller = new AbortController();
-    enrichmentAbortControllerRef.current = controller;
-    setEnrichmentLoading(true);
-    setEnrichAllConfirmOpen(false);
-    handleAiMenuClose();
-    try {
-      const response = await cultureAPI.enrichBatch({ culture_ids: enrichableCultureIds, limit: enrichableCultureIds.length }, controller.signal);
-      showSnackbar(t('ai.batchDone', { ok: response.data.succeeded, failed: response.data.failed }), 'success');
-      const costMessage = formatBatchCostMessage(response.data);
-      setEnrichmentCostBanner(costMessage);
-      showSnackbar(costMessage, 'info');
-      const first = response.data.items.find((item) => item.status === 'completed' && item.result)?.result;
-      if (first) {
-        openEnrichmentDialog(first);
-      }
-    } catch (error) {
-      if (isApiRequestCanceled(error)) {
-        return;
-      }
-      console.error('Error enriching all cultures:', error);
-      showSnackbar(extractApiErrorMessage(error, t, t('ai.runError')), 'error');
-    } finally {
-      if (enrichmentAbortControllerRef.current === controller) {
-        enrichmentAbortControllerRef.current = null;
-      }
-      setEnrichmentLoading(false);
-    }
-  };
-
 
   const contextActions = useMemo<TopbarContextAction[]>(() => ([
     {
@@ -1022,159 +583,6 @@ function Cultures() {
 
   useRegisterCommands('cultures-page', commandSpecs);
 
-
-  const toggleSuggestionField = (field: string) => {
-    setSelectedSuggestionFields((prev) => prev.includes(field) ? prev.filter((item) => item !== field) : [...prev, field]);
-  };
-
-  const handleApplySuggestions = async () => {
-    if (!enrichmentResult?.culture_id || !selectedSuggestionFields.length) {
-      setEnrichmentDialogOpen(false);
-      return;
-    }
-
-    const targetCulture = cultures.find((item) => item.id === enrichmentResult.culture_id);
-    if (!targetCulture) return;
-
-    const patch: Record<string, unknown> = {};
-    selectedSuggestionFields.forEach((field) => {
-      const suggestionValue = enrichmentResult.suggested_fields[field]?.value;
-      if (field === 'seed_packages') {
-        patch[field] = normalizeSuggestedSeedPackages(suggestionValue);
-        return;
-      }
-      if (field === 'seed_rate_direct_unit' || field === 'seed_rate_transplant_unit') {
-        patch[field] = normalizeSeedRateUnit(suggestionValue);
-        return;
-      }
-      if (field === 'allowed_sowing_methods') {
-        const methods = Array.isArray(suggestionValue)
-          ? suggestionValue.map((item) => normalizeCultivationType(item)).filter(Boolean)
-          : [];
-        patch.cultivation_types = methods;
-        if (methods.length > 0) {
-          patch.cultivation_type = methods[0];
-        }
-        return;
-      }
-      if (field === 'seed_rate_by_cultivation' && suggestionValue && typeof suggestionValue === 'object') {
-        const rawByCultivation = suggestionValue as Record<string, { value?: unknown; unit?: unknown }>;
-        const sanitizedByCultivation: Record<string, { value: number; unit: string }> = {};
-        const directValue = Number(rawByCultivation.direct_sowing?.value);
-        const directUnit = normalizeSeedRateUnit(rawByCultivation.direct_sowing?.unit);
-        if (Number.isFinite(directValue) && directValue > 0 && directUnit && ['g_per_m2', 'g_per_lfm', 'seeds_per_m2', 'seeds_per_lfm', 'seeds_per_plant'].includes(directUnit)) {
-          sanitizedByCultivation.direct_sowing = { value: directValue, unit: directUnit };
-        }
-        const preValue = Number(rawByCultivation.pre_cultivation?.value);
-        const preUnit = normalizeSeedRateUnit(rawByCultivation.pre_cultivation?.unit);
-        if (Number.isFinite(preValue) && preValue > 0 && preUnit && ['g_per_m2', 'g_per_lfm', 'seeds_per_m2', 'seeds_per_lfm', 'seeds_per_plant'].includes(preUnit)) {
-          sanitizedByCultivation.pre_cultivation = { value: preValue, unit: preUnit };
-        }
-        if (Object.keys(sanitizedByCultivation).length > 0) {
-          patch.seed_rate_by_cultivation = sanitizedByCultivation;
-        }
-        return;
-      }
-      if (field === 'seed_rate_direct_value' || field === 'seed_rate_direct_unit' || field === 'seed_rate_transplant_value' || field === 'seed_rate_transplant_unit') {
-        const directValue = field === 'seed_rate_direct_value'
-          ? Number(suggestionValue)
-          : Number(enrichmentResult.suggested_fields.seed_rate_direct_value?.value);
-        const directUnit = field === 'seed_rate_direct_unit'
-          ? normalizeSeedRateUnit(suggestionValue)
-          : normalizeSeedRateUnit(enrichmentResult.suggested_fields.seed_rate_direct_unit?.value);
-        const transplantValue = field === 'seed_rate_transplant_value'
-          ? Number(suggestionValue)
-          : Number(enrichmentResult.suggested_fields.seed_rate_transplant_value?.value);
-        const transplantUnit = field === 'seed_rate_transplant_unit'
-          ? normalizeSeedRateUnit(suggestionValue)
-          : normalizeSeedRateUnit(enrichmentResult.suggested_fields.seed_rate_transplant_unit?.value);
-
-        const byCultivation: Record<string, { value: number; unit: string }> = {};
-        if (Number.isFinite(directValue) && directValue > 0 && directUnit) {
-          byCultivation.direct_sowing = { value: directValue, unit: directUnit };
-        }
-        if (Number.isFinite(transplantValue) && transplantValue > 0 && transplantUnit && ['g_per_m2', 'g_per_lfm', 'seeds_per_m2', 'seeds_per_lfm', 'seeds_per_plant'].includes(transplantUnit)) {
-          byCultivation.pre_cultivation = { value: transplantValue, unit: transplantUnit };
-        }
-        if (Object.keys(byCultivation).length > 0) {
-          patch.seed_rate_by_cultivation = byCultivation;
-        }
-        return;
-      }
-      if (field === 'harvest_method') {
-        patch[field] = normalizeHarvestMethod(suggestionValue);
-        return;
-      }
-      if (field === 'nutrient_demand') {
-        patch[field] = normalizeNutrientDemand(suggestionValue);
-        return;
-      }
-      if (field === 'cultivation_type') {
-        patch[field] = normalizeCultivationType(suggestionValue);
-        patch.cultivation_types = [normalizeCultivationType(suggestionValue)].filter(Boolean);
-        return;
-      }
-      patch[field] = suggestionValue;
-    });
-
-    const nextCultivationTypesRaw = Array.isArray(patch.cultivation_types)
-      ? patch.cultivation_types
-      : (targetCulture.cultivation_types && targetCulture.cultivation_types.length > 0
-        ? targetCulture.cultivation_types
-        : (targetCulture.cultivation_type ? [normalizeCultivationType(targetCulture.cultivation_type)] : ['pre_cultivation']));
-    const nextCultivationTypes = nextCultivationTypesRaw
-      .map((method) => normalizeCultivationType(method))
-      .filter((method): method is CultivationType => method === 'pre_cultivation' || method === 'direct_sowing');
-
-    if (patch.seed_rate_by_cultivation) {
-      const sanitizedByMethod = sanitizeSeedRateByCultivationForMethods(patch.seed_rate_by_cultivation, nextCultivationTypes);
-      if (sanitizedByMethod && Object.keys(sanitizedByMethod).length > 0) {
-        patch.seed_rate_by_cultivation = sanitizedByMethod;
-      } else {
-        delete patch.seed_rate_by_cultivation;
-      }
-    }
-
-    try {
-      await cultureAPI.update(targetCulture.id!, {
-        ...targetCulture,
-        seed_rate_unit: normalizeSeedRateUnit(targetCulture.seed_rate_unit),
-        harvest_method: normalizeHarvestMethod(targetCulture.harvest_method),
-        nutrient_demand: normalizeNutrientDemand(targetCulture.nutrient_demand),
-        cultivation_type: normalizeCultivationType(targetCulture.cultivation_type),
-        cultivation_types: (targetCulture.cultivation_types && targetCulture.cultivation_types.length > 0)
-          ? targetCulture.cultivation_types
-          : (targetCulture.cultivation_type ? [normalizeCultivationType(targetCulture.cultivation_type)] : ['pre_cultivation']),
-        seed_rate_by_cultivation: targetCulture.seed_rate_by_cultivation ?? null,
-        seeding_requirement_type: normalizeSeedingRequirementType(targetCulture.seeding_requirement_type),
-        ...patch,
-      } as Culture);
-      await fetchCultures();
-      showSnackbar(t('ai.applySuccess'), 'success');
-      setEnrichmentDialogOpen(false);
-      window.location.reload();
-    } catch (error) {
-      console.error('Error applying enrichment suggestions:', error);
-      showSnackbar(extractApiErrorMessage(error, t, t('messages.updateError')), 'error');
-    }
-  };
-  useEffect(() => {
-    const onEscapeCancel = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') {
-        return;
-      }
-      if (!enrichmentLoadingRef.current) {
-        return;
-      }
-      event.preventDefault();
-      handleCancelEnrichment();
-    };
-
-    window.addEventListener('keydown', onEscapeCancel, { capture: true });
-    return () => window.removeEventListener('keydown', onEscapeCancel, { capture: true });
-  }, [handleCancelEnrichment]);
-
- 
 
 
 
@@ -1341,7 +749,7 @@ function Cultures() {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-          <Button onClick={() => setDeleteDialogCulture(null)}>
+          <Button variant="outlined" onClick={() => setDeleteDialogCulture(null)}>
             {t('common:actions.cancel')}
           </Button>
           <Button color="error" variant="contained" onClick={handleDeleteConfirm}>
@@ -1472,6 +880,7 @@ function Cultures() {
               </Typography>
             </Box>
           ) : (
+            <>
             <List>
               {historyItems.map((item, index) => {
                 const isCurrentVersion = isCurrentHistoryEntry(item, index);
@@ -1633,6 +1042,12 @@ function Cultures() {
                 );
               })}
             </List>
+            {historyItems.length === 1 && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, pt: 1, borderTop: 1, borderColor: 'divider' }}>
+                {t('history.emptyState.onlyCurrentVersion')}
+              </Typography>
+            )}
+            </>
           )}
         </DialogContent>
         <DialogActions>
@@ -1650,7 +1065,7 @@ function Cultures() {
               <ListItemText primary={t('shortcuts.openShortcuts')} secondary="?" />
             </ListItem>
             <ListItem>
-              <ListItemText primary={t('shortcuts.commandPalette')} secondary="Ctrl+K" />
+              <ListItemText primary={t('shortcuts.commandPalette')} secondary="Alt+K" />
             </ListItem>
             <ListItem>
               <ListItemText primary={t('shortcuts.closeDialog')} secondary="Esc" />

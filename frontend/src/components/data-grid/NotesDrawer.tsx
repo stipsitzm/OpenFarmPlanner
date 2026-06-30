@@ -334,7 +334,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, has
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'Enter' || event.key === 's')) {
       event.preventDefault();
       void handleSaveClick();
       return;
@@ -355,7 +355,13 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, has
   };
 
   return (
-    <Drawer anchor="right" open={open} onClose={requestClose} PaperProps={{ sx: { width: { xs: '100%', sm: '680px' }, maxWidth: '95vw' } }}>
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={requestClose}
+      PaperProps={{ sx: { width: { xs: '100%', sm: '680px' }, maxWidth: '95vw' } }}
+      SlideProps={{ onEntered: () => { textFieldRef.current?.focus(); } }}
+    >
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 3 }} onKeyDown={handleKeyDown}>
         <Typography variant="h6" gutterBottom>{title}</Typography>
         <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)} sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
@@ -511,7 +517,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, has
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmDiscardOpen(false)}>
+          <Button autoFocus color="success" variant="contained" onClick={() => setConfirmDiscardOpen(false)}>
             {t('notesDrawer.unsavedDialog.continueEditing')}
           </Button>
           <Button

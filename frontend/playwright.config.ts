@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const frontendPort = 4173;
+const frontendPort = process.env.FRONTEND_PORT ? parseInt(process.env.FRONTEND_PORT) : 4173;
 const backendPort = 8000;
 const e2eToken = process.env.E2E_TEST_TOKEN || 'openfarmplanner-e2e-token';
 
@@ -13,9 +13,9 @@ export default defineConfig({
     timeout: 10_000,
   },
   use: {
-    baseURL: `http://127.0.0.1:${frontendPort}`,
-    trace: 'on-first-retry',
-    video: 'retain-on-failure',
+    baseURL: `http://localhost:${frontendPort}`,
+    trace: 'off',
+    video: 'off',
   },
   webServer: [
     {
@@ -48,7 +48,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
   ],
 });

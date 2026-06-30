@@ -34,8 +34,10 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { cultureAPI, publicCultureAPI, supplierAPI } from '../api/api';
+import { useActiveSaveShortcut } from '../hooks/useActiveSaveShortcut';
 import { useDialogKeyboardScroll } from '../hooks/useDialogKeyboardScroll';
 import { useNavigate } from 'react-router-dom';
+import { hasEffectiveCultureFormChanges } from './cultureFormChangeDetection';
 import { validateCulture } from './validation';
 import { normalizeSeedRateUnit } from './enumNormalization';
 import { BasicInfoSection } from './sections/BasicInfoSection';
@@ -46,6 +48,7 @@ import { SeedingSection } from './sections/SeedingSection';
 import { ColorSection } from './sections/ColorSection';
 import { NotesSection } from './sections/NotesSection';
 import { hasSupplierDataRowMissingSupplier, hasSupplierInformation } from './supplierDataRows';
+import { stripCitationMarkers } from '../components/data-grid/markdown';
 
 interface CultureFormProps {
   culture?: Culture;
@@ -162,11 +165,14 @@ const buildInitialFormData = (culture?: Culture): Partial<Culture> => {
     seed_rate_pre_cultivation_unit: normalizeSeedRateUnit(culture.seed_rate_pre_cultivation_unit),
   };
 
+  const normalizedNotes = culture.notes ? stripCitationMarkers(culture.notes) : culture.notes;
+
   if (culture.supplier || !culture.seed_supplier) {
     return {
       ...culture,
       ...normalizedSpacingValues,
       ...normalizedSeedRateUnits,
+      notes: normalizedNotes,
     };
   }
 
@@ -174,6 +180,7 @@ const buildInitialFormData = (culture?: Culture): Partial<Culture> => {
     ...culture,
     ...normalizedSpacingValues,
     ...normalizedSeedRateUnits,
+    notes: normalizedNotes,
     supplier: {
       name: culture.seed_supplier,
       allowed_domains: [],
@@ -221,6 +228,9 @@ export function CultureForm({
   const [isDirty, setIsDirty] = useState(false);
   const [isValid, setIsValid] = useState(true);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const isSavingRef = useRef(false);
+  const userInteractedRef = useRef(false);
   const dialogContentRef = useDialogKeyboardScroll(true);
   const formRef = useRef<HTMLFormElement | null>(null);
   const supplierOptionsRef = useRef<Supplier[]>([]);
@@ -228,6 +238,15 @@ export function CultureForm({
   const publicLibraryMatchSequenceRef = useRef(0);
   const currentIdentityKeyRef = useRef<string | null>(null);
   const publicLibraryMatchCacheRef = useRef<Map<string, PublicCultureMatchResponse['culture']>>(new Map());
+
+  // Move focus to the first input after MUI's FocusTrap has settled
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      const firstInput = formRef.current?.querySelector<HTMLInputElement>('input:not([type="hidden"])');
+      firstInput?.focus();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   const loadSuppliers = useCallback(async () => {
     try {
@@ -284,6 +303,8 @@ export function CultureForm({
     setIsValid(true);
     setHasSubmitted(false);
     setSaveError('');
+    isSavingRef.current = false;
+    userInteractedRef.current = false;
   }, [culture]);
 
   useEffect(() => {
@@ -433,6 +454,7 @@ export function CultureForm({
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
       setIsDirty(true);
+      userInteractedRef.current = true;
       setSaveError('');
       if (name === 'name' || name === 'variety') {
         setDuplicateErrorKey('');
@@ -492,6 +514,11 @@ export function CultureForm({
   // Handle manual save (for Save button)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSavingRef.current) return;
+    if (isEdit && !hasEffectiveCultureFormChanges(buildInitialFormData(culture), formData)) {
+      onCancel();
+      return;
+    }
     setHasSubmitted(true);
     if (!validateAndSet(formData, 'submit')) return;
     if (hasSupplierDataRowMissingSupplier(formData.supplier_data)) {
@@ -499,6 +526,7 @@ export function CultureForm({
       return;
     }
     if (duplicateErrorKey || isDuplicateChecking) return;
+    isSavingRef.current = true;
     setIsSaving(true);
     try {
       await saveCulture(formData);
@@ -508,6 +536,7 @@ export function CultureForm({
     } catch (error) {
       setSaveError(extractApiErrorMessage(error, t, t('messages.updateError')));
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   };
@@ -516,6 +545,35 @@ export function CultureForm({
   const displayErrors = duplicateErrorKey
     ? { ...errors, variety: errors.variety || t(duplicateErrorKey) }
     : errors;
+  const isSaveDisabled = isSaving || !isValid || Boolean(duplicateErrorKey) || isDuplicateChecking;
+
+  const getActiveSaveShortcutElement = useCallback((): HTMLElement | null => {
+    const formElement = formRef.current;
+    const dialogElement = formElement?.closest('[role="dialog"]') as HTMLElement | null;
+    if (!formElement || !dialogElement || showDiscardConfirm) {
+      return null;
+    }
+
+    const openDialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"]'))
+      .filter((element) => element.getAttribute('aria-hidden') !== 'true');
+    const topDialog = openDialogs.at(-1);
+    if (topDialog && topDialog !== dialogElement) {
+      return null;
+    }
+
+    return formElement;
+  }, [showDiscardConfirm]);
+
+  const submitActiveForm = useCallback((): void => {
+    formRef.current?.requestSubmit();
+  }, []);
+
+  useActiveSaveShortcut({
+    enabled: true,
+    disabled: isSaveDisabled,
+    getActiveElement: getActiveSaveShortcutElement,
+    onSave: submitActiveForm,
+  });
 
   const updateSupplierRow = (index: number, patch: Record<string, unknown>) => {
     const nextRows = supplierRows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row));
@@ -545,7 +603,11 @@ export function CultureForm({
       open
       onClose={(_event, reason) => {
         if (reason === 'backdropClick') return;
-        onCancel();
+        if (isDirty && userInteractedRef.current) {
+          setShowDiscardConfirm(true);
+        } else {
+          onCancel();
+        }
       }}
       aria-labelledby="culture-form-dialog-title"
       maxWidth="md"
@@ -749,20 +811,26 @@ export function CultureForm({
               {saveError}
             </Alert>
           ) : null}
-          {isDirty && (
+          {isDirty && userInteractedRef.current && (
             <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
               {isValid && !duplicateErrorKey
                 ? t('messages.unsavedChanges')
                 : t('messages.fixErrors')}
             </Typography>
           )}
-          <Button onClick={onCancel} disabled={isSaving}>
+          <Button variant="outlined" onClick={() => {
+            if (isDirty && userInteractedRef.current) {
+              setShowDiscardConfirm(true);
+            } else {
+              onCancel();
+            }
+          }} disabled={isSaving}>
             {t('form.cancel')}
           </Button>
           <Button
             type="submit"
             variant="contained"
-            disabled={isSaving || !isValid || Boolean(duplicateErrorKey) || isDuplicateChecking}
+            disabled={isSaveDisabled}
           >
             {isSaving
               ? t('messages.saving', { defaultValue: 'Speichern...' })
@@ -770,6 +838,20 @@ export function CultureForm({
           </Button>
         </DialogActions>
       </form>
+      <Dialog open={showDiscardConfirm} onClose={() => setShowDiscardConfirm(false)} maxWidth="xs">
+        <DialogTitle>{t('form.discardChangesTitle')}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            {t('form.discardChangesMessage')}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button autoFocus onClick={() => setShowDiscardConfirm(false)}>{t('form.discardCancel')}</Button>
+          <Button variant="contained" color="error" onClick={() => { setShowDiscardConfirm(false); onCancel(); }}>
+            {t('form.discardConfirm')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 }

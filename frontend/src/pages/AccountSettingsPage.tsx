@@ -14,11 +14,12 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { changePassword, requestEmailChange, updateProfile } from '../auth/authApi';
 import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
+import { useNavigationBlocker } from '../hooks/useNavigationBlocker';
 
 export default function AccountSettingsPage() {
   const { user, requestAccountDeletion, refreshUser } = useAuth();
@@ -49,9 +50,19 @@ export default function AccountSettingsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [activeEditor, setActiveEditor] = useState<'displayName' | 'email' | 'password' | null>(null);
+  const [hintsResetDone, setHintsResetDone] = useState(false);
 
   const requiresDeletePhrase = deleteConfirmationText.trim() === 'LÖSCHEN';
   const canDelete = deletePassword.trim().length > 0 && requiresDeletePhrase;
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (activeEditor === 'displayName') return displayName !== (user?.display_name ?? '');
+    if (activeEditor === 'email') return !!newEmail || !!emailPassword;
+    if (activeEditor === 'password') return !!currentPassword || !!newPassword || !!repeatPassword;
+    return false;
+  }, [activeEditor, currentPassword, displayName, emailPassword, newEmail, newPassword, repeatPassword, user?.display_name]);
+
+  useNavigationBlocker(hasUnsavedChanges, t('unsavedChangesWarning'));
 
   const closeDisplayNameEditor = (): void => {
     setActiveEditor(null);
@@ -118,6 +129,13 @@ export default function AccountSettingsPage() {
     } finally {
       setPasswordSubmitting(false);
     }
+  };
+
+  const handleResetHints = (): void => {
+    localStorage.removeItem('ofp.shortcutHintSeen');
+    localStorage.removeItem(`ofp.contextMenuHintDismissed:user:${user?.id}`);
+    localStorage.removeItem('ofp.contextMenuHintDismissed');
+    setHintsResetDone(true);
   };
 
   const handleDelete = async (): Promise<void> => {
@@ -321,6 +339,22 @@ export default function AccountSettingsPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {import.meta.env.DEV ? (
+          <Card>
+            <CardContent>
+              <Typography variant="h6" sx={{ mb: 1 }}>Entwickler</Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Setzt localStorage-Hinweise zurück, sodass sie beim nächsten Seitenaufruf wieder angezeigt werden (Rechtsklick-Hinweis, Tastenkürzel-Hinweis).
+              </Typography>
+              {hintsResetDone ? <Alert severity="success" sx={{ mb: 2 }}>Hinweise zurückgesetzt.</Alert> : null}
+              <Button variant="outlined" onClick={handleResetHints}>
+                Hinweise zurücksetzen
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
       </Stack>
 
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} fullWidth maxWidth="sm">

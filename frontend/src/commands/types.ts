@@ -28,6 +28,7 @@ export interface CommandSpec {
   group: CommandGroup;
   shortcutHint?: string;
   keys?: ShortcutKeys;
+  allowRepeat?: boolean;
   contextTags: CommandContextTag[];
   isVisible?: () => boolean;
   isEnabled?: () => boolean;

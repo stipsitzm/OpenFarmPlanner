@@ -236,6 +236,21 @@ export function buildFieldOccupancyTaskGroups({
 
   const candidates: OccupancyBedGroupCandidate[] = [];
   const { start: visStart, end: visEnd } = getVisibleYearInterval(displayYear);
+  const plansByBed = new Map<number, PlantingPlan[]>();
+
+  plantingPlans.forEach((plan) => {
+    if (!plan.bed || !plan.planting_date || !plan.harvest_date) {
+      return;
+    }
+    const plantingDate = parseDateString(plan.planting_date);
+    const harvestDate = parseDateString(plan.harvest_date);
+    if (harvestDate < visStart || plantingDate > visEnd) {
+      return;
+    }
+    const bedPlans = plansByBed.get(plan.bed) ?? [];
+    bedPlans.push(plan);
+    plansByBed.set(plan.bed, bedPlans);
+  });
 
   const bedsByField = beds.reduce<Record<number, Bed[]>>((accumulator, bed) => {
     const fieldId = bed.field;
@@ -271,14 +286,7 @@ export function buildFieldOccupancyTaskGroups({
           return;
         }
 
-        const bedPlans = plantingPlans.filter((plan) => {
-          if (plan.bed !== bedId) return false;
-          if (!plan.planting_date || !plan.harvest_date) return false;
-
-          const plantingDate = parseDateString(plan.planting_date);
-          const harvestDate = parseDateString(plan.harvest_date);
-          return !(harvestDate < visStart || plantingDate > visEnd);
-        });
+        const bedPlans = plansByBed.get(bedId) ?? [];
 
         if (bedPlans.length === 0) {
           return;

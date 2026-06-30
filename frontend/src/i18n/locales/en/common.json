@@ -4,12 +4,11 @@
       "title": "Unsaved notes",
       "message": "The notes contain unsaved changes. Continue editing or discard the changes?",
       "continueEditing": "Continue editing",
-      "discardAndClose": "Discard changes and close"
+      "discardAndClose": "Discard"
     }
   },
   "messages": {
-    "contextMenuTableHint": "Tip: Right-click a table row to open more actions.",
-    "contextMenuHintKeyboard": "Alternative: context menu key or Shift+F10."
+    "contextMenuTableHint": "Tip: Right-click a row for more actions."
   },
   "errors": {
     "supplierDataDuplicate": "This supplier already has data for this culture.",
@@ -18,5 +17,9 @@
     "supplierProjectMismatch": "The supplier does not belong to the active project.",
     "selectedSupplierProjectMismatch": "The selected seed supplier does not belong to the active project.",
     "cultureProjectMismatch": "The culture does not belong to the active project."
+  },
+  "runtime": {
+    "applicationUpdatedFallback": "The application could not be updated automatically. Please try again later.",
+    "routeErrorFallback": "The page could not be restored automatically. Please try again later."
   }
 }

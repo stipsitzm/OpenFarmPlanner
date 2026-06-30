@@ -26,6 +26,9 @@
   "feedback": {
     "areaAutoFilled": "Verfügbare Restfläche automatisch verwendet: {{area}}"
   },
+  "dateEditor": {
+    "openCalendar": "Kalender öffnen"
+  },
   "areaValidation": {
     "maxAreaApplied": "Maximal verfügbare Fläche übernommen: {{area}}",
     "remainingLimitTitle": "Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.",
@@ -40,7 +43,10 @@
     "applyBedArea": "Beetfläche übernehmen"
   },
   "placeholders": {
+    "selectCulture": "Kultur wählen",
     "selectCultivationType": "Anbauart wählen",
+    "selectArea": "Anbaufläche wählen",
+    "plantsCount": "Anzahl eingeben",
     "maxKeyword": "max"
   },
   "tooltips": {

@@ -38,7 +38,7 @@ const getAvailableCreateActions = (actions: CreateAction[]): CreateAction[] => a
   .sort((first, second) => (first.priority ?? 0) - (second.priority ?? 0) || first.label.localeCompare(second.label));
 
 export function CommandProvider({ children }: { children: React.ReactNode }) {
-  const { t } = useTranslation('navigation');
+  const { t } = useTranslation(['navigation', 'common']);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [createChooserOpen, setCreateChooserOpen] = useState(false);
@@ -53,8 +53,19 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     [contextTagMap],
   );
 
+  const hasVisitedFeaturePageRef = useRef(false);
+
   useEffect(() => {
-    if (localStorage.getItem(SHORTCUT_HINT_KEY) !== null) {
+    if (currentContextTags.some((tag) => tag !== 'global')) {
+      hasVisitedFeaturePageRef.current = true;
+    }
+  }, [currentContextTags]);
+
+  useEffect(() => {
+    if (localStorage.getItem(SHORTCUT_HINT_KEY) !== null || !hasVisitedFeaturePageRef.current) {
+      return;
+    }
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches) {
       return;
     }
 
@@ -64,7 +75,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     }, 1800);
 
     return () => window.clearTimeout(timerId);
-  }, []);
+  }, [currentContextTags]);
 
   const openPalette = useCallback(() => {
     previouslyFocusedElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -173,6 +184,7 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         title: command.label,
         keys: command.keys,
         contexts: command.contextTags,
+        allowRepeat: command.allowRepeat,
         when: () => (command.isVisible?.() ?? true) && (command.isEnabled?.() ?? true),
         action: () => { void command.action(); },
       }));
@@ -277,8 +289,8 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
         onClose={() => setHintOpen(false)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity="info" onClose={() => setHintOpen(false)}>
-          💡 Tipp: Drücke Alt+K für die Command Palette.
+        <Alert severity="info" onClose={() => setHintOpen(false)} closeText={t('common:actions.close')}>
+          💡 {t('commandPalette.shortcutHint')}
         </Alert>
       </Snackbar>
     </CommandContext.Provider>

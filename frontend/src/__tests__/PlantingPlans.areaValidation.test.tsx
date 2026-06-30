@@ -187,22 +187,27 @@ vi.mock("../api/api", async () => {
     cultureAPI: {
       ...actual.cultureAPI,
       list: apiMocks.cultureList,
+      listAll: async () => (await apiMocks.cultureList()).data,
     },
     locationAPI: {
       ...actual.locationAPI,
       list: apiMocks.locationList,
+      listAll: async () => (await apiMocks.locationList()).data,
     },
     fieldAPI: {
       ...actual.fieldAPI,
       list: apiMocks.fieldList,
+      listAll: async () => (await apiMocks.fieldList()).data,
     },
     bedAPI: {
       ...actual.bedAPI,
       list: apiMocks.bedList,
+      listAll: async () => (await apiMocks.bedList()).data,
     },
     plantingPlanAPI: {
       ...actual.plantingPlanAPI,
       list: apiMocks.planList,
+      listAll: async () => (await apiMocks.planList()).data,
     },
   };
 });
@@ -266,6 +271,7 @@ describe("PlantingPlans save-time area validation", () => {
       expect.objectContaining({ minWidth: 142, width: 142, maxWidth: 142 }),
       expect.objectContaining({ minWidth: 142, width: 142, maxWidth: 142 }),
     ]);
+    expect(dateColumns.every((column) => column?.renderEditCell === undefined)).toBe(true);
   });
 
   it("shows bed-limit dialog when requested area exceeds bed area", async () => {

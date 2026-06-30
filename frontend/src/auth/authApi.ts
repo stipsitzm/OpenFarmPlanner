@@ -1,10 +1,8 @@
 import type { AccountActionResponse, AccountDeleteResponse, AuthUser, ProjectSwitchResponse } from './types';
 import i18n from '../i18n';
-import { computeProdApiPath } from '../api/httpClient';
+import { computeBaseURL } from '../api/httpClient';
 
-const API_BASE = import.meta.env.PROD
-  ? computeProdApiPath(import.meta.env.BASE_URL)
-  : import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE = computeBaseURL(import.meta.env.PROD, import.meta.env.VITE_API_BASE_URL, import.meta.env.BASE_URL);
 
 export class AuthApiError extends Error {
   code?: string;

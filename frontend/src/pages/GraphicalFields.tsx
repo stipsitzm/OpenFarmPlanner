@@ -264,6 +264,9 @@ export default function GraphicalFields({
   const { t } = useTranslation(["fields", "common"]);
   const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
   const { loading, error, locations, fields, beds } = hierarchyData ?? internalHierarchyData;
+  const [hasAutoExpanded, setHasAutoExpanded] = useState<boolean>(
+    Boolean(window.localStorage.getItem(EXPANDED_STORAGE_KEY)),
+  );
   const [expanded, setExpanded] = useState<Record<number, boolean>>(() => {
     try {
       const raw = window.localStorage.getItem(EXPANDED_STORAGE_KEY);
@@ -399,6 +402,18 @@ export default function GraphicalFields({
       JSON.stringify(expandedIds),
     );
   }, [expanded]);
+
+  useEffect(() => {
+    if (!hasAutoExpanded && locations.length > 0) {
+      setExpanded(
+        locations.reduce<Record<number, boolean>>((acc, location) => {
+          if (location.id) acc[location.id] = true;
+          return acc;
+        }, {}),
+      );
+      setHasAutoExpanded(true);
+    }
+  }, [locations, hasAutoExpanded]);
 
   useEffect(() => {
     let active = true;
@@ -1804,8 +1819,8 @@ export default function GraphicalFields({
                                         const bedScreenHeight =
                                           bedVm.height * viewport.scale;
                                         const shouldUseCompactLabel =
-                                          bedScreenWidth < 120 ||
-                                          bedScreenHeight < 42;
+                                          bedScreenWidth < 80 ||
+                                          bedScreenHeight < 30;
                                         const labelText =
                                           visibility.showDetailedBedLabels &&
                                           !shouldUseCompactLabel
@@ -1830,8 +1845,8 @@ export default function GraphicalFields({
                                               shouldUseCompactLabel ? 11 : 12
                                             }
                                             width={Math.max(
-                                              36,
-                                              bedScreenWidth - 8,
+                                              1,
+                                              bedScreenWidth - 4,
                                             )}
                                             wrap="word"
                                             listening={false}

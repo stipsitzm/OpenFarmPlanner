@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { computeBaseURL, computeProdApiPath, validateBaseURL } from '../api/httpClient';
+import { computeBaseURL, computeProdApiPath, normalizeDevApiBaseURL, validateBaseURL } from '../api/httpClient';
 
 describe('httpClient', () => {
   describe('computeBaseURL', () => {
@@ -22,9 +22,19 @@ describe('httpClient', () => {
       expect(baseUrl).toBe('/openfarmplanner/api');
     });
 
-    it('should return VITE_API_BASE_URL in development when set', () => {
+    it('should return VITE_API_BASE_URL in development when set on localhost', () => {
       const baseUrl = computeBaseURL(false, 'http://localhost:8000/api');
       expect(baseUrl).toBe('http://localhost:8000/api');
+    });
+
+    it('should map localhost API overrides to the LAN host in development', () => {
+      const baseUrl = computeBaseURL(false, 'http://localhost:8000/api', '/', '192.168.178.125');
+      expect(baseUrl).toBe('http://192.168.178.125:8000/api');
+    });
+
+    it('should map 127.0.0.1 API overrides to the LAN host in development', () => {
+      const baseUrl = computeBaseURL(false, 'http://127.0.0.1:8000/api', '/', '192.168.178.125');
+      expect(baseUrl).toBe('http://192.168.178.125:8000/api');
     });
 
     it('should return PROD_API_PATH in development when VITE_API_BASE_URL is not set', () => {
@@ -35,6 +45,16 @@ describe('httpClient', () => {
     it('should return PROD_API_PATH in development when VITE_API_BASE_URL is empty', () => {
       const baseUrl = computeBaseURL(false, '');
       expect(baseUrl).toBe('/api');
+    });
+  });
+
+  describe('normalizeDevApiBaseURL', () => {
+    it('should leave relative URLs unchanged', () => {
+      expect(normalizeDevApiBaseURL('/api', '192.168.178.125')).toBe('/api');
+    });
+
+    it('should leave non-localhost absolute URLs unchanged', () => {
+      expect(normalizeDevApiBaseURL('http://api.example.test/api', '192.168.178.125')).toBe('http://api.example.test/api');
     });
   });
 

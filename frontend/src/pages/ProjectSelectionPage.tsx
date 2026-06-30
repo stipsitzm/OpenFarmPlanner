@@ -1,6 +1,6 @@
 import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, List, ListItem, ListItemText, Stack, Typography } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { projectAPI, type ProjectPayload } from '../api/api';
 import { useAuth } from '../auth/useAuth';
@@ -16,23 +16,36 @@ export default function ProjectSelectionPage() {
   const [deletedProjects, setDeletedProjects] = useState<ProjectPayload[]>([]);
   const [trashError, setTrashError] = useState<string | null>(null);
   const [renderedAt] = useState(() => Date.now());
+  const isMountedRef = useRef(false);
 
   const loadDeletedProjects = useCallback(async (): Promise<void> => {
     try {
       const response = await projectAPI.listDeleted();
+      if (!isMountedRef.current) {
+        return;
+      }
       const payload = response.data;
       setDeletedProjects(Array.isArray(payload) ? payload : payload.results);
       setTrashError(null);
     } catch {
+      if (!isMountedRef.current) {
+        return;
+      }
       setDeletedProjects([]);
       setTrashError(t('projectTrash.loadError'));
     }
   }, [t]);
 
   useEffect(() => {
-    window.setTimeout(() => {
+    isMountedRef.current = true;
+    const timeoutId = window.setTimeout(() => {
       void loadDeletedProjects();
     }, 0);
+
+    return () => {
+      isMountedRef.current = false;
+      window.clearTimeout(timeoutId);
+    };
   }, [loadDeletedProjects]);
 
   const deletedProjectsByName = useMemo(

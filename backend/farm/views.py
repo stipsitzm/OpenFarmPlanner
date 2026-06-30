@@ -303,14 +303,15 @@ def _get_bootstrap_project() -> Project:
     return project
 
 
-def _create_project_revision(summary: str, project: Project | None = None) -> None:
+def _create_project_revision(summary: str, project: Project | None = None, *, display_name: str | None = None) -> None:
     target_project = project or _get_bootstrap_project()
+    final_summary = f"{summary} ({display_name})" if display_name else summary
     snapshot = json.loads(json.dumps(_serialize_project_state(target_project), cls=DjangoJSONEncoder))
-    ProjectRevision.objects.create(snapshot=snapshot, summary=summary, project=target_project)
+    ProjectRevision.objects.create(snapshot=snapshot, summary=final_summary, project=target_project)
 
 
 _PROJECT_SUMMARY_PATTERN = re.compile(
-    r'^(?P<object>[A-Za-z]+)\s+(?P<action>created|updated|deleted|soft-deleted|undeleted|restored|uploaded|used)\s+#(?P<object_id>\d+)$'
+    r'^(?P<object>[A-Za-z]+)\s+(?P<action>created|updated|deleted|soft-deleted|undeleted|restored|uploaded|used)\s+#(?P<object_id>\d+)(?:\s+\((?P<display_name>[^)]+)\))?$'
 )
 _PROJECT_RESTORE_PATTERN = re.compile(r'^Project restored from snapshot #(?P<object_id>\d+)$')
 
@@ -421,19 +422,20 @@ def _build_planting_plan_label(snapshot: dict, row: dict | None) -> str | None:
     return ' / '.join(parts)
 
 
-def _parse_project_summary(summary: str) -> tuple[str, str, int | None]:
+def _parse_project_summary(summary: str) -> tuple[str, str, int | None, str | None]:
     normalized_summary = (summary or '').strip()
     restore_match = _PROJECT_RESTORE_PATTERN.match(normalized_summary)
     if restore_match:
-        return 'project', 'restored', int(restore_match.group('object_id'))
+        return 'project', 'restored', int(restore_match.group('object_id')), None
 
     match = _PROJECT_SUMMARY_PATTERN.match(normalized_summary)
     if not match:
-        return 'project', 'updated', None
+        return 'project', 'updated', None, None
 
     object_type_raw = match.group('object').lower()
     action_raw = match.group('action').lower()
     object_id = int(match.group('object_id'))
+    display_name = match.group('display_name') or None
 
     object_type_map = {
         'culture': 'culture',
@@ -458,7 +460,7 @@ def _parse_project_summary(summary: str) -> tuple[str, str, int | None]:
         'uploaded': 'created',
         'used': 'updated',
     }
-    return object_type_map.get(object_type_raw, object_type_raw), action_map.get(action_raw, 'updated'), object_id
+    return object_type_map.get(object_type_raw, object_type_raw), action_map.get(action_raw, 'updated'), object_id, display_name
 
 
 def _resolve_project_object_display_name(snapshot: dict, object_type: str, object_id: int | None) -> str | None:
@@ -743,8 +745,8 @@ class YieldCalendarListView(generics.GenericAPIView):
 class ProjectRevisionMixin:
     """Create a project snapshot after mutating operations."""
 
-    def create_project_revision(self, summary: str) -> None:
-        _create_project_revision(summary, project=getattr(self.request, 'active_project', None))
+    def create_project_revision(self, summary: str, *, display_name: str | None = None) -> None:
+        _create_project_revision(summary, project=getattr(self.request, 'active_project', None), display_name=display_name)
 
 
 
@@ -807,8 +809,9 @@ class LocationViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
 
     def perform_destroy(self, instance):
         instance_id = instance.pk
+        name = instance.name
         instance.delete()
-        self.create_project_revision(f"Location deleted #{instance_id}")
+        self.create_project_revision(f"Location deleted #{instance_id}", display_name=name)
 
 
 
@@ -949,8 +952,9 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
             ).update(selected_seed_demand_supplier=None)
             CultureSupplierData.objects.filter(project=supplier.project, supplier=supplier).delete()
             supplier_id = supplier.pk
+            supplier_name = supplier.name
             supplier.delete()
-            self.create_project_revision(f"Supplier unlinked and deleted #{supplier_id}")
+            self.create_project_revision(f"Supplier unlinked and deleted #{supplier_id}", display_name=supplier_name)
 
         return Response({
             'affected_culture_count': usage['total_culture_count'],
@@ -1046,8 +1050,9 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
 
     def perform_destroy(self, instance: Supplier) -> None:
         instance_id = instance.pk
+        name = instance.name
         instance.delete()
-        self.create_project_revision(f"Supplier deleted #{instance_id}")
+        self.create_project_revision(f"Supplier deleted #{instance_id}", display_name=name)
 
     
     def get_queryset(self):
@@ -1181,8 +1186,9 @@ class FieldViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewS
 
     def perform_destroy(self, instance):
         instance_id = instance.pk
+        name = instance.name
         instance.delete()
-        self.create_project_revision(f"Field deleted #{instance_id}")
+        self.create_project_revision(f"Field deleted #{instance_id}", display_name=name)
 
 
 
@@ -1215,8 +1221,9 @@ class BedViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet
 
     def perform_destroy(self, instance):
         instance_id = instance.pk
+        name = instance.name
         instance.delete()
-        self.create_project_revision(f"Bed deleted #{instance_id}")
+        self.create_project_revision(f"Bed deleted #{instance_id}", display_name=name)
 
 
 
@@ -1958,8 +1965,13 @@ class PlantingPlanViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.Mod
 
     def perform_destroy(self, instance):
         instance_id = instance.pk
+        culture = getattr(instance, 'culture', None)
+        culture_name = _format_culture_display_name(
+            getattr(culture, 'name', None),
+            getattr(culture, 'variety', None),
+        ) if culture else None
         instance.delete()
-        self.create_project_revision(f"PlantingPlan deleted #{instance_id}")
+        self.create_project_revision(f"PlantingPlan deleted #{instance_id}", display_name=culture_name)
 
 
     @action(detail=False, methods=['get'], url_path='remaining-area')
@@ -2057,8 +2069,9 @@ class TaskViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSe
 
     def perform_destroy(self, instance):
         instance_id = instance.pk
+        title = getattr(instance, 'title', None)
         instance.delete()
-        self.create_project_revision(f"Task deleted #{instance_id}")
+        self.create_project_revision(f"Task deleted #{instance_id}", display_name=title)
 
 
 
@@ -2088,7 +2101,7 @@ class ProjectHistoryListView(APIView):
         rows = ProjectRevision.objects.filter(project=active_project, created_at__gte=since).order_by('-created_at')
         payload = []
         for row in rows:
-            object_type, action, object_id = _parse_project_summary(row.summary or '')
+            object_type, action, object_id, summary_display_name = _parse_project_summary(row.summary or '')
             payload.append({
                 'history_id': row.id,
                 'history_date': row.created_at,
@@ -2096,7 +2109,7 @@ class ProjectHistoryListView(APIView):
                 'history_user': None,
                 'summary': row.summary or 'Project snapshot',
                 'object_type': object_type,
-                'object_display_name': _resolve_project_object_display_name(row.snapshot or {}, object_type, object_id),
+                'object_display_name': _resolve_project_object_display_name(row.snapshot or {}, object_type, object_id) or summary_display_name,
                 'action': action,
                 'actor_label': None,
             })

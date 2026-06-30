@@ -7,7 +7,7 @@
  * @returns The Gantt Chart page component
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
@@ -28,13 +28,11 @@ import {
   fieldAPI,
   locationAPI,
   plantingPlanAPI,
-  yieldCalendarAPI,
   type Bed,
   type Culture,
   type Field,
   type Location,
   type PlantingPlan,
-  type YieldCalendarWeek,
 } from '../api/api';
 import GanttChart, { ViewMode } from 'react-modern-gantt';
 import 'react-modern-gantt/dist/index.css';
@@ -47,6 +45,7 @@ import type { CommandSpec } from '../commands/types';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import { extractApiErrorMessage } from '../api/errors';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
+import { useTopbarTitleActions } from '../hooks/useTopbarTitleActions';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { AuthContext } from '../auth/authContextShared';
@@ -66,24 +65,18 @@ import {
   getSegmentedActionButtonSx,
   segmentedButtonGroupSx,
 } from '../components/buttons/segmentedControlStyles';
-
-interface WeeklyYieldCultureMeta {
-  id: number;
-  name: string;
-  color: string;
-}
-
-interface WeeklyYieldChartColumn {
-  isoWeek: string;
-  weekLabel: string;
-  monthLabel: string;
-  cultures: YieldCalendarWeek['cultures'];
-  totalYield: number;
-}
+import { getGanttRenderWindow } from './ganttRenderWindow';
 
 type CalendarMode = 'occupancy' | 'seedlings';
+const GanttChartWithFocusMode = GanttChart as React.ComponentType<
+  React.ComponentProps<typeof GanttChart> & { focusMode?: boolean }
+>;
 
 const CALENDAR_VIEW_STORAGE_KEY = 'openFarmPlanner.ganttChart.view';
+const CALENDAR_TIMELINE_VIEW_MODE_STORAGE_KEY = 'openFarmPlanner.ganttChart.timelineViewMode';
+const GANTT_STATE_STORAGE_PREFIX = 'openfarmplanner:gantt';
+const DEFAULT_TIMELINE_VIEW_MODE = ViewMode.MONTH;
+const GANTT_LEFT_COLUMN_WIDTH = 220;
 const GANTT_HEADER_VIEW_MODES = [
   ViewMode.DAY,
   ViewMode.WEEK,
@@ -91,6 +84,29 @@ const GANTT_HEADER_VIEW_MODES = [
   ViewMode.QUARTER,
   ViewMode.YEAR,
 ] as const;
+const GANTT_UNIT_WIDTH_BY_VIEW_MODE: Record<ViewMode, number> = {
+  [ViewMode.MINUTE]: 60,
+  [ViewMode.HOUR]: 80,
+  [ViewMode.DAY]: 50,
+  [ViewMode.WEEK]: 80,
+  [ViewMode.MONTH]: 150,
+  [ViewMode.QUARTER]: 180,
+  [ViewMode.YEAR]: 200,
+};
+const CALENDAR_SHORTCUT_VIEW_MODES: Array<{ mode: ViewMode; shortcut: string; labelKey: string }> = [
+  { mode: ViewMode.DAY, shortcut: '1', labelKey: 'dayView' },
+  { mode: ViewMode.WEEK, shortcut: '2', labelKey: 'weekView' },
+  { mode: ViewMode.MONTH, shortcut: '3', labelKey: 'monthView' },
+  { mode: ViewMode.QUARTER, shortcut: '4', labelKey: 'quarterView' },
+  { mode: ViewMode.YEAR, shortcut: '5', labelKey: 'yearView' },
+];
+
+interface StoredGanttState {
+  calendarMode?: CalendarMode;
+  timelineViewMode?: ViewMode;
+  referenceDate?: string;
+  rowScrollTop?: number;
+}
 
 function getCalendarModeFromViewParam(viewParam: string | null): CalendarMode {
   return viewParam === 'seedlings' ? 'seedlings' : 'occupancy';
@@ -108,6 +124,16 @@ function getCalendarViewStorageKey(activeProjectId: number | null): string {
   return activeProjectId ? `${CALENDAR_VIEW_STORAGE_KEY}.${activeProjectId}` : CALENDAR_VIEW_STORAGE_KEY;
 }
 
+function getTimelineViewModeStorageKey(activeProjectId: number | null): string {
+  return activeProjectId
+    ? `${CALENDAR_TIMELINE_VIEW_MODE_STORAGE_KEY}.${activeProjectId}`
+    : CALENDAR_TIMELINE_VIEW_MODE_STORAGE_KEY;
+}
+
+function getGanttStateStorageKey(activeProjectId: number | null): string | null {
+  return activeProjectId ? `${GANTT_STATE_STORAGE_PREFIX}:${activeProjectId}:state` : null;
+}
+
 function getStoredCalendarMode(storageKey: string): CalendarMode | null {
   const storedValue = window.localStorage.getItem(storageKey);
   return isCalendarViewParam(storedValue) ? getCalendarModeFromViewParam(storedValue) : null;
@@ -115,6 +141,213 @@ function getStoredCalendarMode(storageKey: string): CalendarMode | null {
 
 function storeCalendarMode(storageKey: string, mode: CalendarMode): void {
   window.localStorage.setItem(storageKey, getViewParamFromCalendarMode(mode));
+}
+
+function isTimelineViewMode(value: string | null): value is ViewMode {
+  return value !== null && (GANTT_HEADER_VIEW_MODES as readonly string[]).includes(value);
+}
+
+function storeTimelineViewMode(storageKey: string, mode: ViewMode): void {
+  window.localStorage.setItem(storageKey, mode);
+}
+
+function getStoredGanttState(storageKey: string | null): StoredGanttState | null {
+  if (!storageKey) {
+    return null;
+  }
+
+  try {
+    const storedValue = window.localStorage.getItem(storageKey);
+    if (!storedValue) {
+      return null;
+    }
+    const parsed = JSON.parse(storedValue) as StoredGanttState;
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+    return {
+      calendarMode: parsed.calendarMode === 'occupancy' || parsed.calendarMode === 'seedlings'
+        ? parsed.calendarMode
+        : undefined,
+      timelineViewMode: isTimelineViewMode(parsed.timelineViewMode ?? null)
+        ? parsed.timelineViewMode
+        : undefined,
+      referenceDate: typeof parsed.referenceDate === 'string' ? parsed.referenceDate : undefined,
+      rowScrollTop: typeof parsed.rowScrollTop === 'number' && Number.isFinite(parsed.rowScrollTop)
+        ? parsed.rowScrollTop
+        : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function storeGanttState(storageKey: string | null, nextState: StoredGanttState): void {
+  if (!storageKey) {
+    return;
+  }
+
+  const currentState = getStoredGanttState(storageKey) ?? {};
+  window.localStorage.setItem(storageKey, JSON.stringify({
+    ...currentState,
+    ...nextState,
+  }));
+}
+
+function isValidDate(value: Date): boolean {
+  return !Number.isNaN(value.getTime());
+}
+
+function clampDate(date: Date, startDate: Date, endDate: Date): Date {
+  if (date < startDate) {
+    return new Date(startDate);
+  }
+  if (date > endDate) {
+    return new Date(endDate);
+  }
+  return date;
+}
+
+function getStoredReferenceDate(state: StoredGanttState | null, startDate: Date, endDate: Date): Date | null {
+  if (!state?.referenceDate) {
+    return null;
+  }
+
+  const date = parseDateString(state.referenceDate);
+  if (!isValidDate(date) || date < startDate || date > endDate) {
+    return null;
+  }
+  return date;
+}
+
+function getStoredTimelineViewModeFromState(state: StoredGanttState | null): ViewMode | null {
+  return state?.referenceDate && state.timelineViewMode ? state.timelineViewMode : null;
+}
+
+function getInitialTimelineReferenceDate(state: StoredGanttState | null, startDate: Date, endDate: Date): Date {
+  return getStoredReferenceDate(state, startDate, endDate) ?? clampDate(new Date(), startDate, endDate);
+}
+
+function getGanttUnitWidth(viewMode: ViewMode): number {
+  return GANTT_UNIT_WIDTH_BY_VIEW_MODE[viewMode] ?? GANTT_UNIT_WIDTH_BY_VIEW_MODE[ViewMode.MONTH];
+}
+
+function getDatePosition(date: Date, viewMode: ViewMode, startDate: Date): number {
+  const unitWidth = getGanttUnitWidth(viewMode);
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+
+  switch (viewMode) {
+    case ViewMode.DAY: {
+      const days = Math.floor((date.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      return days * unitWidth + unitWidth / 2;
+    }
+    case ViewMode.WEEK: {
+      const days = Math.max(0, (date.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      return (days / 7) * unitWidth;
+    }
+    case ViewMode.MONTH:
+      return ((date.getMonth() - start.getMonth()) + ((date.getDate() - 1) / new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate())) * unitWidth;
+    case ViewMode.QUARTER: {
+      const quarterIndex = Math.floor(date.getMonth() / 3) - Math.floor(start.getMonth() / 3);
+      const monthInQuarter = date.getMonth() % 3;
+      return (quarterIndex + monthInQuarter / 3) * unitWidth;
+    }
+    case ViewMode.YEAR:
+      return ((date.getFullYear() - start.getFullYear()) + date.getMonth() / 12) * unitWidth;
+    default:
+      return 0;
+  }
+}
+
+function getReferenceDateFromScroll(scrollLeft: number, containerWidth: number, viewMode: ViewMode, startDate: Date, endDate: Date): Date {
+  const unitWidth = getGanttUnitWidth(viewMode);
+  const timelineViewportWidth = Math.max(0, containerWidth - GANTT_LEFT_COLUMN_WIDTH);
+  const centerPosition = Math.max(0, scrollLeft + timelineViewportWidth / 2);
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+  const nextDate = new Date(start);
+
+  switch (viewMode) {
+    case ViewMode.DAY:
+      nextDate.setDate(start.getDate() + Math.floor(centerPosition / unitWidth));
+      break;
+    case ViewMode.WEEK:
+      nextDate.setDate(start.getDate() + Math.floor((centerPosition / unitWidth) * 7));
+      break;
+    case ViewMode.MONTH:
+      nextDate.setMonth(start.getMonth() + Math.floor(centerPosition / unitWidth), 1);
+      break;
+    case ViewMode.QUARTER:
+      nextDate.setMonth(start.getMonth() + Math.floor(centerPosition / unitWidth) * 3, 1);
+      break;
+    case ViewMode.YEAR:
+      nextDate.setFullYear(start.getFullYear() + Math.floor(centerPosition / unitWidth), 0, 1);
+      break;
+    default:
+      break;
+  }
+
+  return clampDate(nextDate, startDate, endDate);
+}
+
+function getTimelineScrollLeftForDate(date: Date, viewMode: ViewMode, startDate: Date, container: HTMLElement): number {
+  const position = getDatePosition(date, viewMode, startDate);
+  const timelineViewportWidth = Math.max(0, container.clientWidth - GANTT_LEFT_COLUMN_WIDTH);
+  const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+  return Math.max(0, Math.min(maxScroll, position - timelineViewportWidth / 2));
+}
+
+function addTimelinePeriod(date: Date, viewMode: ViewMode, direction: -1 | 1): Date {
+  const nextDate = new Date(date);
+
+  switch (viewMode) {
+    case ViewMode.DAY:
+      nextDate.setDate(nextDate.getDate() + direction);
+      break;
+    case ViewMode.WEEK:
+      nextDate.setDate(nextDate.getDate() + direction * 7);
+      break;
+    case ViewMode.MONTH:
+      nextDate.setMonth(nextDate.getMonth() + direction);
+      break;
+    case ViewMode.QUARTER:
+      nextDate.setMonth(nextDate.getMonth() + direction * 3);
+      break;
+    case ViewMode.YEAR:
+      nextDate.setFullYear(nextDate.getFullYear() + direction);
+      break;
+    default:
+      break;
+  }
+
+  return nextDate;
+}
+
+function addTimelinePeriodLarge(date: Date, viewMode: ViewMode, direction: -1 | 1): Date {
+  const nextDate = new Date(date);
+
+  switch (viewMode) {
+    case ViewMode.DAY:
+      nextDate.setDate(nextDate.getDate() + direction * 7);
+      break;
+    case ViewMode.WEEK:
+      nextDate.setMonth(nextDate.getMonth() + direction);
+      break;
+    case ViewMode.MONTH:
+      nextDate.setFullYear(nextDate.getFullYear() + direction);
+      break;
+    case ViewMode.QUARTER:
+      nextDate.setFullYear(nextDate.getFullYear() + direction);
+      break;
+    case ViewMode.YEAR:
+      nextDate.setFullYear(nextDate.getFullYear() + direction * 5);
+      break;
+    default:
+      break;
+  }
+
+  return nextDate;
 }
 
 class GanttRenderBoundary extends React.Component<
@@ -149,14 +382,44 @@ function formatDateToAPI(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function formatIsoWeek(date: Date): string {
-  const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const day = utcDate.getUTCDay() || 7;
-  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
-  const weekNumber = Math.ceil((((utcDate.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  return `${utcDate.getUTCFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
+function getPrimaryTouch(event: TouchEvent): Touch | null {
+  return event.touches[0] ?? event.changedTouches[0] ?? null;
 }
+
+interface SyntheticMousePoint {
+  clientX: number;
+  clientY: number;
+  screenX: number;
+  screenY: number;
+}
+
+function toSyntheticMousePoint(touch: Touch): SyntheticMousePoint {
+  return {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+    screenX: touch.screenX,
+    screenY: touch.screenY,
+  };
+}
+
+function dispatchSyntheticMouseEvent(
+  target: EventTarget,
+  type: 'mousedown' | 'mousemove' | 'mouseup',
+  point: SyntheticMousePoint,
+): void {
+  target.dispatchEvent(new MouseEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    clientX: point.clientX,
+    clientY: point.clientY,
+    screenX: point.screenX,
+    screenY: point.screenY,
+    button: 0,
+    buttons: type === 'mouseup' ? 0 : 1,
+  }));
+}
+
+
 
 function GanttChartPage() {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
@@ -175,24 +438,50 @@ function GanttChartPage() {
   const [beds, setBeds] = useState<Bed[]>([]);
   const [plantingPlans, setPlantingPlans] = useState<PlantingPlan[]>([]);
   const [cultures, setCultures] = useState<Culture[]>([]);
-  const [weeklyYield, setWeeklyYield] = useState<YieldCalendarWeek[]>([]);
   const [ganttRenderKey, setGanttRenderKey] = useState(0);
+  const [ganttScrollTop, setGanttScrollTop] = useState(0);
+  const [ganttViewportHeight, setGanttViewportHeight] = useState(640);
+  const ganttViewportRef = useRef<HTMLDivElement | null>(null);
+  const hasRestoredTimelineRef = useRef(false);
+  const latestReferenceDateRef = useRef<Date | null>(null);
+  const currentYear = new Date().getFullYear();
+  const [displayYear] = useState(currentYear);
+  const startDate = useMemo(() => new Date(displayYear, 0, 1), [displayYear]);
+  const endDate = useMemo(() => new Date(displayYear, 11, 31), [displayYear]);
 
+  const ganttStateStorageKey = useMemo(
+    () => (canUseStoredCalendarView ? getGanttStateStorageKey(activeProjectId) : null),
+    [activeProjectId, canUseStoredCalendarView],
+  );
+  const storedGanttState = useMemo(
+    () => getStoredGanttState(ganttStateStorageKey),
+    [ganttStateStorageKey],
+  );
   const calendarViewStorageKey = useMemo(
     () => (canUseStoredCalendarView ? getCalendarViewStorageKey(activeProjectId) : null),
+    [activeProjectId, canUseStoredCalendarView],
+  );
+  const timelineViewModeStorageKey = useMemo(
+    () => (canUseStoredCalendarView ? getTimelineViewModeStorageKey(activeProjectId) : null),
     [activeProjectId, canUseStoredCalendarView],
   );
   const [calendarMode, setCalendarMode] = useState<CalendarMode>(() => {
     const viewParam = searchParams.get('view');
     return isCalendarViewParam(viewParam)
       ? getCalendarModeFromViewParam(viewParam)
+      : storedGanttState?.calendarMode
+        ? storedGanttState.calendarMode
       : calendarViewStorageKey
         ? getStoredCalendarMode(calendarViewStorageKey) ?? 'occupancy'
         : 'occupancy';
   });
+  const [timelineViewMode, setTimelineViewMode] = useState<ViewMode>(() => (
+    getStoredTimelineViewModeFromState(storedGanttState) ?? DEFAULT_TIMELINE_VIEW_MODE
+  ));
   const [editMode, setEditMode] = useState(false);
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
   const setTopbarContextActions = outletContext?.setTopbarContextActions;
+  const setTopbarTitleActions = outletContext?.setTopbarTitleActions;
 
   useEffect(() => {
     const viewParam = searchParams.get('view');
@@ -202,6 +491,8 @@ function GanttChartPage() {
 
     const nextMode = isCalendarViewParam(viewParam)
       ? getCalendarModeFromViewParam(viewParam)
+      : storedGanttState?.calendarMode
+        ? storedGanttState.calendarMode
       : calendarViewStorageKey
         ? getStoredCalendarMode(calendarViewStorageKey) ?? 'occupancy'
         : 'occupancy';
@@ -212,6 +503,7 @@ function GanttChartPage() {
       if (calendarViewStorageKey) {
         storeCalendarMode(calendarViewStorageKey, nextMode);
       }
+      storeGanttState(ganttStateStorageKey, { calendarMode: nextMode });
       return;
     }
 
@@ -220,13 +512,23 @@ function GanttChartPage() {
       nextSearchParams.set('view', getViewParamFromCalendarMode(nextMode));
       return nextSearchParams;
     }, { replace: true });
-  }, [calendarViewStorageKey, isAuthLoading, searchParams, setSearchParams]);
+  }, [calendarViewStorageKey, ganttStateStorageKey, isAuthLoading, searchParams, setSearchParams, storedGanttState?.calendarMode]);
+
+  useEffect(() => {
+    if (!timelineViewModeStorageKey || isAuthLoading) {
+      return;
+    }
+
+    const nextViewMode = getStoredTimelineViewModeFromState(storedGanttState) ?? DEFAULT_TIMELINE_VIEW_MODE;
+    setTimelineViewMode((currentViewMode) => (currentViewMode === nextViewMode ? currentViewMode : nextViewMode));
+  }, [isAuthLoading, storedGanttState, timelineViewModeStorageKey]);
 
   const handleCalendarModeChange = useCallback((nextMode: CalendarMode) => {
     setCalendarMode(nextMode);
     if (calendarViewStorageKey) {
       storeCalendarMode(calendarViewStorageKey, nextMode);
     }
+    storeGanttState(ganttStateStorageKey, { calendarMode: nextMode });
     setSearchParams((currentSearchParams) => {
       if (currentSearchParams.get('view') === getViewParamFromCalendarMode(nextMode)) {
         return currentSearchParams;
@@ -235,28 +537,112 @@ function GanttChartPage() {
       nextSearchParams.set('view', getViewParamFromCalendarMode(nextMode));
       return nextSearchParams;
     });
-  }, [calendarViewStorageKey, setSearchParams]);
+  }, [calendarViewStorageKey, ganttStateStorageKey, setSearchParams]);
 
-  const calendarCommands = useMemo<CommandSpec[]>(() => [
-    {
-      id: 'calendar.toggleEdit',
-      label: editMode
-        ? t('ganttChart:moveModeCommandDeactivate')
-        : t('ganttChart:moveModeCommandActivate'),
-      group: 'navigation',
-      keywords: ['kalender', 'verschieben', 'drag-and-drop'],
-      shortcutHint: 'Alt+E',
-      keys: { alt: true, key: 'e' },
-      contextTags: ['calendar'],
-      isEnabled: () => calendarMode === 'occupancy',
-      action: () => setEditMode((value) => !value),
-    },
-  ], [calendarMode, editMode, t]);
+  const handleTimelineViewModeChange = useCallback((
+    nextViewMode: ViewMode,
+    applyViewModeChange: (mode: ViewMode) => void,
+  ) => {
+    const scrollContainer = ganttViewportRef.current?.querySelector<HTMLElement>('.rmg-container') ?? null;
+    const currentReferenceDate = scrollContainer
+      ? getReferenceDateFromScroll(scrollContainer.scrollLeft, scrollContainer.clientWidth, timelineViewMode, startDate, endDate)
+      : latestReferenceDateRef.current;
+    setTimelineViewMode(nextViewMode);
+    if (timelineViewModeStorageKey) {
+      storeTimelineViewMode(timelineViewModeStorageKey, nextViewMode);
+    }
+    storeGanttState(ganttStateStorageKey, {
+      timelineViewMode: nextViewMode,
+      referenceDate: formatDateToAPI(currentReferenceDate ?? getInitialTimelineReferenceDate(storedGanttState, startDate, endDate)),
+    });
+    hasRestoredTimelineRef.current = false;
+    applyViewModeChange(nextViewMode);
+  }, [endDate, ganttStateStorageKey, startDate, storedGanttState, timelineViewMode, timelineViewModeStorageKey]);
 
-  useRegisterCommands('calendar-page', calendarCommands);
+  const getCurrentTimelineReferenceDate = useCallback((): Date => {
+    const scrollContainer = ganttViewportRef.current?.querySelector<HTMLElement>('.rmg-container') ?? null;
+    if (scrollContainer) {
+      return getReferenceDateFromScroll(
+        scrollContainer.scrollLeft,
+        scrollContainer.clientWidth,
+        timelineViewMode,
+        startDate,
+        endDate,
+      );
+    }
 
-  const currentYear = new Date().getFullYear();
-  const [displayYear] = useState(currentYear);
+    return latestReferenceDateRef.current
+      ?? getInitialTimelineReferenceDate(getStoredGanttState(ganttStateStorageKey), startDate, endDate);
+  }, [endDate, ganttStateStorageKey, startDate, timelineViewMode]);
+
+  const scrollToTimelineReferenceDate = useCallback((date: Date): void => {
+    const referenceDate = clampDate(date, startDate, endDate);
+    latestReferenceDateRef.current = referenceDate;
+    storeGanttState(ganttStateStorageKey, {
+      calendarMode,
+      timelineViewMode,
+      referenceDate: formatDateToAPI(referenceDate),
+    });
+
+    const scrollContainer = ganttViewportRef.current?.querySelector<HTMLElement>('.rmg-container') ?? null;
+    if (!scrollContainer) {
+      return;
+    }
+
+    scrollContainer.scrollLeft = getTimelineScrollLeftForDate(referenceDate, timelineViewMode, startDate, scrollContainer);
+  }, [calendarMode, endDate, ganttStateStorageKey, startDate, timelineViewMode]);
+
+  const handleShortcutTimelineViewModeChange = useCallback((nextViewMode: ViewMode): void => {
+    const referenceDate = getCurrentTimelineReferenceDate();
+    setTimelineViewMode(nextViewMode);
+    if (timelineViewModeStorageKey) {
+      storeTimelineViewMode(timelineViewModeStorageKey, nextViewMode);
+    }
+    storeGanttState(ganttStateStorageKey, {
+      timelineViewMode: nextViewMode,
+      referenceDate: formatDateToAPI(referenceDate),
+    });
+    latestReferenceDateRef.current = referenceDate;
+    hasRestoredTimelineRef.current = false;
+  }, [ganttStateStorageKey, getCurrentTimelineReferenceDate, timelineViewModeStorageKey]);
+
+  const toggleCalendarEditMode = useCallback((): void => {
+    if (calendarMode !== 'occupancy') {
+      return;
+    }
+    setEditMode((value) => !value);
+  }, [calendarMode]);
+
+  const fetchCalendarData = useCallback(async (options: { showLoading?: boolean } = {}): Promise<void> => {
+    const { showLoading = true } = options;
+    try {
+      if (showLoading) {
+        setLoading(true);
+      }
+      setError(null);
+
+      const [locationsRes, fieldsRes, bedsRes, plansRes, culturesRes] = await Promise.all([
+        locationAPI.listAll(),
+        fieldAPI.listAll(),
+        bedAPI.listAll(),
+        plantingPlanAPI.listAll(),
+        cultureAPI.listAll(),
+      ]);
+
+      setLocations(locationsRes.results);
+      setFields(fieldsRes.results);
+      setBeds(bedsRes.results);
+      setPlantingPlans(plansRes.results);
+      setCultures(culturesRes.results);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError(t('ganttChart:errors.load'));
+    } finally {
+      if (showLoading) {
+        setLoading(false);
+      }
+    }
+  }, [t]);
 
   useEffect(() => {
     if (shouldShowProjectRequiredState) {
@@ -267,52 +653,36 @@ function GanttChartPage() {
       setBeds([]);
       setPlantingPlans([]);
       setCultures([]);
-      setWeeklyYield([]);
       return;
     }
-    const fetchData = async (): Promise<void> => {
-      try {
-        setLoading(true);
-        setError(null);
 
-        const [locationsRes, fieldsRes, bedsRes, plansRes, culturesRes, weeklyYieldRes] = await Promise.all([
-          locationAPI.list(),
-          fieldAPI.list(),
-          bedAPI.list(),
-          plantingPlanAPI.list(),
-          cultureAPI.list(),
-          yieldCalendarAPI.list(displayYear),
-        ]);
+    void fetchCalendarData();
+  }, [displayYear, fetchCalendarData, shouldShowProjectRequiredState]);
 
-        setLocations(locationsRes.data.results);
-        setFields(fieldsRes.data.results);
-        setBeds(bedsRes.data.results);
-        setPlantingPlans(plansRes.data.results);
-        setCultures(culturesRes.data.results);
-        setWeeklyYield(weeklyYieldRes.data);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError(t('ganttChart:errors.load'));
-      } finally {
-        setLoading(false);
+  useEffect(() => {
+    if (shouldShowProjectRequiredState) {
+      return undefined;
+    }
+
+    const refreshVisibleCalendar = (): void => {
+      if (document.visibilityState === 'hidden') {
+        return;
       }
+      void fetchCalendarData({ showLoading: false });
     };
 
-    void fetchData();
-  }, [displayYear, shouldShowProjectRequiredState, t]);
+    window.addEventListener('focus', refreshVisibleCalendar);
+    document.addEventListener('visibilitychange', refreshVisibleCalendar);
 
-  const refreshWeeklyYield = useCallback(async (): Promise<void> => {
-    try {
-      const weeklyYieldRes = await yieldCalendarAPI.list(displayYear);
-      setWeeklyYield(weeklyYieldRes.data);
-    } catch (err) {
-      console.error('Error refreshing weekly yield data:', err);
-    }
-  }, [displayYear]);
+    return () => {
+      window.removeEventListener('focus', refreshVisibleCalendar);
+      document.removeEventListener('visibilitychange', refreshVisibleCalendar);
+    };
+  }, [fetchCalendarData, shouldShowProjectRequiredState]);
 
   const refreshPlantingPlans = useCallback(async (): Promise<void> => {
-    const plansRes = await plantingPlanAPI.list();
-    setPlantingPlans(plansRes.data.results);
+    const plans = await plantingPlanAPI.listAll();
+    setPlantingPlans(plans.results);
   }, []);
 
   const handleTaskUpdate = async (_groupId: string, updatedTask: GanttTask) => {
@@ -357,8 +727,6 @@ function GanttChartPage() {
         entry.id === planId ? response.data : entry
       )));
       setError(null);
-
-      await refreshWeeklyYield();
     } catch (err) {
       console.error('Error updating planting plan:', err);
       setError(extractApiErrorMessage(err, t, t('ganttChart:errors.updatePlan')));
@@ -389,8 +757,6 @@ function GanttChartPage() {
     displayYear,
   }), [cultures, displayYear, plantingPlans]);
 
-  const startDate = useMemo(() => new Date(displayYear, 0, 1), [displayYear]);
-  const endDate = useMemo(() => new Date(displayYear, 11, 31), [displayYear]);
   const resolvedLocale = useMemo(() => {
     const language = i18n.resolvedLanguage || i18n.language || 'de';
     if (language === 'de') {
@@ -468,7 +834,7 @@ function GanttChartPage() {
                 <Select
                   size="small"
                   value={viewMode}
-                  onChange={(event) => onViewModeChange(event.target.value as ViewMode)}
+                  onChange={(event) => handleTimelineViewModeChange(event.target.value as ViewMode, onViewModeChange)}
                   inputProps={{ 'aria-label': t('ganttChart:viewSelectorAriaLabel') }}
                   sx={{
                     display: { xs: 'inline-flex', md: 'none' },
@@ -555,7 +921,7 @@ function GanttChartPage() {
             {GANTT_HEADER_VIEW_MODES.map((mode) => (
               <Button
                 key={mode}
-                onClick={() => onViewModeChange(mode)}
+                onClick={() => handleTimelineViewModeChange(mode, onViewModeChange)}
                 aria-pressed={viewMode === mode}
                 variant={viewMode === mode ? 'contained' : 'outlined'}
                 color={viewMode === mode ? 'success' : 'inherit'}
@@ -568,9 +934,26 @@ function GanttChartPage() {
         ) : null}
       </Box>
     </Box>
-  ), [calendarMode, editMode, t]);
+  ), [calendarMode, editMode, handleTimelineViewModeChange, t]);
 
   const activeTaskGroups = calendarMode === 'occupancy' ? occupancyTaskGroups : seedlingTaskGroups;
+  const renderWindow = useMemo(
+    () => getGanttRenderWindow(
+      activeTaskGroups,
+      ganttScrollTop,
+      ganttViewportHeight,
+    ),
+    [activeTaskGroups, ganttScrollTop, ganttViewportHeight],
+  );
+  const renderedTaskGroups = renderWindow.groups;
+  const totalTimelineItems = useMemo(
+    () => activeTaskGroups.reduce((total, group) => total + group.tasks.length, 0),
+    [activeTaskGroups],
+  );
+  const renderedTimelineItems = useMemo(
+    () => renderedTaskGroups.reduce((total, group) => total + group.tasks.length, 0),
+    [renderedTaskGroups],
+  );
   const hasFields = fields.length > 0;
   const hasCultures = cultures.length > 0;
   const hasBeds = beds.length > 0;
@@ -585,6 +968,434 @@ function GanttChartPage() {
   const requirementActions = firstMissingRequirement
     ? getProjectSetupActions(firstMissingRequirement)
     : [];
+  const calendarCommands = useMemo<CommandSpec[]>(() => [
+    {
+      id: 'calendar.today',
+      label: t('ganttChart:shortcuts.today'),
+      group: 'navigation',
+      keywords: ['kalender', 'heute', 'aktuell', 'periode'],
+      shortcutHint: 'T',
+      keys: { key: 't' },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => scrollToTimelineReferenceDate(new Date()),
+    },
+    {
+      id: 'calendar.previousPeriod',
+      label: t('ganttChart:shortcuts.previousPeriod'),
+      group: 'navigation',
+      keywords: ['kalender', 'vorherige', 'periode', 'zurück'],
+      shortcutHint: '←',
+      keys: { key: 'ArrowLeft' },
+      allowRepeat: true,
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => scrollToTimelineReferenceDate(addTimelinePeriod(getCurrentTimelineReferenceDate(), timelineViewMode, -1)),
+    },
+    {
+      id: 'calendar.nextPeriod',
+      label: t('ganttChart:shortcuts.nextPeriod'),
+      group: 'navigation',
+      keywords: ['kalender', 'nächste', 'periode', 'weiter'],
+      shortcutHint: '→',
+      keys: { key: 'ArrowRight' },
+      allowRepeat: true,
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => scrollToTimelineReferenceDate(addTimelinePeriod(getCurrentTimelineReferenceDate(), timelineViewMode, 1)),
+    },
+    {
+      id: 'calendar.previousLargePeriod',
+      label: t('ganttChart:shortcuts.previousLargePeriod'),
+      group: 'navigation',
+      keywords: ['kalender', 'vorherige', 'große', 'periode', 'sprung', 'zurück'],
+      shortcutHint: 'Shift+←',
+      keys: { shift: true, key: 'ArrowLeft' },
+      allowRepeat: true,
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => scrollToTimelineReferenceDate(addTimelinePeriodLarge(getCurrentTimelineReferenceDate(), timelineViewMode, -1)),
+    },
+    {
+      id: 'calendar.nextLargePeriod',
+      label: t('ganttChart:shortcuts.nextLargePeriod'),
+      group: 'navigation',
+      keywords: ['kalender', 'nächste', 'große', 'periode', 'sprung', 'weiter'],
+      shortcutHint: 'Shift+→',
+      keys: { shift: true, key: 'ArrowRight' },
+      allowRepeat: true,
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => scrollToTimelineReferenceDate(addTimelinePeriodLarge(getCurrentTimelineReferenceDate(), timelineViewMode, 1)),
+    },
+    ...CALENDAR_SHORTCUT_VIEW_MODES.map<CommandSpec>(({ mode, shortcut, labelKey }) => ({
+      id: `calendar.viewMode.${mode}`,
+      label: t(`ganttChart:shortcuts.${labelKey}`),
+      group: 'navigation',
+      keywords: ['kalender', 'ansicht', mode],
+      shortcutHint: shortcut,
+      keys: { key: shortcut },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => handleShortcutTimelineViewModeChange(mode),
+    })),
+    {
+      id: 'calendar.showOccupancy',
+      label: t('ganttChart:shortcuts.showOccupancy'),
+      group: 'navigation',
+      keywords: ['kalender', 'feldbelegung', 'felder'],
+      shortcutHint: 'F',
+      keys: { key: 'f' },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => handleCalendarModeChange('occupancy'),
+    },
+    {
+      id: 'calendar.showSeedlings',
+      label: t('ganttChart:shortcuts.showSeedlings'),
+      group: 'navigation',
+      keywords: ['kalender', 'anzucht', 'jungpflanzen'],
+      shortcutHint: 'A',
+      keys: { key: 'a' },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: () => handleCalendarModeChange('seedlings'),
+    },
+    {
+      id: 'calendar.toggleEdit',
+      label: editMode
+        ? t('ganttChart:moveModeCommandDeactivate')
+        : t('ganttChart:moveModeCommandActivate'),
+      group: 'navigation',
+      keywords: ['kalender', 'verschieben', 'drag-and-drop'],
+      shortcutHint: 'Alt+E / Z',
+      keys: { alt: true, key: 'e' },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements && calendarMode === 'occupancy',
+      action: toggleCalendarEditMode,
+    },
+    {
+      id: 'calendar.toggleEditPlain',
+      label: editMode
+        ? t('ganttChart:moveModeCommandDeactivate')
+        : t('ganttChart:moveModeCommandActivate'),
+      group: 'navigation',
+      keywords: ['kalender', 'verschieben', 'drag-and-drop'],
+      shortcutHint: 'Z',
+      keys: { key: 'z' },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements && calendarMode === 'occupancy',
+      action: toggleCalendarEditMode,
+    },
+  ], [
+    calendarMode,
+    editMode,
+    getCurrentTimelineReferenceDate,
+    handleCalendarModeChange,
+    handleShortcutTimelineViewModeChange,
+    hasCalendarRequirements,
+    scrollToTimelineReferenceDate,
+    t,
+    timelineViewMode,
+    toggleCalendarEditMode,
+  ]);
+
+  useRegisterCommands('calendar-page', calendarCommands);
+
+  useEffect(() => {
+    if (loading || !hasCalendarRequirements) {
+      return;
+    }
+
+    const storedRowScrollTop = storedGanttState?.rowScrollTop;
+    const nextScrollTop = typeof storedRowScrollTop === 'number' && Number.isFinite(storedRowScrollTop)
+      ? Math.max(0, storedRowScrollTop)
+      : 0;
+    setGanttScrollTop(nextScrollTop);
+    if (ganttViewportRef.current) {
+      ganttViewportRef.current.scrollTop = nextScrollTop;
+    }
+    hasRestoredTimelineRef.current = false;
+  }, [activeProjectId, calendarMode, hasCalendarRequirements, loading, storedGanttState?.rowScrollTop]);
+
+  useEffect(() => {
+    if (loading || !hasCalendarRequirements) {
+      return undefined;
+    }
+
+    let timeoutId: number | null = null;
+    let animationFrameId: number | null = null;
+    let isCancelled = false;
+    let attempt = 0;
+
+    const restoreTimelineScroll = (): void => {
+      animationFrameId = window.requestAnimationFrame(() => {
+        if (isCancelled) {
+          return;
+        }
+
+        const scrollContainer = ganttViewportRef.current?.querySelector<HTMLElement>('.rmg-container') ?? null;
+        if (!scrollContainer) {
+          return;
+        }
+
+        const referenceDate = getInitialTimelineReferenceDate(
+          getStoredGanttState(ganttStateStorageKey),
+          startDate,
+          endDate,
+        );
+        const nextScrollLeft = getTimelineScrollLeftForDate(referenceDate, timelineViewMode, startDate, scrollContainer);
+        const previousScrollBehavior = scrollContainer.style.scrollBehavior;
+        scrollContainer.style.scrollBehavior = 'auto';
+        scrollContainer.scrollLeft = nextScrollLeft;
+        scrollContainer.style.scrollBehavior = previousScrollBehavior;
+
+        if (nextScrollLeft > 0 && scrollContainer.scrollLeft === 0 && attempt < 5) {
+          attempt += 1;
+          timeoutId = window.setTimeout(restoreTimelineScroll, 50);
+          return;
+        }
+
+        latestReferenceDateRef.current = referenceDate;
+        hasRestoredTimelineRef.current = true;
+        storeGanttState(ganttStateStorageKey, {
+          calendarMode,
+          timelineViewMode,
+          referenceDate: formatDateToAPI(referenceDate),
+        });
+      });
+    };
+
+    timeoutId = window.setTimeout(restoreTimelineScroll, 0);
+
+    return () => {
+      isCancelled = true;
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [
+    activeProjectId,
+    calendarMode,
+    endDate,
+    ganttStateStorageKey,
+    hasCalendarRequirements,
+    loading,
+    startDate,
+    timelineViewMode,
+  ]);
+
+  useEffect(() => {
+    if (loading || !hasCalendarRequirements) {
+      return undefined;
+    }
+
+    const scrollContainer = ganttViewportRef.current?.querySelector<HTMLElement>('.rmg-container') ?? null;
+    if (!scrollContainer) {
+      return undefined;
+    }
+
+    const handleTimelineScroll = (): void => {
+      if (!hasRestoredTimelineRef.current) {
+        return;
+      }
+      const referenceDate = getReferenceDateFromScroll(
+        scrollContainer.scrollLeft,
+        scrollContainer.clientWidth,
+        timelineViewMode,
+        startDate,
+        endDate,
+      );
+      latestReferenceDateRef.current = referenceDate;
+      storeGanttState(ganttStateStorageKey, {
+        calendarMode,
+        timelineViewMode,
+        referenceDate: formatDateToAPI(referenceDate),
+      });
+    };
+
+    scrollContainer.addEventListener('scroll', handleTimelineScroll, { passive: true });
+    return () => scrollContainer.removeEventListener('scroll', handleTimelineScroll);
+  }, [calendarMode, endDate, ganttStateStorageKey, hasCalendarRequirements, loading, startDate, timelineViewMode]);
+
+  useEffect(() => {
+    if (loading || !hasCalendarRequirements || calendarMode !== 'occupancy' || !editMode) {
+      return undefined;
+    }
+
+    const viewport = ganttViewportRef.current;
+    if (!viewport) {
+      return undefined;
+    }
+
+    let activeTouchId: number | null = null;
+    let activeTaskTarget: HTMLElement | null = null;
+    let isMouseDragReady = false;
+    let dragReadyAnimationFrame: number | null = null;
+    let pendingMovePoint: SyntheticMousePoint | null = null;
+    let pendingEndPoint: SyntheticMousePoint | null = null;
+
+    const resetTouchDrag = (): void => {
+      activeTouchId = null;
+      activeTaskTarget = null;
+      isMouseDragReady = false;
+      pendingMovePoint = null;
+      pendingEndPoint = null;
+      if (dragReadyAnimationFrame !== null) {
+        window.cancelAnimationFrame(dragReadyAnimationFrame);
+        dragReadyAnimationFrame = null;
+      }
+    };
+
+    const flushPendingTouchDrag = (): void => {
+      isMouseDragReady = true;
+      dragReadyAnimationFrame = null;
+      if (pendingMovePoint) {
+        const moveTarget = document.elementFromPoint?.(pendingMovePoint.clientX, pendingMovePoint.clientY)
+          ?? activeTaskTarget
+          ?? document;
+        dispatchSyntheticMouseEvent(moveTarget, 'mousemove', pendingMovePoint);
+        pendingMovePoint = null;
+      }
+      if (pendingEndPoint) {
+        dispatchSyntheticMouseEvent(document, 'mouseup', pendingEndPoint);
+        resetTouchDrag();
+      }
+    };
+
+    const getTrackedTouch = (event: TouchEvent): Touch | null => {
+      if (activeTouchId === null) {
+        return getPrimaryTouch(event);
+      }
+
+      const touches = Array.from(event.touches);
+      return touches.find((touch) => touch.identifier === activeTouchId) ?? getPrimaryTouch(event);
+    };
+
+    const handleTouchStart = (event: TouchEvent): void => {
+      if (event.touches.length !== 1) {
+        return;
+      }
+
+      const target = event.target instanceof HTMLElement
+        ? event.target.closest<HTMLElement>('[data-rmg-component="task"]')
+        : null;
+      const touch = getPrimaryTouch(event);
+      if (!target || !touch) {
+        return;
+      }
+
+      activeTouchId = touch.identifier;
+      activeTaskTarget = target;
+      isMouseDragReady = false;
+      event.preventDefault();
+      dispatchSyntheticMouseEvent(target, 'mousedown', toSyntheticMousePoint(touch));
+      dragReadyAnimationFrame = window.requestAnimationFrame(flushPendingTouchDrag);
+    };
+
+    const handleTouchMove = (event: TouchEvent): void => {
+      if (activeTouchId === null || !activeTaskTarget) {
+        return;
+      }
+
+      const touch = getTrackedTouch(event);
+      if (!touch) {
+        return;
+      }
+
+      event.preventDefault();
+      const point = toSyntheticMousePoint(touch);
+      if (!isMouseDragReady) {
+        pendingMovePoint = point;
+        return;
+      }
+      const moveTarget = document.elementFromPoint?.(point.clientX, point.clientY)
+        ?? activeTaskTarget
+        ?? document;
+      dispatchSyntheticMouseEvent(moveTarget, 'mousemove', point);
+    };
+
+    const finishTouchDrag = (event: TouchEvent): void => {
+      if (activeTouchId === null || !activeTaskTarget) {
+        return;
+      }
+
+      const touch = Array.from(event.changedTouches).find((candidate) => candidate.identifier === activeTouchId)
+        ?? getPrimaryTouch(event);
+      if (touch) {
+        event.preventDefault();
+        const point = toSyntheticMousePoint(touch);
+        if (!isMouseDragReady) {
+          pendingEndPoint = point;
+          return;
+        }
+        dispatchSyntheticMouseEvent(document, 'mouseup', point);
+      }
+      resetTouchDrag();
+    };
+
+    viewport.addEventListener('touchstart', handleTouchStart, { passive: false });
+    viewport.addEventListener('touchmove', handleTouchMove, { passive: false });
+    viewport.addEventListener('touchend', finishTouchDrag, { passive: false });
+    viewport.addEventListener('touchcancel', finishTouchDrag, { passive: false });
+
+    return () => {
+      viewport.removeEventListener('touchstart', handleTouchStart);
+      viewport.removeEventListener('touchmove', handleTouchMove);
+      viewport.removeEventListener('touchend', finishTouchDrag);
+      viewport.removeEventListener('touchcancel', finishTouchDrag);
+      resetTouchDrag();
+    };
+  }, [calendarMode, editMode, hasCalendarRequirements, loading]);
+
+  useEffect(() => {
+    const viewport = ganttViewportRef.current;
+    if (!viewport) {
+      return undefined;
+    }
+
+    const updateViewportHeight = (): void => {
+      setGanttViewportHeight(viewport.clientHeight);
+    };
+    updateViewportHeight();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateViewportHeight);
+      return () => window.removeEventListener('resize', updateViewportHeight);
+    }
+    const observer = new ResizeObserver(updateViewportHeight);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || loading) {
+      return;
+    }
+
+    console.debug('[Gantt diagnostics]', {
+      beds: beds.length,
+      plantingPlans: plantingPlans.length,
+      totalRows: activeTaskGroups.length,
+      totalTimelineItems,
+      renderedRows: renderedTaskGroups.length,
+      renderedTimelineItems,
+      firstRenderedRow: renderWindow.startIndex,
+      lastRenderedRow: renderWindow.endIndex,
+    });
+  }, [
+    activeTaskGroups.length,
+    beds.length,
+    loading,
+    plantingPlans.length,
+    renderWindow.endIndex,
+    renderWindow.startIndex,
+    renderedTaskGroups.length,
+    renderedTimelineItems,
+    totalTimelineItems,
+  ]);
   const viewModeActions = useMemo<TopbarContextAction[]>(() => (hasCalendarRequirements ? [
     {
       id: 'calendar-view-mode-occupancy',
@@ -644,75 +1455,10 @@ function GanttChartPage() {
     </Box>
   ), [t]);
 
-  const { chartData, chartCultures, maxTotalYield } = useMemo(() => {
-    const cultureMeta = new Map<number, WeeklyYieldCultureMeta>();
-    const weekMap = new Map(weeklyYield.map((week) => [week.week_start, week]));
-    const sortedByStart = [...weeklyYield].sort((left, right) => left.week_start.localeCompare(right.week_start));
-    if (sortedByStart.length === 0) {
-      return {
-        chartData: [] as WeeklyYieldChartColumn[],
-        chartCultures: [] as WeeklyYieldCultureMeta[],
-        maxTotalYield: 0,
-      };
-    }
+  const contextActions = useMemo<TopbarContextAction[]>(() => [], []);
 
-    const startDateRange = parseDateString(sortedByStart[0].week_start);
-    const endDateRange = parseDateString(sortedByStart[sortedByStart.length - 1].week_start);
-
-    const rows: WeeklyYieldChartColumn[] = [];
-    const currentDate = new Date(startDateRange);
-    while (currentDate <= endDateRange) {
-      const weekStart = formatDateToAPI(currentDate);
-      const week = weekMap.get(weekStart);
-      const weekCultures = week?.cultures || [];
-      const culturesForWeek = weekCultures.map((entry) => {
-        if (!cultureMeta.has(entry.culture_id)) {
-          cultureMeta.set(entry.culture_id, {
-            id: entry.culture_id,
-            name: entry.culture_name,
-            color: entry.color,
-          });
-        }
-        return entry;
-      });
-      const totalYield = culturesForWeek.reduce((sum, item) => sum + item.yield, 0);
-      const weekStartDate = parseDateString(weekStart);
-      const monthLabel = weekStartDate.toLocaleDateString('de-DE', { month: 'short' });
-      const isoWeek = week?.iso_week || formatIsoWeek(weekStartDate);
-      rows.push({
-        isoWeek,
-        weekLabel: isoWeek.split('-W')[1] ? `W${isoWeek.split('-W')[1]}` : isoWeek,
-        monthLabel,
-        cultures: culturesForWeek,
-        totalYield,
-      });
-      currentDate.setDate(currentDate.getDate() + 7);
-    }
-
-    const sortedCultures = [...cultureMeta.values()].sort((left, right) => left.name.localeCompare(right.name, 'de'));
-    const maxYield = rows.reduce((max, row) => Math.max(max, row.totalYield), 0);
-
-    return {
-      chartData: rows,
-      chartCultures: sortedCultures,
-      maxTotalYield: maxYield,
-    };
-  }, [weeklyYield]);
-  const hasYieldData = chartData.length > 0;
-
-  useTopbarContextActions(setTopbarContextActions, viewModeActions);
-
-  const yAxisTicks = useMemo(() => {
-    const tickCount = 5;
-    if (maxTotalYield <= 0) {
-      return [0];
-    }
-    return Array.from({ length: tickCount }, (_, idx) => {
-      const value = (maxTotalYield / (tickCount - 1)) * idx;
-      return Number(value.toFixed(1));
-    });
-  }, [maxTotalYield]);
-
+  useTopbarContextActions(setTopbarContextActions, contextActions);
+  useTopbarTitleActions(setTopbarTitleActions, viewModeActions);
 
   if (loading) {
     return (
@@ -765,128 +1511,96 @@ function GanttChartPage() {
               bgcolor: 'surface.surfaceBackground',
             }}
           >
-            <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
-              <GanttChart
-                key={`${calendarMode}-${ganttRenderKey}`}
-                tasks={activeTaskGroups}
-                locale={resolvedLocale}
-                localeText={ganttLocaleText}
-                viewMode={ViewMode.MONTH}
-                startDate={startDate}
-                endDate={endDate}
-                editMode={calendarMode === 'occupancy' ? editMode : false}
-                allowTaskResize={false}
-                allowTaskMove={calendarMode === 'occupancy' && editMode}
-                showProgress={false}
-                darkMode={false}
-                onTaskUpdate={calendarMode === 'occupancy' && editMode ? handleTaskUpdate : undefined}
-                renderHeader={renderGanttHeader}
-                renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
-                  ? renderSeedlingTooltip({ task })
-                  : renderOccupancyTooltip({ task }))}
-                renderTask={calendarMode === 'seedlings'
-                  ? ({ task, leftPx, widthPx, topPx }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          left: `${leftPx}px`,
-                          top: `${topPx}px`,
-                          width: `${widthPx}px`,
-                          minWidth: `${widthPx}px`,
-                          height: 26,
-                          px: 1,
-                          borderRadius: 1,
-                          backgroundColor: task.color || '#3b82f6',
-                          color: '#fff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          overflow: 'hidden',
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
-                          boxSizing: 'border-box',
-                          cursor: 'default',
-                        }}
-                      >
-                        <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {typeof task.plantsCount === 'number' && task.plantsCount > 0
-                            ? `${task.name} · ${formatPlantCount(task.plantsCount)} ${t('ganttChart:seedlings.plantsUnit')}`
-                            : task.name}
-                        </Typography>
-                      </Box>
-                    )
-                  : undefined}
-              />
-            </GanttRenderBoundary>
+            <Box
+              ref={ganttViewportRef}
+              data-testid="gantt-virtual-viewport"
+              onScroll={(event) => {
+                const nextScrollTop = event.currentTarget.scrollTop;
+                setGanttScrollTop(nextScrollTop);
+                storeGanttState(ganttStateStorageKey, {
+                  calendarMode,
+                  timelineViewMode,
+                  rowScrollTop: nextScrollTop,
+                });
+              }}
+              sx={{
+                position: 'relative',
+                height: 'calc(100vh - 220px)',
+                minHeight: 420,
+                overflowY: 'auto',
+                overflowX: 'hidden',
+              }}
+            >
+              <Box sx={{ height: Math.max(renderWindow.totalHeight, ganttViewportHeight), position: 'relative' }}>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: ganttScrollTop,
+                    left: 0,
+                    right: 0,
+                  }}
+                >
+                  <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
+                    <GanttChartWithFocusMode
+                      key={`${calendarMode}-${ganttRenderKey}`}
+                      tasks={renderedTaskGroups}
+                      locale={resolvedLocale}
+                      localeText={ganttLocaleText}
+                      viewMode={timelineViewMode}
+                      leftColumnWidth={GANTT_LEFT_COLUMN_WIDTH}
+                      startDate={startDate}
+                      endDate={endDate}
+                      focusMode={false}
+                      editMode={calendarMode === 'occupancy' ? editMode : false}
+                      allowTaskResize={false}
+                      allowTaskMove={calendarMode === 'occupancy' && editMode}
+                      showProgress={false}
+                      darkMode={false}
+                      onTaskUpdate={calendarMode === 'occupancy' && editMode ? handleTaskUpdate : undefined}
+                      renderHeader={renderGanttHeader}
+                      renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
+                        ? renderSeedlingTooltip({ task })
+                        : renderOccupancyTooltip({ task }))}
+                      renderTask={calendarMode === 'seedlings'
+                        ? ({ task, leftPx, widthPx, topPx }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                left: `${leftPx}px`,
+                                top: `${topPx}px`,
+                                width: `${widthPx}px`,
+                                minWidth: `${widthPx}px`,
+                                height: 26,
+                                px: 1,
+                                borderRadius: 1,
+                                backgroundColor: task.color || '#3b82f6',
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap',
+                                textOverflow: 'ellipsis',
+                                boxSizing: 'border-box',
+                                cursor: 'default',
+                              }}
+                            >
+                              <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {typeof task.plantsCount === 'number' && task.plantsCount > 0
+                                  ? `${task.name} · ${formatPlantCount(task.plantsCount)} ${t('ganttChart:seedlings.plantsUnit')}`
+                                  : task.name}
+                              </Typography>
+                            </Box>
+                          )
+                        : undefined}
+                    />
+                  </GanttRenderBoundary>
+                </Box>
+              </Box>
+            </Box>
           </Box>
           </PageSurface>
         )}
 
-        {hasCalendarRequirements && calendarMode === 'occupancy' && hasYieldData ? (
-          <PageSurface variant="fullWorkspace" sx={{ mt: 3 }}>
-          <Box className="gantt-container-wrapper" sx={{ p: 2, border: '1px solid', borderColor: 'surface.surfaceSoftBorder', borderRadius: 2, bgcolor: 'surface.surfaceBackground' }}>
-            <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
-              {t('ganttChart:yieldDistributionTitle')}
-            </Typography>
-              <Box sx={{ width: '100%' }}>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                  {chartCultures.map((culture) => (
-                    <Box key={culture.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <Box sx={{ width: 12, height: 12, borderRadius: '2px', backgroundColor: culture.color }} />
-                      <Typography variant="body2">{culture.name}</Typography>
-                    </Box>
-                  ))}
-                </Box>
-
-                <Box sx={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: 1, alignItems: 'start' }}>
-                  <Box>
-                    <Box sx={{ display: 'flex', flexDirection: 'column-reverse', justifyContent: 'space-between', height: 260, pr: 1 }}>
-                      {yAxisTicks.map((tick, index) => (
-                        <Typography key={`${tick}-${index}`} variant="caption" sx={{ textAlign: 'right', color: 'text.secondary' }}>
-                          {tick.toFixed(1)} kg
-                        </Typography>
-                      ))}
-                    </Box>
-                    <Box sx={{ height: 44 }} />
-                  </Box>
-
-                  <Box sx={{ overflowX: 'auto', pb: 0.5 }}>
-                    <Box sx={{ width: Math.max(chartData.length * 40, 420) }}>
-                      <Box sx={{ borderLeft: '1px solid #d1d5db', borderBottom: '1px solid #d1d5db', height: 260, px: 1, display: 'flex', alignItems: 'flex-end', gap: 0.75 }}>
-                        {chartData.map((week) => (
-                          <Box key={week.isoWeek} sx={{ width: 34, flex: '0 0 34px', height: '100%', display: 'flex', alignItems: 'flex-end' }}>
-                            <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column-reverse', justifyContent: 'flex-start' }}>
-                              {week.cultures.map((culture) => (
-                                <Tooltip key={`${week.isoWeek}-${culture.culture_id}`} title={`${culture.culture_name}: ${culture.yield.toFixed(2)} kg`}>
-                                  <Box
-                                    sx={{
-                                      width: '100%',
-                                      height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
-                                      minHeight: culture.yield > 0 ? '2px' : 0,
-                                      backgroundColor: culture.color,
-                                    }}
-                                  />
-                                </Tooltip>
-                              ))}
-                            </Box>
-                          </Box>
-                        ))}
-                      </Box>
-
-                      <Box sx={{ height: 44, px: 1, display: 'flex', gap: 0.75, alignItems: 'flex-start' }}>
-                        {chartData.map((week) => (
-                          <Box key={`${week.isoWeek}-axis`} sx={{ width: 34, flex: '0 0 34px', textAlign: 'center' }}>
-                            <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, lineHeight: 1.2 }}>{week.weekLabel}</Typography>
-                            <Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', lineHeight: 1.2 }}>{week.monthLabel}</Typography>
-                          </Box>
-                        ))}
-                      </Box>
-                    </Box>
-                  </Box>
-                </Box>
-              </Box>
-          </Box>
-          </PageSurface>
-        ) : null}
     </PageContainer>
   );
 }

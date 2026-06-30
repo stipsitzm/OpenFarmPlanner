@@ -9,6 +9,7 @@ import { mockT } from './helpers/testI18n';
 
 const mockUseNavigationBlocker = vi.fn();
 const mockStopRowEditMode = vi.hoisted(() => vi.fn());
+const mockSetCellFocus = vi.hoisted(() => vi.fn());
 
 vi.mock('../hooks/autosave', () => ({
   useNavigationBlocker: (...args: unknown[]) => mockUseNavigationBlocker(...args),
@@ -48,14 +49,20 @@ vi.mock('@mui/x-data-grid', async () => {
     onCellClick,
     onCellKeyDown,
     onRowEditStop,
+    onRowSelectionModelChange,
     rowModesModel,
+    rowSelectionModel,
     slots,
+    pagination,
+    paginationModel,
+    pageSizeOptions,
   }: unknown) => {
     const [, forceFocusRender] = React.useState(0);
 
     if (apiRef?.current) {
       apiRef.current.state = apiRef.current.state ?? { focus: { cell: null } };
       apiRef.current.getVisibleColumns = () => columns;
+      apiRef.current.getAllRowIds = () => rows.map((row: TestGridRow) => row.id);
       apiRef.current.getRowWithUpdatedValues = (id: string | number) =>
         rows.find((row: TestGridRow) => String(row.id) === String(id)) ?? null;
       apiRef.current.getRowIndexRelativeToVisibleRows = (id: string | number) =>
@@ -70,6 +77,7 @@ vi.mock('@mui/x-data-grid', async () => {
         columns.find((column: GridColDef) => column.field === params.field)?.editable !== false;
       apiRef.current.scrollToIndexes = vi.fn();
       apiRef.current.setCellFocus = (id: string | number, field: string) => {
+        mockSetCellFocus(id, field);
         apiRef.current.state.focus.cell = { id, field };
         forceFocusRender((version) => version + 1);
       };
@@ -87,8 +95,17 @@ vi.mock('@mui/x-data-grid', async () => {
     return (
       <div>
         <div data-testid="row-count">{rows.length}</div>
+        <div data-testid="pagination-enabled">{String(Boolean(pagination))}</div>
+        <div data-testid="pagination-page-size">{paginationModel?.pageSize ?? ''}</div>
+        <div data-testid="pagination-options">{pageSizeOptions?.join(',') ?? ''}</div>
         {rows.map((row: TestGridRow) => (
-          <div key={row.id} role="row" data-id={String(row.id)} data-testid={`row-${row.id}`}>
+          <div
+            key={row.id}
+            role="row"
+            data-id={String(row.id)}
+            data-selected={rowSelectionModel?.ids?.has(row.id) ? 'true' : 'false'}
+            data-testid={`row-${row.id}`}
+          >
             <span data-testid={`mode-${row.id}`}>{rowModesModel?.[row.id]?.mode ?? GridRowModes.View}</span>
             {columns.map((col: GridColDef) => {
               if (typeof col.getActions === 'function') {
@@ -121,7 +138,19 @@ vi.mock('@mui/x-data-grid', async () => {
                       if (apiRef?.current) {
                         apiRef.current.state.focus.cell = { id: row.id, field: col.field };
                       }
+                      onRowSelectionModelChange?.({ type: 'include', ids: new Set([row.id]) });
                       onCellClick?.({ id: row.id, field: col.field, isEditable: col.editable !== false });
+                    }}
+                    onKeyDown={(event) => {
+                      onCellKeyDown?.(
+                        {
+                          id: row.id,
+                          field: col.field,
+                          isEditable: col.editable !== false,
+                          row,
+                        },
+                        event,
+                      );
                     }}
                   >
                     Zelle {row.id}-{col.field}
@@ -227,6 +256,22 @@ describe('EditableDataGrid', () => {
     });
   });
 
+  it('configures explicit pagination page sizes when requested', async () => {
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        paginationPageSizeOptions={[25, 50, 100]}
+        initialPageSize={25}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('1'));
+    expect(screen.getByTestId('pagination-enabled')).toHaveTextContent('true');
+    expect(screen.getByTestId('pagination-page-size')).toHaveTextContent('25');
+    expect(screen.getByTestId('pagination-options')).toHaveTextContent('25,50,100');
+  });
+
   it('supports add, blur/enter/tab commit flows and calls API save with payload', async () => {
     const validateRow = vi
       .fn<(row: TestGridRow) => string | null>()
@@ -323,7 +368,7 @@ describe('EditableDataGrid', () => {
     await user.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
 
     await waitFor(() => {
-      expect(mockUseNavigationBlocker).toHaveBeenLastCalledWith(false, 'messages.unsavedChanges');
+      expect(mockUseNavigationBlocker).toHaveBeenLastCalledWith(true, 'messages.unsavedChanges');
     });
   });
 
@@ -443,9 +488,14 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
     await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+    await waitFor(() => expect(screen.getByTestId('row-1')).toHaveAttribute('data-selected', 'true'));
     fireEvent.click(screen.getByRole('button', { name: 'ESC 1' }));
 
-    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('view'));
+    await waitFor(() => {
+      expect(screen.getByTestId('mode-1')).toHaveTextContent('view');
+      expect(screen.getByTestId('row-1')).toHaveAttribute('data-selected', 'false');
+      expect(screen.getByTestId('focused-cell')).toHaveTextContent('none');
+    });
     expect(updateSpy).not.toHaveBeenCalled();
     expect(screen.queryByText('messages.validationErrors')).not.toBeInTheDocument();
     expect(screen.queryByText('Name ist erforderlich')).not.toBeInTheDocument();
@@ -502,6 +552,70 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('-1-culture'));
     expect(screen.queryByText(/Folgende Pflichtfelder müssen ausgefüllt werden/)).not.toBeInTheDocument();
     expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it('skips read-only cells during keyboard navigation', async () => {
+    const props = baseProps();
+    const columnsWithReadOnlyMiddle: GridColDef[] = [
+      { field: 'name', headerName: 'Name', editable: true },
+      { field: 'area_sqm', headerName: 'Fläche', editable: false },
+      { field: 'notes', headerName: 'Notizen', editable: true },
+    ];
+
+    render(
+      <EditableDataGrid
+        {...props}
+        columns={columnsWithReadOnlyMiddle}
+        showDeleteAction={false}
+      />,
+    );
+
+    const nameCell = await screen.findByRole('button', { name: 'Zelle 1-name' });
+    fireEvent.keyDown(nameCell, {
+      key: 'ArrowRight',
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('1-notes'));
+    expect(screen.getByTestId('focused-cell')).not.toHaveTextContent('1-area_sqm');
+  });
+
+  it('focuses the next editable row cell once after Tab saves the edited row', async () => {
+    const props = baseProps(() => null);
+    vi.spyOn(props.api, 'list').mockResolvedValue({
+      data: {
+        results: [
+          createGridRow({ id: 1, name: 'Beet A', area_sqm: 12 }),
+          createGridRow({ id: 2, name: 'Beet B', area_sqm: 8 }),
+        ],
+      },
+    });
+    const updateSpy = vi.spyOn(props.api, 'update');
+
+    render(<EditableDataGrid {...props} showDeleteAction={false} />);
+
+    const lastEditableCell = await screen.findByRole('button', { name: 'Zelle 1-area_sqm' });
+    fireEvent.click(lastEditableCell);
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+
+    mockSetCellFocus.mockClear();
+    fireEvent.keyDown(lastEditableCell, {
+      key: 'Tab',
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    });
+
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalled();
+      expect(mockSetCellFocus).toHaveBeenCalledTimes(1);
+      expect(mockSetCellFocus).toHaveBeenCalledWith(2, 'name');
+      expect(screen.getByTestId('focused-cell')).toHaveTextContent('2-name');
+    });
   });
 
   it('shows required-field validation when explicitly saving an incomplete new row', async () => {
@@ -598,8 +712,14 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
     await waitFor(() => expect(screen.getByRole('button', { name: 'actions.save' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('row-1')).toHaveAttribute('data-selected', 'true'));
     await user.click(screen.getByRole('button', { name: /Tab speichern 1/i }));
-    await waitFor(() => expect(updateSpy).toHaveBeenCalled());
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalled();
+      expect(screen.getByTestId('mode-1')).toHaveTextContent('view');
+      expect(screen.getByTestId('row-1')).toHaveAttribute('data-selected', 'false');
+      expect(screen.getByTestId('focused-cell')).toHaveTextContent('none');
+    });
   });
 
   it('opens contextual row actions without rendering a permanent action column', async () => {
@@ -619,7 +739,7 @@ describe('EditableDataGrid', () => {
     const stopPropagationSpy = vi.spyOn(contextMenuEvent, 'stopPropagation');
     fireEvent(screen.getByTestId('row-1'), contextMenuEvent);
 
-    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Duplizieren' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
     expect(contextMenuEvent.defaultPrevented).toBe(true);
@@ -643,8 +763,54 @@ describe('EditableDataGrid', () => {
 
     fireEvent.contextMenu(screen.getByTestId('row-1'));
 
-    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Duplizieren' })).toBeInTheDocument();
+  });
+
+  it('renders configured inline row actions inside the requested cell', async () => {
+    const props = baseProps();
+    const deleteSpy = vi.spyOn(props.api, 'delete');
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        inlineRowActionField="name"
+        getInlineRowActions={(row, helpers) => [
+          {
+            id: 'delete',
+            label: 'Löschen',
+            onClick: () => helpers.delete(row.id),
+          },
+        ]}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+
+    await waitFor(() => expect(deleteSpy).toHaveBeenCalledWith(1));
+  });
+
+  it('opens the contextual row action menu from the configured inline actions cell', async () => {
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        showDeleteAction={false}
+        inlineRowActionField="name"
+        showInlineRowActionMenu
+        duplicateRow={(row) => ({ ...row, id: -2, isNew: true })}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Aktionen' }));
+
+    expect(screen.getByRole('menuitem', { name: 'Duplizieren' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'actions.copyRow' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'actions.copyTable' })).toBeInTheDocument();
   });
 
   it('duplicates a row from the contextual menu and starts editing the copy', async () => {
@@ -722,7 +888,7 @@ describe('EditableDataGrid', () => {
     expect(deleteSpy).not.toHaveBeenCalled();
   });
 
-  it('finalizes optimistic delete after the 8000 ms undo window', async () => {
+  it('finalizes optimistic delete after the 10000 ms undo window', async () => {
     const props = baseProps();
     const deleteSpy = vi.spyOn(props.api, 'delete');
 
@@ -741,7 +907,7 @@ describe('EditableDataGrid', () => {
     vi.useFakeTimers();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Löschen' }));
 
-    vi.advanceTimersByTime(7999);
+    vi.advanceTimersByTime(9999);
     expect(deleteSpy).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(1);
@@ -806,7 +972,7 @@ describe('EditableDataGrid', () => {
     expect(screen.getByTestId('row-1')).toBeInTheDocument();
     expect(screen.queryByTestId('row-2')).not.toBeInTheDocument();
 
-    vi.advanceTimersByTime(8000);
+    vi.advanceTimersByTime(10000);
     await Promise.resolve();
     expect(deleteSpy).toHaveBeenCalledWith(2);
     expect(deleteSpy).not.toHaveBeenCalledWith(1);

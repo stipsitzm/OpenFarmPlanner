@@ -11,11 +11,12 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+import socket
 from pathlib import Path
 from urllib.parse import urlparse
 
-from django.core.exceptions import ImproperlyConfigured
 from corsheaders.defaults import default_headers
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -40,6 +41,45 @@ def _env_str(name: str, default: str = "") -> str:
 
 def _env_bool(name: str, default: str = "False") -> bool:
     return _env_str(name, default).lower() in ('true', '1', 'yes')
+
+
+def _env_list(name: str, default: str = '') -> list[str]:
+    return [value.strip() for value in os.getenv(name, default).split(',') if value.strip()]
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    return list(dict.fromkeys(values))
+
+
+def _detect_lan_ip() -> str:
+    """Best-effort local LAN IP detection for development settings only."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.connect(('8.8.8.8', 80))
+            return probe.getsockname()[0]
+    except OSError:
+        return ''
+
+
+def _development_lan_hosts() -> list[str]:
+    configured_hosts = _env_list('DEV_LAN_HOSTS') + _env_list('DEV_LAN_IPS')
+    detected_host = _detect_lan_ip()
+    if detected_host:
+        configured_hosts.append(detected_host)
+
+    return _dedupe([
+        host.strip()
+        for host in configured_hosts
+        if host.strip() and host.strip() not in {'localhost', '127.0.0.1', '0.0.0.0'}
+    ])
+
+
+def _local_dev_origins(hosts: list[str], ports: tuple[int, ...] = (5173, 4173, 3000)) -> list[str]:
+    origins: list[str] = []
+    for host in hosts:
+        for port in ports:
+            origins.append(f'http://{host}:{port}')
+    return origins
 
 
 def _env_proxy_ssl_header(name: str = 'SECURE_PROXY_SSL_HEADER') -> tuple[str, str] | None:
@@ -77,7 +117,11 @@ _allowed_hosts_str = os.getenv(
     'ALLOWED_HOSTS',
     'localhost,127.0.0.1'
 )
-ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts_str.split(',')]
+DEVELOPMENT_LAN_HOSTS = _development_lan_hosts() if DEBUG and DJANGO_ENV == 'development' else []
+ALLOWED_HOSTS = _dedupe(
+    [host.strip() for host in _allowed_hosts_str.split(',') if host.strip()]
+    + DEVELOPMENT_LAN_HOSTS
+)
 
 
 # Application definition
@@ -263,14 +307,25 @@ SERVER_EMAIL = _env_str('SERVER_EMAIL', EMAIL_HOST_USER)
 
 # CORS and CSRF origins are intentionally configured independently via environment variables.
 _cors_origins_str = os.getenv('CORS_ALLOWED_ORIGINS', '')
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins_str.split(',') if origin.strip()]
+DEVELOPMENT_LAN_ORIGINS = (
+    _local_dev_origins(DEVELOPMENT_LAN_HOSTS)
+    if DEBUG and DJANGO_ENV == 'development'
+    else []
+)
+CORS_ALLOWED_ORIGINS = _dedupe(
+    [origin.strip() for origin in _cors_origins_str.split(',') if origin.strip()]
+    + DEVELOPMENT_LAN_ORIGINS
+)
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-project-id',
 ]
 
 _csrf_origins_str = os.getenv('CSRF_TRUSTED_ORIGINS', '')
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins_str.split(',') if origin.strip()]
+CSRF_TRUSTED_ORIGINS = _dedupe(
+    [origin.strip() for origin in _csrf_origins_str.split(',') if origin.strip()]
+    + DEVELOPMENT_LAN_ORIGINS
+)
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = _env_str('SESSION_COOKIE_SAMESITE', 'Lax')
@@ -311,7 +366,7 @@ REST_FRAMEWORK = {
         'invitation_accept': _env_str('THROTTLE_INVITATION_ACCEPT', '20/hour'),
         'agent_login_consume': _env_str('THROTTLE_AGENT_LOGIN_CONSUME', '30/hour'),
     },
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'config.pagination.OpenFarmPlannerPageNumberPagination',
     'PAGE_SIZE': 100,
 }
 

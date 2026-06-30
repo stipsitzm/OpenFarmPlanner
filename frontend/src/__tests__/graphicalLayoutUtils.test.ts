@@ -19,7 +19,23 @@ describe('graphicalLayoutUtils', () => {
     expect(fallbackSize.height).toBeGreaterThan(0);
   });
 
+  it('preserves proportional dimensions for very small bed rect sizes', () => {
+    const smallBed = getBedRectSize({ length_m: 1, width_m: 1, area_sqm: 100 }, 8);
+    const doubleBed = getBedRectSize({ length_m: 2, width_m: 2, area_sqm: 1 }, 8);
 
+    expect(smallBed).toEqual({ width: 8, height: 8 });
+    expect(doubleBed.width / smallBed.width).toBe(2);
+    expect(doubleBed.height / smallBed.height).toBe(2);
+    expect((doubleBed.width * doubleBed.height) / (smallBed.width * smallBed.height)).toBe(4);
+  });
+
+  it('keeps fractional dimensional bed sizes to avoid rounding drift', () => {
+    const smallBed = getBedRectSize({ length_m: 1, width_m: 1, area_sqm: 1 }, 7.5);
+    const doubleBed = getBedRectSize({ length_m: 2, width_m: 2, area_sqm: 4 }, 7.5);
+
+    expect(smallBed).toEqual({ width: 7.5, height: 7.5 });
+    expect(doubleBed).toEqual({ width: 15, height: 15 });
+  });
 
   it('uses dimensions first and falls back to area for field rect sizes', () => {
     const dimensionsSize = getFieldRectSize({ length_m: 15, width_m: 10, area_sqm: 42 }, 20);
@@ -46,6 +62,26 @@ describe('graphicalLayoutUtils', () => {
   });
 
 
+
+  it('preserves proportional dimensions for very small beds inside a field', () => {
+    const fieldInnerSize = { width: 333, height: 221 };
+    const field = { length_m: 10, width_m: 10 };
+    const smallBed = getBedRectSizeWithinField(
+      { length_m: 1, width_m: 1, area_sqm: 100 },
+      field,
+      fieldInnerSize,
+    );
+    const doubleBed = getBedRectSizeWithinField(
+      { length_m: 2, width_m: 2, area_sqm: 1 },
+      field,
+      fieldInnerSize,
+    );
+
+    expect(smallBed).toEqual({ width: 33.3, height: 22.1 });
+    expect(doubleBed.width / smallBed.width).toBe(2);
+    expect(doubleBed.height / smallBed.height).toBe(2);
+    expect((doubleBed.width * doubleBed.height) / (smallBed.width * smallBed.height)).toBe(4);
+  });
 
   it('fills full placeable width when bed width equals field width', () => {
     const fieldInnerSize = { width: 360, height: 240 };

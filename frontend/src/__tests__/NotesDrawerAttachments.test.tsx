@@ -54,6 +54,15 @@ describe('NotesDrawer attachments', () => {
     expect(screen.getByTestId('crop-handle-se')).toBeInTheDocument();
   });
 
+  it('saves with Ctrl+S', () => {
+    const onSave = vi.fn();
+    render(<NotesDrawer open title="Notes" value="Some note" onChange={() => {}} onSave={onSave} onClose={() => {}} noteId={1} />);
+
+    fireEvent.keyDown(screen.getByRole('textbox'), { key: 's', ctrlKey: true });
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
   it('closes the drawer with Escape when notes are unchanged', () => {
     const onClose = vi.fn();
     render(<NotesDrawer open title="Notes" value="Existing note" onChange={() => {}} onSave={() => {}} onClose={onClose} noteId={1} />);
@@ -91,7 +100,7 @@ describe('NotesDrawer attachments', () => {
     });
 
     fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
-    await user.click(screen.getByRole('button', { name: 'Änderungen verwerfen und schließen' }));
+    await user.click(screen.getByRole('button', { name: 'Verwerfen' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -116,5 +125,15 @@ describe('NotesDrawer attachments', () => {
 
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByRole('heading', { name: 'Ungespeicherte Notizen' })).toBeInTheDocument();
+  });
+
+  it('focuses the text field after the drawer slide transition completes', async () => {
+    render(
+      <NotesDrawer open title="Notizen" value="" onChange={() => {}} onSave={() => {}} onClose={() => {}} />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox')).toHaveFocus();
+    });
   });
 });

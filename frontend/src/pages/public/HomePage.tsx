@@ -60,7 +60,7 @@ export default function HomePage() {
             <Stack spacing={1.2} sx={{ width: '100%', maxWidth: 320 }}>
               <Button
                 component={RouterLink}
-                to="/app"
+                to="/login"
                 variant="contained"
                 size="large"
                 sx={{

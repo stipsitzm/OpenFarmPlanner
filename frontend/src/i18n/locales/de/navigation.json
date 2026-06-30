@@ -7,6 +7,7 @@
   "suppliers": "Lieferanten",
   "plantingPlans": "Anbaupläne",
   "ganttChart": "Anbaukalender",
+  "yieldOverview": "Ertragsübersicht",
   "seedDemand": "Saatgutbedarf",
   "graphicalFields": "Grafische Ansicht",
   "accountSettings": "Kontoeinstellungen",
@@ -57,6 +58,7 @@
     "cultures": "Hilfe zu Kulturen",
     "plantingPlans": "Hilfe zu Anbauplänen",
     "calendar": "Hilfe zu Anbaukalender",
+    "yieldOverview": "Hilfe zu Ertragsübersicht",
     "seedDemand": "Hilfe zu Saatgutbedarf",
     "suppliers": "Hilfe zu Lieferanten",
     "openAria": "{{label}} öffnen"
@@ -93,7 +95,7 @@
     "help": "Hilfe"
   },
   "commandPalette": {
-    "label": "Aktionssuche (Alt+K)",
+    "label": "Aktionssuche",
     "placeholder": "Aktion suchen oder direkt ausführen",
     "emptyTitle": "Keine passenden Aktionen gefunden.",
     "emptyDescription": "Versuche einen anderen Suchbegriff oder prüfe, ob im aktuellen Kontext weitere Aktionen verfügbar sind.",
@@ -103,6 +105,8 @@
     "contextualShortcutsTitle": "Kontextbezogene Tastenkürzel (Alt+K)",
     "contextualShortcutsDescription": "Shortcuts sind browser-sicher und überschreiben keine üblichen Browser-Shortcuts.",
     "currentVersion": "Aktuelle Version",
+    "versionHistoryTitle": "Versionsverlauf",
+    "versionHistoryEmpty": "Noch keine Änderungen aufgezeichnet.",
     "restoreVersion": "Zu dieser Version wechseln",
     "contextTitles": {
       "global": "Global",
@@ -122,7 +126,6 @@
       "nextPage": "Nächste Seite",
       "previousPage": "Vorherige Seite",
       "openProjectSettings": "Projekteinstellungen öffnen",
-      "openProjectMembers": "Mitgliederbereich öffnen",
       "createProject": "Neues Projekt",
       "switchProjectPrefix": "Projekt wechseln",
       "openAccountSettings": "Kontoeinstellungen öffnen",
@@ -131,13 +134,25 @@
       "openPageHelp": "Seitenhilfe öffnen",
       "logout": "Abmelden",
       "openShortcuts": "Seitenhilfe öffnen",
-      "closeDialog": "Dialog schließen"
+      "closeDialog": "Dialog schließen",
+      "calendarToday": "Zur aktuellen Periode springen",
+      "calendarPreviousPeriod": "Vorherige Kalenderperiode",
+      "calendarNextPeriod": "Nächste Kalenderperiode",
+      "calendarDayView": "Tagesansicht",
+      "calendarWeekView": "Wochenansicht",
+      "calendarMonthView": "Monatsansicht",
+      "calendarQuarterView": "Quartalsansicht",
+      "calendarYearView": "Jahresansicht",
+      "calendarOccupancy": "Feldbelegung anzeigen",
+      "calendarSeedlings": "Anzucht anzeigen",
+      "calendarToggleMove": "Zeiträume verschieben ein-/ausschalten"
     },
     "feedback": {
       "versionHistoryLoadError": "Versionsverlauf konnte nicht geladen werden.",
       "versionRestored": "Projektversion wurde wiederhergestellt.",
       "versionRestoreError": "Projektversion konnte nicht wiederhergestellt werden.",
       "logoutError": "Abmeldung fehlgeschlagen. Bitte versuche es erneut."
-    }
+    },
+    "shortcutHint": "Tipp: Drücke Alt+K für die Command Palette."
   }
 }

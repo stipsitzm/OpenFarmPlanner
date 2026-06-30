@@ -1,0 +1,26 @@
+{
+  "loading": "Loading...",
+  "errors": {
+    "load": "Yield overview could not be loaded."
+  },
+  "filters": {
+    "culture": "Crop",
+    "allCultures": "All crops",
+    "year": "Year",
+    "period": "Display",
+    "week": "Week",
+    "month": "Month"
+  },
+  "chart": {
+    "title": "Yield distribution",
+    "tooltip": "{{period}} · {{culture}}: {{yield}} kg"
+  },
+  "empty": {
+    "noPlansTitle": "No yield forecast available yet",
+    "description": "Yield forecasts become available once planting plans with harvest periods exist.",
+    "createPlanAction": "Add planting plan",
+    "noYieldTitle": "No expected yields for {{year}}",
+    "noYieldDescription": "No harvest data exists for {{year}}. Try a different year or make sure your crops have expected yields entered.",
+    "openPlansAction": "Open planting plans"
+  }
+}

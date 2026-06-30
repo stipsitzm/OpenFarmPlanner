@@ -354,6 +354,9 @@ export default function ProjectSettingsPage() {
         )}
       </Box>
 
+      {!canManageMembers ? (
+        <Alert severity="info" sx={{ mb: 3 }}>{t('memberManagementNoAccess')}</Alert>
+      ) : null}
       <Typography variant="h6" sx={{ mb: 2 }}>{t('inviteSectionTitle')}</Typography>
       <Stack spacing={2}>
         <TextField

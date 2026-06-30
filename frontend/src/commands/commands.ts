@@ -3,12 +3,10 @@ import type { CommandSpec } from './types';
 export interface RootCommandFactoryOptions {
   currentPath: string;
   activeProjectId: number | null;
-  isProjectAdmin: boolean;
   memberships: { project_id: number; project_name: string }[];
   onNextPage: () => void;
   onPreviousPage: () => void;
   onOpenProjectSettings: () => void;
-  onOpenProjectMembers: () => void;
   onOpenCreateProject: () => void;
   onSwitchProject: (projectId: number) => void | Promise<void>;
   onOpenAccountSettings: () => void;
@@ -20,7 +18,6 @@ export interface RootCommandFactoryOptions {
     nextPage: string;
     previousPage: string;
     openProjectSettings: string;
-    openProjectMembers: string;
     createProject: string;
     switchProjectPrefix: string;
     openAccountSettings: string;
@@ -55,15 +52,6 @@ export function createRootCommands(options: RootCommandFactoryOptions): CommandS
       contextTags: ['global'],
       isVisible: () => options.activeProjectId !== null,
       action: options.onOpenProjectSettings,
-    },
-    {
-      id: 'project.members',
-      label: options.labels.openProjectMembers,
-      keywords: ['projekt', 'mitglieder', 'verwaltung', 'team'],
-      group: 'project',
-      contextTags: ['global'],
-      isVisible: () => options.activeProjectId !== null && options.isProjectAdmin,
-      action: options.onOpenProjectMembers,
     },
     {
       id: 'project.create',

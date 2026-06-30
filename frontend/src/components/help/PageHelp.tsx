@@ -23,7 +23,6 @@ import RoomOutlinedIcon from '@mui/icons-material/RoomOutlined';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import TabIcon from '@mui/icons-material/Tab';
-import ToggleOnIcon from '@mui/icons-material/ToggleOn';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {
   Box,
@@ -51,6 +50,7 @@ import { HierarchyAddIcon } from '../hierarchy/HierarchyAddIcon';
 export type HelpPageKey =
   | 'dashboard'
   | 'calendar'
+  | 'yieldOverview'
   | 'locations'
   | 'fields'
   | 'beds'
@@ -123,7 +123,6 @@ const PAGE_SYMBOL_DEFINITIONS: Partial<Record<HelpPageKey, SymbolDefinition[]>> 
   ],
   calendar: [
     { key: 'tabs', icon: <TabIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
-    { key: 'switch', icon: <ToggleOnIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
     { key: 'tooltip', icon: <InfoOutlinedIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
   ],
   seedDemand: [
@@ -423,7 +422,7 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
   return (
     <>
       <Tooltip title={tooltip ?? t('showTooltip')}>
-        <IconButton ref={triggerButtonRef} aria-label={ariaLabel ?? t('showTooltip')} onClick={handleOpen} size="small" sx={{ color: 'text.secondary' }}>
+        <IconButton ref={triggerButtonRef} aria-label={ariaLabel ?? t('showTooltip')} onClick={handleOpen} size={isMobile ? 'medium' : 'small'} sx={{ color: 'text.secondary' }}>
           <HelpOutlineIcon fontSize="small" />
         </IconButton>
       </Tooltip>

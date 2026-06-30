@@ -19,6 +19,10 @@ export interface HierarchyIndex {
   bedsByField: Map<number, Bed[]>;
 }
 
+export const hasPersistedEntityId = (id: number | undefined): id is number => (
+  typeof id === 'number' && Number.isInteger(id) && id > 0
+);
+
 const compareText = (left: string, right: string, direction: 'asc' | 'desc'): number => {
   const normalizedLeft = left.toLocaleLowerCase('de');
   const normalizedRight = right.toLocaleLowerCase('de');
@@ -163,6 +167,7 @@ export function buildHierarchyRowsFromIndex(
         locationId: location.id,
         expanded: isExpanded,
         hasChildren: locationFields.length > 0,
+        notes: location.notes,
       });
 
       if (!isExpanded) return;
@@ -291,6 +296,7 @@ export function createHierarchyRowsProjector(hierarchyIndex: HierarchyIndex) {
       locationId: location.id,
       expanded,
       hasChildren,
+      notes: location.notes,
     };
     locationRows.set(key, row);
     return row;

@@ -3,8 +3,10 @@ import { act } from 'react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthContext, type AuthContextValue } from '../auth/authContextShared';
 import { CommandProvider } from '../commands/CommandProvider';
 import GanttChartPage from '../pages/GanttChart';
+import { getGanttRenderWindow } from '../pages/ganttRenderWindow';
 
 const mocks = vi.hoisted(() => ({
   locationList: vi.fn(),
@@ -12,13 +14,14 @@ const mocks = vi.hoisted(() => ({
   bedList: vi.fn(),
   planList: vi.fn(),
   cultureList: vi.fn(),
-  yieldList: vi.fn(),
   planUpdate: vi.fn(),
   ganttProps: vi.fn(),
 }));
 const topbarContext = vi.hoisted(() => ({
   setTopbarContextActions: vi.fn(),
+  setTopbarTitleActions: vi.fn(),
   latestActions: [] as Array<Record<string, unknown>>,
+  latestTitleActions: [] as Array<Record<string, unknown>>,
 }));
 const projectRequirementState = vi.hoisted(() => ({
   shouldShowProjectRequiredState: false,
@@ -28,6 +31,10 @@ const OCCUPANCY_MODE_TOOLTIP =
   'Zeigt die Belegung der Beete über das Jahr. Die dargestellten Zeiträume werden aus den Anbauplänen und den kulturspezifischen Zeitangaben (z. B. Aussaat, Pflanzung und Ernte) berechnet.';
 const PROPAGATION_MODE_TOOLTIP =
   'Zeigt die Anzuchtphase der Kulturen vor der Pflanzung. Die dargestellten Zeiträume werden aus den Anbauplänen sowie den kulturspezifischen Angaben zur Anzuchtdauer berechnet.';
+const TIMELINE_VIEW_MODE_STORAGE_KEY = 'openFarmPlanner.ganttChart.timelineViewMode.42';
+const GANTT_STATE_STORAGE_KEY = 'openfarmplanner:gantt:42:state';
+
+const getTodayIsoDate = (): string => new Date().toISOString().slice(0, 10);
 
 interface TestTopbarAction {
   id: string;
@@ -39,23 +46,60 @@ interface TestTopbarAction {
 }
 
 const getTopbarAction = (id: string): TestTopbarAction => {
-  const action = topbarContext.latestActions.find((item) => item.id === id) as TestTopbarAction | undefined;
+  const action = topbarContext.latestTitleActions.find((item) => item.id === id) as TestTopbarAction | undefined;
   if (!action) {
     throw new Error(`Missing topbar action: ${id}`);
   }
   return action;
 };
 
+const authContextValue: AuthContextValue = {
+  user: null,
+  isLoading: false,
+  activeProjectId: 42,
+  login: vi.fn(),
+  logout: vi.fn(),
+  register: vi.fn(),
+  activate: vi.fn(),
+  resendActivation: vi.fn(),
+  requestPasswordReset: vi.fn(),
+  confirmPasswordReset: vi.fn(),
+  requestAccountDeletion: vi.fn(),
+  restoreAccount: vi.fn(),
+  switchActiveProject: vi.fn(),
+  refreshUser: vi.fn(),
+};
+
+const renderWithAuth = (): ReturnType<typeof render> => render(
+  <MemoryRouter>
+    <AuthContext.Provider value={authContextValue}>
+      <CommandProvider>
+        <GanttChartPage />
+      </CommandProvider>
+    </AuthContext.Provider>
+  </MemoryRouter>,
+);
+
 vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
   return {
     ...actual,
-    locationAPI: { list: mocks.locationList },
-    fieldAPI: { list: mocks.fieldList },
-    bedAPI: { list: mocks.bedList },
-    plantingPlanAPI: { list: mocks.planList, update: mocks.planUpdate },
-    cultureAPI: { list: mocks.cultureList },
-    yieldCalendarAPI: { list: mocks.yieldList },
+    locationAPI: {
+      listAll: async () => (await mocks.locationList()).data,
+    },
+    fieldAPI: {
+      listAll: async () => (await mocks.fieldList()).data,
+    },
+    bedAPI: {
+      listAll: async () => (await mocks.bedList()).data,
+    },
+    plantingPlanAPI: {
+      listAll: async () => (await mocks.planList()).data,
+      update: mocks.planUpdate,
+    },
+    cultureAPI: {
+      listAll: async () => (await mocks.cultureList()).data,
+    },
   };
 });
 
@@ -72,6 +116,10 @@ vi.mock('react-router-dom', async () => {
       setTopbarContextActions: (actions: Array<Record<string, unknown>>) => {
         topbarContext.latestActions = actions;
         topbarContext.setTopbarContextActions(actions);
+      },
+      setTopbarTitleActions: (actions: Array<Record<string, unknown>>) => {
+        topbarContext.latestTitleActions = actions;
+        topbarContext.setTopbarTitleActions(actions);
       },
     }),
   };
@@ -93,8 +141,10 @@ vi.mock('react-modern-gantt', () => ({
       showViewModeSelector: boolean;
     }) => ReactNode;
     viewMode?: string;
+    focusMode?: boolean;
     locale?: string;
     localeText?: { title?: string } & Record<string, unknown>;
+    maxHeight?: string | number;
   }) => {
     mocks.ganttProps(props);
     const firstTask = props.tasks[0]?.tasks[0];
@@ -108,6 +158,26 @@ vi.mock('react-modern-gantt', () => ({
           onViewModeChange: vi.fn(),
           showViewModeSelector: true,
         })}
+        <div
+          className="rmg-container"
+          data-testid="mock-gantt-scroll-container"
+          ref={(node) => {
+            if (!node) {
+              return;
+            }
+            Object.defineProperty(node, 'clientWidth', { configurable: true, value: 1000 });
+            Object.defineProperty(node, 'scrollWidth', { configurable: true, value: 2000 });
+          }}
+        />
+        {firstTask ? (
+          <div
+            data-testid="mock-touch-task"
+            data-rmg-component="task"
+            data-task-id={String(firstTask.id)}
+          >
+            touch-task
+          </div>
+        ) : null}
         {firstTask && props.onTaskUpdate ? (
           <button
             type="button"
@@ -149,6 +219,7 @@ vi.mock('react-modern-gantt', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.localStorage.clear();
   projectRequirementState.shouldShowProjectRequiredState = false;
   projectRequirementState.missingProjectReason = null;
 
@@ -156,12 +227,70 @@ beforeEach(() => {
   mocks.fieldList.mockResolvedValue({ data: { results: [{ id: 2, name: 'Feld', location: 1 }] } });
   mocks.bedList.mockResolvedValue({ data: { results: [{ id: 3, name: 'Beet 1', field: 2 }] } });
   mocks.planUpdate.mockResolvedValue({ data: {} });
-  mocks.yieldList.mockResolvedValue({ data: [] });
   topbarContext.setTopbarContextActions.mockReset();
+  topbarContext.setTopbarTitleActions.mockReset();
   topbarContext.latestActions = [];
+  topbarContext.latestTitleActions = [];
 });
 
 describe('GanttChartPage', () => {
+  it('limits Gantt rendering to the visible row window', () => {
+    const groups = Array.from({ length: 200 }, (_, index) => ({
+      id: `bed-${index + 1}`,
+      name: `Bed ${index + 1}`,
+      tasks: [{
+        id: `task-${index + 1}`,
+        name: 'Salat',
+        startDate: new Date('2026-04-01'),
+        endDate: new Date('2026-05-01'),
+      }],
+    }));
+
+    const window = getGanttRenderWindow(groups, 0, 720);
+
+    expect(window.groups.length).toBeLessThan(groups.length);
+    expect(window.startIndex).toBe(0);
+    expect(window.totalHeight).toBeGreaterThan(720);
+  });
+
+  it.each([
+    ['small', 5],
+    ['medium', 80],
+    ['large', 2400],
+  ])('keeps the %s dataset window non-empty', (_label, rowCount) => {
+    const groups = Array.from({ length: rowCount }, (_, index) => ({
+      id: `bed-${index + 1}`,
+      name: `Bed ${index + 1}`,
+      tasks: [{
+        id: `task-${index + 1}`,
+        name: 'Salat',
+        startDate: new Date('2026-04-01'),
+        endDate: new Date('2026-05-01'),
+      }],
+    }));
+    const scrollTop = Math.max(0, rowCount * 72 - 720);
+
+    const window = getGanttRenderWindow(groups, scrollTop, 720);
+
+    expect(window.groups.length).toBeGreaterThan(0);
+    expect(window.endIndex).toBeLessThanOrEqual(rowCount);
+  });
+
+  it('also bounds a visible Gantt window by timeline item count', () => {
+    const createTasks = (prefix: string, count: number) => Array.from({ length: count }, (_, index) => ({
+      id: `${prefix}-${index}`,
+      name: 'Salat',
+      startDate: new Date('2026-04-01'),
+      endDate: new Date('2026-05-01'),
+    }));
+    const window = getGanttRenderWindow([
+      { id: 'bed-1', name: 'Bed 1', tasks: createTasks('first', 500) },
+      { id: 'bed-2', name: 'Bed 2', tasks: createTasks('second', 500) },
+    ], 0, 720);
+
+    expect(window.groups).toHaveLength(1);
+  });
+
   it('shows field-specific guidance when no locations exist', async () => {
     mocks.planList.mockResolvedValue({ data: { results: [] } });
     mocks.cultureList.mockResolvedValue({ data: { results: [] } });
@@ -280,7 +409,7 @@ describe('GanttChartPage', () => {
 
     await waitFor(() => expect(screen.getByText('Feldplanung')).toBeInTheDocument());
     expect(screen.queryByText(/Belegung von Parzellen und Beeten im Jahresverlauf/i)).not.toBeInTheDocument();
-    await waitFor(() => expect(topbarContext.latestActions).toHaveLength(2));
+    await waitFor(() => expect(topbarContext.latestTitleActions).toHaveLength(2));
     expect(getTopbarAction('calendar-view-mode-occupancy')).toMatchObject({
       label: 'Feldbelegung',
       active: true,
@@ -307,6 +436,253 @@ describe('GanttChartPage', () => {
     expect(latestProps?.editMode).toBe(false);
     expect(latestProps?.allowTaskMove).toBe(false);
     expect(latestProps?.onTaskUpdate).toBeUndefined();
+  });
+
+  it('uses the month timeline by default and ignores legacy standalone timeline storage', async () => {
+    window.localStorage.setItem(TIMELINE_VIEW_MODE_STORAGE_KEY, 'day');
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-01',
+            harvest_date: '2026-05-01',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    renderWithAuth();
+
+    await waitFor(() => {
+      const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
+      expect(latestProps?.viewMode).toBe('month');
+    });
+    expect(screen.getByRole('button', { name: 'Monat' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('scrolls the first calendar open to the current period instead of the timeline end', async () => {
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-01',
+            harvest_date: '2026-05-01',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    renderWithAuth();
+
+    const scrollContainer = await screen.findByTestId('mock-gantt-scroll-container');
+    await waitFor(() => {
+      expect(scrollContainer.scrollLeft).toBeGreaterThan(0);
+      expect(scrollContainer.scrollLeft).toBeLessThan(900);
+    });
+    expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.focusMode).toBe(false);
+    expect(JSON.parse(window.localStorage.getItem(GANTT_STATE_STORAGE_KEY) ?? '{}')).toMatchObject({
+      calendarMode: 'occupancy',
+      timelineViewMode: 'month',
+      referenceDate: getTodayIsoDate(),
+    });
+  });
+
+  it('restores the saved calendar mode, timeline period, and row scroll for the active project', async () => {
+    window.localStorage.setItem(GANTT_STATE_STORAGE_KEY, JSON.stringify({
+      calendarMode: 'seedlings',
+      timelineViewMode: 'week',
+      referenceDate: '2026-04-15',
+      rowScrollTop: 144,
+    }));
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            planting_date: '2026-04-20',
+            harvest_date: '2026-05-20',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({
+      data: {
+        results: [{
+          id: 5,
+          name: 'Salat',
+          propagation_days: 28,
+        }],
+      },
+    });
+
+    renderWithAuth();
+
+    const scrollContainer = await screen.findByTestId('mock-gantt-scroll-container');
+    const virtualViewport = await screen.findByTestId('gantt-virtual-viewport');
+    await waitFor(() => {
+      expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.viewMode).toBe('week');
+      expect(scrollContainer.scrollLeft).toBeGreaterThan(700);
+      expect(scrollContainer.scrollLeft).toBeLessThan(900);
+      expect(virtualViewport.scrollTop).toBe(144);
+    });
+    await waitFor(() => expect(topbarContext.latestTitleActions).toHaveLength(2));
+    expect(getTopbarAction('calendar-view-mode-seedlings')).toMatchObject({
+      active: true,
+    });
+  });
+
+  it('persists timeline view mode changes and keeps them during data updates', async () => {
+    const initialPlan = {
+      id: 10,
+      culture: 5,
+      culture_name: 'Salat',
+      bed: 3,
+      planting_date: '2026-04-01',
+      harvest_date: '2026-05-01',
+    };
+    mocks.planList.mockResolvedValue({ data: { results: [initialPlan] } });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+    mocks.planUpdate.mockResolvedValue({
+      data: {
+        ...initialPlan,
+        planting_date: '2026-04-05',
+      },
+    });
+
+    renderWithAuth();
+
+    await screen.findByText('Feld / Beet 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Woche' }));
+
+    await waitFor(() => {
+      const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
+      expect(latestProps?.viewMode).toBe('week');
+    });
+    expect(window.localStorage.getItem(TIMELINE_VIEW_MODE_STORAGE_KEY)).toBe('week');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Zeitraum verschieben' }));
+    await screen.findByTestId('mock-update-task');
+    fireEvent.click(screen.getByTestId('mock-update-task'));
+
+    await waitFor(() => expect(mocks.planUpdate).toHaveBeenCalledTimes(1));
+    const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
+    expect(latestProps?.viewMode).toBe('week');
+  });
+
+  it('refreshes calendar data on focus without resetting the timeline view mode', async () => {
+    const initialPlan = {
+      id: 10,
+      culture: 5,
+      culture_name: 'Salat',
+      bed: 3,
+      planting_date: '2026-04-01',
+      harvest_date: '2026-05-01',
+      harvest_end_date: '2026-05-05',
+    };
+    const refreshedPlan = {
+      ...initialPlan,
+      harvest_date: '2026-05-10',
+      harvest_end_date: '2026-05-20',
+    };
+    mocks.planList
+      .mockResolvedValueOnce({ data: { results: [initialPlan] } })
+      .mockResolvedValue({ data: { results: [refreshedPlan] } });
+    mocks.cultureList.mockResolvedValue({
+      data: {
+        results: [{
+          id: 5,
+          name: 'Salat',
+          growth_duration_days: 39,
+          harvest_duration_days: 10,
+        }],
+      },
+    });
+
+    renderWithAuth();
+
+    await screen.findByText('Feld / Beet 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Woche' }));
+    await waitFor(() => {
+      expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.viewMode).toBe('week');
+    });
+
+    fireEvent.focus(window);
+
+    await waitFor(() => expect(mocks.planList).toHaveBeenCalledTimes(2));
+    const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
+    expect(latestProps?.viewMode).toBe('week');
+    expect(latestProps?.tasks[0]?.tasks[0]?.endDate).toEqual(new Date('2026-05-10T00:00:00.000Z'));
+    expect(latestProps?.tasks[0]?.tasks[1]?.endDate).toEqual(new Date('2026-05-20T00:00:00.000Z'));
+  });
+
+  it('keeps large projects renderable by windowing rows passed to the Gantt library', async () => {
+    const rowCount = 200;
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+    mocks.bedList.mockResolvedValue({
+      data: {
+        results: Array.from({ length: rowCount }, (_, index) => ({
+          id: index + 1,
+          name: `Beet ${index + 1}`,
+          field: 2,
+        })),
+      },
+    });
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: Array.from({ length: rowCount }, (_, index) => ({
+          id: index + 1,
+          culture: 5,
+          culture_name: 'Salat',
+          bed: index + 1,
+          planting_date: '2026-04-01',
+          harvest_date: '2026-05-01',
+        })),
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByTestId('gantt-virtual-viewport')).toBeInTheDocument();
+    let latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
+    expect(latestProps?.tasks.length).toBeGreaterThan(0);
+    expect(latestProps?.tasks.length).toBeLessThan(rowCount);
+    expect(debugSpy).toHaveBeenCalledWith('[Gantt diagnostics]', expect.objectContaining({
+      beds: rowCount,
+      plantingPlans: rowCount,
+      totalRows: rowCount,
+      totalTimelineItems: rowCount,
+      renderedRows: expect.any(Number),
+      renderedTimelineItems: expect.any(Number),
+    }));
+
+    fireEvent.scroll(screen.getByTestId('gantt-virtual-viewport'), {
+      target: { scrollTop: 7200 },
+    });
+
+    await waitFor(() => {
+      latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
+      expect(latestProps?.tasks[0]?.id).not.toBe('bed-1');
+    });
+    debugSpy.mockRestore();
   });
 
   it('switches to the seedling view and shows the seedling rows', async () => {
@@ -347,7 +723,7 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(topbarContext.latestActions).toHaveLength(2));
+    await waitFor(() => expect(topbarContext.latestTitleActions).toHaveLength(2));
     act(() => {
       getTopbarAction('calendar-view-mode-seedlings').onClick();
     });
@@ -407,53 +783,62 @@ describe('GanttChartPage', () => {
     expect(latestProps?.allowTaskMove).toBe(true);
   });
 
-  it('fills empty yield weeks between available week entries', async () => {
-    mocks.planList.mockResolvedValue({ data: { results: [{ id: 10, culture: 1, culture_name: 'Kohl', bed: 3, planting_date: '2026-03-01' }] } });
-    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Kohl' }] } });
-    mocks.yieldList.mockResolvedValue({
-      data: [
-        {
-          iso_week: '2026-W13',
-          week_start: '2026-03-23',
-          cultures: [{ culture_id: 1, culture_name: 'Kohl', yield: 0.7, color: '#16a34a' }],
-        },
-        {
-          iso_week: '2026-W15',
-          week_start: '2026-04-06',
-          cultures: [{ culture_id: 1, culture_name: 'Kohl', yield: 0.9, color: '#16a34a' }],
-        },
-      ],
+  it('bridges mobile touch drags to the Gantt mouse drag handlers in move mode', async () => {
+    const mouseEvents: string[] = [];
+    const trackMouseEvent = (event: MouseEvent): void => {
+      mouseEvents.push(`${event.type}:${event.clientX}`);
+    };
+    document.addEventListener('mousedown', trackMouseEvent);
+    document.addEventListener('mousemove', trackMouseEvent);
+    document.addEventListener('mouseup', trackMouseEvent);
+
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-01',
+            harvest_date: '2026-05-01',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('button', { name: 'Zeitraum verschieben' });
+    fireEvent.click(screen.getByRole('button', { name: 'Zeitraum verschieben' }));
+    const task = await screen.findByTestId('mock-touch-task');
+
+    fireEvent.touchStart(task, {
+      touches: [{ identifier: 1, clientX: 100, clientY: 120, screenX: 100, screenY: 120 }],
+      changedTouches: [{ identifier: 1, clientX: 100, clientY: 120, screenX: 100, screenY: 120 }],
+    });
+    fireEvent.touchMove(task, {
+      touches: [{ identifier: 1, clientX: 140, clientY: 120, screenX: 140, screenY: 120 }],
+      changedTouches: [{ identifier: 1, clientX: 140, clientY: 120, screenX: 140, screenY: 120 }],
+    });
+    fireEvent.touchEnd(task, {
+      touches: [],
+      changedTouches: [{ identifier: 1, clientX: 140, clientY: 120, screenX: 140, screenY: 120 }],
     });
 
-    render(
-      <MemoryRouter>
-        <CommandProvider>
-          <GanttChartPage />
-        </CommandProvider>
-      </MemoryRouter>,
-    );
-
-    await waitFor(() => expect(screen.getByText('Ertragsverteilung')).toBeInTheDocument());
-    expect(screen.getByText('W13')).toBeInTheDocument();
-    expect(screen.getByText('W14')).toBeInTheDocument();
-    expect(screen.getByText('W15')).toBeInTheDocument();
-  });
-
-  it('hides yield distribution area when no yield data is available', async () => {
-    mocks.planList.mockResolvedValue({ data: { results: [{ id: 10, culture: 1, culture_name: 'Kohl', bed: 3, planting_date: '2026-03-01' }] } });
-    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 1, name: 'Kohl' }] } });
-    mocks.yieldList.mockResolvedValue({ data: [] });
-
-    render(
-      <MemoryRouter>
-        <CommandProvider>
-          <GanttChartPage />
-        </CommandProvider>
-      </MemoryRouter>,
-    );
-
-    await waitFor(() => expect(screen.getByTestId('mock-gantt')).toBeInTheDocument());
-    expect(screen.queryByText('Ertragsverteilung')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(mouseEvents).toEqual(['mousedown:100', 'mousemove:140', 'mouseup:140']);
+    });
+    document.removeEventListener('mousedown', trackMouseEvent);
+    document.removeEventListener('mousemove', trackMouseEvent);
+    document.removeEventListener('mouseup', trackMouseEvent);
   });
 
   it('still shows a red load error for real API failures', async () => {
@@ -497,7 +882,7 @@ describe('GanttChartPage', () => {
 
     expect(await screen.findByRole('button', { name: 'Zeitraum verschieben' })).toBeInTheDocument();
 
-    await waitFor(() => expect(topbarContext.latestActions).toHaveLength(2));
+    await waitFor(() => expect(topbarContext.latestTitleActions).toHaveLength(2));
     expect(getTopbarAction('calendar-view-mode-occupancy').tooltip).toBe(OCCUPANCY_MODE_TOOLTIP);
     expect(getTopbarAction('calendar-view-mode-seedlings').tooltip).toBe(PROPAGATION_MODE_TOOLTIP);
   });

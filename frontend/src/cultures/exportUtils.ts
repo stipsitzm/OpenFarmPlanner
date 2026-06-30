@@ -130,9 +130,9 @@ export const downloadJsonFile = (data: object, filename: string): void => {
 };
 
 export const buildSingleCultureFilename = (culture: Culture, date = new Date()): string => {
-  const supplier = slugifyFilenamePart(culture.supplier?.name ?? culture.seed_supplier ?? '');
+  const name = slugifyFilenamePart(culture.name);
   const variety = slugifyFilenamePart(culture.variety ?? '');
-  return `kultur_${supplier}_${variety}_${formatDate(date)}.json`;
+  return `kultur_${name}_${variety}_${formatDate(date)}.json`;
 };
 
 export const buildAllCulturesFilename = (date = new Date()): string => `kulturen_export_${formatDate(date)}.json`;

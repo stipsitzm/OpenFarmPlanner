@@ -1,4 +1,4 @@
-import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Link, TextField, Typography, useMediaQuery } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import FieldsBedsHierarchy from './FieldsBedsHierarchy';
@@ -12,6 +12,7 @@ import PageContainer from '../components/layout/PageContainer';
 import { locationAPI } from '../api/api';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
+import { useTopbarTitleActions } from '../hooks/useTopbarTitleActions';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard, { type EmptyStateAction } from '../components/project/EmptyStateCard';
 import { getProjectSetupAction } from './requirementFlow';
@@ -19,6 +20,7 @@ import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { type SxProps, type Theme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
+import { hasPersistedEntityId } from '../components/hierarchy/utils/hierarchyUtils';
 
 const VIEW_MODE_STORAGE_KEY = 'fieldsBedsViewMode';
 const ADD_PARCEL_ACTION = 'add-parcel';
@@ -37,9 +39,6 @@ const CONTENT_ALIGNED_EMPTY_STATE_SX: SxProps<Theme> = {
 
 type ViewMode = 'table' | 'graphical';
 
-const hasPersistedEntityId = (id: number | undefined): id is number =>
-  typeof id === 'number' && id > 0;
-
 export default function FieldsBedsPage() {
   const { t } = useTranslation(['fields', 'hierarchy', 'common']);
   const navigate = useNavigate();
@@ -54,6 +53,7 @@ export default function FieldsBedsPage() {
   const [pendingHierarchyDeletionCount, setPendingHierarchyDeletionCount] = useState(0);
   const [addLocationDialogOpen, setAddLocationDialogOpen] = useState(false);
   const [newLocationName, setNewLocationName] = useState('');
+  const isTouchDevice = useMediaQuery('(pointer: coarse)');
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const hierarchyData = useHierarchyData(!shouldShowProjectRequiredState);
   const {
@@ -67,17 +67,18 @@ export default function FieldsBedsPage() {
 
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
   const setTopbarContextActions = outletContext?.setTopbarContextActions;
+  const setTopbarTitleActions = outletContext?.setTopbarTitleActions;
 
   useCommandContextTag('areas');
 
   const commands = useMemo<CommandSpec[]>(() => [
     {
       id: 'areas.showListView',
-      label: 'Listenansicht',
+      label: 'Listenansicht anzeigen',
       group: 'navigation',
       keywords: ['liste', 'tabelle', 'anbauflächen'],
-      shortcutHint: 'Alt+L',
-      keys: { alt: true, key: 'l' },
+      shortcutHint: 'L',
+      keys: { key: 'l' },
       contextTags: ['areas'],
       isEnabled: () => viewMode !== 'table',
       action: () => {
@@ -86,15 +87,15 @@ export default function FieldsBedsPage() {
     },
     {
       id: 'areas.showGraphicalView',
-      label: 'Grafikansicht',
+      label: 'Grafikansicht anzeigen',
       group: 'navigation',
       keywords: ['grafik', 'grafisch', 'anbauflächen'],
-      shortcutHint: 'Alt+G',
-      keys: { alt: true, key: 'g' },
+      shortcutHint: 'G',
+      keys: { key: 'g' },
       contextTags: ['areas'],
-      isEnabled: () => true,
+      isEnabled: () => viewMode !== 'graphical',
       action: () => {
-        setViewMode((prev) => (prev === 'graphical' ? 'table' : 'graphical'));
+        setViewMode('graphical');
       },
     },
   ], [viewMode]);
@@ -108,7 +109,8 @@ export default function FieldsBedsPage() {
   }, [shouldShowProjectRequiredState]);
 
   const hasAddFieldTarget = locations.some((item) => item.id !== undefined);
-  const canUseGlobalAddField = locations.length === 1 && locations[0]?.id !== undefined;
+  const isSingleLocationMode = locations.length === 1 && locations[0]?.id !== undefined;
+  const canUseGlobalAddField = isSingleLocationMode;
   const hasActiveFieldDraft = fields.some((field) => !hasPersistedEntityId(field.id));
 
   const requestInlineFieldCreation = useCallback((): void => {
@@ -135,17 +137,20 @@ export default function FieldsBedsPage() {
       return;
     }
     try {
+      const wasSingleLocationMode = locations.length === 1;
       await locationAPI.create({ name: trimmedName });
       setAddLocationDialogOpen(false);
       setNewLocationName('');
       await reloadHierarchyData();
       setGlobalActionError('');
-      setGlobalActionSuccess(t('hierarchy:messages.locationCreated'));
+      setGlobalActionSuccess(wasSingleLocationMode
+        ? t('hierarchy:messages.locationsNowVisible')
+        : t('hierarchy:messages.locationCreated'));
     } catch (error) {
       console.error('Error creating additional location:', error);
       setGlobalActionError(t('hierarchy:messages.createLocationError'));
     }
-  }, [newLocationName, reloadHierarchyData, t]);
+  }, [locations.length, newLocationName, reloadHierarchyData, t]);
 
   const handleAdditionalLocationSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -207,17 +212,41 @@ export default function FieldsBedsPage() {
   const hasUnsavedFields = fields.some((field) => !hasPersistedEntityId(field.id));
   const hasUnsavedBeds = beds.some((bed) => !hasPersistedEntityId(bed.id));
   const hasBeds = beds.some((bed) => hasPersistedEntityId(bed.id) && persistedFieldIds.has(bed.field));
-  const hasHierarchyRows = fields.length > 0 || beds.length > 0;
+  const hasHierarchyRows = locations.length > 1 || fields.length > 0 || beds.length > 0;
   const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && !hasLocations;
   const shouldShowMissingFieldsState = hasLocations && !hasFields && !hasUnsavedFields && createFieldRequest <= 0;
   const shouldShowMissingBedsHint = hasFields && !hasBeds && !hasUnsavedBeds;
   const shouldRenderHierarchy = hasHierarchyRows || createFieldRequest > 0 || pendingHierarchyDeletionCount > 0;
   const createBedAction = getProjectSetupAction('beds');
   const emptyAreasDescription = shouldShowMissingFieldsState
-    ? t(locations.length === 1
-      ? 'hierarchy:emptyAreas.missingFieldSingleLocationDescription'
-      : 'hierarchy:emptyAreas.missingFieldMultipleLocationsDescription')
+    ? (locations.length === 1
+      ? t('hierarchy:emptyAreas.missingFieldSingleLocationDescription')
+      : (
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {t('hierarchy:emptyAreas.missingFieldMultipleLocationsBeforeIcon')}
+            <HierarchyAddIcon interactive={false} ariaHidden sx={{ bgcolor: 'transparent' }} />
+            {t('hierarchy:emptyAreas.missingFieldMultipleLocationsAfterIcon')}
+          </Box>
+        ))
     : t('hierarchy:emptyAreas.missingLocationDescription');
+  const emptyAreasSupplement = shouldShowMissingFieldsState && isSingleLocationMode
+    ? (
+        <Typography variant="body2" color="text.secondary">
+          {t('hierarchy:emptyAreas.additionalLocationHint')}{' '}
+          <Link
+            href="#add-location"
+            onClick={(event) => {
+              event.preventDefault();
+              openAddLocationDialog();
+            }}
+            underline="hover"
+          >
+            {t('hierarchy:emptyAreas.additionalLocationLink')}
+          </Link>
+          .
+        </Typography>
+      )
+    : undefined;
   const emptyAreaActions = useMemo<EmptyStateAction[]>(() => {
     if (shouldShowMissingFieldsState) {
       return locations.length === 1
@@ -237,7 +266,6 @@ export default function FieldsBedsPage() {
       label: t('fields:representation.table'),
       onClick: () => setViewMode('table'),
       active: viewMode === 'table',
-      ariaLabel: t('fields:representation.ariaLabel'),
       groupId: 'fields-view-mode',
     },
     {
@@ -245,7 +273,6 @@ export default function FieldsBedsPage() {
       label: t('fields:representation.graphical'),
       onClick: () => setViewMode('graphical'),
       active: viewMode === 'graphical',
-      ariaLabel: t('fields:representation.ariaLabel'),
       groupId: 'fields-view-mode',
     },
   ]), [t, viewMode]);
@@ -256,28 +283,37 @@ export default function FieldsBedsPage() {
       : [
         ...(canUseGlobalAddField ? [{
           id: 'fields-global-add-field',
-          label: t('hierarchy:actions.addField'),
+          label: t('hierarchy:actions.addFieldDropdown'),
           onClick: requestInlineFieldCreation,
-          ariaLabel: t('hierarchy:actions.addField'),
+          ariaLabel: t('hierarchy:actions.addFieldDropdown'),
+          menuActions: [
+            {
+              id: 'fields-global-add-location-menu-item',
+              label: t('hierarchy:actions.createLocation'),
+              onClick: openAddLocationDialog,
+            },
+          ],
         }] : []),
         {
           id: 'fields-global-add-location',
           label: t('hierarchy:actions.createLocation'),
           onClick: openAddLocationDialog,
           ariaLabel: t('hierarchy:actions.createLocation'),
+          hidden: isSingleLocationMode,
         },
       ];
-    return [...globalActions, ...viewModeActions];
+    return globalActions;
   }, [
     canUseGlobalAddField,
     requestInlineFieldCreation,
     openAddLocationDialog,
     shouldShowProjectRequiredState,
+    isSingleLocationMode,
     t,
-    viewModeActions,
   ]);
 
   useTopbarContextActions(setTopbarContextActions, contextActions);
+  useTopbarTitleActions(setTopbarTitleActions, viewModeActions);
 
   return (
     <>
@@ -304,11 +340,13 @@ export default function FieldsBedsPage() {
           <EmptyStateCard
             title={t('hierarchy:messages.noBedsHintTitle')}
             description={(
-              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
-                {t('hierarchy:messages.noBedsHintBeforeIcon')}
-                <AddBedIcon interactive={false} ariaHidden />
-                {t('hierarchy:messages.noBedsHintAfterIcon')}
-              </Box>
+              isTouchDevice ? t('hierarchy:messages.noBedsHintMobile') : (
+                <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {t('hierarchy:messages.noBedsHintBeforeIcon')}
+                  <AddBedIcon interactive={false} ariaHidden />
+                  {t('hierarchy:messages.noBedsHintAfterIcon')}
+                </Box>
+              )
             )}
             actions={[{ label: t(createBedAction.labelKey), to: createBedAction.to }]}
             containerSx={CONTENT_ALIGNED_EMPTY_STATE_SX}
@@ -319,6 +357,7 @@ export default function FieldsBedsPage() {
             title={shouldShowMissingFieldsState ? t('hierarchy:emptyAreas.missingFieldTitle') : t('hierarchy:emptyAreas.missingLocationTitle')}
             description={emptyAreasDescription}
             actions={emptyAreaActions}
+            supplement={emptyAreasSupplement}
             containerSx={CONTENT_ALIGNED_EMPTY_STATE_SX}
           />
         ) : null}

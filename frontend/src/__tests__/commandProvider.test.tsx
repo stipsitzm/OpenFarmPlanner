@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useMemo } from 'react';
 import { CommandProvider } from '../commands/CommandProvider';
-import { useCommandContext, useRegisterCommands } from '../commands/useCommandContext';
+import { useCommandContext, useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import { createRootCommands } from '../commands/commands';
 import type { CommandSpec } from '../commands/types';
 
@@ -36,7 +36,6 @@ function RootCommandFixture(props: {
   const commands = useMemo(() => createRootCommands({
     currentPath: props.currentPath ?? '/app/cultures',
     activeProjectId: 1,
-    isProjectAdmin: true,
     memberships: [
       { project_id: 1, project_name: 'Demo' },
       { project_id: 2, project_name: 'Garten' },
@@ -44,7 +43,6 @@ function RootCommandFixture(props: {
     onNextPage: props.onNextPage ?? vi.fn(),
     onPreviousPage: props.onPreviousPage ?? vi.fn(),
     onOpenProjectSettings: props.onOpenProjectSettings ?? vi.fn(),
-    onOpenProjectMembers: vi.fn(),
     onOpenCreateProject: vi.fn(),
     onSwitchProject: vi.fn(),
     onOpenAccountSettings: vi.fn(),
@@ -56,7 +54,6 @@ function RootCommandFixture(props: {
       nextPage: 'Nächste Seite',
       previousPage: 'Vorherige Seite',
       openProjectSettings: 'Projekteinstellungen',
-      openProjectMembers: 'Projektmitglieder',
       createProject: 'Projekt erstellen',
       switchProjectPrefix: 'Projekt wechseln',
       openAccountSettings: 'Kontoeinstellungen',
@@ -92,9 +89,14 @@ describe('CommandProvider', () => {
     vi.useFakeTimers();
     localStorage.removeItem('ofp.shortcutHintSeen');
 
+    function FeaturePageFixture(): React.ReactElement {
+      useCommandContextTag('cultures');
+      return <div>feature page</div>;
+    }
+
     const { rerender } = render(
       <CommandProvider>
-        <div>first</div>
+        <FeaturePageFixture />
       </CommandProvider>,
     );
 
@@ -126,7 +128,7 @@ describe('CommandProvider', () => {
 
     fireEvent.keyDown(window, { key: 'k', altKey: true });
 
-    expect(screen.getByText('Aktionssuche')).toBeInTheDocument();
+    expect(screen.getAllByText('Aktionssuche').length).toBeGreaterThan(0);
     expect(screen.getByText('Tastenkürzel')).toBeInTheDocument();
     expect(screen.getByText('Projekteinstellungen')).toBeInTheDocument();
     expect(screen.getByText('Projekt wechseln: Garten')).toBeInTheDocument();
@@ -143,7 +145,7 @@ describe('CommandProvider', () => {
 
     fireEvent.keyDown(window, { key: 'k', altKey: true });
 
-    expect(screen.getByRole('textbox', { name: 'Aktionssuche (Alt+K)' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Aktionssuche' })).toBeInTheDocument();
   });
 
   it('does not open the command palette with Alt+K while typing in an input', () => {
@@ -158,7 +160,7 @@ describe('CommandProvider', () => {
     input.focus();
     fireEvent.keyDown(window, { key: 'k', altKey: true });
 
-    expect(screen.queryByRole('textbox', { name: 'Aktionssuche (Alt+K)' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Aktionssuche' })).not.toBeInTheDocument();
   });
 
   it('keeps Ctrl+Shift+Arrow navigation working through root commands', () => {

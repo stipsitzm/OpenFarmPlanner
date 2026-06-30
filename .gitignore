@@ -11,6 +11,7 @@ backend/.env
 .idea/
 .codex
 .codex/
+.claude/
 frontend/dist-production/
 frontend/dist-staging/
 
@@ -35,6 +36,9 @@ coverage/
 **/coverage/
 *.lcov
 
+# Test results / Playwright output
+frontend/test-results/
+
 # Mutation testing
 .stryker-tmp/
 mutation-report/
@@ -50,3 +54,6 @@ reports/
 
 # Local data sync backups
 /backups/
+
+# Node.js (e.g. accidentally created at repo root)
+node_modules/

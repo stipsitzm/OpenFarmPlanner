@@ -40,6 +40,7 @@
     "generic": "Aktion konnte nicht ausgeführt werden.",
     "delete": "Fehler beim Vormerken der Löschung."
   },
+  "unsavedChangesWarning": "Es gibt ungespeicherte Änderungen. Beim Verlassen der Seite gehen sie verloren.",
   "emailConfirm": {
     "title": "E-Mail-Änderung bestätigen",
     "loading": "Bestätigung wird geprüft …",

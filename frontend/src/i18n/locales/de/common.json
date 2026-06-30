@@ -80,7 +80,7 @@
       "title": "Ungespeicherte Notizen",
       "message": "Die Notizen enthalten ungespeicherte Änderungen. Möchten Sie weiter bearbeiten oder die Änderungen verwerfen?",
       "continueEditing": "Weiter bearbeiten",
-      "discardAndClose": "Änderungen verwerfen und schließen"
+      "discardAndClose": "Verwerfen"
     },
     "markdownToolbar": {
       "bold": "Fettdruck",
@@ -136,10 +136,7 @@
     "selectProjectAction": "Projekt auswählen"
   },
   "runtime": {
-    "applicationUpdatedTitle": "Die Anwendung wurde aktualisiert.",
-    "applicationUpdatedDescription": "Bitte lade die Seite neu.",
-    "routeErrorTitle": "Die Seite konnte nicht geladen werden.",
-    "routeErrorDescription": "Bitte lade die Seite neu. Wenn der Fehler bestehen bleibt, versuche es später erneut.",
-    "reloadPage": "Seite neu laden"
+    "applicationUpdatedFallback": "Die Anwendung konnte nicht automatisch aktualisiert werden. Bitte versuche es später erneut.",
+    "routeErrorFallback": "Die Seite konnte nicht automatisch wiederhergestellt werden. Bitte versuche es später erneut."
   }
 }

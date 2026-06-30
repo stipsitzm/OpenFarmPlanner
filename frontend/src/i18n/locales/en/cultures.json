@@ -12,7 +12,9 @@
     "cultureProjectMismatch": "The culture does not belong to the active project."
   },
   "messages": {
-    "restoreDeleteError": "Culture could not be restored."
+    "restoreDeleteError": "Culture could not be restored.",
+    "restoreSuccess": "Version restored",
+    "restoreError": "Version could not be restored"
   },
   "history": {
     "currentVersion": "Current version",

@@ -337,6 +337,47 @@ describe('SeedDemandPage', () => {
     });
   });
 
+  it('opens row actions from the inline actions menu', async () => {
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 1,
+            culture_name: 'Bohne',
+            variety: 'Canadian Wonder',
+            supplier: 'Reinsaat',
+            supplier_options: [{ supplier_id: 10, supplier_name: 'Reinsaat' }],
+            selected_supplier_id: 10,
+            required_amount_value: 184.2,
+            required_amount_unit: 'g',
+            total_grams: 184.2,
+            package_suggestion: null,
+            warning: null,
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider>
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('link', { name: 'Bohne (Canadian Wonder)' });
+    fireEvent.click(screen.getByRole('button', { name: 'common:actions.actions' }));
+
+    expect(screen.getByRole('menuitem', { name: 'seedDemand.contextMenu.openCulture' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'seedDemand.contextMenu.editCulture' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'common:actions.copyRow' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'common:actions.copyTable' })).toBeInTheDocument();
+  });
+
   it('copies the visible seed demand table including headers as TSV', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {

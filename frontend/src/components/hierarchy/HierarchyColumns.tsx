@@ -10,13 +10,15 @@ import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
+import DeleteIcon from '@mui/icons-material/Delete';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import type { HierarchyRow } from './utils/types';
 import { NotesCell } from '../data-grid/NotesCell';
 import { HierarchyAddIcon } from './HierarchyAddIcon';
 import { getPlainExcerpt } from '../data-grid/markdown';
-import { getCalculatedColumnProps } from '../data-grid/calculatedColumns';
+import { CALCULATED_COLUMN_CELL_CLASS, getCalculatedColumnProps } from '../data-grid/calculatedColumns';
 
 export interface HierarchyColumnWidths {
   name: number;
@@ -34,6 +36,14 @@ export const DEFAULT_HIERARCHY_COLUMN_WIDTHS: HierarchyColumnWidths = {
 
 const EXPAND_ICON_SLOT_SIZE = 32;
 const DATA_GRID_HEADER_LABEL_SX = { fontWeight: 600 };
+const NON_BLOCKING_TOOLTIP_PROPS = {
+  disableInteractive: true,
+  slotProps: {
+    popper: {
+      style: { pointerEvents: 'none' as const },
+    },
+  },
+};
 
 interface NameCellCallbacks {
   onToggleExpand: (rowId: string | number) => void;
@@ -58,10 +68,11 @@ function renderHierarchyAddIconButton({
   onClick: (event: MouseEvent<HTMLButtonElement>) => void;
 }): ReactElement {
   return (
-    <Tooltip title={label}>
+    <Tooltip title={label} {...NON_BLOCKING_TOOLTIP_PROPS}>
       <span>
         <HierarchyAddIcon
           ariaLabel={label}
+          tabIndex={-1}
           onClick={(event) => {
             event.stopPropagation();
             onClick(event);
@@ -83,11 +94,12 @@ function renderPlantingPlanActionButton(
   }
 
   return (
-    <Tooltip title={t('hierarchy:createPlantingPlan')}>
+    <Tooltip title={t('hierarchy:createPlantingPlan')} {...NON_BLOCKING_TOOLTIP_PROPS}>
       <IconButton
         size="small"
         color="primary"
         aria-label={t('hierarchy:createPlantingPlan')}
+        tabIndex={-1}
         onClick={(event) => {
           event.stopPropagation();
           callbacks.onCreatePlantingPlan(row.bedId!);
@@ -111,6 +123,101 @@ function renderPlantingPlanActionButton(
   );
 }
 
+function renderDeleteActionButton(
+  row: HierarchyRow,
+  callbacks: NameCellCallbacks,
+  t: TFunction,
+): ReactElement | null {
+  const label = t('common:actions.delete');
+
+  if (row.type === 'location' && row.locationId !== undefined) {
+    return (
+      <Tooltip title={label} {...NON_BLOCKING_TOOLTIP_PROPS}>
+        <IconButton
+          size="small"
+          color="error"
+          aria-label={label}
+          tabIndex={-1}
+          onClick={(event) => {
+            event.stopPropagation();
+            callbacks.onDeleteLocation(row.locationId!);
+          }}
+          sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
+        >
+          <DeleteIcon />
+        </IconButton>
+      </Tooltip>
+    );
+  }
+
+  if (row.type === 'field' && row.fieldId !== undefined) {
+    return (
+      <Tooltip title={label} {...NON_BLOCKING_TOOLTIP_PROPS}>
+        <IconButton
+          size="small"
+          color="error"
+          aria-label={label}
+          tabIndex={-1}
+          onClick={(event) => {
+            event.stopPropagation();
+            callbacks.onDeleteField(row.fieldId!);
+          }}
+          sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
+        >
+          <DeleteIcon />
+        </IconButton>
+      </Tooltip>
+    );
+  }
+
+  if (row.type === 'bed' && row.bedId !== undefined) {
+    return (
+      <Tooltip title={label} {...NON_BLOCKING_TOOLTIP_PROPS}>
+        <IconButton
+          size="small"
+          color="error"
+          aria-label={label}
+          tabIndex={-1}
+          onClick={(event) => {
+            event.stopPropagation();
+            callbacks.onDeleteBed(row.bedId!);
+          }}
+          sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
+        >
+          <DeleteIcon />
+        </IconButton>
+      </Tooltip>
+    );
+  }
+
+  return null;
+}
+
+function renderMoreActionsButton(
+  row: HierarchyRow,
+  callbacks: NameCellCallbacks,
+  t: TFunction,
+): ReactElement {
+  const label = t('common:actions.actions');
+
+  return (
+    <Tooltip title={label} {...NON_BLOCKING_TOOLTIP_PROPS}>
+      <IconButton
+        size="small"
+        aria-label={label}
+        tabIndex={-1}
+        onClick={(event) => {
+          event.stopPropagation();
+          callbacks.onOpenContextMenu(event, row);
+        }}
+        sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
+      >
+        <MoreVertIcon />
+      </IconButton>
+    </Tooltip>
+  );
+}
+
 function renderInlineActions(
   row: HierarchyRow,
   callbacks: NameCellCallbacks,
@@ -128,6 +235,8 @@ function renderInlineActions(
           label: t('hierarchy:addField'),
           onClick: () => callbacks.onAddField(row.locationId),
         })}
+        {renderDeleteActionButton(row, callbacks, t)}
+        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -139,6 +248,8 @@ function renderInlineActions(
           label: t('hierarchy:addBedToField'),
           onClick: () => callbacks.onAddBed(row.fieldId!),
         })}
+        {renderDeleteActionButton(row, callbacks, t)}
+        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -147,6 +258,8 @@ function renderInlineActions(
     return (
       <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
         {renderPlantingPlanActionButton(row, callbacks, t)}
+        {renderDeleteActionButton(row, callbacks, t)}
+        {renderMoreActionsButton(row, callbacks, t)}
       </Box>
     );
   }
@@ -183,10 +296,11 @@ function renderNameCell(
         data-testid="expand-icon-slot"
       >
         {hasExpandToggle ? (
-          <Tooltip title={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}>
+          <Tooltip title={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')} {...NON_BLOCKING_TOOLTIP_PROPS}>
             <IconButton
               size="small"
               aria-label={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}
+              tabIndex={-1}
               onClick={(event) => {
                 event.stopPropagation();
                 callbacks.onToggleExpand(row.id);
@@ -215,8 +329,6 @@ function renderNameCell(
           overflow: 'hidden',
         }}
         onContextMenu={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
           callbacks.onOpenContextMenu(event, row);
         }}
       >
@@ -284,9 +396,9 @@ function renderNameCell(
                   return `linear-gradient(90deg, ${alpha(hoverBackground, 0)} 0%, ${hoverBackground} 100%)`;
                 },
               },
-              '.MuiDataGrid-row:focus-within &': {
-                opacity: 1,
-                pointerEvents: 'auto',
+              '.MuiDataGrid-row--editing:hover &': {
+                opacity: 0,
+                pointerEvents: 'none',
               },
             }}
           >
@@ -319,6 +431,15 @@ interface DimensionRowState {
   hasWidth: boolean;
   hasAreaValue: boolean;
 }
+
+/** Returns true when a dimension edit cell value is non-empty but invalid (non-numeric or negative). */
+export const isDimensionEditValueInvalid = (value: unknown): boolean => {
+  if (value === null || value === undefined) return false;
+  const str = typeof value === 'string' ? value.trim() : String(value);
+  if (str === '') return false;
+  const parsed = Number.parseFloat(str.replace(',', '.'));
+  return !Number.isFinite(parsed) || parsed < 0;
+};
 
 const parseNumericValue = (value: unknown): number | undefined => {
   if (typeof value === 'number') {
@@ -361,11 +482,16 @@ const isDimensionCellIncomplete = (type: DimensionCellType, rowState: DimensionR
 
 const getDimensionCellClassName = (row: HierarchyRow, type: DimensionCellType): string => {
   const rowState = getDimensionRowState(row);
+  if (!rowState) {
+    return CALCULATED_COLUMN_CELL_CLASS;
+  }
   if (!rowState || !isDimensionCellIncomplete(type, rowState)) {
     return '';
   }
   return 'ofp-hierarchy-cell-missing-dimension';
 };
+
+const getNotesCellClassName = (): string => '';
 
 const renderDimensionCell = (
   params: GridRenderCellParams<HierarchyRow>,
@@ -381,7 +507,7 @@ const renderDimensionCell = (
   }
 
   return (
-    <Tooltip title={t('hierarchy:messages.missingDimensionsCellTooltip')} enterDelay={250}>
+    <Tooltip title={t('hierarchy:messages.missingDimensionsCellTooltip')} enterDelay={250} {...NON_BLOCKING_TOOLTIP_PROPS}>
       <Box
         component="span"
         sx={{
@@ -488,6 +614,10 @@ export function createHierarchyColumns(
       valueGetter: (_value, row: HierarchyRow) => row.type === 'location' ? undefined : row.length_m,
       cellClassName: (params) => getDimensionCellClassName(params.row, 'length'),
       renderCell: (params) => renderDimensionCell(params, 'length', t),
+      preProcessEditCellProps: (params) => ({
+        ...params.props,
+        error: params.row.type !== 'location' && isDimensionEditValueInvalid(params.props.value),
+      }),
     },
     {
       field: 'width_m',
@@ -504,6 +634,10 @@ export function createHierarchyColumns(
       valueGetter: (_value, row: HierarchyRow) => row.type === 'location' ? undefined : row.width_m,
       cellClassName: (params) => getDimensionCellClassName(params.row, 'width'),
       renderCell: (params) => renderDimensionCell(params, 'width', t),
+      preProcessEditCellProps: (params) => ({
+        ...params.props,
+        error: params.row.type !== 'location' && isDimensionEditValueInvalid(params.props.value),
+      }),
     },
     {
       field: 'area_sqm',
@@ -521,9 +655,10 @@ export function createHierarchyColumns(
       field: 'notes',
       headerName: t('common:fields.notes'),
       width: widths.notes,
-      minWidth: 180,
-      maxWidth: 260,
+      minWidth: widths.notes,
+      flex: 1,
       editable: false,
+      cellClassName: () => getNotesCellClassName(),
       renderCell: (params) => {
         const value = (params.value as string) || '';
         const hasValue = value.trim().length > 0;

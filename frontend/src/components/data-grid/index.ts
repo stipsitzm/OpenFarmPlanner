@@ -13,7 +13,9 @@ export type {
   EditableDataGridRowActionHelpers,
   NotesFieldConfig,
   EditableDataGridCommandApi,
-} from './DataGrid';
+  EditableDataGridClipboardColumn,
+  DeleteUndoOptions,
+} from './types';
 export { NotesCell } from './NotesCell';
 export { NotesDrawer } from './NotesDrawer';
 export { MarkdownToolbar } from './MarkdownToolbar';
@@ -25,7 +27,8 @@ export { AreaM2EditCell } from './AreaM2EditCell';
 export type { AreaM2EditCellProps } from './AreaM2EditCell';
 export { PlantsCountEditCell } from './PlantsCountEditCell';
 export type { PlantsCountEditCellProps } from './PlantsCountEditCell';
-export { DateEditCell } from './DateEditCell';
+export { DateEditCell, toIsoDateString } from './DateEditCell';
+export { GermanDateEditCell, parseGermanDateText, formatDateAsGerman } from './GermanDateEditCell';
 export { SearchableSelectEditCell } from './SearchableSelectEditCell';
 export type { SearchableSelectOption, SearchableSelectEditCellProps } from './SearchableSelectEditCell';
 export { createSearchableSelectColumn, createSingleSelectColumn } from './columns';

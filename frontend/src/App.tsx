@@ -30,6 +30,8 @@ import {
   Paper,
   Snackbar,
   Stack,
+  SvgIcon,
+  type SvgIconProps,
   TextField,
   Drawer,
   ListItemButton,
@@ -58,6 +60,7 @@ import LocalFloristOutlinedIcon from '@mui/icons-material/LocalFloristOutlined';
 import EventNoteOutlinedIcon from '@mui/icons-material/EventNoteOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import ScienceOutlinedIcon from '@mui/icons-material/ScienceOutlined';
+import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -67,7 +70,6 @@ import AddIcon from '@mui/icons-material/Add';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
-import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import KeyboardOutlinedIcon from '@mui/icons-material/KeyboardOutlined';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
@@ -106,13 +108,28 @@ import {
 } from './navigation/navigationStyles';
 import { PanelLeft } from 'lucide-react';
 import RuntimeErrorState from './components/runtime/RuntimeErrorState';
-import { isDynamicImportLoadError, reloadOnceForDynamicImportError } from './runtime/chunkLoadErrors';
+import {
+  isDynamicImportLoadError,
+  reloadOnceForDynamicImportError,
+  reloadPage,
+  shouldAutomaticallyReloadForRouteLoadError,
+} from './runtime/chunkLoadErrors';
 
 const CONTENT_ALIGNMENT_MODE = 'centered';
 const ACTION_MENU_ITEM_ICON_SX = { minWidth: 32, color: 'text.secondary' } as const;
 const ACTION_MENU_ICON_PROPS = { fontSize: 'small' } as const;
 const HIERARCHY_CREATE_LOCATION_ACTION_ID = 'fields-global-add-location';
 const TOPBAR_ACTION_GROUP_GAP = 1.25;
+const COMPACT_TOPBAR_TOGGLE_SIZE = 44;
+
+function FileExportIcon(props: SvgIconProps) {
+  return (
+    <SvgIcon {...props} viewBox="0 -960 960 960">
+      <path d="M480-480ZM202-65l-56-57 118-118h-90v-80h226v226h-80v-89L202-65Zm278-15v-80h240v-440H520v-200H240v400h-80v-400q0-33 23.5-56.5T240-880h320l240 240v480q0 33-23.5 56.5T720-80H480Z" />
+    </SvgIcon>
+  );
+}
+
 const HomePage = React.lazy(() => import('./pages/public/HomePage'));
 const ImprintPage = React.lazy(() => import('./pages/public/ImprintPage'));
 const PrivacyPolicyPage = React.lazy(() => import('./pages/public/PrivacyPolicyPage'));
@@ -133,6 +150,7 @@ const Cultures = React.lazy(() => import('./pages/Cultures'));
 const PlantingPlans = React.lazy(() => import('./pages/PlantingPlans'));
 const GanttChart = React.lazy(() => import('./pages/GanttChart'));
 const SeedDemandPage = React.lazy(() => import('./pages/SeedDemand'));
+const YieldOverviewPage = React.lazy(() => import('./pages/YieldOverview'));
 const Suppliers = React.lazy(() => import('./pages/Suppliers'));
 
 interface SnackbarState {
@@ -225,7 +243,6 @@ interface GlobalMenuProps {
   onOpenProjectSwitcher: () => void;
   onOpenCreateProject: () => void;
   onOpenProjectSettings: () => void;
-  onOpenProjectMembers: () => void;
   onOpenProjectHistory: () => Promise<void>;
   onOpenAccountSettings: () => void;
   onOpenShortcuts: () => void;
@@ -245,7 +262,6 @@ function GlobalMenu(props: GlobalMenuProps) {
     onOpenProjectSwitcher,
     onOpenCreateProject,
     onOpenProjectSettings,
-    onOpenProjectMembers,
     onOpenProjectHistory,
     onOpenAccountSettings,
     onOpenShortcuts,
@@ -254,28 +270,32 @@ function GlobalMenu(props: GlobalMenuProps) {
     t,
   } = props;
 
+  const wrap = (fn: () => void): () => void => () => { onClose(); fn(); };
+  const wrapAsync = (fn: () => Promise<void>): () => void => () => { onClose(); void fn(); };
+
   const mobileMenuItems = [
     <MenuItem key="mobile-section-project" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.projectActions')}</MenuItem>,
-    <MenuItem key="mobile-project-switcher" onClick={onOpenProjectSwitcher}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SwapHorizIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('projectSwitcher.ariaLabel')}</MenuItem>,
-    <MenuItem key="mobile-project-create" onClick={onOpenCreateProject}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><AddIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.create')}</MenuItem>,
-    <MenuItem key="mobile-project-settings" onClick={onOpenProjectSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.settings')}</MenuItem>,
-    <MenuItem key="mobile-project-members" onClick={onOpenProjectMembers}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><GroupOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openProjectMembers')}</MenuItem>,
-    <MenuItem key="mobile-project-history" onClick={() => void onOpenProjectHistory()} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
+    <MenuItem key="mobile-project-switcher" onClick={wrap(onOpenProjectSwitcher)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SwapHorizIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('projectSwitcher.ariaLabel')}</MenuItem>,
+    <MenuItem key="mobile-project-create" onClick={wrap(onOpenCreateProject)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><AddIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.create')}</MenuItem>,
+    <MenuItem key="mobile-project-settings" onClick={wrap(onOpenProjectSettings)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.settings')}</MenuItem>,
+    <MenuItem key="mobile-project-history" onClick={wrapAsync(onOpenProjectHistory)} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
     <Divider key="mobile-divider-project-app" />,
     <MenuItem key="mobile-section-app" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.app')}</MenuItem>,
-    <MenuItem key="mobile-app-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.shortcuts')}</MenuItem>,
-    <MenuItem key="mobile-app-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.appHelp')}</MenuItem>,
-    <MenuItem key="mobile-app-account-settings" onClick={onOpenAccountSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
+    <MenuItem key="mobile-app-shortcuts" onClick={wrap(onOpenShortcuts)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.shortcuts')}</MenuItem>,
+    <MenuItem key="mobile-app-help" onClick={wrap(onOpenHelp)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.appHelp')}</MenuItem>,
+    <MenuItem key="mobile-app-account-settings" onClick={wrap(onOpenAccountSettings)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
     <Divider key="mobile-divider-app-account" />,
     <MenuItem key="mobile-section-account" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.account')}</MenuItem>,
-    <MenuItem key="mobile-account-logout" onClick={() => void onLogout()}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
+    <MenuItem key="mobile-account-logout" onClick={wrapAsync(onLogout)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
   ];
   const desktopMenuItems = [
-    <MenuItem key="desktop-history" onClick={() => void onOpenProjectHistory()} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
-    <MenuItem key="desktop-account-settings" onClick={onOpenAccountSettings}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
-    <MenuItem key="desktop-shortcuts" onClick={onOpenShortcuts}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.shortcuts')}</MenuItem>,
-    <MenuItem key="desktop-help" onClick={onOpenHelp}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.appHelp')}</MenuItem>,
-    <MenuItem key="desktop-logout" onClick={() => void onLogout()}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
+    <MenuItem key="desktop-project-settings" onClick={wrap(onOpenProjectSettings)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.settings')}</MenuItem>,
+    <MenuItem key="desktop-history" onClick={wrapAsync(onOpenProjectHistory)} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
+    <Divider key="desktop-divider" />,
+    <MenuItem key="desktop-account-settings" onClick={wrap(onOpenAccountSettings)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
+    <MenuItem key="desktop-shortcuts" onClick={wrap(onOpenShortcuts)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.shortcuts')}</MenuItem>,
+    <MenuItem key="desktop-help" onClick={wrap(onOpenHelp)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.appHelp')}</MenuItem>,
+    <MenuItem key="desktop-logout" onClick={wrapAsync(onLogout)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
   ];
   return <Menu id="global-actions-menu" anchorEl={anchorEl} open={open} onClose={onClose}>{isMobile ? mobileMenuItems : desktopMenuItems}</Menu>;
 }
@@ -292,10 +312,27 @@ export interface TopbarContextAction {
   reserveSpace?: boolean;
   groupId?: string;
   tooltip?: string;
+  menuActions?: Array<{ id: string; label: string; onClick: () => void; disabled?: boolean }>;
 }
 
 export interface RootLayoutOutletContext {
   setTopbarContextActions: (actions: TopbarContextAction[]) => void;
+  setTopbarTitleActions: (actions: TopbarContextAction[]) => void;
+}
+
+function getCompactTopbarActionIcon(actionId: string): React.ReactNode {
+  switch (actionId) {
+    case 'fields-view-mode-list':
+      return <ViewListOutlinedIcon fontSize="small" />;
+    case 'fields-view-mode-graphical':
+      return <MapOutlinedIcon fontSize="small" />;
+    case 'calendar-view-mode-occupancy':
+      return <EventNoteOutlinedIcon fontSize="small" />;
+    case 'calendar-view-mode-seedlings':
+      return <LocalFloristOutlinedIcon fontSize="small" />;
+    default:
+      return null;
+  }
 }
 
 
@@ -317,12 +354,15 @@ function RootLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPathnameRef = React.useRef(location.pathname);
+  const expandSidebarBtnRef = React.useRef<HTMLButtonElement>(null);
+  const collapseSidebarBtnRef = React.useRef<HTMLButtonElement>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
   const isLargeDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const isPhone = useMediaQuery(theme.breakpoints.down('sm'));
   const isCoarseLowHeightViewport = useMediaQuery('(pointer: coarse) and (max-height: 500px)');
+  const isLowHeightNarrowViewport = useMediaQuery('(max-width: 900px) and (max-height: 500px)');
   const isCompactTopbar = isPhone || isCoarseLowHeightViewport;
   const isVeryNarrowMobile = useMediaQuery('(max-width:360px)');
   const isPhonePortrait = useMediaQuery(`${theme.breakpoints.down('sm')} and (orientation: portrait)`);
@@ -340,12 +380,15 @@ function RootLayout() {
   const [newProjectName, setNewProjectName] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
+  const [topbarTitleActions, setTopbarTitleActions] = useState<TopbarContextAction[]>([]);
   const [cultureActionsMenuAnchor, setCultureActionsMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileActionsOverflowAnchor, setMobileActionsOverflowAnchor] = useState<null | HTMLElement>(null);
+  const [topbarPrimaryActionMenuAnchor, setTopbarPrimaryActionMenuAnchor] = useState<null | HTMLElement>(null);
   currentPathnameRef.current = location.pathname;
 
   useEffect(() => {
     setTopbarContextActions([]);
+    setTopbarTitleActions([]);
   }, [location.pathname]);
 
   const navItems = useMemo(() => ([
@@ -360,6 +403,7 @@ function RootLayout() {
           : item.to.includes('cultures') ? <LocalFloristOutlinedIcon fontSize="small" />
             : item.to.includes('anbauplaene') ? <EventNoteOutlinedIcon fontSize="small" />
               : item.to.includes('gantt-chart') ? <CalendarMonthOutlinedIcon fontSize="small" />
+                : item.to.includes('yield-overview') ? <BarChartOutlinedIcon fontSize="small" />
                 : item.to.includes('seed-demand') ? <ScienceOutlinedIcon fontSize="small" />
                   : <LocalShippingOutlinedIcon fontSize="small" />,
     })),
@@ -401,6 +445,14 @@ function RootLayout() {
     setSidebarCollapsed((prev) => {
       const next = !prev;
       window.localStorage.setItem('openfarmplanner.sidebarCollapsed', String(next));
+      // Transfer focus to the counterpart button so keyboard users don't lose their position
+      requestAnimationFrame(() => {
+        if (next) {
+          expandSidebarBtnRef.current?.focus();
+        } else {
+          collapseSidebarBtnRef.current?.focus();
+        }
+      });
       return next;
     });
   };
@@ -611,12 +663,12 @@ function RootLayout() {
     () => (
       !isFieldsBedsPage
       && !isCalendarPage
+      && !isCulturesPage
       && (
-        (isCulturesPage && (Boolean(cultureLibraryAction) || showCultureImportExportButton))
-        || hasVisibleMobileContextActions
+        hasVisibleMobileContextActions
       )
     ),
-    [cultureLibraryAction, hasVisibleMobileContextActions, isCalendarPage, isCulturesPage, isFieldsBedsPage, showCultureImportExportButton],
+    [hasVisibleMobileContextActions, isCalendarPage, isCulturesPage, isFieldsBedsPage],
   );
   const handleCreateProject = async (): Promise<void> => {
     if (!newProjectName.trim()) {
@@ -664,8 +716,6 @@ function RootLayout() {
     }
   }, [activeProjectId, applyProjectContextChange, handleProjectMenuClose, showSnackbar, t]);
 
-  const activeMembershipRole = activeMembership?.role ?? null;
-
   const getCurrentRouteFromLocation = useCallback((): string => {
     const pathname = currentPathnameRef.current;
     return getKeyboardNavigationRouteFromPathname(pathname) ?? normalizeMainRoutePath(pathname);
@@ -696,12 +746,10 @@ function RootLayout() {
   const globalCommands = useMemo(() => createRootCommands({
     currentPath: getCurrentRouteFromLocation(),
     activeProjectId,
-    isProjectAdmin: activeMembershipRole === 'admin',
     memberships,
     onNextPage: goToNextPage,
     onPreviousPage: goToPreviousPage,
     onOpenProjectSettings: handleOpenProjectSettings,
-    onOpenProjectMembers: handleOpenProjectSettings,
     onOpenCreateProject: handleOpenCreateProject,
     onSwitchProject: (projectId) => { void handleSwitchProject(projectId); },
     onOpenAccountSettings: () => navigate('/app/account-settings'),
@@ -713,7 +761,6 @@ function RootLayout() {
       nextPage: t('commandPalette.commands.nextPage'),
       previousPage: t('commandPalette.commands.previousPage'),
       openProjectSettings: t('commandPalette.commands.openProjectSettings'),
-      openProjectMembers: t('commandPalette.commands.openProjectMembers'),
       createProject: t('commandPalette.commands.createProject'),
       switchProjectPrefix: t('commandPalette.commands.switchProjectPrefix'),
       openAccountSettings: t('commandPalette.commands.openAccountSettings'),
@@ -723,7 +770,6 @@ function RootLayout() {
       openShortcuts: t('commandPalette.commands.openShortcuts'),
     },
   }), [
-    activeMembershipRole,
     activeProjectId,
     getCurrentRouteFromLocation,
     goToNextPage,
@@ -802,6 +848,7 @@ function RootLayout() {
     if (location.pathname.startsWith('/app/cultures')) return { pageKey: 'cultures' as const, label: t('pageHelp.cultures') };
     if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { pageKey: 'plantingPlans' as const, label: t('pageHelp.plantingPlans') };
     if (location.pathname.startsWith('/app/gantt-chart')) return { pageKey: 'calendar' as const, label: t('pageHelp.calendar') };
+    if (location.pathname.startsWith('/app/yield-overview')) return { pageKey: 'yieldOverview' as const, label: t('pageHelp.yieldOverview') };
     if (location.pathname.startsWith('/app/seed-demand')) return { pageKey: 'seedDemand' as const, label: t('pageHelp.seedDemand') };
     if (location.pathname.startsWith('/app/suppliers')) return { pageKey: 'suppliers' as const, label: t('pageHelp.suppliers') };
     return null;
@@ -817,11 +864,14 @@ function RootLayout() {
         onClick: runPrimaryCreateAction,
       };
     }
-    if (location.pathname.startsWith('/app/fields-beds')) return fieldsGlobalAddAction ? { label: fieldsGlobalAddAction.label, to: '', onClick: fieldsGlobalAddAction.onClick } : null;
+    if (location.pathname.startsWith('/app/fields-beds')) return fieldsGlobalAddAction ? { label: fieldsGlobalAddAction.label, to: '', onClick: fieldsGlobalAddAction.onClick, menuActions: fieldsGlobalAddAction.menuActions } : null;
     return null;
   }, [activeCreateActions, fieldsGlobalAddAction, location.pathname, runPrimaryCreateAction, t]);
   const handleTopbarPrimaryAction = useCallback((): void => {
     if (!topbarPrimaryAction) {
+      return;
+    }
+    if (topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0) {
       return;
     }
     if (topbarPrimaryAction.onClick) {
@@ -872,6 +922,7 @@ function RootLayout() {
                   slotProps={{ tooltip: { sx: navigationTooltipSx } }}
                 >
                   <IconButton
+                    ref={collapseSidebarBtnRef}
                     aria-label={t('globalMenu.collapseSidebar')}
                     onClick={toggleSidebarCollapsed}
                     size="small"
@@ -890,6 +941,7 @@ function RootLayout() {
                   slotProps={{ tooltip: { sx: navigationTooltipSx } }}
                 >
                   <IconButton
+                    ref={expandSidebarBtnRef}
                     aria-label={t('globalMenu.expandSidebar')}
                     onClick={toggleSidebarCollapsed}
                     size="small"
@@ -935,8 +987,8 @@ function RootLayout() {
         sx={{ borderBottom: '1px solid', borderColor: 'surface.surfaceBorder', bgcolor: 'surface.topbarBackground', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
         <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: 'nowrap', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
-          {!isDesktopUp ? <IconButton aria-label={t('globalMenu.openMobileMenu')} onClick={() => setMobileNavOpen(true)} size="small"><MenuIcon fontSize="small" /></IconButton> : null}
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, overflow: 'hidden' }}>
+          {!isDesktopUp ? <IconButton aria-label={t('globalMenu.openMobileMenu')} onClick={() => setMobileNavOpen(true)}><MenuIcon /></IconButton> : null}
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, flexWrap: 'nowrap', overflow: 'hidden' }}>
             {!isDesktopUp ? (
               <Typography
                 component="h1"
@@ -951,6 +1003,7 @@ function RootLayout() {
                   fontSize: { xs: '0.98rem', sm: '1.02rem' },
                   fontWeight: 600,
                   lineHeight: 1.2,
+                  flexShrink: 1,
                 }}
               >
                 {currentPageTitle}
@@ -961,6 +1014,83 @@ function RootLayout() {
               </Typography>
             )}
             {topbarHelpConfig ? <PageHelp pageKey={topbarHelpConfig.pageKey} ariaLabel={t('pageHelp.openAria', { label: topbarHelpConfig.label })} tooltip={topbarHelpConfig.label} /> : null}
+            {topbarTitleActions.length > 0 ? (
+              isCompactTopbar ? (
+                <ToggleButtonGroup
+                  exclusive
+                  size="small"
+                  value={topbarTitleActions.find((action) => action.active)?.id ?? null}
+                  aria-label={isCalendarPage ? t('ganttChart:modeAriaLabel') : t('fields:representation.ariaLabel')}
+                  sx={{
+                    ml: 0.5,
+                    flexShrink: 0,
+                    '& .MuiToggleButton-root': {
+                      width: COMPACT_TOPBAR_TOGGLE_SIZE,
+                      height: COMPACT_TOPBAR_TOGGLE_SIZE,
+                      p: 0,
+                      borderColor: 'divider',
+                      color: 'text.primary',
+                      visibility: 'visible',
+                      '&.Mui-selected': {
+                        bgcolor: 'success.main',
+                        color: 'success.contrastText',
+                        borderColor: 'success.dark',
+                        borderWidth: 2,
+                        boxShadow: 1,
+                      },
+                      '&.Mui-selected:hover': {
+                        bgcolor: 'success.dark',
+                      },
+                    },
+                  }}
+                >
+                  {topbarTitleActions.map((action) => {
+                    const icon = getCompactTopbarActionIcon(action.id);
+                    if (!icon) {
+                      return null;
+                    }
+                    return (
+                      <Tooltip key={action.id} title={action.tooltip ?? action.label} describeChild enterTouchDelay={0}>
+                        <ToggleButton
+                          value={action.id}
+                          aria-label={action.label}
+                          onClick={action.onClick}
+                          disabled={action.disabled}
+                          sx={action.hidden ? {
+                            visibility: 'hidden',
+                            pointerEvents: 'none',
+                          } : undefined}
+                        >
+                          {icon}
+                        </ToggleButton>
+                      </Tooltip>
+                    );
+                  })}
+                </ToggleButtonGroup>
+              ) : (
+              <ButtonGroup
+                size="small"
+                variant="outlined"
+                sx={{ ...segmentedButtonGroupSx, ml: 1, flexShrink: 0 }}
+              >
+                {topbarTitleActions.map((action) => (
+                  <Button
+                    key={action.id}
+                    size="small"
+                    variant={action.active ? 'contained' : 'outlined'}
+                    color={action.active ? 'success' : 'inherit'}
+                    onClick={action.onClick}
+                    aria-label={action.ariaLabel ?? action.label}
+                    aria-pressed={action.active}
+                    disabled={action.disabled}
+                    sx={getSegmentedActionButtonSx({ active: Boolean(action.active), hidden: Boolean(action.hidden) })}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </ButtonGroup>
+              )
+            ) : null}
           </Box>
           {!isCompactTopbar ? (
           <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', minWidth: 0, maxWidth: '100%', flex: 1, overflow: 'hidden' }}>
@@ -1112,20 +1242,74 @@ function RootLayout() {
             });
           })()}
           {topbarPrimaryAction ? (
-            <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
-              <Button
-                size="small"
-                variant="contained"
-                onClick={handleTopbarPrimaryAction}
-                aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
-                startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
-                sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 36 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
-              >
-                {isPhone ? <AddIcon fontSize="small" /> : topbarPrimaryAction.label}
-              </Button>
-            </Tooltip>
+            topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0 ? (
+              <ButtonGroup variant="contained" size="small" sx={{ flexShrink: 0 }}>
+                <Button
+                  startIcon={<AddIcon fontSize="small" />}
+                  onClick={topbarPrimaryAction.onClick}
+                  aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1.25 }}
+                >
+                  {topbarPrimaryAction.label}
+                </Button>
+                <Button
+                  aria-label="Weitere Optionen"
+                  aria-controls={topbarPrimaryActionMenuAnchor ? 'topbar-primary-action-menu' : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={Boolean(topbarPrimaryActionMenuAnchor)}
+                  onClick={(event) => setTopbarPrimaryActionMenuAnchor(event.currentTarget)}
+                  sx={{ px: 0.5, minWidth: 28 }}
+                >
+                  <KeyboardArrowDownIcon fontSize="small" />
+                </Button>
+              </ButtonGroup>
+            ) : (
+              <Tooltip title={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={handleTopbarPrimaryAction}
+                  aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
+                  startIcon={!isPhone ? <AddIcon fontSize="small" /> : undefined}
+                  sx={{ textTransform: 'none', whiteSpace: 'nowrap', minWidth: isPhone ? 44 : 'auto', minHeight: isPhone ? 44 : 'auto', px: isPhone ? 0.75 : 1.25, flexShrink: 0 }}
+                >
+                  {isPhone ? <AddIcon fontSize="small" /> : topbarPrimaryAction.label}
+                </Button>
+              </Tooltip>
+            )
           ) : null}
             </Box>
+          {topbarPrimaryAction?.menuActions && topbarPrimaryAction.menuActions.length > 0 ? (
+            <Menu
+              id="topbar-primary-action-menu"
+              anchorEl={topbarPrimaryActionMenuAnchor}
+              open={Boolean(topbarPrimaryActionMenuAnchor)}
+              onClose={() => setTopbarPrimaryActionMenuAnchor(null)}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              slotProps={{
+                paper: {
+                  sx: {
+                    mt: 0.5,
+                    minWidth: topbarPrimaryActionMenuAnchor?.parentElement?.offsetWidth,
+                  },
+                },
+              }}
+            >
+              {topbarPrimaryAction.menuActions.map((action) => (
+                <MenuItem
+                  key={action.id}
+                  onClick={() => {
+                    setTopbarPrimaryActionMenuAnchor(null);
+                    action.onClick();
+                  }}
+                  disabled={action.disabled}
+                >
+                  <ListItemText primary={action.label} />
+                </MenuItem>
+              ))}
+            </Menu>
+          ) : null}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP, ml: TOPBAR_ACTION_GROUP_GAP, flexShrink: 0 }}>
           <Button
             aria-label={t('projectSwitcher.ariaLabel')}
@@ -1177,7 +1361,6 @@ function RootLayout() {
             onOpenProjectSwitcher={handleOpenMobileProjectSwitcher}
             onOpenCreateProject={handleOpenCreateProject}
             onOpenProjectSettings={handleOpenProjectSettings}
-            onOpenProjectMembers={handleOpenProjectSettings}
             onOpenProjectHistory={handleOpenProjectHistory}
             onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
             onOpenShortcuts={handleOpenShortcuts}
@@ -1188,7 +1371,74 @@ function RootLayout() {
             </Box>
           </Box>
           ) : (
-            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP }}>
+            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: isCulturesPage ? 0.25 : TOPBAR_ACTION_GROUP_GAP, flexShrink: 0 }}>
+              {isCulturesPage ? (
+                <>
+                  {cultureLibraryAction ? (
+                    <Tooltip title={t('cultureActions.openLibrary')} enterTouchDelay={0}>
+                      <Box component="span" sx={{ display: 'inline-flex' }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => cultureLibraryAction.onClick()}
+                          aria-label={t('cultureActions.openLibrary')}
+                          sx={{
+                            width: COMPACT_TOPBAR_TOGGLE_SIZE,
+                            height: COMPACT_TOPBAR_TOGGLE_SIZE,
+                            flexShrink: 0,
+                            color: 'text.primary',
+                            '& .MuiSvgIcon-root': { fontSize: 24 },
+                          }}
+                          disabled={cultureLibraryAction.disabled}
+                        >
+                          <PublicIcon />
+                        </IconButton>
+                      </Box>
+                    </Tooltip>
+                  ) : null}
+                  {showCultureImportExportButton ? (
+                    <Tooltip title={t('cultureActions.openImportExport')} enterTouchDelay={0}>
+                      <IconButton
+                        size="small"
+                        aria-label={t('cultureActions.openImportExport')}
+                        aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu-mobile' : undefined}
+                        aria-haspopup="true"
+                        aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                        onClick={handleCultureActionsMenuOpen}
+                        sx={{
+                          width: COMPACT_TOPBAR_TOGGLE_SIZE,
+                          height: COMPACT_TOPBAR_TOGGLE_SIZE,
+                          flexShrink: 0,
+                          color: 'text.primary',
+                          mr: 0.5,
+                          '& .MuiSvgIcon-root': { fontSize: 24 },
+                        }}
+                      >
+                        <FileExportIcon />
+                      </IconButton>
+                    </Tooltip>
+                  ) : null}
+                  <Menu
+                    id="culture-actions-menu-mobile"
+                    anchorEl={cultureActionsMenuAnchor}
+                    open={Boolean(cultureActionsMenuAnchor)}
+                    onClose={handleCultureActionsMenuClose}
+                  >
+                    {cultureImportExportActions.map((action) => (
+                      <MenuItem
+                        key={`mobile-primary-${action.id}`}
+                        aria-label={action.ariaLabel ?? action.label}
+                        onClick={() => {
+                          action.onClick();
+                          handleCultureActionsMenuClose();
+                        }}
+                        disabled={action.disabled}
+                      >
+                        <ListItemText primary={action.label} secondary={action.shortcutHint} />
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                </>
+              ) : null}
               {showMobileTopbarViewActions ? (
                 <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP, flexShrink: 0 }}>
                   {mobileTopbarViewActions.length > 0 ? (
@@ -1200,8 +1450,8 @@ function RootLayout() {
                       sx={{
                         flexShrink: 0,
                         '& .MuiToggleButton-root': {
-                          width: 32,
-                          height: 32,
+                          width: COMPACT_TOPBAR_TOGGLE_SIZE,
+                          height: COMPACT_TOPBAR_TOGGLE_SIZE,
                           p: 0,
                           borderColor: 'divider',
                           color: 'text.primary',
@@ -1250,6 +1500,38 @@ function RootLayout() {
                       })}
                     </ToggleButtonGroup>
                   ) : null}
+                  {isFieldsBedsPage && fieldsGlobalAddAction ? (
+                    <Tooltip title={fieldsGlobalAddAction.ariaLabel ?? fieldsGlobalAddAction.label} enterTouchDelay={0}>
+                      <IconButton
+                        size="small"
+                        aria-label={fieldsGlobalAddAction.ariaLabel ?? fieldsGlobalAddAction.label}
+                        onClick={(event) => {
+                          if (fieldsGlobalAddAction.menuActions && fieldsGlobalAddAction.menuActions.length > 0) {
+                            setTopbarPrimaryActionMenuAnchor(event.currentTarget);
+                          } else {
+                            fieldsGlobalAddAction.onClick();
+                          }
+                        }}
+                        disabled={fieldsGlobalAddAction.disabled}
+                        sx={{
+                          width: COMPACT_TOPBAR_TOGGLE_SIZE,
+                          height: COMPACT_TOPBAR_TOGGLE_SIZE,
+                          bgcolor: 'success.main',
+                          color: 'success.contrastText',
+                          boxShadow: 1,
+                          '&:hover': {
+                            bgcolor: 'success.dark',
+                          },
+                          '&.Mui-disabled': {
+                            bgcolor: 'action.disabledBackground',
+                            color: 'action.disabled',
+                          },
+                        }}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  ) : null}
                   {mobileFieldsAddLocationAction ? (
                     <Tooltip title={mobileFieldsAddLocationAction.label}>
                       <IconButton
@@ -1258,8 +1540,8 @@ function RootLayout() {
                         onClick={mobileFieldsAddLocationAction.onClick}
                         disabled={mobileFieldsAddLocationAction.disabled}
                         sx={{
-                          width: 32,
-                          height: 32,
+                          width: COMPACT_TOPBAR_TOGGLE_SIZE,
+                          height: COMPACT_TOPBAR_TOGGLE_SIZE,
                           bgcolor: 'success.main',
                           color: 'success.contrastText',
                           boxShadow: 1,
@@ -1283,23 +1565,55 @@ function RootLayout() {
                   <Button
                     size="small"
                     variant="contained"
-                    onClick={handleTopbarPrimaryAction}
+                    onClick={(event) => {
+                      if (topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0) {
+                        setTopbarPrimaryActionMenuAnchor(event.currentTarget);
+                        return;
+                      }
+                      handleTopbarPrimaryAction();
+                    }}
                     aria-label={topbarPrimaryAction.tooltip ?? topbarPrimaryAction.label}
+                    aria-controls={topbarPrimaryActionMenuAnchor ? 'topbar-primary-action-menu' : undefined}
+                    aria-haspopup={topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0 ? 'true' : undefined}
+                    aria-expanded={Boolean(topbarPrimaryActionMenuAnchor)}
                     sx={{ textTransform: 'none', minWidth: 32, px: 0.75, minHeight: 30 }}
                   >
                     <AddIcon fontSize="small" />
                   </Button>
                 </Tooltip>
               ) : null}
+              {topbarPrimaryAction?.menuActions && topbarPrimaryAction.menuActions.length > 0 ? (
+                <Menu
+                  id="topbar-primary-action-menu"
+                  anchorEl={topbarPrimaryActionMenuAnchor}
+                  open={Boolean(topbarPrimaryActionMenuAnchor)}
+                  onClose={() => setTopbarPrimaryActionMenuAnchor(null)}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                  slotProps={{ paper: { sx: { mt: 0.5 } } }}
+                >
+                  {topbarPrimaryAction.menuActions.map((action) => (
+                    <MenuItem
+                      key={action.id}
+                      onClick={() => {
+                        setTopbarPrimaryActionMenuAnchor(null);
+                        action.onClick();
+                      }}
+                      disabled={action.disabled}
+                    >
+                      <ListItemText primary={action.label} />
+                    </MenuItem>
+                  ))}
+                </Menu>
+              ) : null}
               <IconButton
                 aria-label="Mehr"
                 aria-controls={globalMenuAnchor ? 'global-actions-menu' : undefined}
                 aria-haspopup="true"
                 onClick={handleGlobalMenuOpen}
-                size="small"
                 sx={{ color: 'text.primary' }}
               >
-                <MoreVertIcon fontSize="small" />
+                <MoreVertIcon />
               </IconButton>
               <GlobalMenu
                 anchorEl={globalMenuAnchor}
@@ -1311,7 +1625,6 @@ function RootLayout() {
                 onOpenProjectSwitcher={handleOpenMobileProjectSwitcher}
                 onOpenCreateProject={handleOpenCreateProject}
                 onOpenProjectSettings={handleOpenProjectSettings}
-                onOpenProjectMembers={handleOpenProjectSettings}
                 onOpenProjectHistory={handleOpenProjectHistory}
                 onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
                 onOpenShortcuts={handleOpenShortcuts}
@@ -1328,35 +1641,34 @@ function RootLayout() {
               {isCulturesPage ? (
                 <>
                   {cultureLibraryAction ? (
-                    <Tooltip title={t('cultureActions.openLibrary')}>
+                    <Tooltip title={t('cultureActions.openLibrary')} enterTouchDelay={0}>
                       <span>
-                        <Button
+                        <IconButton
                           size="small"
-                          variant="outlined"
                           onClick={() => cultureLibraryAction.onClick()}
                           aria-label={t('cultureActions.openLibrary')}
-                          startIcon={<PublicIcon fontSize="small" />}
-                          sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
+                          sx={{ color: 'text.primary' }}
                           disabled={cultureLibraryAction.disabled}
                         >
-                          {t('cultureActions.libraryShort')}
-                        </Button>
+                          <PublicIcon fontSize="small" />
+                        </IconButton>
                       </span>
                     </Tooltip>
                   ) : null}
                   {showCultureImportExportButton || isMobile ? (
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      aria-label={t('cultureActions.openImportExport')}
-                      aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu' : undefined}
-                      aria-haspopup="true"
-                      aria-expanded={Boolean(cultureActionsMenuAnchor)}
-                      onClick={handleCultureActionsMenuOpen}
-                      sx={{ textTransform: 'none', whiteSpace: 'nowrap', px: 1, minHeight: 30 }}
-                    >
-                      {t('cultureActions.importExport')}
-                    </Button>
+                    <Tooltip title={t('cultureActions.openImportExport')} enterTouchDelay={0}>
+                      <IconButton
+                        size="small"
+                        aria-label={t('cultureActions.openImportExport')}
+                        aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu-mobile' : undefined}
+                        aria-haspopup="true"
+                        aria-expanded={Boolean(cultureActionsMenuAnchor)}
+                        onClick={handleCultureActionsMenuOpen}
+                        sx={{ color: 'text.primary' }}
+                      >
+                        <FileExportIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   ) : null}
                   <Menu
                     id="culture-actions-menu-mobile"
@@ -1511,7 +1823,7 @@ function RootLayout() {
           width: '100%',
           // Global outer page gutter (single source of truth for workspace pages).
           // Uses smaller desktop gutters on wide monitors while keeping clear edge spacing.
-          px: { xs: 0, sm: 2, md: 2.5, lg: 2.25, xl: 2 },
+          px: { xs: 0, sm: isLowHeightNarrowViewport ? 0 : 2, md: 2.5, lg: 2.25, xl: 2 },
           py: { xs: 1.5, md: 2.5 },
           display: 'flex',
           flexDirection: 'column',
@@ -1519,13 +1831,18 @@ function RootLayout() {
           minWidth: 0,
         }}
       >
-        <Outlet context={{ setTopbarContextActions } satisfies RootLayoutOutletContext} />
+        <Outlet context={{ setTopbarContextActions, setTopbarTitleActions } satisfies RootLayoutOutletContext} />
       </Box>
       </Box>
 
       <Dialog open={projectHistoryOpen} onClose={() => setProjectHistoryOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{t('commandPalette.commands.openVersionHistory')}</DialogTitle>
+        <DialogTitle>{t('commandPalette.versionHistoryTitle')}</DialogTitle>
         <DialogContent sx={{ py: isPhonePortrait ? 1 : 2 }}>
+          {historyItems.length === 0 ? (
+            <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+              {t('commandPalette.versionHistoryEmpty')}
+            </Typography>
+          ) : null}
           <List>
             {historyItems.map((item, index) => {
               const isCurrentVersion = isCurrentHistoryEntry(item, index);
@@ -1626,7 +1943,7 @@ function RootLayout() {
                           </>
                         )}
                         secondary={(
-                          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
                             <PersonOutlineIcon sx={{ fontSize: 14, color: 'text.secondary', flexShrink: 0 }} />
                             <Typography component="span" variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                               Von {actorLabel}
@@ -1666,6 +1983,20 @@ function RootLayout() {
             <Typography variant="subtitle2">{t('commandPalette.shortcutSections.viewsLayout')}</Typography>
             <List dense disablePadding>
               <ListItem><ListItemText primary={t('commandPalette.commands.toggleSidebar')} secondary="Ctrl+B" /></ListItem>
+            </List>
+            <Typography variant="subtitle2">{t('commandPalette.contextTitles.calendar')}</Typography>
+            <List dense disablePadding>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarToday')} secondary="T" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarPreviousPeriod')} secondary="←" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarNextPeriod')} secondary="→" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarDayView')} secondary="1" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarWeekView')} secondary="2" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarMonthView')} secondary="3" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarQuarterView')} secondary="4" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarYearView')} secondary="5" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarOccupancy')} secondary="F" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarSeedlings')} secondary="A" /></ListItem>
+              <ListItem><ListItemText primary={t('commandPalette.commands.calendarToggleMove')} secondary="Z" /></ListItem>
             </List>
             <Typography variant="subtitle2">{t('commandPalette.shortcutSections.dialogsHelp')}</Typography>
             <List dense disablePadding>
@@ -1757,7 +2088,7 @@ function RootLayout() {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPendingRestoreEntry(null)}>Abbrechen</Button>
+          <Button autoFocus variant="outlined" onClick={() => setPendingRestoreEntry(null)}>Abbrechen</Button>
           <Button
             variant="contained"
             onClick={() => {
@@ -1804,6 +2135,7 @@ function RootLayout() {
         <Alert
           onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
           severity={snackbar.severity}
+          closeText={t('common:actions.close')}
           sx={{ width: '100%' }}
           action={snackbar.actionLabel && snackbar.onAction ? (
             <Button
@@ -1849,13 +2181,20 @@ function withLazyFallback(element: React.ReactElement): React.ReactElement {
 
 function RouteErrorBoundary() {
   const error = useRouteError();
+  const location = useLocation();
   const isApplicationUpdateError = isDynamicImportLoadError(error);
+  const routeKey = `${location.pathname}${location.search}`;
+  const [isReloading] = useState(() => shouldAutomaticallyReloadForRouteLoadError(routeKey));
 
   useEffect(() => {
-    if (isApplicationUpdateError) {
-      reloadOnceForDynamicImportError(error);
+    if (isReloading) {
+      reloadPage();
     }
-  }, [error, isApplicationUpdateError]);
+  }, [isReloading]);
+
+  if (isReloading) {
+    return null;
+  }
 
   return <RuntimeErrorState variant={isApplicationUpdateError ? 'applicationUpdated' : 'routeError'} />;
 }
@@ -2002,14 +2341,17 @@ function createAppRouter(basename: string) {
                 { path: 'suppliers', element: withLazyFallback(<Suppliers />) },
                 { path: 'planting-plans', element: withLazyFallback(<PlantingPlans />) },
                 { path: 'gantt-chart', element: withLazyFallback(<GanttChart />) },
+                { path: 'yield-overview', element: withLazyFallback(<YieldOverviewPage />) },
                 { path: 'seed-demand', element: withLazyFallback(<SeedDemandPage />) },
                 { path: 'project-selection', element: withLazyFallback(<ProjectSelectionPage />) },
                 { path: 'account-settings', element: withLazyFallback(<AccountSettingsPage />) },
                 { path: 'project-settings', element: withLazyFallback(<ProjectSettingsPage />) },
+                { path: '*', element: <Navigate to="/app/dashboard" replace /> },
               ],
             },
           ],
         },
+        { path: '*', element: <Navigate to="/" replace /> },
       ],
     },
   ], {

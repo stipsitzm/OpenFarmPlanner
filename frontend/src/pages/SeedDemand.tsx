@@ -6,6 +6,7 @@ import {
   CircularProgress,
   FormControl,
   Link,
+  IconButton,
   ListItemIcon,
   ListItemText,
   Menu,
@@ -19,7 +20,9 @@ import {
   TableRow,
   Typography,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import EditIcon from '@mui/icons-material/Edit';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, seedDemandAPI } from '../api/api';
 import type { SeedDemand } from '../api/types';
@@ -35,7 +38,7 @@ import { ContextMenuHint, TableCopyMenuItems, useContextMenuHint } from '../comp
 import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from '../components/data-grid/contextMenuFocus';
 import { getFirstMissingProjectSetupStep, getProjectSetupAction, getProjectSetupActions } from './requirementFlow';
 import { formatLocalizedNumber } from '../utils/numberLocalization';
-import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu, useCloseCustomContextMenuOnNativeContextMenu } from '../utils/contextMenu';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
@@ -243,11 +246,30 @@ export default function SeedDemandPage() {
   }, []);
   const contextMenuListRef = useContextMenuFocus(contextMenuState !== null, closeContextMenu);
 
+  const isSeedDemandContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
+    shouldOpenCustomContextMenu(target) &&
+    target instanceof HTMLElement &&
+    target.closest('tr[data-seed-demand-culture-id]') !== null
+  ), []);
+  const repositionOpenContextMenu = useCallback((event: globalThis.MouseEvent): void => {
+    setContextMenuState((currentState) => (
+      currentState
+        ? { row: currentState.row, mouseX: event.clientX + 2, mouseY: event.clientY - 6 }
+        : currentState
+    ));
+  }, []);
+  useCloseCustomContextMenuOnNativeContextMenu(
+    contextMenuState !== null,
+    closeContextMenu,
+    isSeedDemandContextMenuTarget,
+    repositionOpenContextMenu,
+  );
+
   const openContextMenu = useCallback((
     event: MouseEvent<HTMLTableRowElement>,
     row: SeedDemand,
   ): void => {
-    if (!shouldOpenCustomContextMenu(event.target)) {
+    if (!isSeedDemandContextMenuTarget(event.target)) {
       return;
     }
     suppressNativeContextMenu(event);
@@ -258,7 +280,7 @@ export default function SeedDemandPage() {
       mouseX: event.clientX + 2,
       mouseY: event.clientY - 6,
     });
-  }, [markContextMenuHintUsed]);
+  }, [isSeedDemandContextMenuTarget, markContextMenuHintUsed]);
 
   const openKeyboardContextMenu = useCallback((
     event: KeyboardEvent<HTMLTableRowElement>,
@@ -277,6 +299,19 @@ export default function SeedDemandPage() {
       row,
       mouseX: rowRect.left + Math.min(240, rowRect.width),
       mouseY: rowRect.top + 12,
+    });
+  }, [markContextMenuHintUsed]);
+
+  const openInlineActionMenu = useCallback((event: MouseEvent<HTMLButtonElement>, row: SeedDemand): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    markContextMenuHintUsed();
+    contextMenuOriginRef.current = event.currentTarget;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setContextMenuState({
+      row,
+      mouseX: rect.right - 8,
+      mouseY: rect.top + 12,
     });
   }, [markContextMenuHintUsed]);
 
@@ -346,7 +381,6 @@ export default function SeedDemandPage() {
         {!isLoading && !error && canCalculateSeedDemand && showContextMenuHint ? (
           <ContextMenuHint
             message={t('common:messages.contextMenuTableHint')}
-            secondary={t('common:messages.contextMenuHintKeyboard')}
             onClose={closeContextMenuHint}
             sx={{ mb: 1.25 }}
           />
@@ -384,16 +418,90 @@ export default function SeedDemandPage() {
                 return (
                   <TableRow
                     key={row.culture_id}
+                    data-seed-demand-culture-id={row.culture_id}
                     hover
                     tabIndex={0}
                     onContextMenu={(event) => openContextMenu(event, row)}
                     onKeyDown={(event) => openKeyboardContextMenu(event, row)}
-                    sx={{ WebkitTouchCallout: 'none' }}
+                    sx={{
+                      WebkitTouchCallout: 'none',
+                      '&:hover .seed-demand-row-actions': { opacity: 1, pointerEvents: 'auto' },
+                      '&:focus-within .seed-demand-row-actions': { opacity: 1, pointerEvents: 'auto' },
+                    }}
                   >
-                    <TableCell>
-                      <Link component={RouterLink} to={`/app/cultures?cultureId=${row.culture_id}`} underline="hover">
-                        {getCultureLabel(row)}
-                      </Link>
+                    <TableCell sx={{ maxWidth: { xs: 180, sm: 240 } }}>
+                      <Box
+                        sx={{
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          minWidth: 0,
+                          width: '100%',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: 'block',
+                            flex: '1 1 auto',
+                            minWidth: 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          <Link component={RouterLink} to={`/app/cultures?cultureId=${row.culture_id}`} underline="hover">
+                            {getCultureLabel(row)}
+                          </Link>
+                        </Box>
+                        <Box
+                          className="seed-demand-row-actions"
+                          sx={{
+                            position: 'absolute',
+                            right: 0,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            py: 0.25,
+                            pl: 0.25,
+                            pr: 0.25,
+                            borderRadius: 1,
+                            bgcolor: 'background.paper',
+                            opacity: 0,
+                            pointerEvents: 'none',
+                            transition: 'background-color 120ms ease-in-out, opacity 120ms ease-in-out',
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              top: 0,
+                              bottom: 0,
+                              right: '100%',
+                              width: 16,
+                              pointerEvents: 'none',
+                              background: (theme) =>
+                                `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 100%)`,
+                            },
+                            'tr:hover &': {
+                              bgcolor: 'surface.surfaceHoverBackground',
+                            },
+                            'tr:hover &::before': {
+                              background: (theme) => {
+                                const hoverBackground = theme.palette.surface?.surfaceHoverBackground ?? theme.palette.action.hover;
+                                return `linear-gradient(90deg, ${alpha(hoverBackground, 0)} 0%, ${hoverBackground} 100%)`;
+                              },
+                            },
+                          }}
+                        >
+                          <IconButton
+                            size="small"
+                            aria-label={t('common:actions.actions')}
+                            onClick={(event) => openInlineActionMenu(event, row)}
+                          >
+                            <MoreVertIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </Box>
                     </TableCell>
                     <TableCell>
                       {supplierCount > 1 ? (
@@ -472,9 +580,15 @@ export default function SeedDemandPage() {
       <Menu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
+        hideBackdrop
+        sx={{ pointerEvents: 'none' }}
         autoFocus
         disableAutoFocusItem={false}
         slotProps={{
+          paper: {
+            className: 'ofp-custom-context-menu',
+            sx: { pointerEvents: 'auto' },
+          },
           list: {
             autoFocus: true,
             ref: contextMenuListRef,

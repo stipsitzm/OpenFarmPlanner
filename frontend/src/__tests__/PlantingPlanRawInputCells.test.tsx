@@ -130,4 +130,34 @@ describe('planting plan raw input edit cells', () => {
       value: '',
     });
   });
+
+  it('shows localized descriptive placeholders for empty raw inputs', () => {
+    const { rerender } = render(
+      <AreaM2EditCell
+        {...baseEditParams}
+        field="area_m2"
+        value=""
+        fallbackValue={null}
+        locale="de-DE"
+        maxKeyword="max"
+        maxPlaceholder="max"
+        onLastEditedFieldChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByPlaceholderText('max')).toBeInTheDocument();
+
+    rerender(
+      <PlantsCountEditCell
+        {...baseEditParams}
+        field="plants_count"
+        value=""
+        cultures={[]}
+        placeholder="Anzahl eingeben"
+        onLastEditedFieldChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByPlaceholderText('Anzahl eingeben')).toBeInTheDocument();
+  });
 });

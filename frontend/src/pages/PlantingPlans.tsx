@@ -8,6 +8,7 @@
  */
 
 import { memo, useCallback, useState, useEffect, useMemo, useRef, type MouseEvent as ReactMouseEvent } from "react";
+import { isTypingInEditableElement } from "../hooks/useKeyboardShortcuts";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type {
   GridCellParams,
@@ -48,43 +49,44 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTranslation } from "../i18n";
 import {
-  getAllowedCultivationTypesForCulture,
   normalizeCultivationType,
   resolveCultivationTypeForAllowedOptions,
+  toNumericValue,
+  formatAreaM2,
+  buildBedDisplayLabel,
+  getAllowedCultivationTypesForCulture,
 } from "./plantingPlansUtils";
+import { usePlantingPlanHierarchy, type CultivationTypeSelectOption } from "./usePlantingPlanHierarchy";
 import PageContainer from "../components/layout/PageContainer";
 import PageSurface from "../components/layout/PageSurface";
 import {
   plantingPlanAPI,
-  cultureAPI,
-  bedAPI,
-  fieldAPI,
-  locationAPI,
   type PlantingPlan,
-  type Culture,
   type Bed,
 } from "../api/api";
-import type { CultivationType, Field, Location } from "../api/types";
+import type { CultivationType, Field } from "../api/types";
 import { extractApiErrorMessage } from "../api/errors";
 import {
   formatLocalizedNumber,
   parseLocalizedNumber,
-  resolveLocaleFromLanguage,
 } from "../utils/numberLocalization";
 import { AreaM2EditCell } from "../components/data-grid/AreaM2EditCell";
+import { PlantsCountEditCell } from "../components/data-grid/PlantsCountEditCell";
 import {
   EditableDataGrid,
   createSingleSelectColumn,
   getCalculatedColumnProps,
   type EditableRow,
   type DataGridAPI,
-  type SearchableSelectOption,
   type EditableDataGridCommandApi,
   buildTsv,
   copyTextToClipboard,
   formatClipboardValue,
   getPlainExcerpt,
   showClipboardSnackbar,
+  toIsoDateString,
+  parseGermanDateText,
+  formatDateAsGerman,
 } from "../components/data-grid";
 import { MobileCardList } from "../components/mobile/MobileCardList";
 import { NotesDrawer } from "../components/data-grid/NotesDrawer";
@@ -99,7 +101,6 @@ import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction, getProjectSetupActions } from "./requirementFlow";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
-import { collectHierarchyAvailability } from "../components/planting-plans/areaHierarchySelection";
 import EmptyStateCard from "../components/project/EmptyStateCard";
 
 export {
@@ -108,18 +109,9 @@ export {
   filterFieldOptionsByLocation,
 } from "../components/planting-plans/areaHierarchySelection";
 
-const AREA_LABEL_SEPARATOR = " | ";
-const DATA_GRID_HEADER_LABEL_SX = { fontWeight: 600 };
+export { buildAreaColumnHeaderLabel } from "./plantingPlansUtils";
 
-export const buildAreaColumnHeaderLabel = (
-  includeLocation: boolean,
-  locationLabel: string,
-  fieldLabel: string,
-  bedLabel: string,
-): string =>
-  includeLocation
-    ? `${locationLabel}${AREA_LABEL_SEPARATOR}${fieldLabel}${AREA_LABEL_SEPARATOR}${bedLabel}`
-    : `${fieldLabel}${AREA_LABEL_SEPARATOR}${bedLabel}`;
+const DATA_GRID_HEADER_LABEL_SX = { fontWeight: 600 };
 
 /**
  * Row data type for Data Grid
@@ -144,11 +136,6 @@ interface MobileCreateFormState {
   notes: string;
 }
 
-interface CultivationTypeSelectOption {
-  value: CultivationType;
-  label: string;
-}
-
 interface AreaValidationDialogState {
   rowId: number;
   requestedArea: number;
@@ -161,56 +148,12 @@ interface AreaValidationDialogState {
 }
 
 const AREA_VALIDATION_CLOSE_SUPPRESSION_MS = 250;
-
-const CULTIVATION_TYPE_OPTIONS = [
-  {
-    value: "direct_sowing",
-    labelKey: "plantingPlans:cultivationTypes.directSowing",
-  },
-  {
-    value: "pre_cultivation",
-    labelKey: "plantingPlans:cultivationTypes.preCultivation",
-  },
-] as const;
-
 const CULTURE_COLUMN_MAX_WIDTH = 280;
 const BED_COLUMN_MAX_WIDTH = 220;
-const DATE_COLUMN_WIDTH = 142;
-
-const estimateColumnWidth = (
-  values: string[],
-  min: number,
-  max: number,
-): number => {
-  const longest = values.reduce(
-    (length, value) => Math.max(length, value.length),
-    0,
-  );
-  const estimated = longest * 8 + 52;
-  return Math.max(min, Math.min(max, estimated));
-};
-
-const formatAreaM2 = (value: number, locale: string): string =>
-  `${formatLocalizedNumber(value, locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}\u00a0m²`;
-
-const toIsoDateString = (value: unknown): string | null => {
-  if (value instanceof Date) {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, "0");
-    const day = String(value.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-  if (typeof value === "string" && value.trim().length > 0) {
-    return value;
-  }
-  return null;
-};
 
 interface CultivationTypeEditCellProps extends GridRenderEditCellParams {
   options: CultivationTypeSelectOption[];
+  placeholder: string;
 }
 
 const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
@@ -220,8 +163,10 @@ const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
   hasFocus,
   api,
   options,
+  placeholder,
 }: CultivationTypeEditCellProps) {
   const selectedValue = normalizeCultivationType(value) ?? "";
+  const selectedOption = options.find((option) => option.value === selectedValue);
 
   return (
     <TextField
@@ -233,6 +178,32 @@ const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
       slotProps={{
         htmlInput: {
           tabIndex: hasFocus ? 0 : -1,
+        },
+        select: {
+          displayEmpty: true,
+          renderValue: () => selectedOption?.label ?? (
+            <Box
+              component="span"
+              sx={{
+                display: "block",
+                minWidth: 0,
+                overflow: "hidden",
+                color: "text.disabled",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {placeholder}
+            </Box>
+          ),
+        },
+      }}
+      sx={{
+        "& .MuiSelect-select": {
+          minWidth: 0,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
         },
       }}
       onChange={async (event) => {
@@ -256,6 +227,7 @@ const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
   && previous.value === next.value
   && previous.hasFocus === next.hasFocus
   && previous.options === next.options
+  && previous.placeholder === next.placeholder
 ));
 
 const toDateKey = (value: unknown): number | null => {
@@ -294,16 +266,6 @@ const toDateKey = (value: unknown): number | null => {
   return Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
 };
 
-const toNumericValue = (value: unknown): number | null => {
-  if (typeof value === "number") {
-    return Number.isNaN(value) ? null : value;
-  }
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value);
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-  return null;
-};
 const toAreaNumericValue = (value: unknown, locale: string): number | null => {
   const directNumeric = toNumericValue(value);
   if (directNumeric !== null) {
@@ -432,35 +394,7 @@ export const normalizeSelectionAfterBedChange = (
   };
 };
 
-export const buildBedDisplayLabel = (
-  locationName: string | null | undefined,
-  fieldName: string | null | undefined,
-  bedName: string | null | undefined,
-  areaSqm: number | null,
-  includeLocation: boolean,
-  locale: string,
-): string => {
-  const normalizedLocationName = (locationName ?? "").trim();
-  const normalizedBedName = (bedName ?? "").trim();
-  const normalizedFieldName = (fieldName ?? "").trim();
-  const combinedName = [
-    includeLocation ? normalizedLocationName : "",
-    normalizedFieldName,
-    normalizedBedName,
-  ]
-    .filter((part) => part.length > 0)
-    .join(AREA_LABEL_SEPARATOR);
-
-  if (!combinedName) {
-    return "—";
-  }
-
-  if (areaSqm === null) {
-    return combinedName;
-  }
-
-  return `${combinedName} (${formatAreaM2(areaSqm, locale)})`;
-};
+export { buildBedDisplayLabel } from "./plantingPlansUtils";
 
 export const resolveBedCellValue = (
   value: unknown,
@@ -530,18 +464,32 @@ export const buildMobileCreateForm = (
 
 function PlantingPlans() {
   const { t } = useTranslation(["plantingPlans", "common"]);
-  const { i18n } = useTranslation();
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
-  const numberLocale = resolveLocaleFromLanguage(i18n.language);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [cultures, setCultures] = useState<Culture[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [fields, setFields] = useState<Field[]>([]);
-  const [beds, setBeds] = useState<Bed[]>([]);
+  const {
+    cultures,
+    locations,
+    fields,
+    beds,
+    isHierarchyLoading,
+    numberLocale,
+    cultureOptions,
+    locationById,
+    fieldById,
+    bedById,
+    bedOptions,
+    bedLabelById,
+    cultivationTypeOptions,
+    hasMultipleLocationsWithBeds,
+    fieldBedColumnLabel,
+    areaColumnLabel,
+    getCultivationTypeOptionsForRow,
+    dynamicWidths,
+  } = usePlantingPlanHierarchy(shouldShowProjectRequiredState);
   const [areaNotice, setAreaNotice] = useState<{
     message: string;
     severity: "info" | "warning";
@@ -549,11 +497,17 @@ function PlantingPlans() {
   const [areaValidationDialog, setAreaValidationDialog] = useState<AreaValidationDialogState | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
+  const plantingPlanGridAPI = useMemo<DataGridAPI<PlantingPlanRow>>(() => ({
+    ...plantingPlanAPI,
+    list: async () => {
+      const data = await plantingPlanAPI.listAll();
+      return { data };
+    },
+  }) as unknown as DataGridAPI<PlantingPlanRow>, []);
   const [selectedPlan, setSelectedPlan] = useState<PlantingPlanRow | null>(
     null,
   );
   const [mobileRows, setMobileRows] = useState<PlantingPlanRow[]>([]);
-  const [isHierarchyLoading, setIsHierarchyLoading] = useState(true);
   const [isPlansLoading, setIsPlansLoading] = useState(true);
   const [expandedCardIds, setExpandedCardIds] = useState<Set<number | string>>(
     new Set(),
@@ -611,6 +565,19 @@ function PlantingPlans() {
 
   useCommandContextTag("plans");
 
+  useEffect(() => {
+    const handleAltT = (event: KeyboardEvent) => {
+      if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.key !== "t" && event.key !== "T") return;
+      if (isMobile) return;
+      if (isTypingInEditableElement(document.activeElement)) return;
+      event.preventDefault();
+      gridCommandApiRef.current?.focusTable();
+    };
+    window.addEventListener("keydown", handleAltT);
+    return () => window.removeEventListener("keydown", handleAltT);
+  }, [isMobile]);
+
   // Track which field was last edited (for determining API payload)
   const lastEditedFieldRef = useRef<"area_m2" | "plants_count" | null>(null);
   const areaValidationDialogRef = useRef<AreaValidationDialogState | null>(null);
@@ -650,198 +617,6 @@ function PlantingPlans() {
   useEffect(() => () => {
     clearAreaValidationCloseTimer();
   }, [clearAreaValidationCloseTimer]);
-
-  const cultureOptions: SearchableSelectOption[] = useMemo(
-    () =>
-      cultures
-        .filter((c) => c.id !== undefined)
-        .map((c) => ({
-          value: c.id!,
-          label: c.variety ? `${c.name} (${c.variety})` : c.name,
-        })),
-    [cultures],
-  );
-
-  const locationById = useMemo(
-    () => new Map(locations.filter((location) => location.id !== undefined).map((location) => [location.id!, location])),
-    [locations],
-  );
-
-  const fieldById = useMemo(
-    () => new Map(fields.filter((field) => field.id !== undefined).map((field) => [field.id!, field])),
-    [fields],
-  );
-
-  const bedById = useMemo(
-    () => new Map(beds.filter((bed) => bed.id !== undefined).map((bed) => [bed.id!, bed])),
-    [beds],
-  );
-
-  const hierarchyAvailability = useMemo(
-    () => collectHierarchyAvailability(fields, beds),
-    [fields, beds],
-  );
-
-  const bedOptions: SearchableSelectOption[] = useMemo(
-    () => {
-      const locationIdsWithBeds = new Set<number>();
-      beds.forEach((bed) => {
-        const field = fieldById.get(bed.field);
-        if (field) {
-          locationIdsWithBeds.add(field.location);
-        }
-      });
-      const includeLocation = locationIdsWithBeds.size > 1;
-
-      return beds
-        .filter((b) => b.id !== undefined)
-        .filter((bed) => hierarchyAvailability.fieldIdsWithBeds.has(bed.field))
-        .map((b) => {
-          const field = fieldById.get(b.field);
-          const locationName = field
-            ? locationById.get(field.location)?.name
-            : null;
-          const normalizedAreaSqm = toNumericValue(b.area_sqm);
-          return {
-            value: b.id!,
-            label: buildBedDisplayLabel(
-              locationName,
-              b.field_name ?? field?.name,
-              b.name,
-              normalizedAreaSqm,
-              includeLocation,
-              numberLocale,
-            ),
-          };
-        });
-    },
-    [beds, fieldById, hierarchyAvailability.fieldIdsWithBeds, locationById, numberLocale],
-  );
-
-  const bedLabelById = useMemo(
-    () => new Map(bedOptions.map((option) => [option.value as number, option.label])),
-    [bedOptions],
-  );
-
-  const cultivationTypeOptions = useMemo(
-    () =>
-      CULTIVATION_TYPE_OPTIONS.map((option) => ({
-        value: option.value,
-        label: t(option.labelKey),
-      })),
-    [t],
-  );
-
-  const cultivationTypeOptionsByCultureId = useMemo(() => {
-    const optionsByCultureId = new Map<number, CultivationTypeSelectOption[]>();
-    cultures.forEach((culture) => {
-      if (culture.id === undefined) {
-        return;
-      }
-      const allowedTypes = getAllowedCultivationTypesForCulture(culture);
-      optionsByCultureId.set(
-        culture.id,
-        cultivationTypeOptions.filter((option) =>
-          allowedTypes.includes(option.value as CultivationType),
-        ),
-      );
-    });
-    return optionsByCultureId;
-  }, [cultivationTypeOptions, cultures]);
-
-  const fieldBedColumnLabel = useMemo(
-    () =>
-      t("plantingPlans:columns.fieldBed", {
-        separator: AREA_LABEL_SEPARATOR,
-      }),
-    [t],
-  );
-
-  const hasMultipleLocationsWithBeds = useMemo(() => {
-    const fieldById = new Map(
-      fields
-        .filter((item) => item.id !== undefined)
-        .map((item) => [item.id as number, item]),
-    );
-    const locationIdsWithBeds = new Set<number>();
-    beds.forEach((bed) => {
-      const field = fieldById.get(bed.field);
-      if (field) {
-        locationIdsWithBeds.add(field.location);
-      }
-    });
-    return locationIdsWithBeds.size > 1;
-  }, [beds, fields]);
-
-  const areaColumnLabel = useMemo(
-    () =>
-      buildAreaColumnHeaderLabel(
-        hasMultipleLocationsWithBeds,
-        t("plantingPlans:columns.location"),
-        t("plantingPlans:columns.field"),
-        t("plantingPlans:columns.bed"),
-      ),
-    [hasMultipleLocationsWithBeds, t],
-  );
-
-  const getCultivationTypeOptionsForRow = useMemo(
-    () => (row: PlantingPlanRow) => {
-      return cultivationTypeOptionsByCultureId.get(row.culture) ?? cultivationTypeOptions;
-    },
-    [cultivationTypeOptions, cultivationTypeOptionsByCultureId],
-  );
-
-  const dynamicWidths = useMemo(() => {
-    const cultureWidth = estimateColumnWidth(
-      [
-        t("plantingPlans:columns.culture"),
-        ...cultureOptions.map((option) => option.label),
-      ],
-      170,
-      240,
-    );
-    const hierarchyColumnValues = [
-      t("plantingPlans:columns.bed"),
-      ...Array.from(new Set(bedOptions.map((option) => option.label))),
-    ];
-    const bedWidth = estimateColumnWidth(
-      hierarchyColumnValues,
-      hasMultipleLocationsWithBeds ? 210 : 160,
-      hasMultipleLocationsWithBeds ? 380 : 300,
-    );
-
-    return {
-      culture: cultureWidth,
-      bed: bedWidth,
-      cultivationType: estimateColumnWidth(
-        [
-          t("plantingPlans:columns.cultivationType"),
-          ...cultivationTypeOptions.map((option) => option.label),
-        ],
-        110,
-        150,
-      ),
-      plantingDate: DATE_COLUMN_WIDTH,
-      harvestDate: DATE_COLUMN_WIDTH,
-      harvestEndDate: DATE_COLUMN_WIDTH,
-      area: estimateColumnWidth(
-        [
-          t("plantingPlans:columns.areaM2"),
-          ...beds
-            .filter((bed) => typeof bed.area_sqm === "number")
-            .map((bed) => formatAreaM2(bed.area_sqm as number, numberLocale)),
-        ],
-        95,
-        120,
-      ),
-      plants: estimateColumnWidth(
-        [t("plantingPlans:columns.plantsCount"), "≈ 9999"],
-        96,
-        122,
-      ),
-      notes: 220,
-    };
-  }, [bedOptions, beds, cultivationTypeOptions, cultureOptions, hasMultipleLocationsWithBeds, numberLocale, t]);
 
   const getBedLabelForRow = useCallback(
     (row: PlantingPlanRow | null | undefined): string => {
@@ -938,45 +713,6 @@ function PlantingPlans() {
   }, [initialSelection, replacePlantingPlanSearchParams, searchParams]);
 
   /**
-   * Fetch cultures and beds for dropdowns
-   */
-  useEffect(() => {
-    if (shouldShowProjectRequiredState) {
-      setCultures([]);
-      setLocations([]);
-      setFields([]);
-      setBeds([]);
-      setIsHierarchyLoading(false);
-      return;
-    }
-    const fetchData = async (): Promise<void> => {
-      setIsHierarchyLoading(true);
-      try {
-        const [culturesResponse, locationsResponse, fieldsResponse, bedsResponse] = await Promise.all([
-          cultureAPI.list(),
-          locationAPI.list(),
-          fieldAPI.list(),
-          bedAPI.list(),
-        ]);
-        setCultures(culturesResponse.data.results);
-        setLocations(locationsResponse.data.results);
-        setFields(fieldsResponse.data.results);
-        setBeds(
-          bedsResponse.data.results.map((bed) => ({
-            ...bed,
-            area_sqm: toNumericValue(bed.area_sqm) ?? undefined,
-          })),
-        );
-      } catch (err) {
-        console.error("Error fetching hierarchy data:", err);
-      } finally {
-        setIsHierarchyLoading(false);
-      }
-    };
-    fetchData();
-  }, [shouldShowProjectRequiredState]);
-
-  /**
    * Define columns for the Data Grid with inline editing
    * Recalculates when cultures or beds change to update dropdown options
    */
@@ -995,10 +731,11 @@ function PlantingPlans() {
       },
       {
         id: "plans.delete",
-        label: "Anbauplan löschen (Alt+Shift+D)",
+        label: "Anbauplan löschen (Entf)",
         group: 'navigation',
         keywords: ["anbauplan", "löschen", "delete"],
-                keys: { key: "Delete" },
+        shortcutHint: "Entf",
+        keys: { key: "Delete" },
         contextTags: ["plans"],
         isEnabled: () => selectedPlan !== null,
         action: () => gridCommandApiRef.current?.deleteSelectedRow(),
@@ -1008,14 +745,6 @@ function PlantingPlans() {
   );
 
   useRegisterCommands("plans-page", commands);
-
-  if (shouldShowProjectRequiredState && missingProjectReason) {
-    return (
-      <PageContainer>
-        <ProjectRequiredState reason={missingProjectReason} />
-      </PageContainer>
-    );
-  }
 
   const columns: GridColDef[] = useMemo(
     () => [
@@ -1028,6 +757,7 @@ function PlantingPlans() {
           maxWidth: CULTURE_COLUMN_MAX_WIDTH,
           truncateCellText: true,
           options: cultureOptions,
+          placeholder: t("plantingPlans:placeholders.selectCulture"),
         }),
         valueSetter: (value, row) => {
           const nextRow = row as PlantingPlanRow;
@@ -1084,6 +814,7 @@ function PlantingPlans() {
             <CultivationTypeEditCell
               {...params}
               options={options}
+              placeholder={t("plantingPlans:placeholders.selectCultivationType")}
             />
           );
         },
@@ -1146,6 +877,7 @@ function PlantingPlans() {
               locations={locations}
               locale={numberLocale}
               compactLabel={label}
+              placeholder={t("plantingPlans:placeholders.selectArea")}
               hasFocus={params.hasFocus}
               memoKey={`${String(params.id)}:${params.field}`}
               onApply={async (nextBedId) => {
@@ -1299,6 +1031,17 @@ function PlantingPlans() {
           }
           return params.props;
         },
+        renderEditCell: (params) => (
+          <PlantsCountEditCell
+            {...params}
+            cultures={cultures}
+            placeholder={t("plantingPlans:placeholders.plantsCount")}
+            onLastEditedFieldChange={() => {
+              lastEditedFieldRef.current = "plants_count";
+              setAreaNotice(null);
+            }}
+          />
+        ),
         valueFormatter: (value) => {
           if (typeof value === "number" && !isNaN(value)) {
             return `≈ ${Math.round(value)}`;
@@ -1371,42 +1114,6 @@ function PlantingPlans() {
     return fallback?.label ?? "—";
   };
 
-  const getBedLabel = (row: PlantingPlanRow): string => {
-    const fieldById = new Map(
-      fields.filter((item) => item.id !== undefined).map((item) => [item.id as number, item]),
-    );
-    const locationById = new Map(
-      locations.filter((item) => item.id !== undefined).map((item) => [item.id as number, item]),
-    );
-    const locationIdsWithBeds = new Set<number>();
-    beds.forEach((item) => {
-      const field = fieldById.get(item.field);
-      if (field) {
-        locationIdsWithBeds.add(field.location);
-      }
-    });
-    const includeLocation = locationIdsWithBeds.size > 1;
-    const linkedBed = beds.find((bed) => bed.id === row.bed);
-    if (linkedBed) {
-      const linkedField = fieldById.get(linkedBed.field);
-      const locationName = linkedField
-        ? locationById.get(linkedField.location)?.name
-        : null;
-      return buildBedDisplayLabel(
-        locationName,
-        linkedBed.field_name ?? linkedField?.name,
-        linkedBed.name,
-        toNumericValue(linkedBed.area_sqm),
-        includeLocation,
-        numberLocale,
-      );
-    }
-    if (row.bed_name) {
-      return buildBedDisplayLabel(null, null, row.bed_name, null, includeLocation, numberLocale);
-    }
-    return bedLabelById.get(row.bed) ?? "—";
-  };
-
   const getDisplayArea = (row: PlantingPlanRow): string => {
     const explicitArea = toNumericValue(row.area_m2);
     if (explicitArea !== null) {
@@ -1446,7 +1153,7 @@ function PlantingPlans() {
     {
       field: "bed",
       headerName: areaColumnLabel,
-      getValue: getBedLabel,
+      getValue: getBedLabelForRow,
     },
     {
       field: "planting_date",
@@ -1480,7 +1187,7 @@ function PlantingPlans() {
     },
   ], [
     areaColumnLabel,
-    getBedLabel,
+    getBedLabelForRow,
     getCultureLabel,
     getCultivationTypeLabel,
     getDisplayArea,
@@ -1772,6 +1479,10 @@ function PlantingPlans() {
       }));
       return false;
     }
+    if (!parseGermanDateText(mobileCreateForm.planting_date)) {
+      setMobileCreateError(t("plantingPlans:validation.plantingDateRequired"));
+      return false;
+    }
     if (
       mobileCreateForm.area_m2.trim() !== "" &&
       mobileCreateForm.area_m2.trim().toLowerCase() !== t("plantingPlans:placeholders.maxKeyword").toLowerCase() &&
@@ -1814,11 +1525,13 @@ function PlantingPlans() {
       };
     }
 
+    const plantingDateIso = toIsoDateString(parseGermanDateText(mobileCreateForm.planting_date)) ?? mobileCreateForm.planting_date;
+
     try {
       await plantingPlanAPI.create({
         culture: Number(mobileCreateForm.culture),
         bed: Number(mobileCreateForm.bed),
-        planting_date: mobileCreateForm.planting_date,
+        planting_date: plantingDateIso,
         cultivation_type: mobileCreateForm.cultivation_type,
         notes: mobileCreateForm.notes || "",
         ...areaPayload,
@@ -1840,7 +1553,7 @@ function PlantingPlans() {
       culture: String(row.culture ?? ""),
       bed: String(row.bed ?? ""),
       cultivation_type: (row.cultivation_type as CultivationType) || "",
-      planting_date: row.planting_date || "",
+      planting_date: formatDateAsGerman(row.planting_date),
       area_m2:
         derivedArea !== null
           ? formatNumberForInput(derivedArea, { maximumFractionDigits: 2 })
@@ -1865,7 +1578,7 @@ function PlantingPlans() {
       culture: String(row.culture ?? ""),
       bed: String(row.bed ?? ""),
       cultivation_type: (row.cultivation_type as CultivationType) || "",
-      planting_date: row.planting_date || "",
+      planting_date: formatDateAsGerman(row.planting_date),
       area_m2:
         derivedArea !== null
           ? formatNumberForInput(derivedArea, { maximumFractionDigits: 2 })
@@ -1903,11 +1616,13 @@ function PlantingPlans() {
       };
     }
 
+    const updateDateIso = toIsoDateString(parseGermanDateText(mobileCreateForm.planting_date)) ?? mobileCreateForm.planting_date;
+
     try {
       await plantingPlanAPI.update(mobileEditId, {
         culture: Number(mobileCreateForm.culture),
         bed: Number(mobileCreateForm.bed),
-        planting_date: mobileCreateForm.planting_date,
+        planting_date: updateDateIso,
         cultivation_type: mobileCreateForm.cultivation_type,
         notes: mobileCreateForm.notes || "",
         ...areaPayload,
@@ -1932,7 +1647,7 @@ function PlantingPlans() {
   const canCreatePlan = firstMissingRequirement === null;
   const shouldShowPrerequisiteState = !canCreatePlan;
   const shouldShowNoPlansState = canCreatePlan && !hasPlans;
-  const isInitialLoading = !shouldShowProjectRequiredState && (isHierarchyLoading || isPlansLoading);
+  const isInitialLoading = !shouldShowProjectRequiredState && (isHierarchyLoading || (!shouldShowPrerequisiteState && isPlansLoading));
   const prerequisiteActions = firstMissingRequirement
     ? getProjectSetupActions(firstMissingRequirement)
     : [];
@@ -1973,6 +1688,13 @@ function PlantingPlans() {
     createIntentHandledRef.current = true;
   }, [canCreatePlan, handleCreatePlan, replacePlantingPlanSearchParams, searchParams]);
 
+  if (shouldShowProjectRequiredState && missingProjectReason) {
+    return (
+      <PageContainer>
+        <ProjectRequiredState reason={missingProjectReason} />
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer variant="workspacePage">
@@ -2034,7 +1756,7 @@ function PlantingPlans() {
               expandedIds={expandedCardIds}
               onToggleExpanded={toggleCardExpanded}
               renderPrimary={(item) => getCultureLabel(item)}
-              renderSecondary={(item) => `${formatDateForDisplay(item.planting_date)} · ${getBedLabel(item)}`}
+              renderSecondary={(item) => `${formatDateForDisplay(item.planting_date)} · ${getBedLabelForRow(item)}`}
               renderHeaderAction={(item) => (
                 <Tooltip title={t("common:actions.actions")}>
                   <IconButton
@@ -2055,7 +1777,7 @@ function PlantingPlans() {
               renderDetails={(item) => (
                 <Stack spacing={0.75}>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.cultivationType")}:</strong> {t(`plantingPlans:cultivationTypes.${item.cultivation_type === "direct_sowing" ? "directSowing" : "preCultivation"}`)}</Typography>
-                  <Typography variant="body2"><strong>{t("plantingPlans:columns.bed")}:</strong> {getBedLabel(item)}</Typography>
+                  <Typography variant="body2"><strong>{t("plantingPlans:columns.bed")}:</strong> {getBedLabelForRow(item)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.plantingDate")}:</strong> {formatDateForDisplay(item.planting_date)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.harvestStartDate")}:</strong> {formatDateForDisplay(item.harvest_date)}</Typography>
                   <Typography variant="body2"><strong>{t("plantingPlans:columns.harvestEndDate")}:</strong> {formatDateForDisplay(item.harvest_end_date)}</Typography>
@@ -2160,14 +1882,16 @@ function PlantingPlans() {
           </Box>
         ) : null}
 
-        <PageSurface
+        {!shouldShowPrerequisiteState && <PageSurface
           variant="fullWorkspace"
-          sx={{ display: isMobile || shouldShowPrerequisiteState ? "none" : "block" }}
+          sx={isMobile ? { position: 'fixed', top: '-9999px', left: 0, width: '100vw', height: 1, overflow: 'hidden', pointerEvents: 'none', visibility: 'hidden' } : undefined}
         >
           <EditableDataGrid<PlantingPlanRow>
             surfaceSizing="contentFit"
             columns={columns}
-            api={plantingPlanAPI as unknown as DataGridAPI<PlantingPlanRow>}
+            api={plantingPlanGridAPI}
+            paginationPageSizeOptions={[25, 50, 100]}
+            initialPageSize={25}
             commandApiRef={gridCommandApiRef}
             onSelectedRowChange={setSelectedPlan}
             onRowsStateChange={(rows) => {
@@ -2421,6 +2145,17 @@ function PlantingPlans() {
           showDeleteAction={false}
           showFooterEditControls={false}
           showRowEditActions={false}
+          inlineRowActionField="culture"
+          showInlineRowActionMenu
+          getInlineRowActions={(row, helpers) => [
+            {
+              id: "delete",
+              label: t("common:actions.delete"),
+              icon: <DeleteIcon fontSize="small" />,
+              color: "error",
+              onClick: () => helpers.delete(row.id),
+            },
+          ]}
           duplicateRow={(row) => ({
             ...row,
             id: -Date.now(),
@@ -2443,7 +2178,7 @@ function PlantingPlans() {
               ],
             }}
           />
-        </PageSurface>
+        </PageSurface>}
 
       </Box>
 
@@ -2497,8 +2232,9 @@ function PlantingPlans() {
               </Select>
             </FormControl>
             <TextField
-              type="date"
+              type="text"
               label={t("plantingPlans:columns.plantingDate")}
+              placeholder="TT.MM.JJJJ"
               InputLabelProps={{ shrink: true }}
               value={mobileCreateForm.planting_date}
               onChange={(event) =>

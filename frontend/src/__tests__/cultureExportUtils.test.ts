@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAllCulturesExport, buildSingleCultureExport, toPortableCulture } from '../cultures/exportUtils';
+import { buildAllCulturesExport, buildSingleCultureExport, buildSingleCultureFilename, slugifyFilenamePart, toPortableCulture } from '../cultures/exportUtils';
 import type { Culture } from '../api/types';
 
 describe('culture export mapping', () => {
@@ -35,6 +35,23 @@ describe('culture export mapping', () => {
     expect(portable).not.toHaveProperty('created_at');
     expect(portable).not.toHaveProperty('updated_at');
     expect(portable).not.toHaveProperty('supplier');
+  });
+
+  it('buildSingleCultureFilename uses culture name and variety, not supplier', () => {
+    const date = new Date('2026-06-29T00:00:00Z');
+    expect(buildSingleCultureFilename(culture, date)).toBe('kultur_tomate_roma_2026-06-29.json');
+  });
+
+  it('buildSingleCultureFilename uses "unbekannt" for empty variety but never for the name itself', () => {
+    const noVariety: Culture = { ...culture, variety: undefined };
+    const date = new Date('2026-06-29T00:00:00Z');
+    expect(buildSingleCultureFilename(noVariety, date)).toBe('kultur_tomate_unbekannt_2026-06-29.json');
+  });
+
+  it('slugifyFilenamePart handles german umlauts and special chars', () => {
+    expect(slugifyFilenamePart('Möhre & Kohl')).toBe('mohre_kohl');
+    expect(slugifyFilenamePart('')).toBe('unbekannt');
+    expect(slugifyFilenamePart('Anbau-Salat')).toBe('anbau_salat');
   });
 
   it('builds single and bulk export envelopes with schema version', () => {

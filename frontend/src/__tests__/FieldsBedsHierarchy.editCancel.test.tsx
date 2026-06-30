@@ -4,10 +4,12 @@ import userEvent from '@testing-library/user-event';
 import type { GridColDef } from '@mui/x-data-grid';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import FieldsBedsHierarchy, {
+import FieldsBedsHierarchy from '../pages/FieldsBedsHierarchy';
+import {
   isCompletelyEmptyNewHierarchyRow,
   isPartiallyFilledNamelessNewHierarchyRow,
-} from '../pages/FieldsBedsHierarchy';
+} from '../components/hierarchy/utils/hierarchyRowDraft';
+import { hasPersistedEntityId } from '../components/hierarchy/utils/hierarchyUtils';
 import { mockT } from './helpers/testI18n';
 
 const {
@@ -303,6 +305,25 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     expect(isPartiallyFilledNamelessNewHierarchyRow({ id: -1, type: 'bed', level: 1, isNew: true, name: '', field: 10, length_m: 2 })).toBe(true);
   });
 
+  it('recognizes only positive integer hierarchy IDs as persisted', () => {
+    expect(hasPersistedEntityId(1)).toBe(true);
+    expect(hasPersistedEntityId(-1)).toBe(false);
+    expect(hasPersistedEntityId(0)).toBe(false);
+    expect(hasPersistedEntityId(undefined)).toBe(false);
+  });
+
+  it('renders location rows when multiple locations exist without parcels', async () => {
+    useMultipleLocations();
+    fieldListMock.mockResolvedValue({ data: { results: [] } });
+    bedListMock.mockResolvedValue({ data: { results: [] } });
+
+    renderHierarchy();
+
+    expect(await screen.findByTestId('row-location-1')).toBeInTheDocument();
+    expect(screen.getByTestId('row-location-2')).toBeInTheDocument();
+    expect(screen.getByTestId('row-count')).toHaveTextContent('2');
+  });
+
   it('creates exactly one editable parcel row for one create request', async () => {
     fieldListMock.mockResolvedValue({ data: { results: [] } });
     const onCreateFieldRequestHandled = vi.fn();
@@ -564,8 +585,8 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     await user.click(screen.getByRole('button', { name: 'Partial invalid -1700000000000' }));
     await user.click(screen.getByRole('button', { name: 'Escape -1700000000000' }));
 
-    expect(screen.queryByRole('button', { name: 'Aktionen' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Löschen' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Aktionen' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'Löschen' }).length).toBeGreaterThan(0);
   });
 
   it('opens hierarchy actions from the right-click context menu', async () => {
@@ -577,46 +598,69 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
       'Parzelle hinzufügen',
-      'Bearbeiten',
       'Löschen',
       'common:actions.copyRow',
       'common:actions.copyTable',
     ]);
-    expect(screen.getAllByRole('separator')).toHaveLength(3);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Bearbeiten' }));
-    expect(screen.getByTestId('mode-location-1')).toHaveTextContent('edit');
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
 
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Escape location-1' }));
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
 
     const fieldRow = await screen.findByTestId('row-field-10');
     fireEvent.contextMenu(fieldRow);
 
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
       'Beet hinzufügen',
-      'Bearbeiten',
       'Löschen',
       'common:actions.copyRow',
       'common:actions.copyTable',
     ]);
     expect(screen.getByRole('menuitem', { name: 'Beet hinzufügen' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Beet' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('separator')).toHaveLength(3);
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
 
     fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
-    await waitFor(() => expect(screen.queryByRole('menuitem', { name: 'Bearbeiten' })).not.toBeInTheDocument());
-    expect(within(fieldRow).queryByLabelText('Aktionen')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+    expect(within(fieldRow).getByLabelText('Aktionen')).toBeInTheDocument();
     fireEvent.contextMenu(fieldRow);
 
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
       'Beet hinzufügen',
-      'Bearbeiten',
       'Löschen',
       'common:actions.copyRow',
       'common:actions.copyTable',
     ]);
     expect(screen.getByRole('menuitem', { name: 'Beet hinzufügen' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Beet' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('separator')).toHaveLength(3);
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
+  });
+
+  it('removes a newly created empty bed locally without calling the delete API', async () => {
+    renderHierarchy();
+    await addNewBed();
+
+    deleteRowViaContextMenu(screen.getByTestId('row--1700000000000'));
+
+    await waitFor(() => expect(screen.queryByTestId('row--1700000000000')).not.toBeInTheDocument());
+    expect(bedDeleteMock).not.toHaveBeenCalled();
+    expect(fieldDeleteMock).not.toHaveBeenCalled();
+    expect(locationDeleteMock).not.toHaveBeenCalled();
+    expect(screen.queryByText('Fehler beim Löschen')).not.toBeInTheDocument();
+  });
+
+  it('removes a newly created empty parcel locally without calling the delete API', async () => {
+    fieldListMock.mockResolvedValue({ data: { results: [] } });
+    renderHierarchyWithCreateFieldRequest(1);
+
+    const fieldRow = await screen.findByTestId('row-field--1700000000000');
+    deleteRowViaContextMenu(fieldRow);
+
+    await waitFor(() => expect(screen.queryByTestId('row-field--1700000000000')).not.toBeInTheDocument());
+    expect(fieldDeleteMock).not.toHaveBeenCalled();
+    expect(bedDeleteMock).not.toHaveBeenCalled();
+    expect(locationDeleteMock).not.toHaveBeenCalled();
+    expect(screen.queryByText('Fehler beim Löschen')).not.toBeInTheDocument();
   });
 
   it('persists a deleted bed immediately and shows undo feedback', async () => {

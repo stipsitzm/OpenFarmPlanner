@@ -24,11 +24,41 @@ import api, {
   plantingPlanAPI,
   supplierAPI,
   seedDemandAPI,
+  fetchAllPaginated,
 } from '../api/api';
 
 describe('API Client', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('follows every backend pagination link', async () => {
+    getMock
+      .mockResolvedValueOnce({
+        data: {
+          count: 3,
+          next: '/planting-plans/?page=2',
+          previous: null,
+          results: [{ id: 1 }, { id: 2 }],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          count: 3,
+          next: null,
+          previous: '/planting-plans/',
+          results: [{ id: 3 }],
+        },
+      });
+
+    await expect(fetchAllPaginated<{ id: number }>('/planting-plans/')).resolves.toEqual({
+      count: 3,
+      next: null,
+      previous: null,
+      results: [{ id: 1 }, { id: 2 }, { id: 3 }],
+    });
+    expect(getMock).toHaveBeenNthCalledWith(1, '/planting-plans/?page_size=1000');
+    expect(getMock).toHaveBeenNthCalledWith(2, '/planting-plans/?page=2');
   });
 
   it('calls all culture endpoints with expected URLs and payloads', () => {

@@ -41,16 +41,7 @@
   "pages": {
     "dashboard": {
       "title": "Help: Overview",
-      "intro": "The overview shows the current state of your project and gives you quick access to the main areas.",
-      "sections": [
-        {
-          "title": "How to use it",
-          "points": [
-            "Use the navigation to edit data or open planning pages.",
-            "Use quick actions for frequent tasks."
-          ]
-        }
-      ]
+      "intro": "Once planting plans exist, upcoming tasks for sowing, transplanting, propagation, and harvest appear here."
     },
     "locations": {
       "title": "Help: Locations",
@@ -66,8 +57,7 @@
         {
           "title": "How this connects to other pages",
           "points": [
-            "On the growing areas page, you add fields and beds for each location.",
-            "Tasks are derived from planting plans."
+            "On the growing areas page, you add fields and beds for each location."
           ]
         }
       ],
@@ -124,9 +114,7 @@
         {
           "title": "How this connects to other pages",
           "points": [
-            "The area structure is the basis for your planning.",
-            "In planting plans, you assign crops to individual beds.",
-            "The graphical view shows the same areas visually."
+            "In planting plans, you assign crops to individual beds."
           ]
         }
       ],
@@ -171,7 +159,7 @@
     },
     "plantingPlans": {
       "title": "Help: Planting plans",
-      "intro": "Plan which crop is grown in which bed and when. This page connects growing areas with crop data and feeds the calendar and seed demand.",
+      "intro": "Plan which crop is grown in which bed and when.",
       "sections": [
         {
           "title": "How to use it",
@@ -185,7 +173,6 @@
         {
           "title": "How this connects to other pages",
           "points": [
-            "Planting plans use the area structure from growing areas.",
             "The planting calendar shows the resulting timeline.",
             "Seed demand is calculated from these plans."
           ]
@@ -207,7 +194,6 @@
           "title": "How to use it",
           "points": [
             "Use tabs to switch between occupancy and propagation views.",
-            "Show or hide the weekly yield calendar as needed.",
             "Move through the timeline to review upcoming periods.",
             "Hover entries to see details in a tooltip."
           ]
@@ -215,15 +201,13 @@
         {
           "title": "How this connects to other pages",
           "points": [
-            "The calendar is based on planting plan data.",
             "Changes to time periods in planting plans update this view."
           ]
         }
       ],
       "symbolsTitle": "Icons and controls",
       "symbols": {
-        "tabs": "Switch between views",
-        "switch": "Show or hide the weekly yield calendar",
+        "tabs": "Switch between occupancy and propagation views",
         "tooltip": "Show additional details"
       }
     },
@@ -242,9 +226,7 @@
         {
           "title": "How this connects to other pages",
           "points": [
-            "The basis comes from planting plans and crop data.",
-            "Supplier and package information adds purchasing context.",
-            "Changes to crops or plans directly affect demand."
+            "Supplier and package information adds purchasing context."
           ]
         }
       ],
@@ -256,7 +238,7 @@
     },
     "suppliers": {
       "title": "Help: Suppliers",
-      "intro": "Manage seed suppliers and sources here. These data enrich crops and help with later seed planning.",
+      "intro": "Manage seed suppliers and their package information here.",
       "sections": [
         {
           "title": "How to use it",
@@ -315,6 +297,11 @@
       "modeEdit": "Edit",
       "modeViewDescription": "Only view, navigate, and zoom",
       "modeEditDescription": "Move and arrange elements"
+    },
+    "yieldOverview": {
+      "title": "Help: Yield overview",
+      "intro": "The yield overview shows expected harvest quantities from your planting plans.",
+      "points": []
     }
   }
 }
