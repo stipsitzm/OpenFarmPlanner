@@ -103,6 +103,7 @@
     "createNewShortcut": "Create new",
     "contextualShortcutsTitle": "Contextual keyboard shortcuts (Alt+K)",
     "contextualShortcutsDescription": "Shortcuts are browser-safe and do not override common browser shortcuts.",
+    "versionHistoryTitle": "Version history",
     "currentVersion": "Current version",
     "restoreVersion": "Switch to this version",
     "contextTitles": {

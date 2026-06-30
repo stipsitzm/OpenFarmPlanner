@@ -354,6 +354,8 @@ function RootLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPathnameRef = React.useRef(location.pathname);
+  const expandSidebarBtnRef = React.useRef<HTMLButtonElement>(null);
+  const collapseSidebarBtnRef = React.useRef<HTMLButtonElement>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
@@ -442,6 +444,14 @@ function RootLayout() {
     setSidebarCollapsed((prev) => {
       const next = !prev;
       window.localStorage.setItem('openfarmplanner.sidebarCollapsed', String(next));
+      // Transfer focus to the counterpart button so keyboard users don't lose their position
+      requestAnimationFrame(() => {
+        if (next) {
+          expandSidebarBtnRef.current?.focus();
+        } else {
+          collapseSidebarBtnRef.current?.focus();
+        }
+      });
       return next;
     });
   };
@@ -911,6 +921,7 @@ function RootLayout() {
                   slotProps={{ tooltip: { sx: navigationTooltipSx } }}
                 >
                   <IconButton
+                    ref={collapseSidebarBtnRef}
                     aria-label={t('globalMenu.collapseSidebar')}
                     onClick={toggleSidebarCollapsed}
                     size="small"
@@ -929,6 +940,7 @@ function RootLayout() {
                   slotProps={{ tooltip: { sx: navigationTooltipSx } }}
                 >
                   <IconButton
+                    ref={expandSidebarBtnRef}
                     aria-label={t('globalMenu.expandSidebar')}
                     onClick={toggleSidebarCollapsed}
                     size="small"
@@ -1823,7 +1835,7 @@ function RootLayout() {
       </Box>
 
       <Dialog open={projectHistoryOpen} onClose={() => setProjectHistoryOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{t('commandPalette.commands.openVersionHistory')}</DialogTitle>
+        <DialogTitle>{t('commandPalette.versionHistoryTitle')}</DialogTitle>
         <DialogContent sx={{ py: isPhonePortrait ? 1 : 2 }}>
           {historyItems.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
