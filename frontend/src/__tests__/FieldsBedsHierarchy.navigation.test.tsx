@@ -91,16 +91,18 @@ vi.mock('@mui/x-data-grid', async () => {
   const ReactModule = await import('react');
   const GridRowModes = { Edit: 'edit', View: 'view' };
   const GridRowEditStopReasons = { escapeKeyDown: 'escapeKeyDown', rowFocusOut: 'rowFocusOut' };
-  const useGridApiRef = vi.fn(() => ({
-    current: {
-      setCellFocus: getSetCellFocusMock(),
-      // Route imperative selectRow calls into DataGrid's React state so tests
-      // can assert data-selected without a controlled rowSelectionModel prop.
-      selectRow: vi.fn((id: string | number, isSelected: boolean = true, resetOtherRows: boolean = false) => {
-        getSelectRowImpl()?.(id, isSelected, resetOtherRows);
-      }),
-      setRowSelectionModel: vi.fn(),
-    },
+  // Mirror the real useGridApiRef which uses React.useRef internally, returning the
+  // same ref object across re-renders. Without this, gridApiRef changes on every
+  // render, which cascades through focusRow → focusSelectedCell → useLayoutEffect,
+  // causing spurious re-focus on every render — the exact bug this file tests for.
+  const useGridApiRef = vi.fn(() => ReactModule.useRef({
+    setCellFocus: getSetCellFocusMock(),
+    // Route imperative selectRow calls into DataGrid's React state so tests
+    // can assert data-selected without a controlled rowSelectionModel prop.
+    selectRow: vi.fn((id: string | number, isSelected: boolean = true, resetOtherRows: boolean = false) => {
+      getSelectRowImpl()?.(id, isSelected, resetOtherRows);
+    }),
+    setRowSelectionModel: vi.fn(),
   }));
 
   const DataGrid = ({
@@ -552,6 +554,67 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-selected', 'false');
   });
 
+  it('pressing spacebar after arrow-navigating away from the clicked row keeps focus on the current row', async () => {
+    // Regression: rowsById → getHierarchyFocusableField → focusRow → focusSelectedCell
+    // would get a new identity on every expand/collapse, causing the useLayoutEffect in
+    // useHierarchyGridFocus to re-fire with selectedRowId STATE (= clicked row) instead
+    // of the arrow-navigated row, jumping focus back to the clicked row.
+    fieldListMock.mockResolvedValue({
+      data: {
+        results: [
+          { id: 1, name: 'Parzelle 1', location: 1, area_sqm: 10 },
+          { id: 2, name: 'Parzelle 2', location: 1, area_sqm: 10 },
+        ],
+      },
+    });
+    bedListMock.mockResolvedValue({
+      data: { results: [{ id: 101, name: 'Beet 1', field: 1, area_sqm: 5 }] },
+    });
+
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
+
+    // Click field-2 to set selectedRowId STATE = "field-2".
+    await act(async () => { fireEvent.click(screen.getByTestId('select-field-2-name')); });
+    expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-focused', 'true');
+
+    // Two ArrowUps needed: field-2 → bed-101 (field-1 is auto-expanded) → field-1.
+    // selectedRowIdRef ends up at "field-1" while STATE remains "field-2".
+    await pressArrowUp();
+    await pressArrowUp();
+    await waitFor(() =>
+      expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'true'),
+    );
+
+    // Simulate spacebar on field-1 (which has hasChildren = true due to the bed above).
+    const onCellKeyDown = getCapturedOnCellKeyDown();
+    expect(onCellKeyDown).toBeDefined();
+
+    const event = {
+      key: ' ',
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      shiftKey: false,
+      defaultMuiPrevented: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    await act(async () => {
+      onCellKeyDown!(
+        { id: 'field-1', field: 'name', isEditable: true, row: { type: 'field', hasChildren: true } },
+        event,
+      );
+    });
+
+    // Focus must remain on field-1 — NOT jump back to the clicked field-2.
+    await waitFor(() =>
+      expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'true'),
+    );
+    expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-focused', 'false');
+  });
+
   it('pressing a printable key while a row is keyboard-focused does not start edit mode', async () => {
     renderHierarchy();
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
@@ -621,5 +684,65 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
 
     expect(altTEvent.defaultMuiPrevented).toBe(true);
     expect(screen.getByTestId('mode-field-1')).toHaveTextContent('view');
+  });
+
+  it('pressing spacebar on a bed row does not let MUI DataGrid jump focus to the first row', async () => {
+    // Regression: bed rows have no children, so the old code skipped preventDefault
+    // for spacebar — MUI DataGrid then moved focus to the first row.
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
+
+    const onCellKeyDown = getCapturedOnCellKeyDown();
+    expect(onCellKeyDown).toBeDefined();
+
+    const event = {
+      key: ' ',
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      shiftKey: false,
+      defaultMuiPrevented: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    act(() => {
+      onCellKeyDown!(
+        { id: 101, field: 'name', isEditable: true, row: { type: 'bed', hasChildren: false } },
+        event,
+      );
+    });
+
+    expect(event.defaultMuiPrevented).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('pressing spacebar on a field row without children does not let MUI DataGrid jump focus', async () => {
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
+
+    const onCellKeyDown = getCapturedOnCellKeyDown();
+    expect(onCellKeyDown).toBeDefined();
+
+    const event = {
+      key: ' ',
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      shiftKey: false,
+      defaultMuiPrevented: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    act(() => {
+      onCellKeyDown!(
+        { id: 'field-1', field: 'name', isEditable: true, row: { type: 'field', hasChildren: false } },
+        event,
+      );
+    });
+
+    expect(event.defaultMuiPrevented).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalled();
   });
 });

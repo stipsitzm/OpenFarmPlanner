@@ -665,8 +665,14 @@ function FieldsBedsHierarchy({
     || isCellEditable({ row, field })
   ), [isCellEditable]);
 
+  // Stable ref so getHierarchyFocusableField doesn't change on every expand/collapse.
+  // If it did, focusRow → focusSelectedCell → useLayoutEffect would re-fire after each
+  // rows update and re-focus selectedRowId STATE instead of the arrow-navigated row.
+  const rowsByIdRef = useRef(rowsById);
+  rowsByIdRef.current = rowsById;
+
   const getHierarchyFocusableField = useCallback((rowId: GridRowId, preferredField: string): string | null => {
-    const row = rowsById.get(String(rowId));
+    const row = rowsByIdRef.current.get(String(rowId));
     if (!row) {
       return null;
     }
@@ -675,7 +681,7 @@ function FieldsBedsHierarchy({
       ? ["name", "notes"]
       : ["name", "length_m", "width_m", "notes"];
     return focusableFields.includes(preferredField) ? preferredField : focusableFields[0] ?? null;
-  }, [rowsById]);
+  }, []);
 
   const { focusRow, rememberFocusedField } = useHierarchyGridFocus({
     getFocusableField: getHierarchyFocusableField,
@@ -1298,13 +1304,15 @@ function FieldsBedsHierarchy({
                   params.field !== "notes" &&
                   rowModesModel[params.id]?.mode !== GridRowModes.Edit
                 ) {
+                  // Always block MUI DataGrid's default spacebar behaviour (jumps focus to
+                  // first row) — we handle spacebar ourselves for expand/collapse only.
+                  keyboardEvent.preventDefault();
+                  keyboardEvent.defaultMuiPrevented = true;
                   const row = params.row as HierarchyRow;
                   if ((row.type === "location" || row.type === "field") && row.hasChildren) {
-                    keyboardEvent.preventDefault();
-                    keyboardEvent.defaultMuiPrevented = true;
                     toggleExpand(params.id);
-                    return;
                   }
+                  return;
                 }
 
                 // Prevent DataGrid from moving cell focus on ArrowDown/Up in view mode.
