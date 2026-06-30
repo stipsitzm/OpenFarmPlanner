@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import { GridRowModes } from "@mui/x-data-grid";
 import type { GridRowId, GridRowModesModel, GridRowsProp } from "@mui/x-data-grid";
 import type { HierarchyRow } from "../utils/types";
@@ -79,7 +79,11 @@ export function useHierarchyGridFocus({
     }
   }, [focusRow, selectedRowId]);
 
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) so focus is restored synchronously during the
+  // commit phase, before the browser paints.  Without this, the DOM loses focus when
+  // the edit-cell input is removed, the browser briefly shows the first row focused,
+  // and then an async useEffect would move focus back — causing a visible flash.
+  useLayoutEffect(() => {
     const prevModel = prevRowModesModelRef.current;
     prevRowModesModelRef.current = rowModesModel;
 

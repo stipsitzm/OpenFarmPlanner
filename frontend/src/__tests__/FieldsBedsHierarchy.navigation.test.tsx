@@ -673,6 +673,50 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'false');
   });
 
+  it('focus does not flash to first row when confirming an inline edit on a non-first row', async () => {
+    // Regression: when a row exits edit mode the edit-cell input is removed from the DOM,
+    // which caused the browser to drop focus to the first focusable element (first row).
+    // The fix changed the focus-restoration effect from useEffect (async, after paint) to
+    // useLayoutEffect (synchronous, before paint) so the correct row is focused before the
+    // browser ever paints.  Here we verify setCellFocus is called with the edited row, not
+    // with the first row, immediately after the save completes.
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-field-2')).toBeInTheDocument());
+
+    // Click field-2 (not the first row) to select and start editing it.
+    await act(async () => { fireEvent.click(screen.getByTestId('select-field-2-name')); });
+    expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-focused', 'true');
+    expect(screen.getByTestId('mode-field-2')).toHaveTextContent('edit');
+
+    fieldUpdateMock.mockResolvedValue({ data: { id: 2, name: 'Parzelle 2', location: 1, area_sqm: 20 } });
+
+    getSetCellFocusMock().mockClear();
+
+    const processRowUpdate = getCapturedProcessRowUpdate();
+    await act(async () => {
+      await processRowUpdate!({
+        id: 'field-2',
+        type: 'field',
+        name: 'Parzelle 2',
+        fieldId: 2,
+        locationId: 1,
+        area_sqm: 20,
+        level: 1,
+        parentId: 'location-1',
+        hasChildren: false,
+      });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('mode-field-2')).toHaveTextContent('view'),
+    );
+
+    // Every setCellFocus call after the save must target field-2, never field-1.
+    const calls = getSetCellFocusMock().mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.every(([id]: [unknown]) => id === 'field-2')).toBe(true);
+  });
+
   it('pressing a printable key while a row is keyboard-focused does not start edit mode', async () => {
     renderHierarchy();
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
