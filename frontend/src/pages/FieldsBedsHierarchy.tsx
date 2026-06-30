@@ -625,15 +625,6 @@ function FieldsBedsHierarchy({
     [navigate],
   );
 
-  const handleHierarchyRowEditStop = useCallback<GridEventListener<"rowEditStop">>((params, event): void => {
-    if (params.reason === GridRowEditStopReasons.escapeKeyDown) {
-      event.defaultMuiPrevented = true;
-      discardRowEdit(params.id);
-      return;
-    }
-
-  }, [discardRowEdit]);
-
   const isHierarchyCellAction = useCallback((params: GridCellParams<HierarchyRow>): boolean => (
     params.field === "notes"
   ), []);
@@ -686,6 +677,22 @@ function FieldsBedsHierarchy({
     setSelectedRowId,
     treeActive,
   });
+
+  const handleHierarchyRowEditStop = useCallback<GridEventListener<"rowEditStop">>((params, event): void => {
+    if (params.reason === GridRowEditStopReasons.escapeKeyDown) {
+      event.defaultMuiPrevented = true;
+      discardRowEdit(params.id);
+      return;
+    }
+
+    if (
+      params.reason === GridRowEditStopReasons.enterKeyDown ||
+      params.reason === GridRowEditStopReasons.tabKeyDown ||
+      params.reason === GridRowEditStopReasons.shiftTabKeyDown
+    ) {
+      preFocusEditCell(params.id);
+    }
+  }, [discardRowEdit, preFocusEditCell]);
 
   const activateFirstRowForKeyboard = useCallback((rowId: GridRowId): void => {
     selectedRowIdRef.current = rowId;

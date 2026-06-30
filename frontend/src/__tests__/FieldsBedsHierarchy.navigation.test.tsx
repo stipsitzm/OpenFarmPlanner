@@ -31,6 +31,9 @@ const {
   locationListMock,
   getCapturedOnCellKeyDown,
   setCapturedOnCellKeyDown,
+  getCapturedOnRowEditStop,
+  setCapturedOnRowEditStop,
+  getEditCellFocusMock,
   getCapturedProcessRowUpdate,
   setCapturedProcessRowUpdate,
   getSetCellFocusMock,
@@ -42,10 +45,12 @@ const {
   let capturedOnCellKeyDown: ((params: unknown, event: unknown) => void) | undefined;
   // capturedProcessRowUpdate lets tests simulate a row-save confirmation.
   let capturedProcessRowUpdate: ((row: unknown) => Promise<unknown>) | undefined;
+  let capturedOnRowEditStop: ((params: unknown, event: { defaultMuiPrevented: boolean }) => void) | undefined;
   // selectRowImpl bridges gridApiRef.current.selectRow() → DataGrid's React state.
   // It should stay unused for keyboard-only focus navigation.
   let selectRowImpl: ((id: string | number, isSelected: boolean, reset: boolean) => void) | undefined;
   const setCellFocusMock = vi.fn();
+  const editCellFocusMock = vi.fn();
   return {
     bedListMock: vi.fn(),
     fieldListMock: vi.fn(),
@@ -55,6 +60,11 @@ const {
     setCapturedOnCellKeyDown: (fn: ((params: unknown, event: unknown) => void) | undefined) => {
       capturedOnCellKeyDown = fn;
     },
+    getCapturedOnRowEditStop: () => capturedOnRowEditStop,
+    setCapturedOnRowEditStop: (fn: typeof capturedOnRowEditStop) => {
+      capturedOnRowEditStop = fn;
+    },
+    getEditCellFocusMock: () => editCellFocusMock,
     getCapturedProcessRowUpdate: () => capturedProcessRowUpdate,
     setCapturedProcessRowUpdate: (fn: typeof capturedProcessRowUpdate) => {
       capturedProcessRowUpdate = fn;
@@ -100,7 +110,13 @@ vi.mock('../api/api', async () => {
 vi.mock('@mui/x-data-grid', async () => {
   const ReactModule = await import('react');
   const GridRowModes = { Edit: 'edit', View: 'view' };
-  const GridRowEditStopReasons = { escapeKeyDown: 'escapeKeyDown', rowFocusOut: 'rowFocusOut' };
+  const GridRowEditStopReasons = {
+    escapeKeyDown: 'escapeKeyDown',
+    enterKeyDown: 'enterKeyDown',
+    rowFocusOut: 'rowFocusOut',
+    shiftTabKeyDown: 'shiftTabKeyDown',
+    tabKeyDown: 'tabKeyDown',
+  };
   // Mirror the real useGridApiRef which uses React.useRef internally, returning the
   // same ref object across re-renders. Without this, gridApiRef changes on every
   // render, which cascades through focusRow → focusSelectedCell → useLayoutEffect,
@@ -121,6 +137,7 @@ vi.mock('@mui/x-data-grid', async () => {
     isCellEditable,
     onCellClick,
     onCellKeyDown,
+    onRowEditStop,
     processRowUpdate,
     rowModesModel,
     rows,
@@ -132,6 +149,7 @@ vi.mock('@mui/x-data-grid', async () => {
     isCellEditable?: (p: { row: Record<string, unknown>; field: string }) => boolean;
     onCellClick?: (p: { id: string | number; field: string; isEditable: boolean; row: Record<string, unknown> }) => void;
     onCellKeyDown?: (params: unknown, event: unknown) => void;
+    onRowEditStop?: (params: unknown, event: { defaultMuiPrevented: boolean }) => void;
     processRowUpdate?: (row: unknown) => Promise<unknown>;
     rowModesModel: Record<string, { mode: string }>;
     rows: Array<Record<string, unknown> & { id: string | number }>;
@@ -150,6 +168,7 @@ vi.mock('@mui/x-data-grid', async () => {
     });
     // Capture so tests can invoke them directly.
     setCapturedOnCellKeyDown(onCellKeyDown);
+    setCapturedOnRowEditStop(onRowEditStop);
     setCapturedProcessRowUpdate(processRowUpdate);
     if (apiRef?.current) {
       apiRef.current.setCellFocus = (id: string | number, field: string) => {
@@ -171,6 +190,9 @@ vi.mock('@mui/x-data-grid', async () => {
         rows.findIndex((row) => String(row.id) === String(id));
       apiRef.current.getColumnIndexRelativeToVisibleColumns = (field: string) =>
         columns.findIndex((column) => column.field === field);
+      apiRef.current.getCellElement = () => ({
+        focus: getEditCellFocusMock(),
+      });
       apiRef.current.isCellEditable = (params: { row?: Record<string, unknown>; field: string }) =>
         params.row ? (isCellEditable?.({ row: params.row, field: params.field }) ?? true) : false;
       apiRef.current.scrollToIndexes = vi.fn();
@@ -272,6 +294,7 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getSetCellFocusMock().mockClear();
+    getEditCellFocusMock().mockClear();
     window.sessionStorage.clear();
     vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
     // jsdom does not implement scrollIntoView
@@ -715,6 +738,30 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     const calls = getSetCellFocusMock().mock.calls;
     expect(calls.length).toBeGreaterThan(0);
     expect(calls.every(([id]: [unknown]) => id === 'field-2')).toBe(true);
+  });
+
+  it('anchors focus on the edited cell before MUI stops row editing with Enter', async () => {
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-field-2')).toBeInTheDocument());
+
+    await act(async () => { fireEvent.click(screen.getByTestId('select-field-2-width_m')); });
+    expect(screen.getByTestId('mode-field-2')).toHaveTextContent('edit');
+
+    const onRowEditStop = getCapturedOnRowEditStop();
+    expect(onRowEditStop).toBeDefined();
+    getEditCellFocusMock().mockClear();
+
+    const event = { defaultMuiPrevented: false };
+    act(() => {
+      onRowEditStop!(
+        { id: 'field-2', reason: 'enterKeyDown' },
+        event,
+      );
+    });
+
+    expect(event.defaultMuiPrevented).toBe(false);
+    expect(getEditCellFocusMock()).toHaveBeenCalledWith({ preventScroll: true });
+    expect(getSetCellFocusMock()).not.toHaveBeenCalledWith('field-1', 'name');
   });
 
   it('pressing a printable key while a row is keyboard-focused does not start edit mode', async () => {
