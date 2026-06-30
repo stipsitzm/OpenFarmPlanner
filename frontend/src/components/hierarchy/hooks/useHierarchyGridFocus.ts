@@ -32,8 +32,19 @@ const DEFAULT_FOCUS_FIELD = "name";
 const hasEditingRow = (rowModesModel: GridRowModesModel): boolean =>
   Object.values(rowModesModel).some((mode) => mode.mode === GridRowModes.Edit);
 
-const getEditingRowId = (rowModesModel: GridRowModesModel): string | null =>
-  Object.entries(rowModesModel).find(([, mode]) => mode.mode === GridRowModes.Edit)?.[0] ?? null;
+const getEditingRowId = (
+  rowModesModel: GridRowModesModel,
+  rows: GridRowsProp<HierarchyRow>,
+): GridRowId | null => {
+  const editingRowKey = Object.entries(rowModesModel).find(
+    ([, mode]) => mode.mode === GridRowModes.Edit,
+  )?.[0];
+  if (editingRowKey == null) {
+    return null;
+  }
+
+  return rows.find((row) => String(row.id) === editingRowKey)?.id ?? editingRowKey;
+};
 
 const findFallbackVisibleRow = (
   previousRows: GridRowsProp<HierarchyRow>,
@@ -111,7 +122,7 @@ export function useHierarchyGridFocus({
       return;
     }
 
-    const editingRowId = getEditingRowId(prevModel);
+    const editingRowId = getEditingRowId(prevModel, rows);
     if (editingRowId != null) {
       focusRow(editingRowId);
       setSelectedRowId(editingRowId);

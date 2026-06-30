@@ -29,6 +29,18 @@ const ROWS: HierarchyRow[] = [
   makeRow('field-3'),
 ];
 
+const ROWS_WITH_NUMERIC_BED_ID: HierarchyRow[] = [
+  makeRow('field-1'),
+  {
+    id: 2,
+    type: 'bed',
+    name: 'Bed 2',
+    level: 1,
+    hasChildren: false,
+    isNew: false,
+  },
+];
+
 interface HookProps {
   rowModesModel: GridRowModesModel;
   selectedRowId: string | number | null;
@@ -46,6 +58,30 @@ const renderFocusHook = (initialProps: HookProps) => {
         gridApiRef,
         rowModesModel,
         rows: ROWS,
+        selectedRowId,
+        setSelectedRowId,
+        treeActive,
+      }),
+    { initialProps },
+  );
+
+  return { ...hookResult, setCellFocus, setSelectedRowId };
+};
+
+const renderFocusHookWithRows = (
+  initialProps: HookProps,
+  rows: HierarchyRow[],
+) => {
+  const setCellFocus = vi.fn();
+  const setSelectedRowId = vi.fn();
+  const gridApiRef = { current: { setCellFocus } };
+
+  const hookResult = renderHook(
+    ({ rowModesModel, selectedRowId, treeActive }: HookProps) =>
+      useHierarchyGridFocus({
+        gridApiRef,
+        rowModesModel,
+        rows,
         selectedRowId,
         setSelectedRowId,
         treeActive,
@@ -204,5 +240,31 @@ describe('useHierarchyGridFocus', () => {
     });
 
     expect(setSelectedRowId).toHaveBeenCalledWith('field-3');
+  });
+
+  it('restores focus with the numeric bed row id after Edit→View', () => {
+    const { rerender, setCellFocus, setSelectedRowId } = renderFocusHookWithRows(
+      {
+        rowModesModel: { 2: { mode: GridRowModes.Edit } },
+        selectedRowId: 'field-1',
+        treeActive: true,
+      },
+      ROWS_WITH_NUMERIC_BED_ID,
+    );
+
+    setCellFocus.mockClear();
+    setSelectedRowId.mockClear();
+
+    act(() => {
+      rerender({
+        rowModesModel: {},
+        selectedRowId: 'field-1',
+        treeActive: true,
+      });
+    });
+
+    expect(setCellFocus).toHaveBeenCalledWith(2, 'name');
+    expect(setCellFocus).not.toHaveBeenCalledWith('2', 'name');
+    expect(setSelectedRowId).toHaveBeenCalledWith(2);
   });
 });
