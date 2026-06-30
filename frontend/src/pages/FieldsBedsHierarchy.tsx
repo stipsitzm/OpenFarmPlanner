@@ -987,8 +987,13 @@ function FieldsBedsHierarchy({
     params: GridCellParams<HierarchyRow>,
     event: HierarchyKeyboardEvent,
   ): boolean => {
+    const isEditMode = rowModesModel[params.id]?.mode === GridRowModes.Edit;
+
+    // ArrowLeft/Right have meaning inside edit-cell inputs — let MUI handle them.
+    // Tab is intercepted in both view and edit mode so MUI's default Tab never
+    // reaches the calculated area_sqm column (which is not keyboard-navigable).
     if (
-      rowModesModel[params.id]?.mode === GridRowModes.Edit ||
+      (isEditMode && event.key !== "Tab") ||
       event.altKey ||
       event.ctrlKey ||
       event.metaKey
@@ -1005,7 +1010,9 @@ function FieldsBedsHierarchy({
           direction: event.shiftKey ? -1 : 1,
           isActionCell: isHierarchyCellAction,
           rows: rows as HierarchyRow[],
-          wrapRows: true,
+          // In edit mode, don't wrap to the next row — Tab past the last editable
+          // field falls through to MUI (which confirms the row edit).
+          wrapRows: !isEditMode,
         })
         : event.key === "ArrowRight"
           ? getKeyboardNavigationTarget<HierarchyRow>({

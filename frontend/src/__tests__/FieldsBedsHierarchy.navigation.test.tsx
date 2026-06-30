@@ -819,6 +819,53 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     expect(event.preventDefault).toHaveBeenCalled();
   });
 
+  it('Tab in edit mode skips the calculated area column and goes to notes', async () => {
+    // Regression: Tab while a row is in edit mode was not intercepted, so MUI DataGrid's
+    // default Tab handler moved focus to area_sqm (a non-editable calculated column).
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
+
+    // Click field-1 to start editing.
+    await act(async () => { fireEvent.click(screen.getByTestId('select-field-1-name')); });
+    expect(screen.getByTestId('mode-field-1')).toHaveTextContent('edit');
+
+    const onCellKeyDown = getCapturedOnCellKeyDown();
+    expect(onCellKeyDown).toBeDefined();
+
+    getSetCellFocusMock().mockClear();
+
+    const event = {
+      key: 'Tab',
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      defaultMuiPrevented: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    // Tab from width_m while the row is in edit mode. MUI's default handler would
+    // go to area_sqm next; our handler must skip it and go to notes instead.
+    act(() => {
+      onCellKeyDown!(
+        {
+          id: 'field-1',
+          field: 'width_m',
+          isEditable: true,
+          row: { id: 'field-1', type: 'field' },
+        },
+        event,
+      );
+    });
+
+    expect(event.defaultMuiPrevented).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalled();
+    // Must focus notes, never area_sqm.
+    expect(getSetCellFocusMock()).toHaveBeenLastCalledWith('field-1', 'notes');
+    expect(getSetCellFocusMock()).not.toHaveBeenCalledWith('field-1', 'area_sqm');
+  });
+
   it('pressing spacebar on a field row without children does not let MUI DataGrid jump focus', async () => {
     renderHierarchy();
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
