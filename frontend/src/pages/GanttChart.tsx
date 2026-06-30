@@ -382,6 +382,43 @@ function formatDateToAPI(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function getPrimaryTouch(event: TouchEvent): Touch | null {
+  return event.touches[0] ?? event.changedTouches[0] ?? null;
+}
+
+interface SyntheticMousePoint {
+  clientX: number;
+  clientY: number;
+  screenX: number;
+  screenY: number;
+}
+
+function toSyntheticMousePoint(touch: Touch): SyntheticMousePoint {
+  return {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+    screenX: touch.screenX,
+    screenY: touch.screenY,
+  };
+}
+
+function dispatchSyntheticMouseEvent(
+  target: EventTarget,
+  type: 'mousedown' | 'mousemove' | 'mouseup',
+  point: SyntheticMousePoint,
+): void {
+  target.dispatchEvent(new MouseEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    clientX: point.clientX,
+    clientY: point.clientY,
+    screenX: point.screenX,
+    screenY: point.screenY,
+    button: 0,
+    buttons: type === 'mouseup' ? 0 : 1,
+  }));
+}
+
 
 
 function GanttChartPage() {
@@ -1183,6 +1220,136 @@ function GanttChartPage() {
     scrollContainer.addEventListener('scroll', handleTimelineScroll, { passive: true });
     return () => scrollContainer.removeEventListener('scroll', handleTimelineScroll);
   }, [calendarMode, endDate, ganttStateStorageKey, hasCalendarRequirements, loading, startDate, timelineViewMode]);
+
+  useEffect(() => {
+    if (loading || !hasCalendarRequirements || calendarMode !== 'occupancy' || !editMode) {
+      return undefined;
+    }
+
+    const viewport = ganttViewportRef.current;
+    if (!viewport) {
+      return undefined;
+    }
+
+    let activeTouchId: number | null = null;
+    let activeTaskTarget: HTMLElement | null = null;
+    let isMouseDragReady = false;
+    let dragReadyAnimationFrame: number | null = null;
+    let pendingMovePoint: SyntheticMousePoint | null = null;
+    let pendingEndPoint: SyntheticMousePoint | null = null;
+
+    const resetTouchDrag = (): void => {
+      activeTouchId = null;
+      activeTaskTarget = null;
+      isMouseDragReady = false;
+      pendingMovePoint = null;
+      pendingEndPoint = null;
+      if (dragReadyAnimationFrame !== null) {
+        window.cancelAnimationFrame(dragReadyAnimationFrame);
+        dragReadyAnimationFrame = null;
+      }
+    };
+
+    const flushPendingTouchDrag = (): void => {
+      isMouseDragReady = true;
+      dragReadyAnimationFrame = null;
+      if (pendingMovePoint) {
+        const moveTarget = document.elementFromPoint?.(pendingMovePoint.clientX, pendingMovePoint.clientY)
+          ?? activeTaskTarget
+          ?? document;
+        dispatchSyntheticMouseEvent(moveTarget, 'mousemove', pendingMovePoint);
+        pendingMovePoint = null;
+      }
+      if (pendingEndPoint) {
+        dispatchSyntheticMouseEvent(document, 'mouseup', pendingEndPoint);
+        resetTouchDrag();
+      }
+    };
+
+    const getTrackedTouch = (event: TouchEvent): Touch | null => {
+      if (activeTouchId === null) {
+        return getPrimaryTouch(event);
+      }
+
+      const touches = Array.from(event.touches);
+      return touches.find((touch) => touch.identifier === activeTouchId) ?? getPrimaryTouch(event);
+    };
+
+    const handleTouchStart = (event: TouchEvent): void => {
+      if (event.touches.length !== 1) {
+        return;
+      }
+
+      const target = event.target instanceof HTMLElement
+        ? event.target.closest<HTMLElement>('[data-rmg-component="task"]')
+        : null;
+      const touch = getPrimaryTouch(event);
+      if (!target || !touch) {
+        return;
+      }
+
+      activeTouchId = touch.identifier;
+      activeTaskTarget = target;
+      isMouseDragReady = false;
+      event.preventDefault();
+      dispatchSyntheticMouseEvent(target, 'mousedown', toSyntheticMousePoint(touch));
+      dragReadyAnimationFrame = window.requestAnimationFrame(flushPendingTouchDrag);
+    };
+
+    const handleTouchMove = (event: TouchEvent): void => {
+      if (activeTouchId === null || !activeTaskTarget) {
+        return;
+      }
+
+      const touch = getTrackedTouch(event);
+      if (!touch) {
+        return;
+      }
+
+      event.preventDefault();
+      const point = toSyntheticMousePoint(touch);
+      if (!isMouseDragReady) {
+        pendingMovePoint = point;
+        return;
+      }
+      const moveTarget = document.elementFromPoint?.(point.clientX, point.clientY)
+        ?? activeTaskTarget
+        ?? document;
+      dispatchSyntheticMouseEvent(moveTarget, 'mousemove', point);
+    };
+
+    const finishTouchDrag = (event: TouchEvent): void => {
+      if (activeTouchId === null || !activeTaskTarget) {
+        return;
+      }
+
+      const touch = Array.from(event.changedTouches).find((candidate) => candidate.identifier === activeTouchId)
+        ?? getPrimaryTouch(event);
+      if (touch) {
+        event.preventDefault();
+        const point = toSyntheticMousePoint(touch);
+        if (!isMouseDragReady) {
+          pendingEndPoint = point;
+          return;
+        }
+        dispatchSyntheticMouseEvent(document, 'mouseup', point);
+      }
+      resetTouchDrag();
+    };
+
+    viewport.addEventListener('touchstart', handleTouchStart, { passive: false });
+    viewport.addEventListener('touchmove', handleTouchMove, { passive: false });
+    viewport.addEventListener('touchend', finishTouchDrag, { passive: false });
+    viewport.addEventListener('touchcancel', finishTouchDrag, { passive: false });
+
+    return () => {
+      viewport.removeEventListener('touchstart', handleTouchStart);
+      viewport.removeEventListener('touchmove', handleTouchMove);
+      viewport.removeEventListener('touchend', finishTouchDrag);
+      viewport.removeEventListener('touchcancel', finishTouchDrag);
+      resetTouchDrag();
+    };
+  }, [calendarMode, editMode, hasCalendarRequirements, loading]);
 
   useEffect(() => {
     const viewport = ganttViewportRef.current;

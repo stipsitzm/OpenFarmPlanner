@@ -169,6 +169,15 @@ vi.mock('react-modern-gantt', () => ({
             Object.defineProperty(node, 'scrollWidth', { configurable: true, value: 2000 });
           }}
         />
+        {firstTask ? (
+          <div
+            data-testid="mock-touch-task"
+            data-rmg-component="task"
+            data-task-id={String(firstTask.id)}
+          >
+            touch-task
+          </div>
+        ) : null}
         {firstTask && props.onTaskUpdate ? (
           <button
             type="button"
@@ -772,6 +781,64 @@ describe('GanttChartPage', () => {
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
     expect(latestProps?.editMode).toBe(true);
     expect(latestProps?.allowTaskMove).toBe(true);
+  });
+
+  it('bridges mobile touch drags to the Gantt mouse drag handlers in move mode', async () => {
+    const mouseEvents: string[] = [];
+    const trackMouseEvent = (event: MouseEvent): void => {
+      mouseEvents.push(`${event.type}:${event.clientX}`);
+    };
+    document.addEventListener('mousedown', trackMouseEvent);
+    document.addEventListener('mousemove', trackMouseEvent);
+    document.addEventListener('mouseup', trackMouseEvent);
+
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-01',
+            harvest_date: '2026-05-01',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole('button', { name: 'Zeitraum verschieben' });
+    fireEvent.click(screen.getByRole('button', { name: 'Zeitraum verschieben' }));
+    const task = await screen.findByTestId('mock-touch-task');
+
+    fireEvent.touchStart(task, {
+      touches: [{ identifier: 1, clientX: 100, clientY: 120, screenX: 100, screenY: 120 }],
+      changedTouches: [{ identifier: 1, clientX: 100, clientY: 120, screenX: 100, screenY: 120 }],
+    });
+    fireEvent.touchMove(task, {
+      touches: [{ identifier: 1, clientX: 140, clientY: 120, screenX: 140, screenY: 120 }],
+      changedTouches: [{ identifier: 1, clientX: 140, clientY: 120, screenX: 140, screenY: 120 }],
+    });
+    fireEvent.touchEnd(task, {
+      touches: [],
+      changedTouches: [{ identifier: 1, clientX: 140, clientY: 120, screenX: 140, screenY: 120 }],
+    });
+
+    await waitFor(() => {
+      expect(mouseEvents).toEqual(['mousedown:100', 'mousemove:140', 'mouseup:140']);
+    });
+    document.removeEventListener('mousedown', trackMouseEvent);
+    document.removeEventListener('mousemove', trackMouseEvent);
+    document.removeEventListener('mouseup', trackMouseEvent);
   });
 
   it('still shows a red load error for real API failures', async () => {
