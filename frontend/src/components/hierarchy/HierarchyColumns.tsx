@@ -36,6 +36,14 @@ export const DEFAULT_HIERARCHY_COLUMN_WIDTHS: HierarchyColumnWidths = {
 
 const EXPAND_ICON_SLOT_SIZE = 32;
 const DATA_GRID_HEADER_LABEL_SX = { fontWeight: 600 };
+const NON_BLOCKING_TOOLTIP_PROPS = {
+  disableInteractive: true,
+  slotProps: {
+    popper: {
+      style: { pointerEvents: 'none' as const },
+    },
+  },
+};
 
 interface NameCellCallbacks {
   onToggleExpand: (rowId: string | number) => void;
@@ -60,7 +68,7 @@ function renderHierarchyAddIconButton({
   onClick: (event: MouseEvent<HTMLButtonElement>) => void;
 }): ReactElement {
   return (
-    <Tooltip title={label}>
+    <Tooltip title={label} {...NON_BLOCKING_TOOLTIP_PROPS}>
       <span>
         <HierarchyAddIcon
           ariaLabel={label}
@@ -86,7 +94,7 @@ function renderPlantingPlanActionButton(
   }
 
   return (
-    <Tooltip title={t('hierarchy:createPlantingPlan')}>
+    <Tooltip title={t('hierarchy:createPlantingPlan')} {...NON_BLOCKING_TOOLTIP_PROPS}>
       <IconButton
         size="small"
         color="primary"
@@ -124,7 +132,7 @@ function renderDeleteActionButton(
 
   if (row.type === 'location' && row.locationId !== undefined) {
     return (
-      <Tooltip title={label}>
+      <Tooltip title={label} {...NON_BLOCKING_TOOLTIP_PROPS}>
         <IconButton
           size="small"
           color="error"
@@ -144,7 +152,7 @@ function renderDeleteActionButton(
 
   if (row.type === 'field' && row.fieldId !== undefined) {
     return (
-      <Tooltip title={label}>
+      <Tooltip title={label} {...NON_BLOCKING_TOOLTIP_PROPS}>
         <IconButton
           size="small"
           color="error"
@@ -164,7 +172,7 @@ function renderDeleteActionButton(
 
   if (row.type === 'bed' && row.bedId !== undefined) {
     return (
-      <Tooltip title={label}>
+      <Tooltip title={label} {...NON_BLOCKING_TOOLTIP_PROPS}>
         <IconButton
           size="small"
           color="error"
@@ -193,7 +201,7 @@ function renderMoreActionsButton(
   const label = t('common:actions.actions');
 
   return (
-    <Tooltip title={label}>
+    <Tooltip title={label} {...NON_BLOCKING_TOOLTIP_PROPS}>
       <IconButton
         size="small"
         aria-label={label}
@@ -288,7 +296,7 @@ function renderNameCell(
         data-testid="expand-icon-slot"
       >
         {hasExpandToggle ? (
-          <Tooltip title={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}>
+          <Tooltip title={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')} {...NON_BLOCKING_TOOLTIP_PROPS}>
             <IconButton
               size="small"
               aria-label={row.expanded ? t('tooltips.collapse') : t('tooltips.expand')}
@@ -499,7 +507,7 @@ const renderDimensionCell = (
   }
 
   return (
-    <Tooltip title={t('hierarchy:messages.missingDimensionsCellTooltip')} enterDelay={250}>
+    <Tooltip title={t('hierarchy:messages.missingDimensionsCellTooltip')} enterDelay={250} {...NON_BLOCKING_TOOLTIP_PROPS}>
       <Box
         component="span"
         sx={{

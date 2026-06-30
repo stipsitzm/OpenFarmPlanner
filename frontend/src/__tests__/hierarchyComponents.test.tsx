@@ -539,6 +539,34 @@ describe('hierarchy components and behaviors', () => {
     expect(widthColumn?.cellClassName?.({ row: completeRow } as never)).toBe('');
   });
 
+  it('keeps missing-dimension tooltips from intercepting context-menu clicks', () => {
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+    );
+
+    const lengthColumn = columns.find((column) => column.field === 'length_m');
+    const renderedCell = lengthColumn?.renderCell?.({
+      id: 'field-1',
+      field: 'length_m',
+      value: null,
+      formattedValue: null,
+      row: { id: 'field-1', type: 'field', level: 1, length_m: null, width_m: 3, area_sqm: null },
+    } as never) as ReactElement<{
+      disableInteractive?: boolean;
+      slotProps?: { popper?: { style?: { pointerEvents?: string } } };
+    }> | undefined;
+
+    expect(renderedCell?.props.disableInteractive).toBe(true);
+    expect(renderedCell?.props.slotProps?.popper?.style?.pointerEvents).toBe('none');
+  });
+
   it('marks area as a calculated non-editable column', () => {
     const columns = createHierarchyColumns(
       vi.fn(),
