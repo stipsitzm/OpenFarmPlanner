@@ -731,10 +731,11 @@ function PlantingPlans() {
       },
       {
         id: "plans.delete",
-        label: "Anbauplan löschen (Alt+Shift+D)",
+        label: "Anbauplan löschen (Entf)",
         group: 'navigation',
         keywords: ["anbauplan", "löschen", "delete"],
-                keys: { key: "Delete" },
+        shortcutHint: "Entf",
+        keys: { key: "Delete" },
         contextTags: ["plans"],
         isEnabled: () => selectedPlan !== null,
         action: () => gridCommandApiRef.current?.deleteSelectedRow(),
