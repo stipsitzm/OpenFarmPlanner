@@ -5,7 +5,6 @@ import type { HierarchyRow } from "../utils/types";
 
 interface HierarchyGridFocusApi {
   setCellFocus?: (id: GridRowId, field: string) => void;
-  selectRow?: (id: GridRowId, isSelected?: boolean, resetOtherRows?: boolean) => void;
 }
 
 interface UseHierarchyGridFocusParams {
@@ -21,7 +20,7 @@ interface UseHierarchyGridFocusParams {
 }
 
 interface UseHierarchyGridFocusResult {
-  focusRow: (rowId: GridRowId) => void;
+  focusRow: (rowId: GridRowId, preferredField?: string) => void;
   rememberFocusedField: (field: string) => void;
 }
 
@@ -67,12 +66,11 @@ export function useHierarchyGridFocus({
     focusedFieldRef.current = field || DEFAULT_FOCUS_FIELD;
   }, []);
 
-  const focusRow = useCallback((rowId: GridRowId): void => {
+  const focusRow = useCallback((rowId: GridRowId, preferredField?: string): void => {
     const api = gridApiRef.current;
-    const focusField = getFocusableField?.(rowId, focusedFieldRef.current) ?? DEFAULT_FOCUS_FIELD;
+    const focusField = getFocusableField?.(rowId, preferredField ?? focusedFieldRef.current) ?? DEFAULT_FOCUS_FIELD;
     focusedFieldRef.current = focusField;
     api?.setCellFocus?.(rowId, focusField);
-    api?.selectRow?.(rowId, true, true);
   }, [getFocusableField, gridApiRef]);
 
   const focusSelectedCell = useCallback((): void => {

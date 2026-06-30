@@ -2,7 +2,7 @@
  * Navigation performance and correctness tests for FieldsBedsHierarchy.
  *
  * These tests verify:
- * 1. ArrowDown/Up navigation moves to the correct rows.
+ * 1. ArrowDown/Up navigation moves focus to the correct rows.
  * 2. Navigation does not produce cascading React re-renders.
  * 3. Rapid navigation stays within a generous timing budget so infinite
  *    loops or O(n²) regressions are caught early.
@@ -38,7 +38,7 @@ const {
   // can call the handler directly to verify blocking behaviour.
   let capturedOnCellKeyDown: ((params: unknown, event: unknown) => void) | undefined;
   // selectRowImpl bridges gridApiRef.current.selectRow() → DataGrid's React state.
-  // DataGrid registers its setState on every render; useLayoutEffect calls it imperatively.
+  // It should stay unused for keyboard-only focus navigation.
   let selectRowImpl: ((id: string | number, isSelected: boolean, reset: boolean) => void) | undefined;
   const setCellFocusMock = vi.fn();
   return {
@@ -123,6 +123,7 @@ vi.mock('@mui/x-data-grid', async () => {
     rows: Array<Record<string, unknown> & { id: string | number }>;
   }) => {
     const [selectedIds, setSelectedIds] = ReactModule.useState(new Set<string | number>());
+    const [focusedCell, setFocusedCell] = ReactModule.useState<{ id: string | number; field: string } | null>(null);
     // Register state updater on every render so gridApiRef.current.selectRow() can
     // trigger a DataGrid re-render (mirrors MUI DataGrid's internal state update).
     setSelectRowImpl((id, isSelected, resetOtherRows) => {
@@ -136,6 +137,10 @@ vi.mock('@mui/x-data-grid', async () => {
     // Capture so tests can invoke it directly (e.g. letter-key guard test)
     setCapturedOnCellKeyDown(onCellKeyDown);
     if (apiRef?.current) {
+      apiRef.current.setCellFocus = (id: string | number, field: string) => {
+        getSetCellFocusMock()(id, field);
+        setFocusedCell({ id, field });
+      };
       apiRef.current.getAllRowIds = () => rows.map((row) => row.id);
       apiRef.current.getVisibleColumns = () => columns;
       apiRef.current.getCellParams = (id: string | number, field: string) => {
@@ -161,9 +166,11 @@ vi.mock('@mui/x-data-grid', async () => {
         {rows.map((row) => {
           const mode = rowModesModel[row.id]?.mode ?? rowModesModel[String(row.id)]?.mode ?? GridRowModes.View;
           const isSelected = selectedIds.has(row.id) || selectedIds.has(String(row.id));
+          const isFocused = focusedCell !== null && String(focusedCell.id) === String(row.id);
           return (
             <div
               data-id={String(row.id)}
+              data-focused={isFocused ? 'true' : 'false'}
               data-testid={`row-${row.id}`}
               data-selected={isSelected ? 'true' : 'false'}
               key={String(row.id)}
@@ -276,13 +283,13 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     vi.restoreAllMocks();
   });
 
-  it('ArrowDown moves selection through consecutive rows', async () => {
+  it('ArrowDown moves focus through consecutive rows without selecting rows', async () => {
     renderHierarchy();
 
     // Wait for rows to appear (fields are visible under the single location)
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
 
-    // Click the first field to select it and activate keyboard navigation
+    // Click the first field to focus it and activate keyboard navigation.
     await act(async () => {
       fireEvent.click(screen.getByTestId('select-field-1-name'));
     });
@@ -293,34 +300,37 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     await pressArrowDown();
     await pressArrowDown();
 
-    // The 5th field (field-5) should now be selected
+    // The 5th field (field-5) should now be focused but not selected.
     await waitFor(() =>
-      expect(screen.getByTestId('row-field-5')).toHaveAttribute('data-selected', 'true'),
+      expect(screen.getByTestId('row-field-5')).toHaveAttribute('data-focused', 'true'),
     );
-    // The first field should no longer be selected
+    expect(screen.getByTestId('row-field-5')).toHaveAttribute('data-selected', 'false');
+    // The first field should no longer be focused or selected.
+    expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'false');
     expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-selected', 'false');
   });
 
-  it('ArrowUp moves selection back up', async () => {
+  it('ArrowUp moves focus back up without selecting rows', async () => {
     renderHierarchy();
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
 
-    // Select field-5 first by clicking it
+    // Focus field-5 first by clicking it.
     await act(async () => { fireEvent.click(screen.getByTestId('select-field-5-name')); });
 
     await pressArrowUp();
     await pressArrowUp();
 
     await waitFor(() =>
-      expect(screen.getByTestId('row-field-3')).toHaveAttribute('data-selected', 'true'),
+      expect(screen.getByTestId('row-field-3')).toHaveAttribute('data-focused', 'true'),
     );
+    expect(screen.getByTestId('row-field-3')).toHaveAttribute('data-selected', 'false');
   });
 
   it('ArrowDown does not move past the last row', async () => {
     renderHierarchy();
     await waitFor(() => expect(screen.getByTestId(`row-field-${FIELD_COUNT}`)).toBeInTheDocument());
 
-    // Select the last field
+    // Focus the last field.
     await act(async () => {
       fireEvent.click(screen.getByTestId(`select-field-${FIELD_COUNT}-name`));
     });
@@ -330,8 +340,9 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     await pressArrowDown();
 
     await waitFor(() =>
-      expect(screen.getByTestId(`row-field-${FIELD_COUNT}`)).toHaveAttribute('data-selected', 'true'),
+      expect(screen.getByTestId(`row-field-${FIELD_COUNT}`)).toHaveAttribute('data-focused', 'true'),
     );
+    expect(screen.getByTestId(`row-field-${FIELD_COUNT}`)).toHaveAttribute('data-selected', 'false');
   });
 
   it('ArrowDown preserves the focused column when moving to the next row', async () => {
@@ -347,10 +358,33 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     await pressArrowDown();
 
     await waitFor(() =>
-      expect(screen.getByTestId('row-field-3')).toHaveAttribute('data-selected', 'true'),
+      expect(screen.getByTestId('row-field-3')).toHaveAttribute('data-focused', 'true'),
     );
+    expect(screen.getByTestId('row-field-3')).toHaveAttribute('data-selected', 'false');
     expect(getSetCellFocusMock()).toHaveBeenLastCalledWith('field-3', 'width_m');
     expect(getSetCellFocusMock()).not.toHaveBeenLastCalledWith('field-3', 'name');
+  });
+
+  it('Alt+T focuses the first editable cell without selecting a row', async () => {
+    renderHierarchy();
+
+    await waitFor(() => expect(screen.getByTestId('row-field-2')).toBeInTheDocument());
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('select-field-2-width_m'));
+    });
+    getSetCellFocusMock().mockClear();
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'T', altKey: true, bubbles: true }));
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'true'),
+    );
+    expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-selected', 'false');
+    expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-focused', 'false');
+    expect(getSetCellFocusMock()).toHaveBeenLastCalledWith('field-1', 'name');
   });
 
   it('does not select or edit calculated area cells on click', async () => {
@@ -406,16 +440,17 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     // so field-1 is the first row in the flat list.
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
 
-    // Select the first field
+    // Focus the first field.
     await act(async () => { fireEvent.click(screen.getByTestId('select-field-1-name')); });
 
-    // Pressing up multiple times should keep field-1 selected
+    // Pressing up multiple times should keep field-1 focused without selecting it.
     await pressArrowUp();
     await pressArrowUp();
 
     await waitFor(() =>
-      expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-selected', 'true'),
+      expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'true'),
     );
+    expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-selected', 'false');
   });
 
   it(`${FIELD_COUNT} rapid ArrowDown presses cause at most ${FIELD_COUNT} React updates`, async () => {
@@ -441,8 +476,8 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
 
     const navUpdates = updates.length - updatesAfterClick;
 
-    // The grid mock still updates its internal selected-row state, but
-    // navigation must not cascade into multiple React updates per keypress.
+    // The grid mock updates its internal focused-cell state, but navigation
+    // must not cascade into multiple React updates per keypress.
     expect(navUpdates).toBeLessThanOrEqual(FIELD_COUNT - 1);
     expect(navUpdates).toBeGreaterThan(0);
 
@@ -467,7 +502,7 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     expect(elapsed).toBeLessThan(5000);
   });
 
-  it('collapsing a parent row while a child is selected moves selection to the parent and keeps navigation working', async () => {
+  it('collapsing a parent row while a child is focused moves focus to the parent and keeps navigation working', async () => {
     // Two fields, two beds under field-1.
     fieldListMock.mockResolvedValue({
       data: {
@@ -491,9 +526,10 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     // After auto-expand the beds should be visible under field-1.
     await waitFor(() => expect(screen.getByTestId('row-101')).toBeInTheDocument());
 
-    // Select bed-101.
+    // Focus bed-101.
     await act(async () => { fireEvent.click(screen.getByTestId('select-101-name')); });
-    expect(screen.getByTestId('row-101')).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('row-101')).toHaveAttribute('data-focused', 'true');
+    expect(screen.getByTestId('row-101')).toHaveAttribute('data-selected', 'false');
 
     // Collapse field-1 by clicking its collapse button (rendered via renderCell).
     const collapseButton = within(screen.getByTestId('row-field-1')).getByRole('button', {
@@ -501,20 +537,22 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     });
     await act(async () => { fireEvent.click(collapseButton); });
 
-    // Beds should be gone; selection should jump to the collapsed parent (field-1).
+    // Beds should be gone; focus should jump to the collapsed parent (field-1).
     await waitFor(() => {
       expect(screen.queryByTestId('row-101')).not.toBeInTheDocument();
-      expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-selected', 'true');
+      expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'true');
     });
+    expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-selected', 'false');
 
     // Navigation must still work after the collapse: ArrowDown should go to field-2.
     await pressArrowDown();
     await waitFor(() =>
-      expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-selected', 'true'),
+      expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-focused', 'true'),
     );
+    expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-selected', 'false');
   });
 
-  it('pressing a printable key while a row is selected does not start edit mode', async () => {
+  it('pressing a printable key while a row is keyboard-focused does not start edit mode', async () => {
     renderHierarchy();
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
 
@@ -525,10 +563,11 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'T', altKey: true, bubbles: true }));
     });
 
-    // field-1 is selected but NOT in edit mode.
+    // field-1 is focused but NOT selected and NOT in edit mode.
     await waitFor(() =>
-      expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-selected', 'true'),
+      expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'true'),
     );
+    expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-selected', 'false');
     expect(screen.getByTestId('mode-field-1')).toHaveTextContent('view');
 
     // The DataGrid mock stores the onCellKeyDown prop so we can call it directly.

@@ -301,7 +301,6 @@ function FieldsBedsHierarchy({
   );
 
   const {
-    activateRow,
     expandedRowsRef,
     rowsRef,
     selectRow,
@@ -688,6 +687,14 @@ function FieldsBedsHierarchy({
     treeActive,
   });
 
+  const activateFirstRowForKeyboard = useCallback((rowId: GridRowId): void => {
+    selectedRowIdRef.current = rowId;
+    treeActiveRef.current = true;
+    setSelectedRowId(rowId);
+    setTreeActive(true);
+    focusRow(rowId, "name");
+  }, [focusRow, selectedRowIdRef, setSelectedRowId, setTreeActive, treeActiveRef]);
+
   const selectRowForKeyboard = useCallback((rowId: GridRowId): void => {
     selectRowTransient(rowId);
     focusRow(rowId);
@@ -881,7 +888,7 @@ function FieldsBedsHierarchy({
     rowsRef,
     selectedRowIdRef,
     expandedRowsRef,
-    activateRow,
+    activateFirstRow: activateFirstRowForKeyboard,
     selectRow: selectRowForKeyboard,
     setTreeActive,
     toggleExpand,
@@ -1302,8 +1309,8 @@ function FieldsBedsHierarchy({
 
                 // Prevent DataGrid from moving cell focus on ArrowDown/Up in view mode.
                 // Our window-level handleTreeNavigation handles navigation exclusively and
-                // explicitly syncs both selectedRowId and DataGrid cell focus, so the
-                // selection and the focus box always move together.
+                // explicitly syncs the active row ref and DataGrid cell focus, so keyboard
+                // navigation does not create a visual row selection.
                 if (
                   (keyboardEvent.key === "ArrowDown" || keyboardEvent.key === "ArrowUp") &&
                   rowModesModel[params.id]?.mode !== GridRowModes.Edit

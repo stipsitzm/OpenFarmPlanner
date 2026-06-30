@@ -11,7 +11,7 @@ interface UseHierarchyKeyboardParams {
   rowsRef: React.MutableRefObject<readonly HierarchyRow[]>;
   selectedRowIdRef: React.MutableRefObject<string | number | null>;
   expandedRowsRef: React.MutableRefObject<Set<string | number>>;
-  activateRow: (id: GridRowId) => void;
+  activateFirstRow: (id: GridRowId) => void;
   selectRow: (id: GridRowId) => void;
   setTreeActive: (active: boolean) => void;
   toggleExpand: (id: GridRowId) => void;
@@ -31,7 +31,7 @@ export function useHierarchyKeyboard({
   rowsRef,
   selectedRowIdRef,
   expandedRowsRef,
-  activateRow,
+  activateFirstRow,
   selectRow,
   setTreeActive,
   toggleExpand,
@@ -58,8 +58,8 @@ export function useHierarchyKeyboard({
       if (!firstRow) return;
 
       event.preventDefault();
-      const targetId = selectedRowIdRef.current ?? firstRow.id;
-      activateRow(targetId);
+      const targetId = firstRow.id;
+      activateFirstRow(targetId);
 
       const selectedElement = document.querySelector(`[data-id="${String(targetId)}"]`);
       if (selectedElement instanceof HTMLElement) {
@@ -106,7 +106,7 @@ export function useHierarchyKeyboard({
       window.removeEventListener("keydown", handleFocusTable);
       window.removeEventListener("keydown", handleTreeNavigation);
     };
-  }, [activateRow, contextMenuState, discardActiveRowEdit, expandedRowsRef, rowsRef, selectRow, selectedRowIdRef, setTreeActive, tableWrapperRef, toggleExpand, treeActiveRef]);
+  }, [activateFirstRow, contextMenuState, discardActiveRowEdit, expandedRowsRef, rowsRef, selectRow, selectedRowIdRef, setTreeActive, tableWrapperRef, toggleExpand, treeActiveRef]);
 
   // Context-menu keyboard trigger (ContextMenu key / Shift+F10).
   useEffect(() => {
