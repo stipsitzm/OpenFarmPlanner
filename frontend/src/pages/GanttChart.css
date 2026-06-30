@@ -9,6 +9,14 @@
   min-height: 400px;
 }
 
+@media (max-width: 900px) and (max-height: 500px) {
+  .gantt-container-wrapper {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+  }
+}
+
 .gantt-no-data {
   padding: 2rem;
   text-align: center;

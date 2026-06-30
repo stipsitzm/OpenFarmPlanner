@@ -362,6 +362,7 @@ function RootLayout() {
   const isLargeDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   const isPhone = useMediaQuery(theme.breakpoints.down('sm'));
   const isCoarseLowHeightViewport = useMediaQuery('(pointer: coarse) and (max-height: 500px)');
+  const isLowHeightNarrowViewport = useMediaQuery('(max-width: 900px) and (max-height: 500px)');
   const isCompactTopbar = isPhone || isCoarseLowHeightViewport;
   const isVeryNarrowMobile = useMediaQuery('(max-width:360px)');
   const isPhonePortrait = useMediaQuery(`${theme.breakpoints.down('sm')} and (orientation: portrait)`);
@@ -1822,7 +1823,7 @@ function RootLayout() {
           width: '100%',
           // Global outer page gutter (single source of truth for workspace pages).
           // Uses smaller desktop gutters on wide monitors while keeping clear edge spacing.
-          px: { xs: 0, sm: 2, md: 2.5, lg: 2.25, xl: 2 },
+          px: { xs: 0, sm: isLowHeightNarrowViewport ? 0 : 2, md: 2.5, lg: 2.25, xl: 2 },
           py: { xs: 1.5, md: 2.5 },
           display: 'flex',
           flexDirection: 'column',
