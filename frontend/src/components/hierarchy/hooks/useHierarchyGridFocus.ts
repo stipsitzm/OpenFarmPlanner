@@ -31,6 +31,9 @@ const DEFAULT_FOCUS_FIELD = "name";
 const hasEditingRow = (rowModesModel: GridRowModesModel): boolean =>
   Object.values(rowModesModel).some((mode) => mode.mode === GridRowModes.Edit);
 
+const getEditingRowId = (rowModesModel: GridRowModesModel): string | null =>
+  Object.entries(rowModesModel).find(([, mode]) => mode.mode === GridRowModes.Edit)?.[0] ?? null;
+
 const findFallbackVisibleRow = (
   previousRows: GridRowsProp<HierarchyRow>,
   visibleRows: GridRowsProp<HierarchyRow>,
@@ -82,17 +85,34 @@ export function useHierarchyGridFocus({
   }, [focusRow, selectedRowId]);
 
   // useLayoutEffect (not useEffect) so focus is restored synchronously during the
-  // commit phase, before the browser paints.  Without this, the DOM loses focus when
-  // the edit-cell input is removed, the browser briefly shows the first row focused,
-  // and then an async useEffect would move focus back — causing a visible flash.
+  // commit phase, before the browser paints.
+  //
+  // When a row exits edit mode, we focus the row that WAS being edited (identified
+  // from prevModel), NOT selectedRowId state. This is critical because arrow-key
+  // navigation only updates selectedRowIdRef (transient), not the selectedRowId
+  // React state. If the user navigated to a row via arrow keys and pressed Enter to
+  // edit it, selectedRowId state is stale (the last clicked row). Focusing it would
+  // visually jump to the wrong row. Using prevModel's editing row ID guarantees we
+  // focus the row the user actually just saved, regardless of how they started the edit.
+  //
+  // We also call setSelectedRowId to sync state, so subsequent arrow navigation and
+  // focus restoration start from the correct row.
   useLayoutEffect(() => {
     const prevModel = prevRowModesModelRef.current;
     prevRowModesModelRef.current = rowModesModel;
 
-    if (hasEditingRow(prevModel) && !hasEditingRow(rowModesModel)) {
+    if (!hasEditingRow(prevModel) || hasEditingRow(rowModesModel)) {
+      return;
+    }
+
+    const editingRowId = getEditingRowId(prevModel);
+    if (editingRowId != null) {
+      focusRow(editingRowId);
+      setSelectedRowId(editingRowId);
+    } else {
       focusSelectedCell();
     }
-  }, [focusSelectedCell, rowModesModel]);
+  }, [focusRow, focusSelectedCell, rowModesModel, setSelectedRowId]);
 
   useLayoutEffect(() => {
     if (treeActive) {
