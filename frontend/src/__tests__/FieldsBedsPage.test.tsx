@@ -189,7 +189,7 @@ describe('FieldsBedsPage', () => {
     expect(screen.getByTestId('create-field-request')).toHaveTextContent('1');
   });
 
-  it('shows missing field guidance without an action when multiple locations exist', async () => {
+  it('shows location rows and missing field guidance without an action when multiple locations exist', async () => {
     locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hofstelle' }, { id: 2, name: 'Außenfeld' }] } });
     fieldListMock.mockResolvedValue({ data: { results: [] } });
     bedListMock.mockResolvedValue({ data: { results: [] } });
@@ -197,11 +197,12 @@ describe('FieldsBedsPage', () => {
     renderPage();
 
     expect(await screen.findByText('Parzelle fehlt')).toBeInTheDocument();
-    expect(screen.getByText('Füge beim gewünschten Standort über das ➕-Symbol oder das Kontextmenü eine Parzelle hinzu.')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes('Füge beim gewünschten Standort über das') && content.includes('Symbol oder das Kontextmenü eine Parzelle hinzu.'))).toBeInTheDocument();
+    expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Parzelle hinzufügen' })).not.toBeInTheDocument();
     expect(registeredUiState.topbarActions.find((action) => action.id === 'fields-global-add-field')).toBeUndefined();
     expect(registeredUiState.topbarActions.find((action) => action.id === 'fields-global-add-location')?.hidden).toBe(false);
-    expect(screen.queryByText('Hierarchieansicht')).not.toBeInTheDocument();
+    expect(screen.getByText('Hierarchieansicht')).toBeInTheDocument();
   });
 
   it('shows missing bed requirement when fields exist but no beds exist', async () => {

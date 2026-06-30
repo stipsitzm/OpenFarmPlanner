@@ -103,7 +103,8 @@
     "missingFieldSingleLocationDescription": "Lege eine Parzelle an, um zu starten.",
     "additionalLocationHint": "Falls du Flächen an mehreren Orten bewirtschaftest, kannst du auch",
     "additionalLocationLink": "zusätzliche Standorte anlegen",
-    "missingFieldMultipleLocationsDescription": "Füge beim gewünschten Standort über das ➕-Symbol oder das Kontextmenü eine Parzelle hinzu.",
+    "missingFieldMultipleLocationsBeforeIcon": "Füge beim gewünschten Standort über das",
+    "missingFieldMultipleLocationsAfterIcon": "Symbol oder das Kontextmenü eine Parzelle hinzu.",
     "actions": {
       "createLocation": "Standort hinzufügen",
       "createField": "Parzelle hinzufügen",

@@ -312,6 +312,18 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     expect(hasPersistedEntityId(undefined)).toBe(false);
   });
 
+  it('renders location rows when multiple locations exist without parcels', async () => {
+    useMultipleLocations();
+    fieldListMock.mockResolvedValue({ data: { results: [] } });
+    bedListMock.mockResolvedValue({ data: { results: [] } });
+
+    renderHierarchy();
+
+    expect(await screen.findByTestId('row-location-1')).toBeInTheDocument();
+    expect(screen.getByTestId('row-location-2')).toBeInTheDocument();
+    expect(screen.getByTestId('row-count')).toHaveTextContent('2');
+  });
+
   it('creates exactly one editable parcel row for one create request', async () => {
     fieldListMock.mockResolvedValue({ data: { results: [] } });
     const onCreateFieldRequestHandled = vi.fn();

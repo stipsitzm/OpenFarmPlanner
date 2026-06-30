@@ -341,7 +341,7 @@ function FieldsBedsHierarchy({
     setDraftValidationWarning,
   });
 
-  const shouldShowHierarchyTable = fields.length > 0 || createFieldRequest > 0;
+  const shouldShowHierarchyTable = hierarchyIndex.hasMultipleLocations || fields.length > 0 || createFieldRequest > 0;
   const hasUsableHierarchyRows = shouldShowHierarchyTable && (
     rows.length > 0
     || locations.length > 0

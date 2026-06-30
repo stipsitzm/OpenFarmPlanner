@@ -212,16 +212,22 @@ export default function FieldsBedsPage() {
   const hasUnsavedFields = fields.some((field) => !hasPersistedEntityId(field.id));
   const hasUnsavedBeds = beds.some((bed) => !hasPersistedEntityId(bed.id));
   const hasBeds = beds.some((bed) => hasPersistedEntityId(bed.id) && persistedFieldIds.has(bed.field));
-  const hasHierarchyRows = fields.length > 0 || beds.length > 0;
+  const hasHierarchyRows = locations.length > 1 || fields.length > 0 || beds.length > 0;
   const shouldShowAreasEmptyState = hasAreaDataLoaded && !isAreaDataLoading && !hasLocations;
   const shouldShowMissingFieldsState = hasLocations && !hasFields && !hasUnsavedFields && createFieldRequest <= 0;
   const shouldShowMissingBedsHint = hasFields && !hasBeds && !hasUnsavedBeds;
   const shouldRenderHierarchy = hasHierarchyRows || createFieldRequest > 0 || pendingHierarchyDeletionCount > 0;
   const createBedAction = getProjectSetupAction('beds');
   const emptyAreasDescription = shouldShowMissingFieldsState
-    ? t(locations.length === 1
-      ? 'hierarchy:emptyAreas.missingFieldSingleLocationDescription'
-      : 'hierarchy:emptyAreas.missingFieldMultipleLocationsDescription')
+    ? (locations.length === 1
+      ? t('hierarchy:emptyAreas.missingFieldSingleLocationDescription')
+      : (
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', justifyContent: 'center' }}>
+            {t('hierarchy:emptyAreas.missingFieldMultipleLocationsBeforeIcon')}
+            <HierarchyAddIcon interactive={false} ariaHidden sx={{ bgcolor: 'transparent' }} />
+            {t('hierarchy:emptyAreas.missingFieldMultipleLocationsAfterIcon')}
+          </Box>
+        ))
     : t('hierarchy:emptyAreas.missingLocationDescription');
   const emptyAreasSupplement = shouldShowMissingFieldsState && isSingleLocationMode
     ? (
