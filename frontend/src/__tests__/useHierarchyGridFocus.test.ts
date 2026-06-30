@@ -159,6 +159,30 @@ describe('useHierarchyGridFocus', () => {
     expect(restorationCalls).toHaveLength(0);
   });
 
+  it('preFocusEditCell calls getCellElement().focus() for the remembered field', () => {
+    const mockElement = { focus: vi.fn() };
+    const getCellElement = vi.fn().mockReturnValue(mockElement);
+    const setSelectedRowId = vi.fn();
+    const gridApiRef = { current: { setCellFocus: vi.fn(), getCellElement } };
+
+    const { result } = renderHook(() =>
+      useHierarchyGridFocus({
+        gridApiRef,
+        rowModesModel: {},
+        rows: ROWS,
+        selectedRowId: 'field-1',
+        setSelectedRowId,
+        treeActive: true,
+      }),
+    );
+
+    act(() => { result.current.rememberFocusedField('width_m'); });
+    act(() => { result.current.preFocusEditCell('field-1'); });
+
+    expect(getCellElement).toHaveBeenCalledWith('field-1', 'width_m');
+    expect(mockElement.focus).toHaveBeenCalledWith({ preventScroll: true });
+  });
+
   it('syncs selectedRowId state after focusing the edited row', () => {
     // After Edit→View, setSelectedRowId must be called so that subsequent
     // arrow navigation and useLayoutEffect([selectedRowId]) start from the
