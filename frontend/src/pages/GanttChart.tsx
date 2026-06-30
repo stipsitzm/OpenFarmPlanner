@@ -147,11 +147,6 @@ function isTimelineViewMode(value: string | null): value is ViewMode {
   return value !== null && (GANTT_HEADER_VIEW_MODES as readonly string[]).includes(value);
 }
 
-function getStoredTimelineViewMode(storageKey: string): ViewMode | null {
-  const storedValue = window.localStorage.getItem(storageKey);
-  return isTimelineViewMode(storedValue) ? storedValue : null;
-}
-
 function storeTimelineViewMode(storageKey: string, mode: ViewMode): void {
   window.localStorage.setItem(storageKey, mode);
 }
@@ -223,6 +218,10 @@ function getStoredReferenceDate(state: StoredGanttState | null, startDate: Date,
     return null;
   }
   return date;
+}
+
+function getStoredTimelineViewModeFromState(state: StoredGanttState | null): ViewMode | null {
+  return state?.referenceDate && state.timelineViewMode ? state.timelineViewMode : null;
 }
 
 function getInitialTimelineReferenceDate(state: StoredGanttState | null, startDate: Date, endDate: Date): Date {
@@ -440,11 +439,7 @@ function GanttChartPage() {
         : 'occupancy';
   });
   const [timelineViewMode, setTimelineViewMode] = useState<ViewMode>(() => (
-    storedGanttState?.timelineViewMode
-      ? storedGanttState.timelineViewMode
-      : timelineViewModeStorageKey
-      ? getStoredTimelineViewMode(timelineViewModeStorageKey) ?? DEFAULT_TIMELINE_VIEW_MODE
-      : DEFAULT_TIMELINE_VIEW_MODE
+    getStoredTimelineViewModeFromState(storedGanttState) ?? DEFAULT_TIMELINE_VIEW_MODE
   ));
   const [editMode, setEditMode] = useState(false);
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
@@ -487,11 +482,9 @@ function GanttChartPage() {
       return;
     }
 
-    const nextViewMode = storedGanttState?.timelineViewMode
-      ?? getStoredTimelineViewMode(timelineViewModeStorageKey)
-      ?? DEFAULT_TIMELINE_VIEW_MODE;
+    const nextViewMode = getStoredTimelineViewModeFromState(storedGanttState) ?? DEFAULT_TIMELINE_VIEW_MODE;
     setTimelineViewMode((currentViewMode) => (currentViewMode === nextViewMode ? currentViewMode : nextViewMode));
-  }, [isAuthLoading, storedGanttState?.timelineViewMode, timelineViewModeStorageKey]);
+  }, [isAuthLoading, storedGanttState, timelineViewModeStorageKey]);
 
   const handleCalendarModeChange = useCallback((nextMode: CalendarMode) => {
     setCalendarMode(nextMode);
@@ -1093,8 +1086,17 @@ function GanttChartPage() {
       return undefined;
     }
 
-    const timeoutId = window.setTimeout(() => {
-      window.requestAnimationFrame(() => {
+    let timeoutId: number | null = null;
+    let animationFrameId: number | null = null;
+    let isCancelled = false;
+    let attempt = 0;
+
+    const restoreTimelineScroll = (): void => {
+      animationFrameId = window.requestAnimationFrame(() => {
+        if (isCancelled) {
+          return;
+        }
+
         const scrollContainer = ganttViewportRef.current?.querySelector<HTMLElement>('.rmg-container') ?? null;
         if (!scrollContainer) {
           return;
@@ -1110,6 +1112,13 @@ function GanttChartPage() {
         scrollContainer.style.scrollBehavior = 'auto';
         scrollContainer.scrollLeft = nextScrollLeft;
         scrollContainer.style.scrollBehavior = previousScrollBehavior;
+
+        if (nextScrollLeft > 0 && scrollContainer.scrollLeft === 0 && attempt < 5) {
+          attempt += 1;
+          timeoutId = window.setTimeout(restoreTimelineScroll, 50);
+          return;
+        }
+
         latestReferenceDateRef.current = referenceDate;
         hasRestoredTimelineRef.current = true;
         storeGanttState(ganttStateStorageKey, {
@@ -1118,9 +1127,19 @@ function GanttChartPage() {
           referenceDate: formatDateToAPI(referenceDate),
         });
       });
-    }, 0);
+    };
 
-    return () => window.clearTimeout(timeoutId);
+    timeoutId = window.setTimeout(restoreTimelineScroll, 0);
+
+    return () => {
+      isCancelled = true;
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, [
     activeProjectId,
     calendarMode,

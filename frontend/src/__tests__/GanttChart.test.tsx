@@ -429,7 +429,7 @@ describe('GanttChartPage', () => {
     expect(latestProps?.onTaskUpdate).toBeUndefined();
   });
 
-  it('restores the persisted timeline view mode when the calendar opens', async () => {
+  it('uses the month timeline by default and ignores legacy standalone timeline storage', async () => {
     window.localStorage.setItem(TIMELINE_VIEW_MODE_STORAGE_KEY, 'day');
     mocks.planList.mockResolvedValue({
       data: {
@@ -451,9 +451,9 @@ describe('GanttChartPage', () => {
 
     await waitFor(() => {
       const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
-      expect(latestProps?.viewMode).toBe('day');
+      expect(latestProps?.viewMode).toBe('month');
     });
-    expect(screen.getByRole('button', { name: 'Tag' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Monat' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('scrolls the first calendar open to the current period instead of the timeline end', async () => {
