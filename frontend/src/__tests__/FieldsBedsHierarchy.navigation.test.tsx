@@ -27,9 +27,12 @@ import { mockT } from './helpers/testI18n';
 const {
   bedListMock,
   fieldListMock,
+  fieldUpdateMock,
   locationListMock,
   getCapturedOnCellKeyDown,
   setCapturedOnCellKeyDown,
+  getCapturedProcessRowUpdate,
+  setCapturedProcessRowUpdate,
   getSetCellFocusMock,
   getSelectRowImpl,
   setSelectRowImpl,
@@ -37,6 +40,8 @@ const {
   // capturedOnCellKeyDown is set by the DataGrid mock each render so tests
   // can call the handler directly to verify blocking behaviour.
   let capturedOnCellKeyDown: ((params: unknown, event: unknown) => void) | undefined;
+  // capturedProcessRowUpdate lets tests simulate a row-save confirmation.
+  let capturedProcessRowUpdate: ((row: unknown) => Promise<unknown>) | undefined;
   // selectRowImpl bridges gridApiRef.current.selectRow() → DataGrid's React state.
   // It should stay unused for keyboard-only focus navigation.
   let selectRowImpl: ((id: string | number, isSelected: boolean, reset: boolean) => void) | undefined;
@@ -44,10 +49,15 @@ const {
   return {
     bedListMock: vi.fn(),
     fieldListMock: vi.fn(),
+    fieldUpdateMock: vi.fn(),
     locationListMock: vi.fn(),
     getCapturedOnCellKeyDown: () => capturedOnCellKeyDown,
     setCapturedOnCellKeyDown: (fn: ((params: unknown, event: unknown) => void) | undefined) => {
       capturedOnCellKeyDown = fn;
+    },
+    getCapturedProcessRowUpdate: () => capturedProcessRowUpdate,
+    setCapturedProcessRowUpdate: (fn: typeof capturedProcessRowUpdate) => {
+      capturedProcessRowUpdate = fn;
     },
     getSetCellFocusMock: () => setCellFocusMock,
     getSelectRowImpl: () => selectRowImpl,
@@ -76,7 +86,7 @@ vi.mock('../api/api', async () => {
       create: vi.fn(),
       delete: vi.fn(),
       list: fieldListMock,
-      update: vi.fn(),
+      update: fieldUpdateMock,
     },
     locationAPI: {
       create: vi.fn(),
@@ -111,6 +121,7 @@ vi.mock('@mui/x-data-grid', async () => {
     isCellEditable,
     onCellClick,
     onCellKeyDown,
+    processRowUpdate,
     rowModesModel,
     rows,
   }: {
@@ -121,6 +132,7 @@ vi.mock('@mui/x-data-grid', async () => {
     isCellEditable?: (p: { row: Record<string, unknown>; field: string }) => boolean;
     onCellClick?: (p: { id: string | number; field: string; isEditable: boolean; row: Record<string, unknown> }) => void;
     onCellKeyDown?: (params: unknown, event: unknown) => void;
+    processRowUpdate?: (row: unknown) => Promise<unknown>;
     rowModesModel: Record<string, { mode: string }>;
     rows: Array<Record<string, unknown> & { id: string | number }>;
   }) => {
@@ -136,8 +148,9 @@ vi.mock('@mui/x-data-grid', async () => {
         return next;
       });
     });
-    // Capture so tests can invoke it directly (e.g. letter-key guard test)
+    // Capture so tests can invoke them directly.
     setCapturedOnCellKeyDown(onCellKeyDown);
+    setCapturedProcessRowUpdate(processRowUpdate);
     if (apiRef?.current) {
       apiRef.current.setCellFocus = (id: string | number, field: string) => {
         getSetCellFocusMock()(id, field);
@@ -613,6 +626,51 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
       expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'true'),
     );
     expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-focused', 'false');
+  });
+
+  it('arrow keys navigate normally after confirming an inline edit', async () => {
+    // Regression: handleHierarchyProcessRowUpdate called clearHierarchyInteractionState
+    // which reset treeActive=false and selectedRowId=null, so ArrowDown/Up after saving
+    // would scroll the page instead of moving row focus.
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
+
+    // Click field-1 to select it and activate tree navigation.
+    await act(async () => { fireEvent.click(screen.getByTestId('select-field-1-name')); });
+    expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'true');
+    expect(screen.getByTestId('mode-field-1')).toHaveTextContent('edit');
+
+    // Mock the API update to return success.
+    fieldUpdateMock.mockResolvedValue({ data: { id: 1, name: 'Parzelle 1', location: 1, area_sqm: 10 } });
+
+    // Simulate confirming the edit by calling processRowUpdate with the field's row data.
+    const processRowUpdate = getCapturedProcessRowUpdate();
+    expect(processRowUpdate).toBeDefined();
+    await act(async () => {
+      await processRowUpdate!({
+        id: 'field-1',
+        type: 'field',
+        name: 'Parzelle 1',
+        fieldId: 1,
+        locationId: 1,
+        area_sqm: 10,
+        level: 1,
+        parentId: 'location-1',
+        hasChildren: false,
+      });
+    });
+
+    // Row should be back in view mode after save.
+    await waitFor(() =>
+      expect(screen.getByTestId('mode-field-1')).toHaveTextContent('view'),
+    );
+
+    // ArrowDown must navigate to field-2, NOT scroll the page.
+    await pressArrowDown();
+    await waitFor(() =>
+      expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-focused', 'true'),
+    );
+    expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'false');
   });
 
   it('pressing a printable key while a row is keyboard-focused does not start edit mode', async () => {
