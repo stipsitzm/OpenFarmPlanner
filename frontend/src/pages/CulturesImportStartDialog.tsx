@@ -1,5 +1,4 @@
 import {
-  Alert,
   Box,
   Button,
   Dialog,
@@ -86,12 +85,6 @@ export function CulturesImportStartDialog({
             </Typography>
           </Box>
 
-          <Alert severity="info" variant="outlined" sx={{ '& .MuiAlert-message': { width: '100%' } }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-              <Typography variant="body2">{t('import.formatHintTable')}</Typography>
-              <Typography variant="body2">{t('import.formatHintJson')}</Typography>
-            </Box>
-          </Alert>
         </Box>
       </DialogContent>
       <DialogActions>
