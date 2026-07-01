@@ -48,7 +48,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from './i18n';
 import { useCommandContext, useRegisterCommands } from './commands/useCommandContext';
 import { createRootCommands } from './commands/commands';
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
@@ -386,7 +386,8 @@ function RootLayout() {
   const [topbarPrimaryActionMenuAnchor, setTopbarPrimaryActionMenuAnchor] = useState<null | HTMLElement>(null);
   currentPathnameRef.current = location.pathname;
 
-  useEffect(() => {
+  // Layout effect so this always runs before the new page's passive effect registers its actions.
+  useLayoutEffect(() => {
     setTopbarContextActions([]);
     setTopbarTitleActions([]);
   }, [location.pathname]);
