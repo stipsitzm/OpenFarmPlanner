@@ -90,6 +90,21 @@ export function AuthProvider({
     })();
   }, []);
 
+  // localStorage is shared across tabs, but React state and the API's X-Project-Id
+  // header (read fresh from localStorage per request, see httpClient.ts) are not: if
+  // another tab switches the active project, this tab would keep showing stale data
+  // while its own requests silently target the new project. Reload to resync.
+  useEffect(() => {
+    function handleStorageChange(event: StorageEvent): void {
+      if (event.key !== "activeProjectId" || event.newValue === event.oldValue) {
+        return;
+      }
+      window.location.reload();
+    }
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
