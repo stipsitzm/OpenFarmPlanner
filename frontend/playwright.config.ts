@@ -27,6 +27,9 @@ export default defineConfig({
       env: {
         ...process.env,
         DEBUG: 'True',
+        // Without a local .env file (e.g. in CI), DJANGO_ENV defaults to 'production',
+        // and settings.py refuses to boot with a localhost FRONTEND_URL in that mode.
+        DJANGO_ENV: process.env.DJANGO_ENV || 'development',
         FRONTEND_URL: `http://127.0.0.1:${frontendPort}`,
         CORS_ALLOWED_ORIGINS: `http://127.0.0.1:${frontendPort}`,
         CSRF_TRUSTED_ORIGINS: `http://127.0.0.1:${frontendPort}`,
