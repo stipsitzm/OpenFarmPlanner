@@ -11,7 +11,7 @@ export type CreateCulturesCommandSpecsOptions = {
   handleDelete: (culture: Culture) => void;
   handleEdit: (culture: Culture) => void;
   handleEnrichCurrent: (mode: 'complete' | 'reresearch') => Promise<void>;
-  handleExportAllCultures: () => Promise<void>;
+  handleExportAllCultures: () => void;
   handleExportCurrentCulture: () => void;
   handleImportFileTrigger: () => void;
   selectedCulture?: Culture;
