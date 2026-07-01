@@ -155,14 +155,14 @@ export function validateCulture(
     errors.display_color = t('form.displayColorError');
   }
 
-  // If expected_yield is set, harvest_method must also be selected
+  // If expected_yield is set, the yield unit must also be selected.
   if (
     mode === 'submit' &&
     draft.expected_yield !== undefined &&
     draft.expected_yield !== null &&
     !draft.harvest_method
   ) {
-    errors.harvest_method = t('form.harvestMethodRequired');
+    errors.harvest_method = t('form.yieldUnitRequired');
   }
 
   if (

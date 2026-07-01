@@ -28,7 +28,7 @@ export const ENRICHMENT_FIELD_LABEL_MAP: Record<string, string> = {
   growth_duration_days: 'form.growthDurationDays',
   harvest_duration_days: 'form.harvestDurationDays',
   propagation_duration_days: 'form.propagationDurationDays',
-  harvest_method: 'form.harvestMethod',
+  harvest_method: 'form.yieldUnit',
   expected_yield: 'form.expectedYield',
   seed_packages: 'form.seedPackagesLabel',
   distance_within_row_cm: 'form.distanceWithinRowCm',
