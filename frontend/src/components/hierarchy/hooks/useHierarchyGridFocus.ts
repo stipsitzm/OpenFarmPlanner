@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import { GridRowModes } from "@mui/x-data-grid";
 import type { GridRowId, GridRowModesModel, GridRowsProp } from "@mui/x-data-grid";
 import type { HierarchyRow } from "../utils/types";
 
 interface HierarchyGridFocusApi {
+  getCellElement?: (id: GridRowId, field: string) => HTMLElement | null;
   setCellFocus?: (id: GridRowId, field: string) => void;
 }
 
@@ -21,6 +22,8 @@ interface UseHierarchyGridFocusParams {
 
 interface UseHierarchyGridFocusResult {
   focusRow: (rowId: GridRowId, preferredField?: string) => void;
+  /** Call immediately before setRowModesModel(View) to prevent a browser focus-fixup flash. */
+  preFocusEditCell: (rowId: GridRowId) => void;
   rememberFocusedField: (field: string) => void;
 }
 
@@ -28,6 +31,20 @@ const DEFAULT_FOCUS_FIELD = "name";
 
 const hasEditingRow = (rowModesModel: GridRowModesModel): boolean =>
   Object.values(rowModesModel).some((mode) => mode.mode === GridRowModes.Edit);
+
+const getEditingRowId = (
+  rowModesModel: GridRowModesModel,
+  rows: GridRowsProp<HierarchyRow>,
+): GridRowId | null => {
+  const editingRowKey = Object.entries(rowModesModel).find(
+    ([, mode]) => mode.mode === GridRowModes.Edit,
+  )?.[0];
+  if (editingRowKey == null) {
+    return null;
+  }
+
+  return rows.find((row) => String(row.id) === editingRowKey)?.id ?? editingRowKey;
+};
 
 const findFallbackVisibleRow = (
   previousRows: GridRowsProp<HierarchyRow>,
@@ -73,20 +90,46 @@ export function useHierarchyGridFocus({
     api?.setCellFocus?.(rowId, focusField);
   }, [getFocusableField, gridApiRef]);
 
+  // Pre-focus the stable cell container div before switching the row back to View mode.
+  // When React removes the edit <input> from the DOM, the browser's native focus-fixup
+  // would otherwise move focus to the nearest focusable ancestor (often the first row),
+  // causing a visible flash. Moving focus to the container first keeps DOM focus anchored
+  // through the transition. This does NOT fire MUI's cellFocusOut custom event (which is
+  // only emitted by setCellFocus), so it has no unintended edit-stop side-effect.
+  const preFocusEditCell = useCallback((rowId: GridRowId): void => {
+    gridApiRef.current?.getCellElement?.(rowId, focusedFieldRef.current)?.focus({ preventScroll: true });
+  }, [gridApiRef]);
+
   const focusSelectedCell = useCallback((): void => {
     if (selectedRowId != null) {
       focusRow(selectedRowId);
     }
   }, [focusRow, selectedRowId]);
 
-  useEffect(() => {
+  // useLayoutEffect (not useEffect) fires synchronously before the browser paints,
+  // so focus is always corrected within the same commit — no visible flash.
+  //
+  // On Edit→View transition we focus the row that WAS being edited (from prevModel),
+  // not selectedRowId state. Arrow-key navigation only updates selectedRowIdRef (transient);
+  // if editing was started via keyboard, selectedRowId state is the last clicked row and
+  // would land focus on the wrong row. We also sync selectedRowId so subsequent arrow
+  // navigation and focus restoration start from the correct row.
+  useLayoutEffect(() => {
     const prevModel = prevRowModesModelRef.current;
     prevRowModesModelRef.current = rowModesModel;
 
-    if (hasEditingRow(prevModel) && !hasEditingRow(rowModesModel)) {
+    if (!hasEditingRow(prevModel) || hasEditingRow(rowModesModel)) {
+      return;
+    }
+
+    const editingRowId = getEditingRowId(prevModel, rows);
+    if (editingRowId != null) {
+      focusRow(editingRowId);
+      setSelectedRowId(editingRowId);
+    } else {
       focusSelectedCell();
     }
-  }, [focusSelectedCell, rowModesModel]);
+  }, [focusRow, focusSelectedCell, rowModesModel, setSelectedRowId]);
 
   useLayoutEffect(() => {
     if (treeActive) {
@@ -113,6 +156,7 @@ export function useHierarchyGridFocus({
 
   return {
     focusRow,
+    preFocusEditCell,
     rememberFocusedField,
   };
 }

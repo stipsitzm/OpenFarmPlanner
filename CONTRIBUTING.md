@@ -1,5 +1,15 @@
 # Contributing
 
+## Initial setup
+
+After cloning the repo, run once to activate the project's git hooks:
+
+```bash
+make setup
+```
+
+This configures the pre-commit hook that warns you when an unusually large number of files are staged for deletion — which catches the common mistake of silently losing source files after a `git stash pop` conflict during a rebase.
+
 ## Conventional Commits
 
 This project uses Conventional Commits for automated versioning and releases.

@@ -40,7 +40,8 @@
     "react-markdown": "^10.1.0",
     "react-modern-gantt": "https://codeload.github.com/stipsitzm/React-Modern-Gantt/tar.gz/refs/heads/master",
     "react-router-dom": "^7.9.6",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

@@ -987,7 +987,7 @@ function RootLayout() {
         sx={{ borderBottom: '1px solid', borderColor: 'surface.surfaceBorder', bgcolor: 'surface.topbarBackground', backdropFilter: 'saturate(120%) blur(2px)' }}
       >
         <Toolbar variant="dense" sx={{ minHeight: 56, gap: 1, py: 0.5, px: { xs: 0, sm: 2, md: 3 }, flexWrap: 'nowrap', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
-          {!isDesktopUp ? <IconButton aria-label={t('globalMenu.openMobileMenu')} onClick={() => setMobileNavOpen(true)}><MenuIcon /></IconButton> : null}
+          {!isDesktopUp ? <IconButton aria-label={t('globalMenu.openMobileMenu')} onClick={() => setMobileNavOpen(true)} sx={{ width: COMPACT_TOPBAR_TOGGLE_SIZE, height: COMPACT_TOPBAR_TOGGLE_SIZE }}><MenuIcon /></IconButton> : null}
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, minWidth: 0, flexShrink: 1, flexWrap: 'nowrap', overflow: 'hidden' }}>
             {!isDesktopUp ? (
               <Typography
@@ -1576,7 +1576,7 @@ function RootLayout() {
                     aria-controls={topbarPrimaryActionMenuAnchor ? 'topbar-primary-action-menu' : undefined}
                     aria-haspopup={topbarPrimaryAction.menuActions && topbarPrimaryAction.menuActions.length > 0 ? 'true' : undefined}
                     aria-expanded={Boolean(topbarPrimaryActionMenuAnchor)}
-                    sx={{ textTransform: 'none', minWidth: 32, px: 0.75, minHeight: 30 }}
+                    sx={{ textTransform: 'none', minWidth: COMPACT_TOPBAR_TOGGLE_SIZE, px: 0.75, minHeight: COMPACT_TOPBAR_TOGGLE_SIZE }}
                   >
                     <AddIcon fontSize="small" />
                   </Button>
@@ -1611,7 +1611,7 @@ function RootLayout() {
                 aria-controls={globalMenuAnchor ? 'global-actions-menu' : undefined}
                 aria-haspopup="true"
                 onClick={handleGlobalMenuOpen}
-                sx={{ color: 'text.primary' }}
+                sx={{ color: 'text.primary', width: COMPACT_TOPBAR_TOGGLE_SIZE, height: COMPACT_TOPBAR_TOGGLE_SIZE }}
               >
                 <MoreVertIcon />
               </IconButton>
@@ -1637,20 +1637,19 @@ function RootLayout() {
         </Toolbar>
         {isCompactTopbar && hasMobileSecondaryRow ? (
           <Box className="mobile-action-scroll" sx={{ px: 0, pb: 0.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP, minHeight: 36, flexWrap: 'wrap', whiteSpace: 'normal', width: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: TOPBAR_ACTION_GROUP_GAP, minHeight: COMPACT_TOPBAR_TOGGLE_SIZE, flexWrap: 'wrap', whiteSpace: 'normal', width: '100%' }}>
               {isCulturesPage ? (
                 <>
                   {cultureLibraryAction ? (
                     <Tooltip title={t('cultureActions.openLibrary')} enterTouchDelay={0}>
                       <span>
                         <IconButton
-                          size="small"
                           onClick={() => cultureLibraryAction.onClick()}
                           aria-label={t('cultureActions.openLibrary')}
-                          sx={{ color: 'text.primary' }}
+                          sx={{ color: 'text.primary', width: COMPACT_TOPBAR_TOGGLE_SIZE, height: COMPACT_TOPBAR_TOGGLE_SIZE }}
                           disabled={cultureLibraryAction.disabled}
                         >
-                          <PublicIcon fontSize="small" />
+                          <PublicIcon />
                         </IconButton>
                       </span>
                     </Tooltip>
@@ -1658,15 +1657,14 @@ function RootLayout() {
                   {showCultureImportExportButton || isMobile ? (
                     <Tooltip title={t('cultureActions.openImportExport')} enterTouchDelay={0}>
                       <IconButton
-                        size="small"
                         aria-label={t('cultureActions.openImportExport')}
                         aria-controls={cultureActionsMenuAnchor ? 'culture-actions-menu-mobile' : undefined}
                         aria-haspopup="true"
                         aria-expanded={Boolean(cultureActionsMenuAnchor)}
                         onClick={handleCultureActionsMenuOpen}
-                        sx={{ color: 'text.primary' }}
+                        sx={{ color: 'text.primary', width: COMPACT_TOPBAR_TOGGLE_SIZE, height: COMPACT_TOPBAR_TOGGLE_SIZE }}
                       >
-                        <FileExportIcon fontSize="small" />
+                        <FileExportIcon />
                       </IconButton>
                     </Tooltip>
                   ) : null}
@@ -1723,14 +1721,14 @@ function RootLayout() {
                           ? {
                             textTransform: 'none',
                             whiteSpace: 'nowrap',
-                            minWidth: isPhone ? 32 : 'auto',
+                            minWidth: isPhone ? COMPACT_TOPBAR_TOGGLE_SIZE : 'auto',
                             px: isPhone ? 0.75 : 1.25,
-                            minHeight: 30,
+                            minHeight: COMPACT_TOPBAR_TOGGLE_SIZE,
                             ...(action.hidden ? { display: 'none' } : {}),
                           }
                           : {
                             ...getSegmentedActionButtonSx({ active: Boolean(action.active), hidden: Boolean(action.hidden) }),
-                            minHeight: 30,
+                            minHeight: COMPACT_TOPBAR_TOGGLE_SIZE,
                             px: 1,
                           }}
                       >
@@ -1753,13 +1751,12 @@ function RootLayout() {
                   ...visibleNodes,
                   <IconButton
                     key="mobile-actions-overflow-trigger"
-                    size="small"
                     aria-label="Weitere Aktionen"
                     aria-controls={mobileActionsOverflowAnchor ? 'mobile-actions-overflow-menu' : undefined}
                     aria-haspopup="true"
                     aria-expanded={Boolean(mobileActionsOverflowAnchor)}
                     onClick={handleMobileActionsOverflowOpen}
-                    sx={{ border: '1px solid', borderColor: 'divider' }}
+                    sx={{ border: '1px solid', borderColor: 'divider', width: COMPACT_TOPBAR_TOGGLE_SIZE, height: COMPACT_TOPBAR_TOGGLE_SIZE }}
                   >
                     <MoreVertIcon fontSize="small" />
                   </IconButton>,

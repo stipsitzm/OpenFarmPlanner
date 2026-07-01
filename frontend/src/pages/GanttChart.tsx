@@ -801,25 +801,25 @@ function GanttChartPage() {
         className="rmg-header-content"
         sx={{
           gap: 1.5,
-          alignItems: { xs: 'flex-start', md: 'center' },
-          flexDirection: { xs: 'column', md: 'row' },
+          alignItems: 'center',
+          flexDirection: 'row',
         }}
       >
         <Box
           sx={{
             display: 'inline-flex',
             alignItems: 'center',
-            justifyContent: { xs: 'space-between', md: 'flex-start' },
             gap: { xs: 1.5, md: 2.5 },
             minWidth: 0,
-            width: { xs: '100%', md: 'auto' },
+            flex: '0 1 auto',
+            overflow: 'hidden',
           }}
         >
           <Typography
             component="h1"
             className="rmg-title"
             sx={{
-              flex: { xs: '1 1 auto', md: '0 1 auto' },
+              flex: '0 1 auto',
               minWidth: 0,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -828,109 +828,105 @@ function GanttChartPage() {
           >
             {title}
           </Typography>
-          {showViewModeSelector || calendarMode === 'occupancy' ? (
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
-              {showViewModeSelector ? (
-                <Select
-                  size="small"
-                  value={viewMode}
-                  onChange={(event) => handleTimelineViewModeChange(event.target.value as ViewMode, onViewModeChange)}
-                  inputProps={{ 'aria-label': t('ganttChart:viewSelectorAriaLabel') }}
-                  sx={{
-                    display: { xs: 'inline-flex', md: 'none' },
-                    width: 'auto',
-                    minWidth: 0,
-                    bgcolor: 'background.paper',
-                    color: 'text.primary',
-                    '& .MuiSelect-select': {
-                      width: 'auto',
-                      minWidth: 0,
-                      py: 0.75,
-                      pl: 1,
-                      pr: '26px !important',
-                    },
-                  }}
-                >
-                  {GANTT_HEADER_VIEW_MODES.map((mode) => (
-                    <MenuItem key={mode} value={mode}>
-                      {t(`ganttChart:chartLocaleText.viewModes.${mode}`)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              ) : null}
-              {calendarMode === 'occupancy' ? (
-                <Tooltip title={t('ganttChart:moveModeOption')}>
-                  <Button
-                    size="small"
-                    variant={editMode ? 'contained' : 'outlined'}
-                    color={editMode ? 'success' : 'inherit'}
-                    aria-label={t('ganttChart:moveModeOption')}
-                    aria-pressed={editMode}
-                    onClick={() => setEditMode((value) => !value)}
-                    sx={{
-                      flexShrink: 0,
-                      gap: { xs: 0, md: 0.75 },
-                      minWidth: { xs: 34, md: 'auto' },
-                      width: { xs: 34, md: 'auto' },
-                      height: { xs: 34, md: 'auto' },
-                      px: { xs: 0, md: 1.25 },
-                      textTransform: 'none',
-                      whiteSpace: 'nowrap',
-                      ...(editMode
-                        ? {}
-                        : {
-                          borderColor: 'success.main',
-                          color: 'success.dark',
-                          bgcolor: 'background.paper',
-                          '&:hover': {
-                            borderColor: 'success.dark',
-                            bgcolor: 'success.50',
-                          },
-                        }),
-                    }}
-                  >
-                    <SwapHorizIcon
-                      sx={{ display: { xs: 'inline-flex', md: editMode ? 'none' : 'inline-flex' } }}
-                      fontSize="small"
-                    />
-                    {editMode ? (
-                      <CheckCircleOutlineIcon
-                        sx={{ display: { xs: 'none', md: 'inline-flex' } }}
-                        fontSize="small"
-                      />
-                    ) : null}
-                    <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
-                      {editMode ? t('ganttChart:moveModeActiveOption') : t('ganttChart:moveModeOption')}
-                    </Box>
-                  </Button>
-                </Tooltip>
-              ) : null}
-            </Box>
+          {calendarMode === 'occupancy' ? (
+            <Tooltip title={t('ganttChart:moveModeOption')}>
+              <Button
+                size="small"
+                variant={editMode ? 'contained' : 'outlined'}
+                color={editMode ? 'success' : 'inherit'}
+                aria-label={t('ganttChart:moveModeOption')}
+                aria-pressed={editMode}
+                onClick={() => setEditMode((value) => !value)}
+                sx={{
+                  flexShrink: 0,
+                  gap: { xs: 0, md: 0.75 },
+                  minWidth: { xs: 44, md: 'auto' },
+                  width: { xs: 44, md: 'auto' },
+                  height: { xs: 44, md: 'auto' },
+                  px: { xs: 0, md: 1.25 },
+                  textTransform: 'none',
+                  whiteSpace: 'nowrap',
+                  ...(editMode
+                    ? {}
+                    : {
+                      borderColor: 'success.main',
+                      color: 'success.dark',
+                      bgcolor: 'background.paper',
+                      '&:hover': {
+                        borderColor: 'success.dark',
+                        bgcolor: 'success.50',
+                      },
+                    }),
+                }}
+              >
+                <SwapHorizIcon
+                  sx={{ display: { xs: 'inline-flex', md: editMode ? 'none' : 'inline-flex' } }}
+                  fontSize="small"
+                />
+                {editMode ? (
+                  <CheckCircleOutlineIcon
+                    sx={{ display: { xs: 'none', md: 'inline-flex' } }}
+                    fontSize="small"
+                  />
+                ) : null}
+                <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                  {editMode ? t('ganttChart:moveModeActiveOption') : t('ganttChart:moveModeOption')}
+                </Box>
+              </Button>
+            </Tooltip>
           ) : null}
         </Box>
         {showViewModeSelector ? (
-          <ButtonGroup
-            size="small"
-            variant="outlined"
-            sx={{
-              ...segmentedButtonGroupSx,
-              display: { xs: 'none', md: 'inline-flex' },
-            }}
-            aria-label={t('ganttChart:chartLocaleText.titleOccupancy')}
-          >
-            {GANTT_HEADER_VIEW_MODES.map((mode) => (
-              <Button
-                key={mode}
-                onClick={() => handleTimelineViewModeChange(mode, onViewModeChange)}
-                aria-pressed={viewMode === mode}
-                variant={viewMode === mode ? 'contained' : 'outlined'}
-                color={viewMode === mode ? 'success' : 'inherit'}
-                sx={{ ...getSegmentedActionButtonSx({ active: viewMode === mode }) }}
-              >
-                {t(`ganttChart:chartLocaleText.viewModes.${mode}`)}
-              </Button>
-            ))}
-          </ButtonGroup>
+          <Box sx={{ ml: 'auto', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
+            <Select
+              size="small"
+              value={viewMode}
+              onChange={(event) => handleTimelineViewModeChange(event.target.value as ViewMode, onViewModeChange)}
+              inputProps={{ 'aria-label': t('ganttChart:viewSelectorAriaLabel') }}
+              sx={{
+                display: { xs: 'inline-flex', md: 'none' },
+                width: 'auto',
+                minWidth: 0,
+                bgcolor: 'background.paper',
+                color: 'text.primary',
+                '& .MuiSelect-select': {
+                  width: 'auto',
+                  minWidth: 0,
+                  py: 0.75,
+                  pl: 1,
+                  pr: '26px !important',
+                },
+              }}
+            >
+              {GANTT_HEADER_VIEW_MODES.map((mode) => (
+                <MenuItem key={mode} value={mode}>
+                  {t(`ganttChart:chartLocaleText.viewModes.${mode}`)}
+                </MenuItem>
+              ))}
+            </Select>
+            <ButtonGroup
+              size="small"
+              variant="outlined"
+              sx={{
+                ...segmentedButtonGroupSx,
+                display: { xs: 'none', md: 'inline-flex' },
+              }}
+              aria-label={t('ganttChart:chartLocaleText.titleOccupancy')}
+            >
+              {GANTT_HEADER_VIEW_MODES.map((mode) => (
+                <Button
+                  key={mode}
+                  onClick={() => handleTimelineViewModeChange(mode, onViewModeChange)}
+                  aria-pressed={viewMode === mode}
+                  variant={viewMode === mode ? 'contained' : 'outlined'}
+                  color={viewMode === mode ? 'success' : 'inherit'}
+                  sx={{ ...getSegmentedActionButtonSx({ active: viewMode === mode }) }}
+                >
+                  {t(`ganttChart:chartLocaleText.viewModes.${mode}`)}
+                </Button>
+              ))}
+            </ButtonGroup>
+          </Box>
         ) : null}
       </Box>
     </Box>

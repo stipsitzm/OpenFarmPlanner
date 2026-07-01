@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, type ChangeEvent } from 'react';
+import { useState, useCallback, type ChangeEvent } from 'react';
 import { cultureAPI, type Culture } from '../api/api';
 import { useTranslation } from '../i18n';
 import {
@@ -8,9 +8,14 @@ import {
   buildSingleCultureFilename,
   downloadJsonFile,
 } from '../cultures/exportUtils';
+import { exportCulturesToSpreadsheet, buildSpreadsheetFilename, type SpreadsheetExportFormat } from '../cultures/spreadsheetExport';
+import { parseSpreadsheetFile } from '../cultures/spreadsheetImport';
 import { buildImportSuccessMessage, mapImportErrors } from './culturesPageUtils';
 import { analyzeCultureImportJson, readFileAsText } from './culturesImportUtils';
 import { useCultureImportState } from './useCultureImportState';
+
+export type ExportFormat = SpreadsheetExportFormat | 'json';
+export type ExportScope = 'current' | 'all';
 
 interface UseCultureImportExportConfig {
   selectedCulture: Culture | undefined;
@@ -26,8 +31,9 @@ export function useCultureImportExport({
   const { t } = useTranslation(['cultures', 'common']);
 
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importStartDialogOpen, setImportStartDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [confirmUpdates, setConfirmUpdates] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     state: importState,
@@ -42,92 +48,149 @@ export function useCultureImportExport({
 
   const handleImportFileTrigger = useCallback(() => {
     resetImportState();
-    fileInputRef.current?.click();
+    setImportStartDialogOpen(true);
   }, [resetImportState]);
 
-  const handleExportCurrentCulture = useCallback(() => {
-    if (!selectedCulture) {
+  const handleImportFileSelected = useCallback(async (file: File) => {
+    setImportStartDialogOpen(false);
+    resetImportState();
+
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const isSpreadsheet = ['xlsx', 'ods', 'csv'].includes(ext);
+
+    if (isSpreadsheet) {
+      try {
+        const { entries, skippedRows, warnings } = await parseSpreadsheetFile(file);
+
+        if (entries.length === 0) {
+          const warningText = warnings.length > 0 ? warnings.join(' ') : t('import.errors.noValidEntries');
+          setImportErrorState({ error: warningText, previewCount: skippedRows, validCount: 0, invalidEntries: [] });
+          setImportDialogOpen(true);
+          return;
+        }
+
+        setImportUploading();
+        try {
+          const response = await cultureAPI.importPreview(entries);
+          const invalidEntries: string[] = [];
+          if (skippedRows > 0) invalidEntries.push(t('import.skippedRows', { count: skippedRows }));
+          warnings.forEach((w) => invalidEntries.push(w));
+          setPreviewReadyState({
+            previewCount: entries.length + skippedRows,
+            validCount: entries.length,
+            invalidEntries,
+            payload: entries,
+            previewResults: response.data.results,
+          });
+          setImportDialogOpen(true);
+        } catch (error) {
+          console.error('Error calling preview endpoint:', error);
+          setImportErrorState({ error: t('import.errors.network') });
+          setImportDialogOpen(true);
+        }
+      } catch (error) {
+        console.error('Error parsing spreadsheet file:', error);
+        setImportErrorState({ error: t('import.errors.parse') });
+        setImportDialogOpen(true);
+      }
       return;
     }
 
-    const exportPayload = buildSingleCultureExport(selectedCulture);
-    const filename = buildSingleCultureFilename(selectedCulture);
-    downloadJsonFile(exportPayload, filename);
-    showSnackbar(t('messages.exportSuccess'), 'success');
-  }, [selectedCulture, showSnackbar, t]);
+    if (ext === 'json') {
+      try {
+        const jsonString = await readFileAsText(file);
+        const importAnalysis = analyzeCultureImportJson(jsonString, t);
 
-  const handleExportAllCultures = useCallback(async () => {
-    try {
-      const allCultures: Culture[] = [];
-      let nextUrl: string | null = '/cultures/';
+        if (importAnalysis.status === 'error') {
+          setImportErrorState({
+            error: t(importAnalysis.errorKey),
+            previewCount: importAnalysis.originalCount,
+            validCount: 0,
+            invalidEntries: importAnalysis.invalidEntries,
+          });
+          setImportDialogOpen(true);
+          return;
+        }
 
-      while (nextUrl) {
-        const response = await cultureAPI.list(nextUrl);
-        allCultures.push(...response.data.results);
-        nextUrl = response.data.next;
+        setImportUploading();
+        try {
+          const response = await cultureAPI.importPreview(importAnalysis.validEntries);
+          setPreviewReadyState({
+            previewCount: importAnalysis.originalCount,
+            validCount: importAnalysis.validEntries.length,
+            invalidEntries: importAnalysis.invalidEntries,
+            payload: importAnalysis.validEntries,
+            previewResults: response.data.results,
+          });
+          setImportDialogOpen(true);
+        } catch (error) {
+          console.error('Error calling preview endpoint:', error);
+          setImportErrorState({ error: t('import.errors.network') });
+          setImportDialogOpen(true);
+        }
+      } catch (error) {
+        console.error('Error reading JSON file:', error);
+        setImportErrorState({ error: t('import.errors.parse') });
+        setImportDialogOpen(true);
       }
+      return;
+    }
 
-      const exportPayload = buildAllCulturesExport(allCultures);
-      const filename = buildAllCulturesFilename();
-      downloadJsonFile(exportPayload, filename);
-      showSnackbar(t('messages.exportSuccess'), 'success');
+    setImportErrorState({ error: t('import.errors.unsupportedFormat') });
+    setImportDialogOpen(true);
+  }, [resetImportState, t, setImportErrorState, setImportUploading, setPreviewReadyState]);
+
+  const handleOpenExportDialog = useCallback(() => {
+    setExportDialogOpen(true);
+  }, []);
+
+  // Called by the command palette (expects separate current/all handlers)
+  const handleExportCurrentCulture = handleOpenExportDialog;
+  const handleExportAllCultures = handleOpenExportDialog;
+
+  const handleExport = useCallback(async (scope: ExportScope, format: ExportFormat) => {
+    try {
+      if (format === 'json') {
+        if (scope === 'current' && selectedCulture) {
+          const exportPayload = buildSingleCultureExport(selectedCulture);
+          const filename = buildSingleCultureFilename(selectedCulture);
+          downloadJsonFile(exportPayload, filename);
+        } else {
+          const allCultures: Culture[] = [];
+          let nextUrl: string | null = '/cultures/';
+          while (nextUrl) {
+            const response = await cultureAPI.list(nextUrl);
+            allCultures.push(...response.data.results);
+            nextUrl = response.data.next;
+          }
+          const exportPayload = buildAllCulturesExport(allCultures);
+          const filename = buildAllCulturesFilename();
+          downloadJsonFile(exportPayload, filename);
+        }
+      } else {
+        const culturesToExport: Culture[] = [];
+        if (scope === 'current' && selectedCulture) {
+          culturesToExport.push(selectedCulture);
+        } else {
+          let nextUrl: string | null = '/cultures/';
+          while (nextUrl) {
+            const response = await cultureAPI.list(nextUrl);
+            culturesToExport.push(...response.data.results);
+            nextUrl = response.data.next;
+          }
+        }
+        const filename = buildSpreadsheetFilename(format, scope === 'current' ? 'single' : 'all', selectedCulture ?? undefined);
+        exportCulturesToSpreadsheet(culturesToExport, format, filename);
+      }
+      showSnackbar(t('export.success'), 'success');
     } catch (error) {
       console.error('Error exporting cultures:', error);
       showSnackbar(t('messages.fetchError'), 'error');
     }
-  }, [showSnackbar, t]);
-
-  const handleImportFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (!file) {
-      return;
-    }
-
-    try {
-      const jsonString = await readFileAsText(file);
-      const importAnalysis = analyzeCultureImportJson(jsonString, t);
-
-      if (importAnalysis.status === 'error') {
-        setImportErrorState({
-          error: t(importAnalysis.errorKey),
-          previewCount: importAnalysis.originalCount,
-          validCount: 0,
-          invalidEntries: importAnalysis.invalidEntries,
-        });
-        setImportDialogOpen(true);
-        return;
-      }
-
-      setImportUploading();
-      try {
-        const response = await cultureAPI.importPreview(importAnalysis.validEntries);
-
-        setPreviewReadyState({
-          previewCount: importAnalysis.originalCount,
-          validCount: importAnalysis.validEntries.length,
-          invalidEntries: importAnalysis.invalidEntries,
-          payload: importAnalysis.validEntries,
-          previewResults: response.data.results,
-        });
-        setImportDialogOpen(true);
-      } catch (error) {
-        console.error('Error calling preview endpoint:', error);
-        setImportErrorState({ error: t('import.errors.network') });
-        setImportDialogOpen(true);
-      }
-    } catch (error) {
-      console.error('Error reading JSON file:', error);
-      setImportErrorState({ error: t('import.errors.parse') });
-      setImportDialogOpen(true);
-    }
-  };
+  }, [selectedCulture, showSnackbar, t]);
 
   const handleImportStart = async () => {
-    if (!hasImportableEntries || importState.status === 'uploading') {
-      return;
-    }
+    if (!hasImportableEntries || importState.status === 'uploading') return;
 
     setImportUploading();
 
@@ -142,15 +205,12 @@ export function useCultureImportExport({
       if (errors.length > 0) {
         setImportPartialFailure({
           failedEntries: mapImportErrors(errors, importState.payload),
-          error: t('import.errors.someFailures', {
-            failed: errors.length,
-          }),
+          error: t('import.errors.someFailures', { failed: errors.length }),
         });
         return;
       }
 
       const successMessage = buildImportSuccessMessage(created_count, updated_count, skipped_count, t);
-
       setImportSuccessState(successMessage || t('import.success'));
       await fetchCultures();
     } catch (error) {
@@ -163,18 +223,31 @@ export function useCultureImportExport({
     setImportDialogOpen(false);
   };
 
+  // Legacy: kept for compatibility with hidden <input> path (unused when dialogs are active)
+  const handleImportFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file) await handleImportFileSelected(file);
+  };
+
   return {
     importDialogOpen,
-    fileInputRef,
-    importState,
-    hasImportableEntries,
+    importStartDialogOpen,
+    exportDialogOpen,
     confirmUpdates,
     setConfirmUpdates,
+    importState,
+    hasImportableEntries,
     handleImportFileTrigger,
+    handleImportFileSelected,
+    handleImportFileChange,
+    handleOpenExportDialog,
     handleExportCurrentCulture,
     handleExportAllCultures,
-    handleImportFileChange,
+    handleExport,
     handleImportStart,
     handleImportDialogClose,
+    setImportStartDialogOpen,
+    setExportDialogOpen,
   };
 }

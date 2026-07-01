@@ -1,4 +1,8 @@
-.PHONY: quality bump-version
+.PHONY: setup quality bump-version
+
+setup:
+	git config core.hooksPath .githooks
+	@echo "Git hooks configured. Pre-commit hook will warn on bulk file deletions."
 
 quality:
 	./scripts/quality.sh
