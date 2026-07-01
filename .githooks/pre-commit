@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Warn when an unusually large number of files are being deleted in a single commit.
+# Catches the common mistake of silently losing files after a git stash pop during rebase.
+
+DELETED_FILES=$(git diff --cached --name-status | grep "^D")
+DELETED_COUNT=$(echo "$DELETED_FILES" | grep -c "^D" || true)
+
+if [ "$DELETED_COUNT" -gt 2 ]; then
+  echo ""
+  echo "⚠️  WARNING: $DELETED_COUNT files are staged for deletion:"
+  echo "$DELETED_FILES" | awk '{print "   - " $2}'
+  echo ""
+  echo "This can happen after 'git stash pop' silently drops files during a rebase."
+  echo "Verify these deletions are intentional before continuing."
+  echo ""
+  printf "Continue with commit? (y/N) "
+  read -r confirm </dev/tty
+  if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+    echo "Commit aborted."
+    exit 1
+  fi
+fi
