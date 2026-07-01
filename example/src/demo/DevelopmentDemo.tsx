@@ -61,14 +61,32 @@ const DevelopmentDemo: React.FC = () => {
   const chartProps = activeFixture.chart ?? {};
   const rowCount = scenario.tasks.length;
   const taskCount = countTasks(scenario.tasks);
+  const isOpenFarmPlanner = activeFixture.id === "openfarmplanner";
 
   return (
-    <div className={`dev-demo ${darkMode ? "dev-demo--dark" : ""}`}>
+    <div
+      className={`dev-demo ${darkMode ? "dev-demo--dark" : ""} ${
+        isOpenFarmPlanner ? "dev-demo--ofp" : ""
+      }`}
+    >
       <aside className="dev-demo__sidebar">
         <div className="dev-demo__brand">
-          <span className="dev-demo__eyebrow">React Modern Gantt</span>
-          <h1>Development demo</h1>
+          <span className="dev-demo__eyebrow">
+            {isOpenFarmPlanner ? "OpenFarmPlanner" : "React Modern Gantt"}
+          </span>
+          <h1>{isOpenFarmPlanner ? "Anbaukalender" : "Development demo"}</h1>
         </div>
+
+        {isOpenFarmPlanner && (
+          <nav className="dev-demo__ofp-nav" aria-label="OpenFarmPlanner areas">
+            <span>Übersicht</span>
+            <span>Anbauflächen</span>
+            <span>Kulturen</span>
+            <span>Anbaupläne</span>
+            <strong>Anbaukalender</strong>
+            <span>Ertragsübersicht</span>
+          </nav>
+        )}
 
         <div className="dev-demo__scenario-list" aria-label="Demo scenarios">
           {fixtures.map((fixture) => (
@@ -88,57 +106,91 @@ const DevelopmentDemo: React.FC = () => {
       </aside>
 
       <main className="dev-demo__main">
+        {isOpenFarmPlanner && (
+          <div className="dev-demo__ofp-topbar">
+            <div className="dev-demo__ofp-title">
+              <h2>Anbaukalender</h2>
+              <span>?</span>
+            </div>
+            <div className="dev-demo__ofp-tabs" role="tablist">
+              <button className="is-active" type="button">
+                Feldbelegung
+              </button>
+              <button type="button">Anzucht</button>
+            </div>
+            <div className="dev-demo__ofp-farm">Gelawi Zwiebelzopf</div>
+          </div>
+        )}
+
+        {isOpenFarmPlanner && <div className="dev-demo__ofp-map-spacer" />}
+
         <header className="dev-demo__toolbar">
           <div>
-            <h2>{activeFixture.name}</h2>
-            <p>{activeFixture.description}</p>
+            <h2>{isOpenFarmPlanner ? "Feldplanung" : activeFixture.name}</h2>
+            {!isOpenFarmPlanner && <p>{activeFixture.description}</p>}
           </div>
 
           <div className="dev-demo__actions">
-            <label className="dev-demo__toggle">
-              <input
-                type="checkbox"
-                checked={darkMode}
-                onChange={(event) => setDarkMode(event.target.checked)}
-              />
-              <span>Dark</span>
-            </label>
-            <label className="dev-demo__toggle">
-              <input
-                type="checkbox"
-                checked={infiniteScroll}
-                onChange={(event) => setInfiniteScroll(event.target.checked)}
-              />
-              <span>Infinite</span>
-            </label>
+            {isOpenFarmPlanner && (
+              <button className="dev-demo__ofp-shift" type="button">
+                Zeitraum verschieben
+              </button>
+            )}
+            {!isOpenFarmPlanner && (
+              <>
+                <label className="dev-demo__toggle">
+                  <input
+                    type="checkbox"
+                    checked={darkMode}
+                    onChange={(event) => setDarkMode(event.target.checked)}
+                  />
+                  <span>Dark</span>
+                </label>
+                <label className="dev-demo__toggle">
+                  <input
+                    type="checkbox"
+                    checked={infiniteScroll}
+                    onChange={(event) =>
+                      setInfiniteScroll(event.target.checked)
+                    }
+                  />
+                  <span>Infinite</span>
+                </label>
+              </>
+            )}
             <button type="button" onClick={resetScenario}>
               Reset
             </button>
           </div>
         </header>
 
-        <section className="dev-demo__controls" aria-label="Scenario controls">
-          <div className="dev-demo__metric">
-            <span>Rows</span>
-            <strong>{rowCount}</strong>
-          </div>
-          <div className="dev-demo__metric">
-            <span>Tasks</span>
-            <strong>{taskCount}</strong>
-          </div>
-          <div className="dev-demo__view-modes" aria-label="Zoom levels">
-            {activeFixture.viewModes.map((mode) => (
-              <button
-                key={mode}
-                className={mode === activeViewMode ? "is-active" : ""}
-                type="button"
-                onClick={() => setActiveViewMode(mode)}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
-        </section>
+        {!isOpenFarmPlanner && (
+          <section
+            className="dev-demo__controls"
+            aria-label="Scenario controls"
+          >
+            <div className="dev-demo__metric">
+              <span>Rows</span>
+              <strong>{rowCount}</strong>
+            </div>
+            <div className="dev-demo__metric">
+              <span>Tasks</span>
+              <strong>{taskCount}</strong>
+            </div>
+            <div className="dev-demo__view-modes" aria-label="Zoom levels">
+              {activeFixture.viewModes.map((mode) => (
+                <button
+                  key={mode}
+                  className={mode === activeViewMode ? "is-active" : ""}
+                  type="button"
+                  onClick={() => setActiveViewMode(mode)}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="dev-demo__chart" aria-label="Gantt scenario">
           <GanttChart
@@ -159,6 +211,7 @@ const DevelopmentDemo: React.FC = () => {
             maxHeight={chartProps.maxHeight}
             minuteStep={chartProps.minuteStep}
             darkMode={darkMode}
+            todayLabel={isOpenFarmPlanner ? "Heute" : undefined}
             viewMode={activeViewMode}
             viewModes={activeFixture.viewModes}
             infiniteScroll={infiniteScroll}

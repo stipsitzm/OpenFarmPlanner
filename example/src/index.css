@@ -261,6 +261,243 @@ input {
   min-width: 760px;
 }
 
+.dev-demo--ofp {
+  grid-template-columns: 230px minmax(0, 1fr);
+  background: #f8f7f2;
+  color: #202938;
+}
+
+.dev-demo--ofp .dev-demo__sidebar {
+  border-right-color: #e5e0d6;
+  background: #ffffff;
+  padding: 18px 12px;
+}
+
+.dev-demo--ofp .dev-demo__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 18px;
+  padding: 0 4px;
+}
+
+.dev-demo--ofp .dev-demo__eyebrow {
+  color: #2e7d32;
+  font-size: 13px;
+  text-transform: none;
+}
+
+.dev-demo--ofp .dev-demo__brand h1 {
+  font-size: 15px;
+}
+
+.dev-demo__ofp-nav {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+
+.dev-demo__ofp-nav span,
+.dev-demo__ofp-nav strong {
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dev-demo__ofp-nav span {
+  color: #3f4651;
+}
+
+.dev-demo__ofp-nav strong {
+  background: #e9f3eb;
+  color: #2e7d32;
+}
+
+.dev-demo--ofp .dev-demo__scenario {
+  border-color: #e5e0d6;
+  padding: 10px;
+}
+
+.dev-demo--ofp .dev-demo__scenario span {
+  font-size: 13px;
+}
+
+.dev-demo--ofp .dev-demo__scenario small {
+  display: none;
+}
+
+.dev-demo--ofp .dev-demo__scenario:hover,
+.dev-demo--ofp .dev-demo__scenario.is-active {
+  border-color: #2e7d32;
+  background: #edf7ef;
+}
+
+.dev-demo--ofp .dev-demo__main {
+  padding: 0 14px 28px;
+}
+
+.dev-demo__ofp-topbar {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  height: 54px;
+  border-bottom: 1px solid #e5e0d6;
+  background: #ffffff;
+  margin: 0 -14px;
+  padding: 0 18px;
+}
+
+.dev-demo__ofp-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dev-demo__ofp-title h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.dev-demo__ofp-title span {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #a7adb6;
+  border-radius: 50%;
+  color: #6b7280;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dev-demo__ofp-tabs {
+  display: inline-flex;
+  align-items: center;
+}
+
+.dev-demo__ofp-tabs button {
+  min-height: 34px;
+  border: 1px solid #cfd6dd;
+  background: #ffffff;
+  color: #253041;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0 12px;
+}
+
+.dev-demo__ofp-tabs button:first-child {
+  border-radius: 5px 0 0 5px;
+}
+
+.dev-demo__ofp-tabs button:last-child {
+  border-left: 0;
+  border-radius: 0 5px 5px 0;
+}
+
+.dev-demo__ofp-tabs button.is-active {
+  border-color: #2e7d32;
+  background: #2e7d32;
+  color: #ffffff;
+}
+
+.dev-demo__ofp-farm {
+  justify-self: end;
+  color: #2f3744;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.dev-demo__ofp-map-spacer {
+  height: 230px;
+  border: 1px solid #e5e0d6;
+  border-radius: 8px;
+  background: #ffffff;
+  margin: 28px 0 0;
+}
+
+.dev-demo--ofp .dev-demo__toolbar {
+  align-items: center;
+  border: 1px solid #e5e0d6;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: #ffffff;
+  margin: 0;
+  margin-top: -1px;
+  padding: 14px 18px 12px;
+}
+
+.dev-demo--ofp .dev-demo__toolbar h2 {
+  font-size: 22px;
+}
+
+.dev-demo__ofp-shift {
+  border-color: #5aa15e !important;
+  color: #2e7d32 !important;
+  font-weight: 700;
+}
+
+.dev-demo__ofp-shift::before {
+  content: "↔";
+  margin-right: 6px;
+}
+
+.dev-demo--ofp .dev-demo__chart {
+  border: 1px solid #e5e0d6;
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  background: #ffffff;
+}
+
+.dev-demo--ofp .dev-demo__chart .rmg-gantt-chart {
+  min-width: 1180px;
+  border: 0;
+  border-radius: 0 0 8px 8px;
+  box-shadow: none;
+}
+
+.dev-demo--ofp .rmg-title {
+  display: none;
+}
+
+.dev-demo--ofp .rmg-task-list-header,
+.dev-demo--ofp .rmg-timeline-header {
+  background: #ffffff;
+}
+
+.dev-demo--ofp .rmg-task-group {
+  border-color: #e8edf2;
+}
+
+.dev-demo--ofp .rmg-task-group-content {
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.dev-demo--ofp .rmg-task-item {
+  border-radius: 4px;
+  box-shadow: none;
+  min-height: 28px;
+}
+
+.dev-demo--ofp .rmg-task-item-name {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 28px;
+  padding: 0 8px;
+}
+
+.dev-demo--ofp .rmg-view-mode-button {
+  border-radius: 0;
+  font-weight: 700;
+}
+
+.dev-demo--ofp .rmg-view-mode-button-active {
+  background: #2e7d32;
+}
+
 @media (max-width: 900px) {
   .dev-demo {
     grid-template-columns: 1fr;

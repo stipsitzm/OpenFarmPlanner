@@ -1,128 +1,270 @@
 {
   "id": "openfarmplanner",
-  "name": "OpenFarmPlanner-like",
-  "description": "Agricultural planning shape with location, field, bed hierarchy, long labels, multiple crops per bed, overlaps, and seasonal colors.",
-  "viewMode": "week",
+  "name": "OpenFarmPlanner Anbaukalender",
+  "description": "Feldbelegung wie in OpenFarmPlanner: Beete links, Monatsraster, Wachstum und Ernte als getrennte Zeiträume pro Kultur.",
+  "viewMode": "month",
   "viewModes": ["day", "week", "month", "quarter", "year"],
   "timeline": {
-    "startDate": { "offsetDays": -90 },
-    "endDate": { "offsetDays": 220 }
+    "startDate": "2026-01-01T00:00:00.000Z",
+    "endDate": "2026-12-31T23:59:59.000Z"
   },
   "chart": {
-    "title": "Farm crop planning fixture",
-    "headerLabel": "Location / Field / Bed",
-    "showProgress": true,
+    "title": "Feldplanung",
+    "headerLabel": "Beete",
+    "showProgress": false,
     "showCurrentDateMarker": true,
     "editMode": true,
     "allowTaskMove": true,
     "allowTaskResize": true,
-    "allowProgressEdit": true,
-    "rowHeight": 52,
-    "leftColumnWidth": 340,
-    "maxHeight": 560
+    "allowProgressEdit": false,
+    "rowHeight": 34,
+    "leftColumnWidth": 210,
+    "maxHeight": 470
   },
   "groups": [
     {
-      "id": "ofp-green-north-a1",
-      "name": "Bed A1",
-      "description": "Mixed spring succession",
-      "hierarchyPath": ["Regenbogenland", "11 Frucht", "1 Lichtwurzel"],
+      "id": "ofp-regenbogenland-08-1",
+      "name": "1",
+      "description": "Majoran, Gurke",
+      "hierarchyPath": ["Regenbogenland", "08 Karotte + Zwiebel", "1"],
       "locationName": "Regenbogenland",
-      "fieldName": "11 Frucht",
-      "bedName": "1 Lichtwurzel",
+      "fieldName": "08 Karotte + Zwiebel",
+      "bedName": "1",
       "tasks": [
         {
-          "id": "ofp-carrot-a1",
-          "name": "Carrot sowing and cultivation",
-          "startDate": { "offsetDays": -42 },
-          "endDate": { "offsetDays": 58 },
-          "color": "#16a34a",
-          "percent": 45
+          "id": "ofp-majoran-1-growth-a",
+          "cropId": "majoran-1",
+          "periodType": "growth",
+          "name": "Majoran (französischer Art)",
+          "startDate": "2026-02-20T00:00:00.000Z",
+          "endDate": "2026-05-15T00:00:00.000Z",
+          "color": "#d43ab4"
         },
         {
-          "id": "ofp-radish-a1",
-          "name": "Radish quick crop",
-          "startDate": { "offsetDays": -20 },
-          "endDate": { "offsetDays": 12 },
-          "color": "#db2777",
-          "percent": 80
+          "id": "ofp-majoran-1-harvest-a",
+          "cropId": "majoran-1",
+          "periodType": "harvest",
+          "name": "Majoran (französischer Art) (Ernte)",
+          "startDate": "2026-05-15T00:00:00.000Z",
+          "endDate": "2026-09-20T00:00:00.000Z",
+          "color": "#df65c7"
+        },
+        {
+          "id": "ofp-gurke-1-growth",
+          "cropId": "gurke-1",
+          "periodType": "growth",
+          "name": "Gurke (RS-Gu-01.25)",
+          "startDate": "2026-02-20T00:00:00.000Z",
+          "endDate": "2026-04-20T00:00:00.000Z",
+          "color": "#d97745"
+        },
+        {
+          "id": "ofp-gurke-1-harvest",
+          "cropId": "gurke-1",
+          "periodType": "harvest",
+          "name": "Gurke (RS-Gu-01.25) (Ernte)",
+          "startDate": "2026-04-20T00:00:00.000Z",
+          "endDate": "2026-06-25T00:00:00.000Z",
+          "color": "#e89a75"
+        },
+        {
+          "id": "ofp-majoran-1-growth-b",
+          "cropId": "majoran-1b",
+          "periodType": "growth",
+          "name": "Majoran (französischer Art)",
+          "startDate": "2026-02-20T00:00:00.000Z",
+          "endDate": "2026-05-15T00:00:00.000Z",
+          "color": "#d43ab4"
+        },
+        {
+          "id": "ofp-majoran-1-harvest-b",
+          "cropId": "majoran-1b",
+          "periodType": "harvest",
+          "name": "Majoran (französischer Art) (Ernte)",
+          "startDate": "2026-05-15T00:00:00.000Z",
+          "endDate": "2026-09-20T00:00:00.000Z",
+          "color": "#df65c7"
         }
       ]
     },
     {
-      "id": "ofp-green-north-a2",
-      "name": "Bed A2 with an intentionally long readable label",
-      "description": "Long label wrapping",
-      "hierarchyPath": [
-        "Regenbogenland",
-        "11 Frucht",
-        "2 Sonnenwurzel mit sehr langem Beetnamen"
-      ],
+      "id": "ofp-regenbogenland-08-2",
+      "name": "2",
+      "description": "Bohne und Kürbis",
+      "hierarchyPath": ["Regenbogenland", "08 Karotte + Zwiebel", "2"],
       "locationName": "Regenbogenland",
-      "fieldName": "11 Frucht",
-      "bedName": "2 Sonnenwurzel mit sehr langem Beetnamen",
+      "fieldName": "08 Karotte + Zwiebel",
+      "bedName": "2",
       "tasks": [
         {
-          "id": "ofp-lettuce-a2",
-          "name": "Lettuce transplants",
-          "startDate": { "offsetDays": -12 },
-          "endDate": { "offsetDays": 45 },
-          "color": "#65a30d",
-          "percent": 35
+          "id": "ofp-bohne-2-growth",
+          "cropId": "bohne-2",
+          "periodType": "growth",
+          "name": "Bohne (Faraday)",
+          "startDate": "2026-01-01T00:00:00.000Z",
+          "endDate": "2026-02-20T00:00:00.000Z",
+          "color": "#42d06c"
         },
         {
-          "id": "ofp-beans-a2",
-          "name": "Beans follow-up crop",
-          "startDate": { "offsetDays": 46 },
-          "endDate": { "offsetDays": 132 },
-          "color": "#0d9488",
-          "percent": 0
+          "id": "ofp-bohne-2-harvest",
+          "cropId": "bohne-2",
+          "periodType": "harvest",
+          "name": "Bohne (Faraday) (Ernte)",
+          "startDate": "2026-02-20T00:00:00.000Z",
+          "endDate": "2026-03-12T00:00:00.000Z",
+          "color": "#79df92"
+        },
+        {
+          "id": "ofp-kuerbis-2-growth",
+          "cropId": "kuerbis-2",
+          "periodType": "growth",
+          "name": "Kürbis (Nutterbutter)",
+          "startDate": "2026-05-22T00:00:00.000Z",
+          "endDate": "2026-09-18T00:00:00.000Z",
+          "color": "#d95344"
+        },
+        {
+          "id": "ofp-kuerbis-2-harvest",
+          "cropId": "kuerbis-2",
+          "periodType": "harvest",
+          "name": "Kürbis (Nutterbutter) (Ernte)",
+          "startDate": "2026-09-18T00:00:00.000Z",
+          "endDate": "2026-10-18T00:00:00.000Z",
+          "color": "#e27968"
         }
       ]
     },
     {
-      "id": "ofp-west-b4",
-      "name": "Bed B4",
-      "description": "Greenhouse tomatoes",
-      "hierarchyPath": ["Glashaus West", "Tomatenhaus", "B4"],
-      "locationName": "Glashaus West",
-      "fieldName": "Tomatenhaus",
-      "bedName": "B4",
+      "id": "ofp-regenbogenland-08-4",
+      "name": "4",
+      "description": "Kohl",
+      "hierarchyPath": ["Regenbogenland", "08 Karotte + Zwiebel", "4"],
+      "locationName": "Regenbogenland",
+      "fieldName": "08 Karotte + Zwiebel",
+      "bedName": "4",
       "tasks": [
         {
-          "id": "ofp-tomato-b4",
-          "name": "Tomato season",
-          "startDate": { "offsetDays": -28 },
-          "endDate": { "offsetDays": 165 },
-          "color": "#dc2626",
-          "percent": 25
+          "id": "ofp-kohl-fuyumi-4-growth",
+          "cropId": "kohl-fuyumi-4",
+          "periodType": "growth",
+          "name": "Kohl (Fuyumi)",
+          "startDate": "2026-03-20T00:00:00.000Z",
+          "endDate": "2026-06-03T00:00:00.000Z",
+          "color": "#438fd3"
+        },
+        {
+          "id": "ofp-kohl-fuyumi-4-harvest",
+          "cropId": "kohl-fuyumi-4",
+          "periodType": "harvest",
+          "name": "Kohl (Fuyumi) (Ernte)",
+          "startDate": "2026-06-03T00:00:00.000Z",
+          "endDate": "2026-07-03T00:00:00.000Z",
+          "color": "#68a7de"
         }
       ]
     },
     {
-      "id": "ofp-east-c7",
-      "name": "Bed C7",
-      "description": "Late brassicas",
-      "hierarchyPath": ["Acker Ost", "Kohl Rotation", "C7"],
-      "locationName": "Acker Ost",
-      "fieldName": "Kohl Rotation",
-      "bedName": "C7",
+      "id": "ofp-regenbogenland-08-5",
+      "name": "5",
+      "description": "Kräuter und Kohl",
+      "hierarchyPath": ["Regenbogenland", "08 Karotte + Zwiebel", "5"],
+      "locationName": "Regenbogenland",
+      "fieldName": "08 Karotte + Zwiebel",
+      "bedName": "5",
       "tasks": [
         {
-          "id": "ofp-cabbage-c7",
-          "name": "Cabbage nursery to harvest",
-          "startDate": { "offsetDays": 18 },
-          "endDate": { "offsetDays": 150 },
-          "color": "#4f46e5",
-          "percent": 10
+          "id": "ofp-kraeuter-5-growth",
+          "cropId": "kraeuter-5",
+          "periodType": "growth",
+          "name": "Kräuter (Blattkoriander Thai)",
+          "startDate": "2026-01-01T00:00:00.000Z",
+          "endDate": "2026-02-20T00:00:00.000Z",
+          "color": "#7bd93a"
         },
         {
-          "id": "ofp-cover-c7",
-          "name": "Cover crop",
-          "startDate": { "offsetDays": 152 },
-          "endDate": { "offsetDays": 210 },
-          "color": "#0891b2",
-          "percent": 0
+          "id": "ofp-kraeuter-5-harvest",
+          "cropId": "kraeuter-5",
+          "periodType": "harvest",
+          "name": "Kräuter (Blattkoriander Thai) (Ernte)",
+          "startDate": "2026-02-20T00:00:00.000Z",
+          "endDate": "2026-03-06T00:00:00.000Z",
+          "color": "#9ee56d"
+        },
+        {
+          "id": "ofp-kohl-tuerkis-5-growth",
+          "cropId": "kohl-tuerkis-5",
+          "periodType": "growth",
+          "name": "Kohl (Türkis)",
+          "startDate": "2026-01-25T00:00:00.000Z",
+          "endDate": "2026-05-18T00:00:00.000Z",
+          "color": "#43d0a1"
+        },
+        {
+          "id": "ofp-kohl-tuerkis-5-harvest",
+          "cropId": "kohl-tuerkis-5",
+          "periodType": "harvest",
+          "name": "Kohl (Türkis) (Ernte)",
+          "startDate": "2026-05-18T00:00:00.000Z",
+          "endDate": "2026-07-18T00:00:00.000Z",
+          "color": "#67d9b7"
+        }
+      ]
+    },
+    {
+      "id": "ofp-regenbogenland-08-6",
+      "name": "6",
+      "description": "Erbse",
+      "hierarchyPath": ["Regenbogenland", "08 Karotte + Zwiebel", "6"],
+      "locationName": "Regenbogenland",
+      "fieldName": "08 Karotte + Zwiebel",
+      "bedName": "6",
+      "tasks": [
+        {
+          "id": "ofp-erbse-6-growth",
+          "cropId": "erbse-6",
+          "periodType": "growth",
+          "name": "Erbse (Norli)",
+          "startDate": "2026-03-04T00:00:00.000Z",
+          "endDate": "2026-05-27T00:00:00.000Z",
+          "color": "#d33e9c"
+        },
+        {
+          "id": "ofp-erbse-6-harvest",
+          "cropId": "erbse-6",
+          "periodType": "harvest",
+          "name": "Erbse (Norli) (Ernte)",
+          "startDate": "2026-05-27T00:00:00.000Z",
+          "endDate": "2026-06-25T00:00:00.000Z",
+          "color": "#de69b3"
+        }
+      ]
+    },
+    {
+      "id": "ofp-st-ulrich-testbed",
+      "name": "testbeet",
+      "description": "Bohne",
+      "hierarchyPath": ["St. Ulrich", "Karotten", "testbeet"],
+      "locationName": "St. Ulrich",
+      "fieldName": "Karotten",
+      "bedName": "testbeet",
+      "tasks": [
+        {
+          "id": "ofp-bohne-test-growth",
+          "cropId": "bohne-test",
+          "periodType": "growth",
+          "name": "Bohne (Golden Teepee)",
+          "startDate": "2026-01-01T00:00:00.000Z",
+          "endDate": "2026-02-20T00:00:00.000Z",
+          "color": "#44bcd0"
+        },
+        {
+          "id": "ofp-bohne-test-harvest",
+          "cropId": "bohne-test",
+          "periodType": "harvest",
+          "name": "Bohne (Golden Teepee) (Ernte)",
+          "startDate": "2026-02-20T00:00:00.000Z",
+          "endDate": "2026-03-12T00:00:00.000Z",
+          "color": "#75d0de"
         }
       ]
     }
