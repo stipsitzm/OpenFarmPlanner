@@ -105,14 +105,7 @@ export function CulturesExportDialog({
               <FormControlLabel
                 value="json"
                 control={<Radio size="small" />}
-                label={
-                  <Box>
-                    <Typography variant="body2">{t('export.formatJson')}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {t('export.formatJsonHint')}
-                    </Typography>
-                  </Box>
-                }
+                label={t('export.formatJson')}
               />
             </RadioGroup>
           </Box>
