@@ -78,6 +78,8 @@ import { useEnrichmentFeature } from './useEnrichmentFeature';
 import { useCultureDelete } from './useCultureDelete';
 import { useCultureImportExport } from './useCultureImportExport';
 import { CulturesImportDialog } from './CulturesImportDialog';
+import { CulturesImportStartDialog } from './CulturesImportStartDialog';
+import { CulturesExportDialog } from './CulturesExportDialog';
 import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
@@ -187,17 +189,22 @@ function Cultures() {
 
   const {
     importDialogOpen,
-    fileInputRef,
+    importStartDialogOpen,
+    exportDialogOpen,
     importState,
     hasImportableEntries,
     confirmUpdates,
     setConfirmUpdates,
     handleImportFileTrigger,
+    handleImportFileSelected,
     handleExportCurrentCulture,
     handleExportAllCultures,
-    handleImportFileChange,
+    handleOpenExportDialog,
+    handleExport,
     handleImportStart,
     handleImportDialogClose,
+    setImportStartDialogOpen,
+    setExportDialogOpen,
   } = useCultureImportExport({
     selectedCulture,
     fetchCultures,
@@ -513,28 +520,20 @@ function Cultures() {
       },
     },
     {
-      id: 'cultures-import-json',
-      label: 'Kulturen importieren (JSON)',
-      ariaLabel: 'Kulturen importieren (JSON)',
+      id: 'cultures-import',
+      label: t('import.menuLabel'),
+      ariaLabel: t('import.menuLabel'),
       onClick: handleImportFileTrigger,
       shortcutHint: 'Alt+I',
     },
     {
-      id: 'cultures-export-current-json',
-      label: selectedCulture ? 'Aktuelle Kultur exportieren (JSON)' : 'Kulturen exportieren (JSON)',
-      ariaLabel: selectedCulture ? 'Aktuelle Kultur exportieren (JSON)' : 'Kulturen exportieren (JSON)',
-      onClick: handleExportCurrentCulture,
-      disabled: !selectedCulture,
-      shortcutHint: 'Alt+J',
+      id: 'cultures-export',
+      label: t('export.menuLabel'),
+      ariaLabel: t('export.menuLabel'),
+      onClick: handleOpenExportDialog,
+      shortcutHint: 'Alt+X',
     },
-    {
-      id: 'cultures-export-all-json',
-      label: 'Alle Kulturen exportieren (JSON)',
-      ariaLabel: 'Alle Kulturen exportieren (JSON)',
-      onClick: handleExportAllCultures,
-      shortcutHint: 'Alt+Shift+J',
-    },
-  ]), [handleExportAllCultures, handleExportCurrentCulture, handleImportFileTrigger, handleOpenPublicLibrary, selectedCulture]);
+  ]), [handleImportFileTrigger, handleOpenExportDialog, handleOpenPublicLibrary, t]);
 
   useTopbarContextActions(setTopbarContextActions, contextActions);
 
@@ -579,6 +578,7 @@ function Cultures() {
     handleImportFileTrigger,
     selectedCulture,
     selectedCultureId,
+    setEnrichAllConfirmOpen,
   ]);
 
   useRegisterCommands('cultures-page', commandSpecs);
@@ -596,14 +596,7 @@ function Cultures() {
 
   return (
     <PageContainer variant="xwide">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json,.json"
-          onChange={handleImportFileChange}
-          hidden
-        />
-      
+
       {enrichmentCostBanner && (
         <Alert severity="info" sx={{ mb: 2 }}>
           {enrichmentCostBanner}
@@ -767,6 +760,13 @@ function Cultures() {
         />
       ) : null}
 
+      <CulturesImportStartDialog
+        open={importStartDialogOpen}
+        onClose={() => setImportStartDialogOpen(false)}
+        onFileSelected={(file) => void handleImportFileSelected(file)}
+        t={t}
+      />
+
       <CulturesImportDialog
         open={importDialogOpen}
         importState={importState}
@@ -775,6 +775,14 @@ function Cultures() {
         onConfirmUpdatesChange={setConfirmUpdates}
         onClose={handleImportDialogClose}
         onImportStart={() => void handleImportStart()}
+        t={t}
+      />
+
+      <CulturesExportDialog
+        open={exportDialogOpen}
+        hasCurrentCulture={Boolean(selectedCulture)}
+        onClose={() => setExportDialogOpen(false)}
+        onExport={handleExport}
         t={t}
       />
 
