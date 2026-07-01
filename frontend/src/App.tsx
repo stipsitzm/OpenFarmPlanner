@@ -91,6 +91,7 @@ import { getHistoryEntryTarget, getHistoryEntryTitle, isCurrentHistoryEntry } fr
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { useGlobalOverlayKeyboardScroll } from './hooks/useDialogKeyboardScroll';
+import { useTopbarActionsRouteReset } from './hooks/useTopbarActionsRouteReset';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, getKeyboardNavigationRouteFromPathname, normalizeMainRoutePath } from './navigation/mainNavigation';
 import {
   getMobileNavigationIconSx,
@@ -386,10 +387,7 @@ function RootLayout() {
   const [topbarPrimaryActionMenuAnchor, setTopbarPrimaryActionMenuAnchor] = useState<null | HTMLElement>(null);
   currentPathnameRef.current = location.pathname;
 
-  useEffect(() => {
-    setTopbarContextActions([]);
-    setTopbarTitleActions([]);
-  }, [location.pathname]);
+  useTopbarActionsRouteReset(location.pathname, setTopbarContextActions, setTopbarTitleActions);
 
   const navItems = useMemo(() => ([
     { to: '/app/dashboard', label: t('dashboard'), activeAliases: [], keywords: ['übersicht', 'dashboard'], icon: <DashboardOutlinedIcon fontSize="small" /> },
