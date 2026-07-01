@@ -809,7 +809,7 @@ function GanttChartPage() {
           sx={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: { xs: 0.75, md: 2.5 },
+            gap: { xs: 1.5, md: 2.5 },
             minWidth: 0,
             flex: '0 1 auto',
             overflow: 'hidden',
