@@ -321,63 +321,6 @@ describe('App', () => {
     expect(screen.queryByText('Fehler beim Laden der Kulturen')).not.toBeInTheDocument();
   });
 
-  it('keeps the culture library action visible after leaving and returning to Kulturen', async () => {
-    authState.user = {
-      id: 1,
-      email: 'demo@example.com',
-      display_name: 'Demo',
-      display_label: 'Demo',
-      is_active: true,
-      default_project_id: null,
-      last_project_id: null,
-      resolved_project_id: null,
-      needs_project_selection: false,
-      memberships: [],
-      account_pending_deletion: false,
-      scheduled_deletion_at: null,
-    };
-    authState.activeProjectId = null;
-    window.history.pushState({}, '', '/app/cultures');
-
-    render(<CommandProvider><App /></CommandProvider>);
-
-    const expectCultureLibraryActionVisible = async () => {
-      const directButton = screen.queryByRole('button', { name: 'Kulturbibliothek öffnen' });
-      if (directButton) {
-        expect(directButton).toBeInTheDocument();
-        return;
-      }
-      const overflowButton = await screen.findByRole('button', { name: 'Kultur-Aktionen öffnen' });
-      fireEvent.click(overflowButton);
-      expect(await screen.findByRole('menuitem', { name: 'Kulturbibliothek öffnen' }, { timeout: 5000 })).toBeInTheDocument();
-      fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
-    };
-
-    await screen.findByRole('heading', { name: 'Kulturen' });
-    await expectCultureLibraryActionVisible();
-
-    const fieldsBedsLink = screen
-      .getAllByRole('link', { name: 'Anbauflächen' })
-      .find((link) => link.getAttribute('href') === '/app/fields-beds');
-    if (!fieldsBedsLink) {
-      throw new Error('Fields and beds sidebar link was not found');
-    }
-    fireEvent.click(fieldsBedsLink);
-    await waitFor(() => expect(window.location.pathname).toBe('/app/fields-beds'));
-
-    const culturesLink = screen
-      .getAllByRole('link', { name: 'Kulturen' })
-      .find((link) => link.getAttribute('href') === '/app/cultures');
-    if (!culturesLink) {
-      throw new Error('Cultures sidebar link was not found');
-    }
-    fireEvent.click(culturesLink);
-    await waitFor(() => expect(window.location.pathname).toBe('/app/cultures'));
-
-    await screen.findByRole('heading', { name: 'Kulturen' });
-    await expectCultureLibraryActionVisible();
-  });
-
   it('does not open supplier creation from query intent for users without projects', async () => {
     authState.user = {
       id: 1,

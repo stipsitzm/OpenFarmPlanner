@@ -10,7 +10,7 @@ Nicht bei jedem QA-Lauf alles testen — stattdessen:
 
 ## Trigger für einen vollen Re-Sweep
 
-- ≥ 50 Commits seit dem letzten vollen Sweep
+- ≥ 20 Commits seit dem letzten vollen Sweep
 - Änderungen an Querschnittskomponenten (App.tsx, DataGrid-Wrapper, Sidebar, TopBar)
 - Vor einem Release / größerem Feature-Merge
 - Nach größeren Dependency-Updates (React, MUI, React Router)
