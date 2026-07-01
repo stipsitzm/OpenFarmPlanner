@@ -5,7 +5,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 
-from farm.models import Culture, MediaFile, CultureRevision, Project, ProjectMembership
+from farm.models import Culture, MediaFile, CultureRevision, Project, ProjectMembership, ProjectRevision
 
 User = get_user_model()
 
@@ -158,6 +158,17 @@ class CultureHistoryTests(TestCase):
 
         call_command('cleanup_history')
         self.assertFalse(CultureRevision.objects.filter(id=old.id).exists())
+
+    def test_cleanup_history_command_also_prunes_project_revisions(self):
+        recent = ProjectRevision.objects.create(snapshot={}, summary='Recent snapshot', project=self.project)
+        old = ProjectRevision.objects.create(snapshot={}, summary='Old snapshot', project=self.project)
+        old.created_at = timezone.now() - timedelta(days=40)
+        old.save(update_fields=['created_at'])
+
+        call_command('cleanup_history')
+
+        self.assertFalse(ProjectRevision.objects.filter(id=old.id).exists())
+        self.assertTrue(ProjectRevision.objects.filter(id=recent.id).exists())
 
     def test_global_history_is_scoped_to_active_project(self):
         other_user = User.objects.create_user(username='otherhist', email='otherhist@example.com', password='testpass', is_active=True)
