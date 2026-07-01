@@ -48,7 +48,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from './i18n';
 import { useCommandContext, useRegisterCommands } from './commands/useCommandContext';
 import { createRootCommands } from './commands/commands';
-import React, { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
@@ -91,6 +91,7 @@ import { getHistoryEntryTarget, getHistoryEntryTitle, isCurrentHistoryEntry } fr
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { useGlobalOverlayKeyboardScroll } from './hooks/useDialogKeyboardScroll';
+import { useTopbarActionsRouteReset } from './hooks/useTopbarActionsRouteReset';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, getKeyboardNavigationRouteFromPathname, normalizeMainRoutePath } from './navigation/mainNavigation';
 import {
   getMobileNavigationIconSx,
@@ -386,11 +387,7 @@ function RootLayout() {
   const [topbarPrimaryActionMenuAnchor, setTopbarPrimaryActionMenuAnchor] = useState<null | HTMLElement>(null);
   currentPathnameRef.current = location.pathname;
 
-  // Layout effect so this always runs before the new page's passive effect registers its actions.
-  useLayoutEffect(() => {
-    setTopbarContextActions([]);
-    setTopbarTitleActions([]);
-  }, [location.pathname]);
+  useTopbarActionsRouteReset(location.pathname, setTopbarContextActions, setTopbarTitleActions);
 
   const navItems = useMemo(() => ([
     { to: '/app/dashboard', label: t('dashboard'), activeAliases: [], keywords: ['übersicht', 'dashboard'], icon: <DashboardOutlinedIcon fontSize="small" /> },
