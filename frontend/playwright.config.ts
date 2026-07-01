@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const frontendPort = process.env.FRONTEND_PORT ? parseInt(process.env.FRONTEND_PORT) : 4173;
-const backendPort = 8000;
+const backendPort = process.env.BACKEND_PORT ? parseInt(process.env.BACKEND_PORT) : 8000;
 const e2eToken = process.env.E2E_TEST_TOKEN || 'openfarmplanner-e2e-token';
 
 export default defineConfig({
@@ -19,7 +19,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "bash -lc 'uv run python manage.py migrate && uv run python manage.py runserver 127.0.0.1:8000'",
+      command: `bash -lc 'uv run python manage.py migrate && uv run python manage.py runserver 127.0.0.1:${backendPort}'`,
       cwd: '../backend',
       port: backendPort,
       reuseExistingServer: true,
@@ -34,14 +34,19 @@ export default defineConfig({
       },
     },
     {
-      command: `npm run dev -- --host 127.0.0.1 --port ${frontendPort}`,
+      // Serves the production bundle (`npm run build`'s dist/ output), not the Vite dev
+      // server, so E2E tests catch build-only bugs (e.g. effect-ordering/timing issues
+      // that only surface once code is bundled) instead of just dev-mode behavior.
+      // `dist/` must already exist — run `npm run build` first (see package.json's
+      // `test:e2e` script and the CI workflow).
+      command: `npm run preview -- --host 127.0.0.1 --port ${frontendPort} --strictPort`,
       cwd: '.',
       port: frontendPort,
       reuseExistingServer: true,
-      timeout: 120_000,
+      timeout: 30_000,
       env: {
         ...process.env,
-        VITE_API_BASE_URL: `http://127.0.0.1:${backendPort}/api`,
+        DEV_BACKEND_ORIGIN: `http://127.0.0.1:${backendPort}`,
       },
     },
   ],
