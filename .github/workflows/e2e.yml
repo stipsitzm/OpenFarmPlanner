@@ -39,9 +39,30 @@ jobs:
         run: npm run build
         working-directory: frontend
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chrome-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+
       - name: Install Playwright browser (Chrome)
-        run: npx playwright install --with-deps chrome
+        # The Playwright CDN download (esp. the bundled FFmpeg) has been observed to
+        # stall indefinitely after reaching 100% instead of erroring out, silently
+        # burning the whole job timeout. Bound each attempt and retry a couple of
+        # times instead of relying on a single unbounded download.
+        timeout-minutes: 10
         working-directory: frontend
+        run: |
+          set -e
+          max_attempts=3
+          for attempt in $(seq 1 "$max_attempts"); do
+            if timeout 240 npx playwright install --with-deps chrome; then
+              exit 0
+            fi
+            echo "Playwright browser install attempt $attempt/$max_attempts failed or timed out, retrying..." >&2
+          done
+          echo "Playwright browser install failed after $max_attempts attempts" >&2
+          exit 1
 
       - name: Run E2E tests against the production build
         run: npx playwright test
