@@ -1768,7 +1768,7 @@ function PlantingPlans() {
                     aria-haspopup="menu"
                     aria-expanded={Boolean(mobileActionMenuAnchor && mobileActionMenuRow?.id === item.id)}
                     onClick={(event) => openMobileActionMenu(event, item)}
-                    sx={{ width: 36, height: 36 }}
+                    sx={{ width: 44, height: 44 }}
                   >
                     <MoreVertIcon fontSize="small" />
                   </IconButton>
