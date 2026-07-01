@@ -2,6 +2,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework import status
@@ -557,3 +558,15 @@ class ProjectsApiTests(APITestCase):
             format='json',
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_cleanup_deleted_projects_command_purges_expired_trash(self) -> None:
+        self.project2.deleted_at = timezone.now() - timedelta(days=31)
+        self.project2.save(update_fields=['deleted_at'])
+
+        recently_trashed = Project.objects.create(name='P3', slug='p3', deleted_at=timezone.now() - timedelta(days=1))
+
+        call_command('cleanup_deleted_projects')
+
+        self.assertFalse(Project.objects.filter(id=self.project2.id).exists())
+        self.assertTrue(Project.objects.filter(id=recently_trashed.id).exists())
+        self.assertTrue(Project.objects.filter(id=self.project.id).exists())

@@ -667,3 +667,34 @@ class AuthApiTest(APITestCase):
         second = StringIO()
         call_command('purge_deleted_accounts', stdout=second)
         self.assertIn('Finalized 0 accounts.', second.getvalue())
+
+    def test_delete_expired_inactive_users_removes_only_expired_accounts(self) -> None:
+        expired = User.objects.create_user(
+            username='expired',
+            email='expired@example.com',
+            password=self.password,
+            is_active=False,
+        )
+        PendingActivation.objects.update_or_create(
+            user=expired,
+            defaults={'activation_expires_at': timezone.now() - timedelta(days=1)},
+        )
+
+        still_pending = User.objects.create_user(
+            username='stillpending',
+            email='stillpending@example.com',
+            password=self.password,
+            is_active=False,
+        )
+        PendingActivation.objects.update_or_create(
+            user=still_pending,
+            defaults={'activation_expires_at': timezone.now() + timedelta(days=1)},
+        )
+
+        output = StringIO()
+        call_command('delete_expired_inactive_users', stdout=output)
+
+        self.assertFalse(User.objects.filter(id=expired.id).exists())
+        self.assertTrue(User.objects.filter(id=still_pending.id).exists())
+        self.assertTrue(User.objects.filter(id=self.user.id).exists())
+        self.assertIn('Deleted 1 expired inactive users.', output.getvalue())
