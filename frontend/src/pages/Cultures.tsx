@@ -8,7 +8,7 @@
  * @returns The Cultures page component
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link as RouterLink, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
@@ -113,6 +113,11 @@ function Cultures() {
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [historyScope, setHistoryScope] = useState<HistoryScope>('culture');
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const focusSearch = useCallback(() => {
+    searchInputRef.current?.focus();
+    searchInputRef.current?.select();
+  }, []);
   const [aiMenuAnchor, setAiMenuAnchor] = useState<null | HTMLElement>(null);
   const aiEnrichmentEnabled = FEATURES.AI_ENRICHMENT;
   const [hasFields, setHasFields] = useState(false);
@@ -553,6 +558,7 @@ function Cultures() {
     cultures,
     enableAiEnrichment: aiEnrichmentEnabled,
     enrichmentLoading,
+    focusSearch,
     goToRelativeCulture,
     handleCreatePlantingPlan,
     handleDelete,
@@ -568,6 +574,7 @@ function Cultures() {
     aiEnrichmentEnabled,
     cultures,
     enrichmentLoading,
+    focusSearch,
     goToRelativeCulture,
     handleCreatePlantingPlan,
     handleDelete,
@@ -609,6 +616,7 @@ function Cultures() {
           isLoading={isCulturesLoading}
           selectedCultureId={selectedCultureId}
           onCultureSelect={handleCultureSelect}
+          searchInputRef={searchInputRef}
           onCreateCulture={handleAddNew}
           onOpenPublicLibrary={() => {
             void handleOpenPublicLibrary();

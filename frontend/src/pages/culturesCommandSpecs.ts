@@ -6,6 +6,7 @@ export type CreateCulturesCommandSpecsOptions = {
   cultures: Culture[];
   enableAiEnrichment: boolean;
   enrichmentLoading: boolean;
+  focusSearch: () => void;
   goToRelativeCulture: (direction: 'next' | 'previous') => void;
   handleCreatePlantingPlan: () => void;
   handleDelete: (culture: Culture) => void;
@@ -24,6 +25,7 @@ export function createCulturesCommandSpecs({
   cultures,
   enableAiEnrichment,
   enrichmentLoading,
+  focusSearch,
   goToRelativeCulture,
   handleCreatePlantingPlan,
   handleDelete,
@@ -77,6 +79,17 @@ export function createCulturesCommandSpecs({
   ] : [];
 
   return [
+    {
+      id: 'culture.focusSearch',
+      label: 'Kultur suchen fokussieren (Alt+S)',
+      group: 'navigation',
+      keywords: ['kultur', 'suchen', 'search', 'filter'],
+      shortcutHint: 'Alt+S',
+      keys: { alt: true, key: 's' },
+      contextTags: ['cultures'],
+      isEnabled: () => true,
+      action: focusSearch,
+    },
     {
       id: 'culture.edit',
       label: 'Kultur bearbeiten (Alt+E)',
