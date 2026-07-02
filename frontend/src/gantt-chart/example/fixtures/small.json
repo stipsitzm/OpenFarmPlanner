@@ -1,0 +1,90 @@
+{
+  "id": "small",
+  "name": "Small example",
+  "description": "Compact project with a few rows, different colors, dependencies, drag, resize, and the current date marker.",
+  "viewMode": "week",
+  "viewModes": ["day", "week", "month", "quarter"],
+  "timeline": {
+    "startDate": { "offsetDays": -35 },
+    "endDate": { "offsetDays": 55 }
+  },
+  "chart": {
+    "title": "Small project fixture",
+    "headerLabel": "Teams",
+    "showProgress": true,
+    "showCurrentDateMarker": true,
+    "editMode": true,
+    "allowTaskMove": true,
+    "allowTaskResize": true,
+    "allowProgressEdit": true,
+    "rowHeight": 48,
+    "leftColumnWidth": 220,
+    "maxHeight": 460
+  },
+  "groups": [
+    {
+      "id": "small-design",
+      "name": "Design",
+      "description": "Product discovery",
+      "tasks": [
+        {
+          "id": "small-research",
+          "name": "Research",
+          "startDate": { "offsetDays": -25 },
+          "endDate": { "offsetDays": -8 },
+          "color": "#2563eb",
+          "percent": 100
+        },
+        {
+          "id": "small-prototype",
+          "name": "Prototype",
+          "startDate": { "offsetDays": -6 },
+          "endDate": { "offsetDays": 14 },
+          "color": "#7c3aed",
+          "percent": 55,
+          "dependencies": ["small-research"]
+        }
+      ]
+    },
+    {
+      "id": "small-engineering",
+      "name": "Engineering",
+      "description": "Implementation",
+      "tasks": [
+        {
+          "id": "small-api",
+          "name": "API integration",
+          "startDate": { "offsetDays": -3 },
+          "endDate": { "offsetDays": 24 },
+          "color": "#059669",
+          "percent": 35,
+          "dependencies": ["small-prototype"]
+        },
+        {
+          "id": "small-ui",
+          "name": "Timeline UI",
+          "startDate": { "offsetDays": 6 },
+          "endDate": { "offsetDays": 32 },
+          "color": "#ea580c",
+          "percent": 20
+        }
+      ]
+    },
+    {
+      "id": "small-release",
+      "name": "Release",
+      "description": "QA and launch",
+      "tasks": [
+        {
+          "id": "small-qa",
+          "name": "QA pass",
+          "startDate": { "offsetDays": 28 },
+          "endDate": { "offsetDays": 42 },
+          "color": "#dc2626",
+          "percent": 0,
+          "dependencies": ["small-api", "small-ui"]
+        }
+      ]
+    }
+  ]
+}

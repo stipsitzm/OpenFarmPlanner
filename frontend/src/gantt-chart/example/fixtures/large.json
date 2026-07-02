@@ -1,0 +1,48 @@
+{
+  "id": "large",
+  "name": "Large example",
+  "description": "Performance and scrolling fixture with more than 100 generated rows, multiple colors, horizontal overflow, and vertical scrolling.",
+  "viewMode": "month",
+  "viewModes": ["week", "month", "quarter", "year"],
+  "timeline": {
+    "startDate": { "offsetDays": -180 },
+    "endDate": { "offsetDays": 420 }
+  },
+  "chart": {
+    "title": "Large generated fixture",
+    "headerLabel": "Resources",
+    "showProgress": true,
+    "showCurrentDateMarker": true,
+    "editMode": true,
+    "allowTaskMove": true,
+    "allowTaskResize": true,
+    "allowProgressEdit": true,
+    "rowHeight": 38,
+    "leftColumnWidth": 260,
+    "maxHeight": 620
+  },
+  "generators": [
+    {
+      "kind": "resourceRows",
+      "count": 128,
+      "groupPrefix": "Resource",
+      "groupDescription": "Generated row for large-fixture scrolling",
+      "taskPrefix": "Planned work package",
+      "tasksPerRow": 2,
+      "startOffsetDays": -150,
+      "rowSpacingDays": 3,
+      "durationDays": 32,
+      "secondTaskGapDays": 18,
+      "secondTaskDurationDays": 24,
+      "colors": [
+        "#2563eb",
+        "#059669",
+        "#d97706",
+        "#dc2626",
+        "#7c3aed",
+        "#0891b2"
+      ]
+    }
+  ],
+  "groups": []
+}

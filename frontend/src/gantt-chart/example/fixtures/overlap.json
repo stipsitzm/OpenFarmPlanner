@@ -1,0 +1,88 @@
+{
+  "id": "overlap",
+  "name": "Overlap and multi-bar rows",
+  "description": "Rows with overlapping bars, multiple bars per row, long task names, different colors, and edit handles enabled.",
+  "viewMode": "day",
+  "viewModes": ["day", "week", "month"],
+  "timeline": {
+    "startDate": { "offsetDays": -20 },
+    "endDate": { "offsetDays": 65 }
+  },
+  "chart": {
+    "title": "Overlap fixture",
+    "headerLabel": "Workstreams",
+    "showProgress": true,
+    "showCurrentDateMarker": true,
+    "editMode": true,
+    "allowTaskMove": true,
+    "allowTaskResize": true,
+    "allowProgressEdit": true,
+    "rowHeight": 64,
+    "leftColumnWidth": 300,
+    "maxHeight": 500
+  },
+  "groups": [
+    {
+      "id": "overlap-row-1",
+      "name": "Same-row overlapping delivery windows",
+      "description": "Collision layout stress",
+      "tasks": [
+        {
+          "id": "overlap-a",
+          "name": "Early preparation",
+          "startDate": { "offsetDays": -12 },
+          "endDate": { "offsetDays": 24 },
+          "color": "#2563eb",
+          "percent": 70
+        },
+        {
+          "id": "overlap-b",
+          "name": "Concurrent implementation",
+          "startDate": { "offsetDays": -4 },
+          "endDate": { "offsetDays": 34 },
+          "color": "#dc2626",
+          "percent": 45
+        },
+        {
+          "id": "overlap-c",
+          "name": "Late validation task with a deliberately long label",
+          "startDate": { "offsetDays": 18 },
+          "endDate": { "offsetDays": 48 },
+          "color": "#7c3aed",
+          "percent": 10
+        }
+      ]
+    },
+    {
+      "id": "overlap-row-2",
+      "name": "Separated bars in one row",
+      "description": "Multiple bars without collision",
+      "tasks": [
+        {
+          "id": "multi-a",
+          "name": "Phase 1",
+          "startDate": { "offsetDays": -16 },
+          "endDate": { "offsetDays": -2 },
+          "color": "#059669",
+          "percent": 100
+        },
+        {
+          "id": "multi-b",
+          "name": "Phase 2",
+          "startDate": { "offsetDays": 10 },
+          "endDate": { "offsetDays": 28 },
+          "color": "#d97706",
+          "percent": 40
+        },
+        {
+          "id": "multi-c",
+          "name": "Phase 3",
+          "startDate": { "offsetDays": 38 },
+          "endDate": { "offsetDays": 55 },
+          "color": "#0891b2",
+          "percent": 0
+        }
+      ]
+    }
+  ]
+}

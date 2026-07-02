@@ -1,0 +1,73 @@
+{
+  "id": "zoom",
+  "name": "Zoom levels",
+  "description": "One fixture for quickly switching between minute, hour, day, week, month, quarter, and year view modes.",
+  "viewMode": "hour",
+  "viewModes": ["minute", "hour", "day", "week", "month", "quarter", "year"],
+  "timeline": {
+    "startDate": { "offsetHours": -8 },
+    "endDate": { "offsetDays": 370 }
+  },
+  "chart": {
+    "title": "Zoom fixture",
+    "headerLabel": "Schedules",
+    "showProgress": true,
+    "showCurrentDateMarker": true,
+    "editMode": true,
+    "allowTaskMove": true,
+    "allowTaskResize": true,
+    "allowProgressEdit": true,
+    "rowHeight": 48,
+    "leftColumnWidth": 240,
+    "maxHeight": 460,
+    "minuteStep": 15
+  },
+  "groups": [
+    {
+      "id": "zoom-day",
+      "name": "Today schedule",
+      "description": "Hour and minute views",
+      "tasks": [
+        {
+          "id": "zoom-standup",
+          "name": "Standup",
+          "startDate": { "offsetHours": -2 },
+          "endDate": { "offsetHours": -1 },
+          "color": "#2563eb",
+          "percent": 100
+        },
+        {
+          "id": "zoom-workshop",
+          "name": "Workshop block",
+          "startDate": { "offsetHours": 1 },
+          "endDate": { "offsetHours": 4 },
+          "color": "#059669",
+          "percent": 30
+        }
+      ]
+    },
+    {
+      "id": "zoom-roadmap",
+      "name": "Long roadmap",
+      "description": "Month, quarter, and year views",
+      "tasks": [
+        {
+          "id": "zoom-quarter",
+          "name": "Quarter initiative",
+          "startDate": { "offsetDays": 21 },
+          "endDate": { "offsetDays": 112 },
+          "color": "#7c3aed",
+          "percent": 15
+        },
+        {
+          "id": "zoom-year",
+          "name": "Year-long strategic program",
+          "startDate": { "offsetDays": 80 },
+          "endDate": { "offsetDays": 340 },
+          "color": "#dc2626",
+          "percent": 5
+        }
+      ]
+    }
+  ]
+}

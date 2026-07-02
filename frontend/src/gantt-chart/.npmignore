@@ -1,0 +1,31 @@
+# Explicitly exclude example directory
+/example/
+/examples/
+
+# Development files
+.github/
+src/
+.eslintrc
+.gitignore
+.prettierrc
+jest.config.js
+jest.setup.js
+tsconfig.json
+rollup.config.js
+postcss.config.mjs
+*.log
+.DS_Store
+
+# Test files
+__tests__/
+*.test.ts
+*.test.tsx
+coverage/
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
