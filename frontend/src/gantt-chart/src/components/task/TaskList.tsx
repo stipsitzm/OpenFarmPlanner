@@ -67,7 +67,7 @@ const TaskList: React.FC<TaskListProps> = ({
     }
 
     const taskRows = CollisionService.detectOverlaps(taskGroup.tasks, viewMode);
-    const taskHeight = Math.max(60, taskRows.length * rowHeight + 20);
+    const taskHeight = Math.max(40, taskRows.length * rowHeight + 12);
     return Math.max(taskHeight, estimatedHeight);
   };
 
@@ -178,20 +178,13 @@ const TaskList: React.FC<TaskListProps> = ({
                 <span
                   className="rmg-task-group-name rmg-task-group-tree-name"
                   data-rmg-component="task-group-name"
-                  title={displayName}
+                  title={taskGroup.emptyRowLabel
+                    ? `${displayName} — ${taskGroup.emptyRowLabel}`
+                    : displayName}
                 >
                   {displayName}
                 </span>
               </div>
-
-              {taskGroup.emptyRowLabel && (
-                <div
-                  className="rmg-task-group-meta"
-                  data-rmg-component="task-group-meta"
-                >
-                  {taskGroup.emptyRowLabel}
-                </div>
-              )}
 
               {showTaskCount && taskGroup.tasks && taskGroup.tasks.length > 0 && (
                 <div

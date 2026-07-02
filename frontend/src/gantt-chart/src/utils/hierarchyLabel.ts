@@ -126,7 +126,7 @@ export function estimateLabelHeight(
     return total + Math.max(1, Math.ceil(trimmedLabel.length / charsPerLine));
   }, 0);
 
-  return Math.max(60, estimatedLabelLines * 16 + 28);
+  return Math.max(40, estimatedLabelLines * 16 + 20);
 }
 
 /**

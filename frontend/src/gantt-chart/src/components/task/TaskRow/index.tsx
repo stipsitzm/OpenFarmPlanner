@@ -150,7 +150,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
   );
   const resolvedRowHeight = taskGroup?.rowHeightOverride !== undefined
     ? taskGroup.rowHeightOverride
-    : Math.max(estimatedHeight, taskRows.length * laneHeight + 20);
+    : Math.max(estimatedHeight, taskRows.length * laneHeight + 12);
 
   // Update timeline limits for auto-scrolling
   useEffect(() => {
@@ -504,6 +504,10 @@ const TaskRow: React.FC<TaskRowProps> = ({
   };
 
   const handleTaskContextMenu = (event: React.MouseEvent, task: Task) => {
+    // Dismiss the hover tooltip immediately — otherwise it stays visible
+    // (the pointer is still technically "hovering" the bar) and overlaps
+    // the context menu that's about to open.
+    setHoveredTask(null);
     onTaskContextMenu?.(event, task, taskGroup);
   };
 
@@ -962,7 +966,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
 
               const isHovered = hoveredTask?.id === task.id;
               const isDragging = draggingTask?.id === task.id;
-              const topPx = rowIndex * laneHeight + 10;
+              const topPx = rowIndex * laneHeight + 6;
 
               return (
                 <TaskItem

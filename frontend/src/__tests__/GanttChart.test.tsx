@@ -897,6 +897,99 @@ describe('GanttChartPage', () => {
     });
   });
 
+  it('filters the seedling view by culture name using its own search field, without any hierarchy filters', async () => {
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 11,
+            culture: 6,
+            culture_name: 'Tomate',
+            bed: 3,
+            planting_date: '2026-05-10',
+            cultivation_type: 'pre_cultivation',
+          },
+          {
+            id: 12,
+            culture: 7,
+            culture_name: 'Karotte',
+            bed: 4,
+            planting_date: '2026-05-15',
+            cultivation_type: 'pre_cultivation',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({
+      data: {
+        results: [
+          { id: 6, name: 'Tomate', propagation_duration_days: 21, cultivation_type: 'pre_cultivation' },
+          { id: 7, name: 'Karotte', propagation_duration_days: 14, cultivation_type: 'pre_cultivation' },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(topbarContext.latestTitleActions).toHaveLength(2));
+    act(() => {
+      getTopbarAction('calendar-view-mode-seedlings').onClick();
+    });
+
+    await waitFor(() => expect(screen.getAllByText('Tomate').length).toBeGreaterThan(0));
+    expect(screen.getAllByText('Karotte').length).toBeGreaterThan(0);
+    expect(screen.queryByPlaceholderText('Suche nach Kultur, Beet, Parzelle oder Standort…')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Alle Standorte')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('Suche nach Kultur…'), {
+      target: { value: 'Karotte' },
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Karotte').length).toBeGreaterThan(0);
+      expect(screen.queryByText('Tomate')).not.toBeInTheDocument();
+    });
+  });
+
+  it('focuses the active search field with Alt+S', async () => {
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-01',
+            harvest_date: '2026-05-01',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    render(
+      <MemoryRouter>
+        <CommandProvider>
+          <GanttChartPage />
+        </CommandProvider>
+      </MemoryRouter>,
+    );
+
+    const searchField = await screen.findByPlaceholderText('Suche nach Kultur, Beet, Parzelle oder Standort…');
+    expect(searchField).not.toHaveFocus();
+
+    fireEvent.keyDown(window, { key: 's', altKey: true });
+
+    await waitFor(() => expect(searchField).toHaveFocus());
+  });
+
   it('toggles occupancy edit mode with Alt+E', async () => {
     mocks.planList.mockResolvedValue({
       data: {
@@ -1241,14 +1334,14 @@ describe('GanttChartPage', () => {
       mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
     };
 
-    it('double-clicking a task bar navigates to its planting plan (bed + culture filtered)', async () => {
+    it('double-clicking a task bar navigates to and opens its existing planting plan', async () => {
       setUpSinglePlanFixture();
       renderWithAuth();
 
       await screen.findByText('Beet 1');
       fireEvent.click(screen.getByRole('button', { name: /^open-task-/ }));
 
-      expect(mocks.navigate).toHaveBeenCalledWith('/app/planting-plans?bedId=3&cultureId=5');
+      expect(mocks.navigate).toHaveBeenCalledWith('/app/planting-plans?planId=10');
     });
 
     it('a task context menu offers plan/culture/bed navigation plus edit, copy, and delete', async () => {
@@ -1274,7 +1367,7 @@ describe('GanttChartPage', () => {
       fireEvent.click(screen.getByRole('button', { name: /^context-menu-task-/ }));
       fireEvent.click(await screen.findByRole('menuitem', { name: 'Anbauplan öffnen' }));
 
-      expect(mocks.navigate).toHaveBeenCalledWith('/app/planting-plans?bedId=3&cultureId=5');
+      expect(mocks.navigate).toHaveBeenCalledWith('/app/planting-plans?planId=10');
     });
 
     it('choosing "Löschen" from the task context menu deletes the plan after confirmation', async () => {

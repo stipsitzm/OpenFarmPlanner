@@ -1222,20 +1222,6 @@ export function EditableDataGrid<T extends EditableRow>({
     setSelectedRowIds,
   ]);
 
-  useDataGridCommandApi<T>({
-    commandApiRef,
-    selectedRowIds,
-    deleteRowCommandRef,
-    handleAddClick,
-    handleEditSelectedRow,
-    handleDeleteSelectedRow,
-    setRowModesModel,
-    applyDraftValues,
-    commitDraftValues,
-    reload: fetchData,
-    focusTable,
-  });
-
   const handleStartRowEdit = useCallback((rowId: GridRowId, field?: string): void => {
     const rowKey = String(rowId);
     if (!rowSnapshotRef.current.has(rowKey)) {
@@ -1251,6 +1237,35 @@ export function EditableDataGrid<T extends EditableRow>({
       [rowId]: { mode: GridRowModes.Edit, fieldToFocus },
     }));
   }, [columns, rowsById]);
+
+  // Scrolls to, selects, and opens edit mode on a specific row by id —
+  // used by pages that deep-link into this grid (e.g. "Anbauplan öffnen"
+  // from the Gantt calendar's context menu) instead of just prefilling a
+  // brand-new draft row via `initialRow`.
+  const openRowById = useCallback((rowId: GridRowId): void => {
+    const api = gridApiRef.current;
+    if (!api || !rowsById.has(String(rowId))) return;
+    setSelectedRowIds([rowId]);
+    requestAnimationFrame(() => {
+      api.scrollToIndexes({ rowIndex: api.getRowIndexRelativeToVisibleRows(rowId) });
+    });
+    handleStartRowEdit(rowId);
+  }, [gridApiRef, handleStartRowEdit, rowsById, setSelectedRowIds]);
+
+  useDataGridCommandApi<T>({
+    commandApiRef,
+    selectedRowIds,
+    deleteRowCommandRef,
+    handleAddClick,
+    handleEditSelectedRow,
+    handleDeleteSelectedRow,
+    setRowModesModel,
+    applyDraftValues,
+    commitDraftValues,
+    reload: fetchData,
+    focusTable,
+    openRowById,
+  });
 
   const handleDuplicateRow = useCallback((row: T): void => {
     if (!duplicateRow) {

@@ -205,6 +205,14 @@ const HIERARCHY_DATA_GRID_SX = {
     backgroundColor: "surface.surfaceHoverBackground",
     boxShadow: "inset 0 0 0 9999px rgba(237, 108, 2, 0.14)",
   },
+  "& .ofp-hierarchy-row-highlighted .MuiDataGrid-cell": {
+    animation: "ofp-hierarchy-row-highlight-flash 2.5s ease-out",
+  },
+  "@keyframes ofp-hierarchy-row-highlight-flash": {
+    "0%": { backgroundColor: "rgba(255, 213, 79, 0.55)" },
+    "70%": { backgroundColor: "rgba(255, 213, 79, 0.35)" },
+    "100%": { backgroundColor: "transparent" },
+  },
 };
 
 function FieldsBedsHierarchy({
@@ -232,6 +240,8 @@ function FieldsBedsHierarchy({
   const handledCreateFieldRequestRef = useRef(0);
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
+  const [highlightedRowId, setHighlightedRowId] = useState<GridRowId | null>(null);
+  const highlightClearTimeoutRef = useRef<number | null>(null);
 
   // Data fetching
   const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
@@ -594,6 +604,89 @@ function FieldsBedsHierarchy({
       { replace: true },
     );
   }, [fields, handleAddBed, loading, location.pathname, location.search, navigate]);
+
+  // Consumes a `?highlight=location:<id>|field:<id>|bed:<id>` deep link (e.g.
+  // from the Gantt calendar's "Standort/Parzelle/Beet öffnen" context menu
+  // actions): expands the ancestor chain so the target row is visible,
+  // scrolls it into view, and flashes it briefly so the user can find it.
+  useEffect(() => {
+    if (!location.pathname.startsWith("/app/fields-beds")) {
+      return;
+    }
+
+    const searchParams = new URLSearchParams(location.search);
+    const highlightParam = searchParams.get("highlight");
+    if (!highlightParam || loading) {
+      return;
+    }
+
+    const [highlightType, highlightIdRaw] = highlightParam.split(":");
+    const highlightId = Number(highlightIdRaw);
+
+    let targetRowId: GridRowId | null = null;
+    let locationIdToExpand: number | undefined;
+    let fieldIdToExpand: number | undefined;
+
+    if (Number.isFinite(highlightId)) {
+      if (highlightType === "location") {
+        targetRowId = `location-${highlightId}`;
+      } else if (highlightType === "field") {
+        const field = fields.find((entry) => entry.id === highlightId);
+        targetRowId = `field-${highlightId}`;
+        locationIdToExpand = field?.location;
+      } else if (highlightType === "bed") {
+        const bed = beds.find((entry) => entry.id === highlightId);
+        const field = bed ? fields.find((entry) => entry.id === bed.field) : undefined;
+        targetRowId = highlightId;
+        fieldIdToExpand = bed?.field;
+        locationIdToExpand = field?.location;
+      }
+    }
+
+    if (targetRowId !== null) {
+      if (locationIdToExpand !== undefined) {
+        ensureExpanded(`location-${locationIdToExpand}`);
+      }
+      if (fieldIdToExpand !== undefined) {
+        ensureExpanded(`field-${fieldIdToExpand}`);
+      }
+
+      setHighlightedRowId(targetRowId);
+
+      // Expansion needs a render pass before the target row exists in the
+      // DataGrid's virtualized viewport.
+      window.setTimeout(() => {
+        const rowIndex = gridApiRef.current?.getRowIndexRelativeToVisibleRows(targetRowId!);
+        if (typeof rowIndex === "number" && rowIndex >= 0) {
+          gridApiRef.current?.scrollToIndexes({ rowIndex });
+        }
+      }, 50);
+
+      if (highlightClearTimeoutRef.current !== null) {
+        window.clearTimeout(highlightClearTimeoutRef.current);
+      }
+      highlightClearTimeoutRef.current = window.setTimeout(() => {
+        setHighlightedRowId(null);
+        highlightClearTimeoutRef.current = null;
+      }, 2500);
+    }
+
+    searchParams.delete("highlight");
+    const nextSearch = searchParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+      },
+      { replace: true },
+    );
+  }, [beds, ensureExpanded, fields, gridApiRef, loading, location.pathname, location.search, navigate]);
+
+  useEffect(() => () => {
+    if (highlightClearTimeoutRef.current !== null) {
+      window.clearTimeout(highlightClearTimeoutRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (
@@ -1181,7 +1274,11 @@ function FieldsBedsHierarchy({
               columns={columns}
               columnHeaderHeight={HEADER_ROW_HEIGHT}
               getRowHeight={getRowHeight}
-              getRowClassName={(params) => `ofp-hierarchy-row-${params.row.type}`}
+              getRowClassName={(params) => (
+                params.id === highlightedRowId
+                  ? `ofp-hierarchy-row-${params.row.type} ofp-hierarchy-row-highlighted`
+                  : `ofp-hierarchy-row-${params.row.type}`
+              )}
               rowModesModel={rowModesModel}
               onRowModesModelChange={setRowModesModel}
               onRowEditStop={handleHierarchyRowEditStop}

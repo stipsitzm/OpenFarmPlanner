@@ -105,7 +105,8 @@
     "quarterView": "Quartalsansicht anzeigen",
     "yearView": "Jahresansicht anzeigen",
     "showOccupancy": "Feldbelegung anzeigen",
-    "showSeedlings": "Anzucht anzeigen"
+    "showSeedlings": "Anzucht anzeigen",
+    "focusSearch": "Suche fokussieren (Alt+S)"
   },
   "modeDescriptions": {
     "occupancy": "Belegung von Parzellen und Beeten im Jahresverlauf. Diese Ansicht unterstützt weiterhin das Verschieben bestehender Anbaupläne.",
@@ -159,6 +160,7 @@
   },
   "treeFilters": {
     "searchPlaceholder": "Suche nach Kultur, Beet, Parzelle oder Standort…",
+    "searchPlaceholderSeedlings": "Suche nach Kultur…",
     "allLocations": "Alle Standorte",
     "allFields": "Alle Parzellen",
     "onlyOccupiedBeds": "Nur belegte Beete"
