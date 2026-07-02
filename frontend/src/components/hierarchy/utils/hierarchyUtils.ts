@@ -328,6 +328,7 @@ export function createHierarchyRowsProjector(hierarchyIndex: HierarchyIndex) {
       length_m: field.length_m,
       width_m: field.width_m,
       notes: field.notes,
+      isNew: field.id! < 0,
       ...(parentId ? { parentId } : {}),
       ...(locationId !== undefined ? { locationId } : {}),
     };

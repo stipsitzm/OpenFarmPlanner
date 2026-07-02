@@ -84,6 +84,7 @@ import {
   type HierarchyNameMeasureEntry,
 } from "../components/hierarchy/utils/hierarchyNameColumnWidth";
 import {
+  isCompletelyEmptyNewHierarchyRow,
   isPartiallyFilledNamelessNewHierarchyRow,
 } from "../components/hierarchy/utils/hierarchyRowDraft";
 import {
@@ -388,7 +389,6 @@ function FieldsBedsHierarchy({
 
   const {
     discardRowEdit,
-    discardActiveRowEdit,
     processRowUpdate,
     handleProcessRowUpdateError,
   } = useHierarchyRowUpdate({
@@ -869,6 +869,25 @@ function FieldsBedsHierarchy({
 
   useRegisterCommands("areas-page", areaCommands);
 
+  // Clicking outside the grid while a row is being edited doesn't go through MUI's
+  // own cell-focus-out handling (that only fires when focus moves to another grid
+  // cell), so the row is neither saved nor discarded by default. Commit it if it
+  // has real data (matching normal click-away-to-save UX and avoiding silent data
+  // loss); only a still-blank draft row is discarded.
+  const handleClickOutsideGrid = useCallback((): void => {
+    const editingRowId = Object.entries(rowModesModel).find(
+      ([, mode]) => mode.mode === GridRowModes.Edit,
+    )?.[0];
+    if (editingRowId === undefined) return;
+    const rowId = rowsById.get(editingRowId)?.id ?? editingRowId;
+    const draftRow = getDraftRow(rowId);
+    if (draftRow && isCompletelyEmptyNewHierarchyRow(draftRow)) {
+      discardRowEdit(rowId);
+      return;
+    }
+    gridApiRef.current?.stopRowEditMode({ id: rowId });
+  }, [discardRowEdit, getDraftRow, gridApiRef, rowModesModel, rowsById]);
+
   useHierarchyKeyboard({
     contextMenuState,
     treeActiveRef,
@@ -880,7 +899,7 @@ function FieldsBedsHierarchy({
     selectRow: selectRowForKeyboard,
     setTreeActive,
     toggleExpand,
-    discardActiveRowEdit,
+    discardActiveRowEdit: handleClickOutsideGrid,
     openContextMenuForRow,
   });
 
