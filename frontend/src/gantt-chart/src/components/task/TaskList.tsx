@@ -11,6 +11,20 @@ import {
 /**
  * TaskList Component - Displays the list of task groups on the left side of the Gantt chart
  */
+const TREE_INDENT_PX = 20;
+
+const ChevronIcon: React.FC<{ expanded: boolean }> = ({ expanded }) => (
+  <svg
+    viewBox="0 0 16 16"
+    width="12"
+    height="12"
+    className={`rmg-task-group-chevron-icon ${expanded ? "rmg-task-group-chevron-icon-expanded" : ""}`}
+    aria-hidden="true"
+  >
+    <path d="M5 3l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
 const TaskList: React.FC<TaskListProps> = ({
   tasks = [],
   headerLabel = "Resources",
@@ -20,6 +34,7 @@ const TaskList: React.FC<TaskListProps> = ({
   rowHeight = 40,
   className = "",
   onGroupClick,
+  onToggleGroupExpand,
   viewMode,
   showTimelineHeader = true,
   leftColumnWidth = 160,
@@ -31,15 +46,14 @@ const TaskList: React.FC<TaskListProps> = ({
 
   // Calculate height for each group based on tasks
   const getGroupHeight = (taskGroup: TaskGroup) => {
-    const hierarchyLevels = getHierarchyLevels(taskGroup);
-    const labelLinesSource = getLabelLinesSource(
-      taskGroup,
-      hierarchyLevels,
-      showDescription,
-    );
+    const isTreeRow = taskGroup.depth !== undefined;
+    const hierarchyLevels = isTreeRow ? null : getHierarchyLevels(taskGroup);
+    const labelLinesSource = isTreeRow
+      ? [taskGroup.name || "Unnamed"]
+      : getLabelLinesSource(taskGroup, hierarchyLevels, showDescription);
     const estimatedHeight = estimateLabelHeight(
       labelLinesSource,
-      normalizedLeftColumnWidth,
+      normalizedLeftColumnWidth - (isTreeRow ? (taskGroup.depth ?? 0) * TREE_INDENT_PX : 0),
     );
 
     if (!taskGroup.tasks || !Array.isArray(taskGroup.tasks)) {
@@ -56,6 +70,11 @@ const TaskList: React.FC<TaskListProps> = ({
     if (onGroupClick) {
       onGroupClick(group);
     }
+  };
+
+  const handleChevronClick = (event: React.MouseEvent, groupId: string) => {
+    event.stopPropagation();
+    onToggleGroupExpand?.(groupId);
   };
 
   return (
@@ -81,6 +100,74 @@ const TaskList: React.FC<TaskListProps> = ({
         if (!taskGroup) return null;
 
         const groupHeight = getGroupHeight(taskGroup);
+        const isTreeRow = taskGroup.depth !== undefined;
+
+        if (isTreeRow) {
+          const depth = taskGroup.depth ?? 0;
+          const isExpanded = Boolean(taskGroup.isExpanded);
+          const displayName = taskGroup.name || "Unnamed";
+
+          return (
+            <div
+              key={`task-group-${taskGroup.id || "unknown"}`}
+              className="rmg-task-group rmg-task-group-tree-row"
+              style={{ minHeight: `${groupHeight}px` }}
+              onClick={() => handleGroupClick(taskGroup)}
+              data-testid={`task-group-${taskGroup.id || "unknown"}`}
+              data-rmg-component="task-group"
+              data-group-id={taskGroup.id}
+              data-depth={depth}
+              data-expanded={taskGroup.isExpandable ? isExpanded : undefined}
+            >
+              <div
+                className="rmg-task-group-content rmg-task-group-tree-content"
+                style={{ paddingLeft: `${depth * TREE_INDENT_PX}px` }}
+              >
+                {taskGroup.isExpandable ? (
+                  <button
+                    type="button"
+                    className="rmg-task-group-chevron"
+                    onClick={(event) => handleChevronClick(event, taskGroup.id)}
+                    aria-expanded={isExpanded}
+                    aria-label={isExpanded ? "Collapse" : "Expand"}
+                    data-rmg-component="task-group-chevron"
+                  >
+                    <ChevronIcon expanded={isExpanded} />
+                  </button>
+                ) : (
+                  <span className="rmg-task-group-chevron-spacer" aria-hidden="true" />
+                )}
+
+                {showIcon && taskGroup.icon && (
+                  <span
+                    className="rmg-task-group-icon"
+                    dangerouslySetInnerHTML={{ __html: taskGroup.icon }}
+                    data-rmg-component="task-group-icon"
+                  />
+                )}
+
+                <span
+                  className="rmg-task-group-name rmg-task-group-tree-name"
+                  data-rmg-component="task-group-name"
+                  title={displayName}
+                >
+                  {displayName}
+                </span>
+              </div>
+
+              {showTaskCount && taskGroup.tasks && taskGroup.tasks.length > 0 && (
+                <div
+                  className="rmg-task-group-count"
+                  data-rmg-component="task-group-count"
+                >
+                  {taskGroup.tasks.length}{" "}
+                  {taskGroup.tasks.length === 1 ? "task" : "tasks"}
+                </div>
+              )}
+            </div>
+          );
+        }
+
         const hierarchyLevels = getHierarchyLevels(taskGroup);
         const hasHierarchy = Boolean(hierarchyLevels);
         const fullLabelTitle = (

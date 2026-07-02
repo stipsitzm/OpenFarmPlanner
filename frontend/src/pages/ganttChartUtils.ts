@@ -41,6 +41,11 @@ export interface GanttTaskGroup {
   area?: number;
   isGroup?: boolean;
   level?: number;
+  /** Tree-row rendering hints, forwarded as-is to the Gantt library. */
+  depth?: number;
+  isExpandable?: boolean;
+  isExpanded?: boolean;
+  emptyRowLabel?: string;
 }
 
 interface BuildTaskGroupsArgs {
@@ -377,6 +382,217 @@ export function buildFieldOccupancyTaskGroups({
       area: candidate.area,
     };
   });
+}
+
+export type OccupancyHierarchyNodeType = 'location' | 'field' | 'bed';
+
+/**
+ * A single row of the Standort -> Parzelle -> Beet tree, built as a flat
+ * list with parent references (see frontend/src/components/hierarchy/utils/treeRows.ts
+ * for the generic flatten/expand logic this feeds into) rather than the
+ * older hierarchyPath breadcrumb-per-leaf convention.
+ */
+export interface OccupancyHierarchyNode {
+  id: string;
+  parentId: string | null;
+  type: OccupancyHierarchyNodeType;
+  name: string;
+  locationId: number;
+  fieldId?: number;
+  bedId?: number;
+  tasks: GanttTask[];
+  area?: number;
+  /** Total descendant bed count (1 for bed nodes themselves). */
+  bedCount: number;
+  /** Descendant beds that have at least one planting plan. */
+  occupiedBedCount: number;
+  /** Descendant planting plan count (growth tasks only, harvest duplicates excluded). */
+  planCount: number;
+}
+
+/**
+ * Builds the full Standort -> Parzelle -> Beet tree for the occupancy
+ * calendar, including beds without any planting plan (unlike
+ * buildFieldOccupancyTaskGroups, which only emits occupied beds as flat
+ * rows). Location and Field are always their own nodes, regardless of
+ * count, so the tree structure is consistent rather than collapsing a
+ * single location the way the old hierarchyPath label did.
+ */
+export function buildFieldOccupancyHierarchy({
+  locations,
+  fields,
+  beds,
+  plantingPlans,
+  cultures,
+  displayYear,
+}: BuildTaskGroupsArgs): OccupancyHierarchyNode[] {
+  if (!locations.length) {
+    return [];
+  }
+
+  const { start: visStart, end: visEnd } = getVisibleYearInterval(displayYear);
+  const plansByBed = new Map<number, PlantingPlan[]>();
+
+  plantingPlans.forEach((plan) => {
+    if (!plan.bed || !plan.planting_date || !plan.harvest_date) {
+      return;
+    }
+    const plantingDate = parseDateString(plan.planting_date);
+    const harvestDate = parseDateString(plan.harvest_date);
+    if (harvestDate < visStart || plantingDate > visEnd) {
+      return;
+    }
+    const bedPlans = plansByBed.get(plan.bed) ?? [];
+    bedPlans.push(plan);
+    plansByBed.set(plan.bed, bedPlans);
+  });
+
+  const bedsByField = beds.reduce<Record<number, Bed[]>>((accumulator, bed) => {
+    const fieldId = bed.field;
+    accumulator[fieldId] = accumulator[fieldId] ?? [];
+    accumulator[fieldId].push(bed);
+    return accumulator;
+  }, {});
+
+  const fieldsByLocation = fields.reduce<Record<number, Field[]>>((accumulator, field) => {
+    const locationId = field.location;
+    accumulator[locationId] = accumulator[locationId] ?? [];
+    accumulator[locationId].push(field);
+    return accumulator;
+  }, {});
+
+  const buildBedTasks = (bedPlans: PlantingPlan[]): GanttTask[] => {
+    const tasks: GanttTask[] = [];
+    bedPlans.forEach((plan) => {
+      const plantingDate = parseDateString(plan.planting_date);
+      const harvestStartDate = parseDateString(plan.harvest_date!);
+      const baseColor = getCultureColor(cultures, plan.culture, plan.culture_name || '', plan.culture_display_color);
+      const cultureLabel = formatCultureDisplayLabel(
+        plan.culture_name || `Culture ${plan.culture}`,
+        plan.culture_variety,
+      );
+      const harvestEndDate = plan.harvest_end_date
+        ? parseDateString(plan.harvest_end_date)
+        : harvestStartDate;
+
+      tasks.push({
+        id: `plan-${plan.id}-growth`,
+        name: cultureLabel,
+        startDate: plantingDate,
+        endDate: harvestStartDate,
+        color: baseColor,
+        percent: 100,
+        plantingPlanId: plan.id,
+        cultureName: plan.culture_name,
+        cultureVariety: plan.culture_variety,
+        areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
+        notes: plan.notes,
+        harvestStartDate,
+        harvestEndDate,
+      });
+
+      if (harvestEndDate > harvestStartDate) {
+        tasks.push({
+          id: `plan-${plan.id}-harvest`,
+          name: `${cultureLabel} (Ernte)`,
+          startDate: harvestStartDate,
+          endDate: harvestEndDate,
+          color: baseColor.startsWith('#') ? `${baseColor}CC` : baseColor,
+          percent: 100,
+          plantingPlanId: plan.id,
+          cultureName: plan.culture_name,
+          cultureVariety: plan.culture_variety,
+          areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
+          notes: `Erntezeitraum: ${plan.notes || ''}`.trim(),
+          harvestStartDate,
+          harvestEndDate,
+        });
+      }
+    });
+    return tasks;
+  };
+
+  const nodes: OccupancyHierarchyNode[] = [];
+
+  locations.forEach((location) => {
+    const locationId = location.id;
+    if (!locationId) {
+      return;
+    }
+
+    const locationNodeId = `location-${locationId}`;
+    const locationNode: OccupancyHierarchyNode = {
+      id: locationNodeId,
+      parentId: null,
+      type: 'location',
+      name: location.name,
+      locationId,
+      tasks: [],
+      bedCount: 0,
+      occupiedBedCount: 0,
+      planCount: 0,
+    };
+    nodes.push(locationNode);
+
+    const locationFields = fieldsByLocation[locationId] ?? [];
+    locationFields.forEach((field) => {
+      const fieldId = field.id;
+      if (!fieldId) {
+        return;
+      }
+
+      const fieldNodeId = `field-${fieldId}`;
+      const fieldNode: OccupancyHierarchyNode = {
+        id: fieldNodeId,
+        parentId: locationNodeId,
+        type: 'field',
+        name: field.name,
+        locationId,
+        fieldId,
+        tasks: [],
+        bedCount: 0,
+        occupiedBedCount: 0,
+        planCount: 0,
+      };
+      nodes.push(fieldNode);
+
+      const fieldBeds = bedsByField[fieldId] ?? [];
+      fieldBeds.forEach((bed) => {
+        const bedId = bed.id;
+        if (!bedId) {
+          return;
+        }
+
+        const bedPlans = plansByBed.get(bedId) ?? [];
+        const tasks = buildBedTasks(bedPlans);
+        const isOccupied = bedPlans.length > 0;
+
+        nodes.push({
+          id: `bed-${bedId}`,
+          parentId: fieldNodeId,
+          type: 'bed',
+          name: bed.name,
+          locationId,
+          fieldId,
+          bedId,
+          tasks,
+          area: bed.area_sqm ? Number(bed.area_sqm) : undefined,
+          bedCount: 1,
+          occupiedBedCount: isOccupied ? 1 : 0,
+          planCount: bedPlans.length,
+        });
+
+        fieldNode.bedCount += 1;
+        fieldNode.occupiedBedCount += isOccupied ? 1 : 0;
+        fieldNode.planCount += bedPlans.length;
+        locationNode.bedCount += 1;
+        locationNode.occupiedBedCount += isOccupied ? 1 : 0;
+        locationNode.planCount += bedPlans.length;
+      });
+    });
+  });
+
+  return nodes;
 }
 
 export function buildSeedlingTaskGroups({

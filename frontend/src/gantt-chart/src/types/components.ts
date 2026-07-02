@@ -6,6 +6,7 @@ export interface TaskListRenderProps {
   tasks: TaskGroup[];
   headerLabel?: string;
   onGroupClick?: (group: TaskGroup) => void;
+  onToggleGroupExpand?: (groupId: string) => void;
   viewMode: ViewMode;
   leftColumnWidth?: number;
 }
@@ -134,6 +135,7 @@ export interface GanttChartProps {
   onTaskSelect?: (task: Task, isSelected: boolean) => void;
   onTaskDoubleClick?: (task: Task) => void;
   onGroupClick?: (group: TaskGroup) => void;
+  onToggleGroupExpand?: (groupId: string) => void;
   onViewModeChange?: (viewMode: ViewMode) => void;
 
   // Visual customization
@@ -193,6 +195,7 @@ export interface TaskListProps {
   rowHeight?: number;
   className?: string;
   onGroupClick?: (group: TaskGroup) => void;
+  onToggleGroupExpand?: (groupId: string) => void;
   viewMode?: ViewMode;
   showTimelineHeader?: boolean; // Pass through for styling adjustments
   leftColumnWidth?: number;

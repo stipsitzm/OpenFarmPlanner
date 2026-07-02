@@ -83,6 +83,7 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
       onTaskClick,
       onTaskSelect,
       onGroupClick,
+      onToggleGroupExpand,
       onViewModeChange,
 
       // Visual customization
@@ -1085,6 +1086,7 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
               tasks,
               headerLabel: resolvedHeaderLabel,
               onGroupClick,
+              onToggleGroupExpand,
               viewMode: activeViewMode,
               leftColumnWidth,
             })
@@ -1093,6 +1095,7 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
               tasks={tasks}
               headerLabel={resolvedHeaderLabel}
               onGroupClick={onGroupClick}
+              onToggleGroupExpand={onToggleGroupExpand}
               className={getComponentClassName("taskList", "rmg-task-list")}
               viewMode={activeViewMode}
               showTimelineHeader={showTimelineHeader}

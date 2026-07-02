@@ -23,6 +23,23 @@ export interface TaskGroup {
   bedName?: string;
   icon?: string;
   tasks: Task[];
+  /**
+   * Tree-row rendering hints. All optional and purely presentational — the
+   * caller (e.g. an app page) is responsible for computing the actual tree
+   * structure, flattening it into a visible-row list, and passing depth /
+   * isExpandable / isExpanded per group. Without these, a group renders
+   * exactly as before (flat row, no chevron/indent).
+   */
+  depth?: number;
+  isExpandable?: boolean;
+  isExpanded?: boolean;
+  /**
+   * Shown in the timeline area instead of bars when `tasks` is empty —
+   * e.g. a parent row summarizing its children ("12 beds, 34 plans").
+   * Purely a caller-provided string; this library has no opinion on its
+   * content.
+   */
+  emptyRowLabel?: string;
   [key: string]: any;
 }
 

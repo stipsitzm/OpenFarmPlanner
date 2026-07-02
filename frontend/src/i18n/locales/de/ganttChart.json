@@ -156,5 +156,11 @@
       "createAreas": "Zu Anbauflächen",
       "createPlan": "Anbauplan hinzufügen"
     }
+  },
+  "treeFilters": {
+    "searchPlaceholder": "Suche nach Kultur, Beet, Parzelle oder Standort…",
+    "allLocations": "Alle Standorte",
+    "allFields": "Alle Parzellen",
+    "onlyOccupiedBeds": "Nur belegte Beete"
   }
 }

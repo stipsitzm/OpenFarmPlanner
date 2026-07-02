@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { act } from 'react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -128,9 +128,17 @@ vi.mock('react-router-dom', async () => {
 vi.mock('../gantt-chart/src', () => ({
   __esModule: true,
   default: (props: {
-    tasks: Array<{ name: string; tasks: Array<Record<string, unknown> & { id: string; name: string }> }>;
+    tasks: Array<{
+      id: string;
+      name: string;
+      tasks: Array<Record<string, unknown> & { id: string; name: string }>;
+      isExpandable?: boolean;
+      isExpanded?: boolean;
+      emptyRowLabel?: string;
+    }>;
     renderTooltip?: ({ task }: { task: Record<string, unknown> }) => ReactNode;
     onTaskUpdate?: (groupId: string, task: { id: string; startDate: Date }) => void | Promise<void>;
+    onToggleGroupExpand?: (groupId: string) => void;
     editMode?: boolean;
     allowTaskMove?: boolean;
     renderHeader?: (props: {
@@ -147,8 +155,13 @@ vi.mock('../gantt-chart/src', () => ({
     maxHeight?: string | number;
   }) => {
     mocks.ganttProps(props);
-    const firstTask = props.tasks[0]?.tasks[0];
-    const firstGroupName = props.tasks[0]?.name ?? '';
+    // With the occupancy tree, tasks[0] is often a Standort/Parzelle parent
+    // row with no bars of its own — find the first group that actually has
+    // tasks (a bed/leaf row), matching what the old flat model always had
+    // at index 0.
+    const firstGroupWithTasks = props.tasks.find((group) => group.tasks.length > 0);
+    const firstTask = firstGroupWithTasks?.tasks[0];
+    const firstGroupName = firstGroupWithTasks?.name ?? '';
     return (
       <div data-testid="mock-gantt">
         {props.renderHeader?.({
@@ -195,6 +208,17 @@ vi.mock('../gantt-chart/src', () => ({
         {props.tasks.map((group) => (
         <div key={group.name}>
           <span>{group.name}</span>
+          {group.isExpandable ? (
+            <button
+              type="button"
+              aria-label={`toggle-${group.name}`}
+              aria-expanded={Boolean(group.isExpanded)}
+              onClick={() => props.onToggleGroupExpand?.(group.id)}
+            >
+              {group.isExpanded ? 'collapse' : 'expand'}
+            </button>
+          ) : null}
+          {group.emptyRowLabel ? <span>{group.emptyRowLabel}</span> : null}
           {group.tasks.map((task) => <span key={`${group.name}-${task.name}`}>{task.name}</span>)}
           {group.tasks[0] && props.renderTooltip ? (
             <div data-testid={`mock-tooltip-${group.name}`}>
@@ -220,6 +244,7 @@ vi.mock('../gantt-chart/src', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
+  window.sessionStorage.clear();
   projectRequirementState.shouldShowProjectRequiredState = false;
   projectRequirementState.missingProjectReason = null;
 
@@ -423,8 +448,9 @@ describe('GanttChartPage', () => {
       tooltip: PROPAGATION_MODE_TOOLTIP,
     });
     expect(screen.getByRole('button', { name: 'Zeitraum verschieben' })).toBeInTheDocument();
-    expect(screen.getByText('Feld / Beet 1')).toBeInTheDocument();
-    expect(screen.queryByText('Hof / Feld / Beet 1')).not.toBeInTheDocument();
+    expect(screen.getByText('Hof')).toBeInTheDocument();
+    expect(screen.getByText('Feld')).toBeInTheDocument();
+    expect(screen.getByText('Beet 1')).toBeInTheDocument();
     expect(mocks.ganttProps).toHaveBeenCalled();
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
     expect(latestProps?.locale).toBe('de-DE');
@@ -626,7 +652,7 @@ describe('GanttChartPage', () => {
 
     renderWithAuth();
 
-    await screen.findByText('Feld / Beet 1');
+    await screen.findByText('Beet 1');
     fireEvent.click(screen.getByRole('button', { name: 'Woche' }));
 
     await waitFor(() => {
@@ -675,7 +701,7 @@ describe('GanttChartPage', () => {
 
     renderWithAuth();
 
-    await screen.findByText('Feld / Beet 1');
+    await screen.findByText('Beet 1');
     fireEvent.click(screen.getByRole('button', { name: 'Woche' }));
     await waitFor(() => {
       expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.viewMode).toBe('week');
@@ -686,8 +712,9 @@ describe('GanttChartPage', () => {
     await waitFor(() => expect(mocks.planList).toHaveBeenCalledTimes(2));
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
     expect(latestProps?.viewMode).toBe('week');
-    expect(latestProps?.tasks[0]?.tasks[0]?.endDate).toEqual(new Date('2026-05-10T00:00:00.000Z'));
-    expect(latestProps?.tasks[0]?.tasks[1]?.endDate).toEqual(new Date('2026-05-20T00:00:00.000Z'));
+    const bedGroup = latestProps?.tasks.find((group: { tasks: unknown[] }) => group.tasks.length > 0);
+    expect(bedGroup?.tasks[0]?.endDate).toEqual(new Date('2026-05-10T00:00:00.000Z'));
+    expect(bedGroup?.tasks[1]?.endDate).toEqual(new Date('2026-05-20T00:00:00.000Z'));
   });
 
   it('keeps large projects renderable by windowing rows passed to the Gantt library', async () => {
@@ -725,17 +752,34 @@ describe('GanttChartPage', () => {
     );
 
     expect(await screen.findByTestId('gantt-virtual-viewport')).toBeInTheDocument();
+    // The field starts collapsed by default (200+ beds exceeds the
+    // auto-expand-all threshold): only the location + field parent rows are
+    // visible until it's expanded.
+    await waitFor(() => {
+      expect(debugSpy).toHaveBeenCalledWith('[Gantt diagnostics]', expect.objectContaining({
+        beds: rowCount,
+        plantingPlans: rowCount,
+        totalRows: 2,
+        totalTimelineItems: rowCount,
+      }));
+    });
     let latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];
     expect(latestProps?.tasks.length).toBeGreaterThan(0);
     expect(latestProps?.tasks.length).toBeLessThan(rowCount);
-    expect(debugSpy).toHaveBeenCalledWith('[Gantt diagnostics]', expect.objectContaining({
-      beds: rowCount,
-      plantingPlans: rowCount,
-      totalRows: rowCount,
-      totalTimelineItems: rowCount,
-      renderedRows: expect.any(Number),
-      renderedTimelineItems: expect.any(Number),
-    }));
+
+    // Expand it to reveal all 200 bed rows and actually exercise scroll
+    // windowing across them.
+    fireEvent.click(screen.getByRole('button', { name: 'toggle-Feld' }));
+    await screen.findByText('Beet 1');
+    await waitFor(() => {
+      expect(debugSpy).toHaveBeenCalledWith('[Gantt diagnostics]', expect.objectContaining({
+        beds: rowCount,
+        plantingPlans: rowCount,
+        // +2 for the single location + field parent rows in the occupancy tree
+        totalRows: rowCount + 2,
+        totalTimelineItems: rowCount,
+      }));
+    });
 
     fireEvent.scroll(screen.getByTestId('gantt-virtual-viewport'), {
       target: { scrollTop: 7200 },
@@ -985,7 +1029,7 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await screen.findByText('Feld / Beet 1');
+    await screen.findByText('Beet 1');
     expect(screen.queryByTestId('mock-update-task')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Zeitraum verschieben' }));
     await screen.findByTestId('mock-update-task');
@@ -1021,7 +1065,7 @@ describe('GanttChartPage', () => {
       </MemoryRouter>,
     );
 
-    await screen.findByText('Feld / Beet 1');
+    await screen.findByText('Beet 1');
     expect(screen.queryByTestId('mock-update-task')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Zeitraum verschieben' }));
     await screen.findByTestId('mock-update-task');
@@ -1029,5 +1073,110 @@ describe('GanttChartPage', () => {
 
     await waitFor(() => expect(mocks.planUpdate).toHaveBeenCalledTimes(1));
     expect(screen.queryByText('Fehler beim Aktualisieren des Anbauplans')).not.toBeInTheDocument();
+  });
+
+  describe('occupancy tree filters and search', () => {
+    const setUpMultiLocationFixture = () => {
+      mocks.locationList.mockResolvedValue({
+        data: { results: [{ id: 1, name: 'Hof' }, { id: 2, name: 'Pacht' }] },
+      });
+      mocks.fieldList.mockResolvedValue({
+        data: {
+          results: [
+            { id: 10, name: 'Nordfeld', location: 1 },
+            { id: 20, name: 'Südfeld', location: 2 },
+          ],
+        },
+      });
+      mocks.bedList.mockResolvedValue({
+        data: {
+          results: [
+            { id: 100, name: 'Karottenbeet', field: 10 },
+            { id: 101, name: 'Leerbeet', field: 10 },
+            { id: 200, name: 'Tomatenbeet', field: 20 },
+          ],
+        },
+      });
+      mocks.planList.mockResolvedValue({
+        data: {
+          results: [
+            {
+              id: 1,
+              culture: 1,
+              culture_name: 'Karotte',
+              bed: 100,
+              planting_date: '2026-03-01',
+              harvest_date: '2026-05-01',
+            },
+            {
+              id: 2,
+              culture: 2,
+              culture_name: 'Tomate',
+              bed: 200,
+              planting_date: '2026-04-01',
+              harvest_date: '2026-07-01',
+            },
+          ],
+        },
+      });
+      mocks.cultureList.mockResolvedValue({
+        data: { results: [{ id: 1, name: 'Karotte' }, { id: 2, name: 'Tomate' }] },
+      });
+    };
+
+    it('search finds a matching bed and keeps its parent Standort/Parzelle visible while hiding unrelated branches', async () => {
+      setUpMultiLocationFixture();
+      renderWithAuth();
+
+      await screen.findByText('Karottenbeet');
+      expect(screen.getByText('Tomatenbeet')).toBeInTheDocument();
+
+      fireEvent.change(screen.getByPlaceholderText('Suche nach Kultur, Beet, Parzelle oder Standort…'), {
+        target: { value: 'Karotte' },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Hof')).toBeInTheDocument();
+        expect(screen.getByText('Nordfeld')).toBeInTheDocument();
+        expect(screen.getByText('Karottenbeet')).toBeInTheDocument();
+        expect(screen.queryByText('Pacht')).not.toBeInTheDocument();
+        expect(screen.queryByText('Südfeld')).not.toBeInTheDocument();
+        expect(screen.queryByText('Tomatenbeet')).not.toBeInTheDocument();
+      });
+    });
+
+    it('Standort filter reduces the visible tree to the selected location', async () => {
+      setUpMultiLocationFixture();
+      renderWithAuth();
+
+      await screen.findByText('Karottenbeet');
+
+      fireEvent.mouseDown(screen.getByText('Alle Standorte'));
+      fireEvent.click(await screen.findByRole('option', { name: 'Pacht' }));
+
+      await waitFor(() => {
+        const tree = within(screen.getByTestId('mock-gantt'));
+        expect(tree.getByText('Pacht')).toBeInTheDocument();
+        expect(tree.getByText('Südfeld')).toBeInTheDocument();
+        expect(tree.getByText('Tomatenbeet')).toBeInTheDocument();
+        expect(tree.queryByText('Hof')).not.toBeInTheDocument();
+        expect(tree.queryByText('Nordfeld')).not.toBeInTheDocument();
+        expect(tree.queryByText('Karottenbeet')).not.toBeInTheDocument();
+      });
+    });
+
+    it('"Nur belegte Beete" hides beds without a planting plan by default and shows them when unchecked', async () => {
+      setUpMultiLocationFixture();
+      renderWithAuth();
+
+      await screen.findByText('Karottenbeet');
+      expect(screen.queryByText('Leerbeet')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Nur belegte Beete' }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Leerbeet')).toBeInTheDocument();
+      });
+    });
   });
 });

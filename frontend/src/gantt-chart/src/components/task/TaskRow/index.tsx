@@ -876,7 +876,21 @@ const TaskRow: React.FC<TaskRowProps> = ({
 
   if (groupTasks.length === 0) {
     return (
-      <div className="rmg-task-row rmg-task-row-empty">No tasks available</div>
+      <div
+        className="rmg-task-row rmg-task-row-empty"
+        style={{
+          minHeight: `${resolvedRowHeight}px`,
+          minWidth: `${totalMonths * monthWidth}px`,
+        }}
+        data-testid={`task-row-${taskGroupId}`}
+        data-group-id={taskGroupId}
+      >
+        {taskGroup?.emptyRowLabel && (
+          <span className="rmg-task-row-empty-label">
+            {taskGroup.emptyRowLabel}
+          </span>
+        )}
+      </div>
     );
   }
 
