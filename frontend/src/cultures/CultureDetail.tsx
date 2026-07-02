@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import type { Ref } from 'react';
 import { useMediaQuery, useTheme } from '@mui/material';
 import { useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
@@ -79,6 +80,7 @@ interface CultureDetailProps {
   canCreatePlan?: boolean;
   isPublishingCulture?: boolean;
   publishActionLabel?: string;
+  searchInputRef?: Ref<HTMLInputElement>;
 }
 
 const CULTURE_FILTERS_STORAGE_KEY = 'culturesDetailFiltersV1';
@@ -181,6 +183,7 @@ export function CultureDetail({
   canCreatePlan = true,
   isPublishingCulture = false,
   publishActionLabel,
+  searchInputRef,
 }: CultureDetailProps) {
   const { t } = useTranslation('cultures');
   const [searchParams, setSearchParams] = useSearchParams();
@@ -641,6 +644,7 @@ export function CultureDetail({
               label={t('searchPlaceholder')}
               placeholder={t('searchInputPlaceholderEnhanced')}
               noOptionsText={t('noOptionsEnhanced')}
+              inputRef={searchInputRef}
               textFieldSx={{
                 width: '100%',
               }}

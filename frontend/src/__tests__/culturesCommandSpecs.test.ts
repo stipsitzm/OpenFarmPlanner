@@ -1,0 +1,38 @@
+import { describe, expect, it, vi } from 'vitest';
+import { createCulturesCommandSpecs } from '../pages/culturesCommandSpecs';
+
+function buildOptions(overrides: Partial<Parameters<typeof createCulturesCommandSpecs>[0]> = {}) {
+  return {
+    canRunEnrichmentForCulture: () => false,
+    cultures: [],
+    enableAiEnrichment: false,
+    enrichmentLoading: false,
+    focusSearch: vi.fn(),
+    goToRelativeCulture: vi.fn(),
+    handleCreatePlantingPlan: vi.fn(),
+    handleDelete: vi.fn(),
+    handleEdit: vi.fn(),
+    handleEnrichCurrent: vi.fn(async () => {}),
+    handleExportAllCultures: vi.fn(),
+    handleExportCurrentCulture: vi.fn(),
+    handleImportFileTrigger: vi.fn(),
+    setEnrichAllConfirmOpen: vi.fn(),
+    ...overrides,
+  };
+}
+
+describe('createCulturesCommandSpecs', () => {
+  it('registers a culture.focusSearch command bound to Alt+S', () => {
+    const options = buildOptions();
+    const commands = createCulturesCommandSpecs(options);
+    const focusSearchCommand = commands.find((command) => command.id === 'culture.focusSearch');
+
+    expect(focusSearchCommand).toBeDefined();
+    expect(focusSearchCommand?.keys).toEqual({ alt: true, key: 's' });
+    expect(focusSearchCommand?.shortcutHint).toBe('Alt+S');
+    expect(focusSearchCommand?.isEnabled?.()).toBe(true);
+
+    focusSearchCommand?.action();
+    expect(options.focusSearch).toHaveBeenCalledTimes(1);
+  });
+});

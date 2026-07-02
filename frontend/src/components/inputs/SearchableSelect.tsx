@@ -15,13 +15,14 @@
  * @param props.fullWidth - Whether to stretch to container width.
  * @param props.autoFocus - Whether to focus the input on mount.
  * @param props.textFieldSx - Optional sx overrides for the TextField.
+ * @param props.inputRef - Ref to the underlying input element, for imperative focus.
  * @returns Searchable select input.
  */
 
 import { useState } from 'react';
 import { Autocomplete, TextField } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
 
 export interface SearchableSelectOption<T = unknown> {
   value: number;
@@ -44,6 +45,25 @@ export interface SearchableSelectProps<T = unknown> {
   inputValue?: string;
   onInputChange?: (value: string) => void;
   endAdornment?: ReactNode;
+  inputRef?: Ref<HTMLInputElement>;
+}
+
+// Combines Autocomplete's own internal input ref (needed for its keyboard/focus
+// handling) with a caller-supplied ref, without calling a hook inside renderInput
+// (renderInput runs during Autocomplete's own render, not this component's).
+function mergeRefs<T>(...refs: Array<Ref<T> | undefined>): (node: T | null) => void {
+  return (node) => {
+    refs.forEach((ref) => {
+      if (!ref) {
+        return;
+      }
+      if (typeof ref === 'function') {
+        ref(node);
+      } else {
+        (ref as React.MutableRefObject<T | null>).current = node;
+      }
+    });
+  };
 }
 
 export function SearchableSelect<T = unknown>({
@@ -61,6 +81,7 @@ export function SearchableSelect<T = unknown>({
   inputValue,
   onInputChange,
   endAdornment,
+  inputRef,
 }: SearchableSelectProps<T>) {
   const [internalInputValue, setInternalInputValue] = useState('');
   const resolvedInputValue = inputValue ?? internalInputValue;
@@ -103,6 +124,7 @@ export function SearchableSelect<T = unknown>({
           slotProps={{
             htmlInput: {
               ...params.inputProps,
+              ref: mergeRefs(params.inputProps.ref, inputRef),
               tabIndex: inputTabIndex,
             },
           }}
