@@ -1,4 +1,4 @@
-import { TaskGroup } from "@/types";
+import type { TaskGroup } from "../types";
 
 type ParsedHierarchy = {
   locationName?: string;

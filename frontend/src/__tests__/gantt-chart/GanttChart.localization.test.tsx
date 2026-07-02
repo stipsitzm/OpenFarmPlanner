@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { GanttChart, ViewMode, type TaskGroup } from "../src";
+import { GanttChart, ViewMode, type TaskGroup } from "../../gantt-chart/src";
 
 const tasks: TaskGroup[] = [
   {

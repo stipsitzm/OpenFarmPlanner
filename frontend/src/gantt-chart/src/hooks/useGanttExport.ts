@@ -1,11 +1,11 @@
 import { useRef, useCallback } from "react";
-import { ExportService } from "@/services/ExportService";
-import {
+import { ExportService } from "../services/ExportService";
+import type {
   ExportOptions,
   ExportResult,
   ExportFormat,
   GanttChartRef,
-} from "@/types";
+} from "../types";
 
 /**
  * Hook return type
@@ -188,26 +188,12 @@ export function useGanttExport(): UseGanttExportReturn {
   const getPreviewUrl = useCallback(
     async (
       format?: ExportFormat,
-      options?: Omit<ExportOptions, "format" | "filename">,
+      _options?: Omit<ExportOptions, "format" | "filename">,
     ): Promise<string | null> => {
       return getDataUrl(format);
     },
     [getDataUrl],
   );
-
-  const openPreview = useCallback(
-    async (
-      format?: ExportFormat,
-      options?: Omit<ExportOptions, "format" | "filename">,
-    ): Promise<string | null> => {
-      return getDataUrl(format);
-    },
-    [getDataUrl],
-  );
-
-  const closePreview = useCallback(() => {
-    return null;
-  }, []);
 
   return {
     ganttRef,

@@ -1,5 +1,5 @@
-import { CollisionService } from '../../src/services/CollisionService';
-import { Task, ViewMode } from '../../src/types';
+import { CollisionService } from '../../../gantt-chart/src/services/CollisionService';
+import { Task, ViewMode } from '../../../gantt-chart/src/types';
 
 describe('CollisionService', () => {
   describe('detectOverlaps', () => {

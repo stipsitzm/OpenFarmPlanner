@@ -1,4 +1,4 @@
-import { TaskGroup } from "@/types";
+import type { TaskGroup } from "../types";
 
 /**
  * Finds the earliest start date from all tasks

@@ -1,4 +1,4 @@
-import { Task } from "@/types";
+import type { Task } from "../types";
 import { getMonthsBetween } from "./dateUtils";
 
 /**

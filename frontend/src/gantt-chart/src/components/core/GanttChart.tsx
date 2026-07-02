@@ -6,20 +6,20 @@ import React, {
   forwardRef,
 } from "react";
 import {
-  GanttChartProps,
+  type GanttChartProps,
   ViewMode,
-  TaskGroup,
-  Task,
-  GanttChartRef,
-  ExportOptions,
-  ExportResult,
-  ExportFormat,
-} from "@/types";
-import { getMonthsBetween, findEarliestDate, findLatestDate } from "@/utils";
-import { Timeline, TodayMarker } from "@/components/timeline";
-import { ViewModeSelector } from "@/components/ui";
-import { TaskRow, TaskList } from "@/components/task";
-import { ExportService } from "@/services/ExportService";
+  type TaskGroup,
+  type Task,
+  type GanttChartRef,
+  type ExportOptions,
+  type ExportResult,
+  type ExportFormat,
+} from "../../types";
+import { getMonthsBetween, findEarliestDate, findLatestDate } from "../../utils";
+import { Timeline, TodayMarker } from "../../components/timeline";
+import { ViewModeSelector } from "../../components/ui";
+import { TaskRow, TaskList } from "../../components/task";
+import { ExportService } from "../../services/ExportService";
 import {
   addDays,
   addHours,
@@ -29,7 +29,7 @@ import {
   addYears,
   startOfYear,
 } from "date-fns";
-import { CollisionService } from "@/services/CollisionService";
+import { CollisionService } from "../../services/CollisionService";
 
 /**
  * GanttChart Component with ViewMode support and Export functionality
@@ -82,14 +82,12 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
       onTaskUpdate,
       onTaskClick,
       onTaskSelect,
-      onTaskDoubleClick,
       onGroupClick,
       onViewModeChange,
 
       // Visual customization
       fontSize,
       rowHeight = 40,
-      timeStep,
       maxHeight,
     },
     ref,
@@ -97,7 +95,7 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     const [activeViewMode, setActiveViewMode] = useState<ViewMode>(viewMode);
-    const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+    const [, setSelectedTaskIds] = useState<string[]>([]);
     const [viewUnitWidth, setViewUnitWidth] = useState<number>(150);
     const [isAutoScrolling, setIsAutoScrolling] = useState<boolean>(false);
 
@@ -945,9 +943,6 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
         higherHeaders.forEach((el) => {
           el.style.transform = `translateY(${scrollTop}px)`;
         });
-
-        const higherHeaderHeight =
-          higherHeaders.length > 0 ? higherHeaders[0].offsetHeight : 0;
 
         mainHeaders.forEach((el) => {
           el.style.transform = `translateY(${scrollTop}px)`;

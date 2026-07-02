@@ -20,4 +20,18 @@ export default defineConfig([
       globals: globals.browser,
     },
   },
+  {
+    // Vendored from react-modern-gantt (see src/gantt-chart/README.md), which
+    // was linted under its own, more lenient rule set. Keep that leniency
+    // scoped to this directory instead of rewriting its switch statements.
+    files: ['src/gantt-chart/**/*.{ts,tsx}'],
+    rules: {
+      'no-case-declarations': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+    },
+  },
 ])

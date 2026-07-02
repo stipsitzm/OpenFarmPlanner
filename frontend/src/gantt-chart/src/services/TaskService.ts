@@ -1,4 +1,4 @@
-import { Task, ViewMode } from "@/types";
+import { type Task, ViewMode } from "../types";
 import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 
 export class TaskService {

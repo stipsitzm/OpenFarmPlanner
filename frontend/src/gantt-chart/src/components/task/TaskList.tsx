@@ -1,12 +1,12 @@
 import React from "react";
-import { TaskGroup, TaskListProps } from "@/types";
-import { CollisionService } from "@/services";
+import type { TaskGroup, TaskListProps } from "../../types";
+import { CollisionService } from "../../services";
 import {
   estimateLabelHeight,
   getHierarchyLevels,
   getLabelLinesSource,
   normalizeLeftColumnWidth,
-} from "@/utils";
+} from "../../utils";
 
 /**
  * TaskList Component - Displays the list of task groups on the left side of the Gantt chart

@@ -271,6 +271,10 @@ See `CONTRIBUTING.md` for commit format requirements.
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).
 
+### Third-party code
+
+`frontend/src/gantt-chart/` is vendored from [react-modern-gantt](https://github.com/MikaStiebitz/React-Modern-Gantt) by Mika Stiebitz, MIT License. The original license text and copyright notice are preserved at [frontend/src/gantt-chart/LICENSE](frontend/src/gantt-chart/LICENSE); see [frontend/src/gantt-chart/README.md](frontend/src/gantt-chart/README.md) for provenance details.
+
 ## Developer Quality Checks
 
 Run the shared quality script before opening a PR:

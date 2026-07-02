@@ -1,5 +1,5 @@
-import { TaskService } from '../../src/services/TaskService';
-import { Task, ViewMode } from '../../src/types';
+import { TaskService } from '../../../gantt-chart/src/services/TaskService';
+import { Task } from '../../../gantt-chart/src/types';
 
 describe('TaskService', () => {
   describe('calculateDatesFromPosition', () => {

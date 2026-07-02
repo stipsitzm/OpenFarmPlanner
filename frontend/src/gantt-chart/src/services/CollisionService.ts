@@ -1,4 +1,4 @@
-import { Task, ViewMode } from "@/types";
+import { type Task, ViewMode } from "../types";
 
 /**
  * Service for detecting and resolving task collisions/overlaps

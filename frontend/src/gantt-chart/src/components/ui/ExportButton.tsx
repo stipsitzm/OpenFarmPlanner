@@ -1,5 +1,5 @@
 import React from "react";
-import { ExportOptions, ExportFormat } from "@/types";
+import type { ExportOptions, ExportFormat } from "../../types";
 
 /**
  * Props for ExportButton component

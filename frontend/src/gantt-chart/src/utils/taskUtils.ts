@@ -1,4 +1,4 @@
-import { Task } from "@/types";
+import type { Task } from "../types";
 
 /**
  * Detects task overlaps and organizes them into rows

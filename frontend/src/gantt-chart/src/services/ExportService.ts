@@ -1,4 +1,4 @@
-import { ExportOptions, ExportFormat, ExportResult } from "@/types";
+import type { ExportOptions, ExportFormat, ExportResult } from "../types";
 
 /**
  * Service for exporting Gantt chart as image or PDF
@@ -123,7 +123,6 @@ export class ExportService {
       scale = 2,
       backgroundColor = "#ffffff",
       padding = 20,
-      includeTitle = true,
       pdfOptions = {},
     } = options;
 

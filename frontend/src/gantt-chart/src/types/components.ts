@@ -1,5 +1,5 @@
 import React from "react";
-import { Task, TaskGroup, GanttStyles } from "./core";
+import type { Task, TaskGroup, GanttStyles } from "./core";
 import { ViewMode } from "./enums";
 
 export interface TaskListRenderProps {

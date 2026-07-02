@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ExportFormat } from "@/types";
+import type { ExportFormat } from "../../types";
 
 /**
  * Props for ExportPreview component
@@ -105,10 +105,13 @@ export const ExportPreview: React.FC<ExportPreviewProps> = ({
 }) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
-  // Reset image loaded state whenever preview URL or open state changes
+  // Reset image loaded state whenever preview URL or open state changes,
+  // alongside the document.body side effect below; not derivable from
+  // render alone.
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsImageLoaded(false);
     } else {
       document.body.style.overflow = "";

@@ -7,11 +7,11 @@ import React, {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { ViewMode, TooltipRenderProps } from "@/types";
-import { TaskService } from "@/services";
-import { TooltipProps } from "@/types";
+import { ViewMode, type TooltipRenderProps } from "../../types";
+import { TaskService } from "../../services";
+import type { TooltipProps } from "../../types";
 import { format } from "date-fns";
-import { getDuration } from "@/utils/dateUtils";
+import { getDuration } from "../../utils/dateUtils";
 
 type TooltipPlacement = "top" | "bottom";
 type ScrollListenerTarget = HTMLElement | typeof window;

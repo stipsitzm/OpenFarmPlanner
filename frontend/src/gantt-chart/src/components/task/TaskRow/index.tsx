@@ -1,13 +1,13 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Task, ViewMode, TaskRowProps } from "@/types";
-import { TaskService, CollisionService } from "@/services";
-import TaskItem from "@/components/task/TaskItem";
-import { Tooltip } from "@/components/ui";
+import React, { useState, useRef, useEffect } from "react";
+import { type Task, ViewMode, type TaskRowProps } from "../../../types";
+import { TaskService, CollisionService } from "../../../services";
+import TaskItem from "../../../components/task/TaskItem";
+import { Tooltip } from "../../../components/ui";
 import {
   estimateLabelHeight,
   getHierarchyLevels,
   getLabelLinesSource,
-} from "@/utils";
+} from "../../../utils";
 
 /**
  * TaskRow Component - Displays and manages tasks for a single task group
@@ -32,7 +32,6 @@ const TaskRow: React.FC<TaskRowProps> = ({
   viewMode = ViewMode.MONTH,
   scrollContainerRef,
   smoothDragging = true,
-  movementThreshold = 3,
   animationSpeed = 0.25,
   infiniteScroll = false,
   onTimelineExtend,
@@ -360,8 +359,6 @@ const TaskRow: React.FC<TaskRowProps> = ({
       // Get maximum scroll position
       const maxScrollLeft = container.scrollWidth - container.clientWidth;
 
-      // Apply easing for smoother acceleration/deceleration
-      const easingFactor = 0.15; // Smooth interpolation
       const frameSpeed = speed * (deltaTime / 16); // Normalize to frame time
 
       if (direction === "left") {
@@ -489,7 +486,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
   };
 
   // Task interaction handlers
-  const handleTaskClick = (event: React.MouseEvent, task: Task) => {
+  const handleTaskClick = (_event: React.MouseEvent, task: Task) => {
     if (onTaskClick && !draggingTask) {
       onTaskClick(task, taskGroup);
     }

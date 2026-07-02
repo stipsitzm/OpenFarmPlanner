@@ -1,5 +1,5 @@
 import React from "react";
-import { ViewMode } from "@/types";
+import { ViewMode } from "../../types";
 
 interface ViewModeSelectorProps {
   activeMode: ViewMode;
@@ -31,7 +31,7 @@ const ViewModeSelector: React.FC<ViewModeSelectorProps> = ({
   ];
 
   // Default standard view modes (excluding MINUTE and HOUR)
-  const standardViewModes = [
+  const standardViewModes: ViewMode[] = [
     ViewMode.DAY,
     ViewMode.WEEK,
     ViewMode.MONTH,

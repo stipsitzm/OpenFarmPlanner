@@ -1,7 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { GanttChart, ViewMode, type TaskGroup } from "../src";
-import { createHierarchyDemoData } from "../example/src/data";
+import { GanttChart, ViewMode, type TaskGroup } from "../../gantt-chart/src";
 
 const createTask = (id: string, name: string) => ({
   id,
@@ -9,6 +8,32 @@ const createTask = (id: string, name: string) => ({
   startDate: new Date(2026, 0, 1),
   endDate: new Date(2026, 0, 10),
 });
+
+const createHierarchyDemoData = (includeLocationLevel: boolean): TaskGroup[] => {
+  const withLocation = (field: string, bed: string, location: string) =>
+    includeLocationLevel ? [location, field, bed] : [field, bed];
+
+  return [
+    {
+      id: "bed-1",
+      name: "Bed A1",
+      hierarchyPath: withLocation("Field North", "Bed A1", "Location Green Farm"),
+      tasks: [createTask("crop-1", "Carrot")],
+    },
+    {
+      id: "bed-2",
+      name: "Bed B1",
+      hierarchyPath: withLocation("Field South", "Bed B1", "Location Green Farm"),
+      tasks: [createTask("crop-2", "Lettuce")],
+    },
+    {
+      id: "bed-3",
+      name: "Bed C1",
+      hierarchyPath: withLocation("Field West", "Bed C1", "Location Green Farm"),
+      tasks: [createTask("crop-3", "Beans")],
+    },
+  ];
+};
 
 describe("TaskList hierarchy location visibility", () => {
   test("renders explicit three-level hierarchy path", () => {

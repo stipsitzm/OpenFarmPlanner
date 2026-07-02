@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState, useCallback } from "react";
-import { TaskItemProps } from "@/types";
+import React, { useRef, useEffect, useState } from "react";
+import type { TaskItemProps } from "../../types";
 
 /**
  * TaskItem Component - Renders an individual task bar in the Gantt chart
@@ -146,8 +146,11 @@ const TaskItem: React.FC<TaskItemProps> = ({
     document.addEventListener("mouseup", handleUp, true);
   };
 
-  // Update progress state when task changes
+  // Update progress state when task changes. progressPercent also tracks
+  // in-progress drag state (see handleProgressMouseDown), so it can't be
+  // derived directly from props during render.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProgressPercent(task?.percent || 0);
   }, [task?.percent]);
 
@@ -198,7 +201,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
     left: `${leftPx}px`,
     top: `${topPx}px`,
     width: `${widthPx}px`,
-    backgroundColor: task.color || "var(--rmg-task-bg)",
+    backgroundColor,
+    color: textColor,
     cursor: isDragging ? "grabbing" : canMoveTask ? "grab" : "default",
   };
 

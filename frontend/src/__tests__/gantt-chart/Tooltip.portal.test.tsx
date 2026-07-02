@@ -1,6 +1,6 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { GanttChart, type TaskGroup } from "../src";
+import { GanttChart, type TaskGroup } from "../../gantt-chart/src";
 
 const tasks: TaskGroup[] = [
   {
@@ -46,12 +46,10 @@ describe("Tooltip portal behavior", () => {
     currentTaskRect = { ...taskRect };
     setViewport(1200, 800);
 
-    jest
+    vi
       .spyOn(HTMLElement.prototype, "getBoundingClientRect")
-      .mockImplementation(function () {
-        const element = this as HTMLElement;
-
-        if (element.dataset.taskId === "task-1") {
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.dataset.taskId === "task-1") {
           return {
             ...currentTaskRect,
             x: currentTaskRect.left,
@@ -60,7 +58,7 @@ describe("Tooltip portal behavior", () => {
           } as DOMRect;
         }
 
-        if (element.dataset.rmgComponent === "tooltip") {
+        if (this.dataset.rmgComponent === "tooltip") {
           return {
             left: 0,
             top: 0,
@@ -89,7 +87,7 @@ describe("Tooltip portal behavior", () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   test("renders tooltip through a portal into document.body by default", async () => {

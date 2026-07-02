@@ -6,11 +6,11 @@ import {
   getStandardDayMarkers,
   formatDateRange,
   calculateDuration,
-} from '../src/utils/dateUtils';
-import { findEarliestDate, findLatestDate } from '../src/utils/findUtils';
-import { calculateTaskPosition } from '../src/utils/positionUtils';
-import { detectTaskOverlaps } from '../src/utils/taskUtils';
-import { DateDisplayFormat, Task, TaskGroup } from '../src/types';
+} from '../../gantt-chart/src/utils/dateUtils';
+import { findEarliestDate, findLatestDate } from '../../gantt-chart/src/utils/findUtils';
+import { calculateTaskPosition } from '../../gantt-chart/src/utils/positionUtils';
+import { detectTaskOverlaps } from '../../gantt-chart/src/utils/taskUtils';
+import { DateDisplayFormat, Task, TaskGroup } from '../../gantt-chart/src/types';
 
 describe('formatMonth', () => {
   test('formats month correctly', () => {

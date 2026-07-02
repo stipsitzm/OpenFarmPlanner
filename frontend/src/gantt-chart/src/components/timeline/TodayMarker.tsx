@@ -1,5 +1,5 @@
 import React from "react";
-import { TodayMarkerProps, ViewMode } from "@/types";
+import { type TodayMarkerProps, ViewMode } from "../../types";
 
 /**
  * TodayMarker Component - Displays a vertical line indicating the current date

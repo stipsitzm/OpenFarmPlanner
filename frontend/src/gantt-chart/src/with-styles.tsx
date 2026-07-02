@@ -1,5 +1,5 @@
 import React from "react";
-import { GanttChartProps } from "./types";
+import type { GanttChartProps } from "./types";
 import { GanttChart } from "./components/core";
 
 // Import CSS directly to ensure it's bundled with the component

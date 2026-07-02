@@ -1,6 +1,13 @@
 import React from "react";
-import { TimelineProps, ViewMode } from "@/types";
+import { type TimelineProps, ViewMode } from "../../types";
 import { getWeek, isValid } from "date-fns";
+
+const HIERARCHICAL_VIEW_MODES: ViewMode[] = [
+  ViewMode.MINUTE,
+  ViewMode.HOUR,
+  ViewMode.DAY,
+  ViewMode.WEEK,
+];
 
 /**
  * Timeline Component with hierarchical display for different view modes
@@ -77,9 +84,7 @@ const Timeline: React.FC<TimelineProps> = React.memo(
     // Get higher-level units for the hierarchical header
     const getHigherLevelUnits = (): { date: Date; span: number }[] => {
       if (
-        ![ViewMode.MINUTE, ViewMode.HOUR, ViewMode.DAY, ViewMode.WEEK].includes(
-          viewMode,
-        ) ||
+        !HIERARCHICAL_VIEW_MODES.includes(viewMode) ||
         months.length === 0
       ) {
         return [];
@@ -178,12 +183,7 @@ const Timeline: React.FC<TimelineProps> = React.memo(
     };
 
     // Get whether we need a hierarchical display
-    const needsHierarchicalDisplay = [
-      ViewMode.MINUTE,
-      ViewMode.HOUR,
-      ViewMode.DAY,
-      ViewMode.WEEK,
-    ].includes(viewMode);
+    const needsHierarchicalDisplay = HIERARCHICAL_VIEW_MODES.includes(viewMode);
 
     // Get higher-level units for hierarchical display
     const higherLevelUnits = getHigherLevelUnits();
