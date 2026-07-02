@@ -871,9 +871,12 @@ function FieldsBedsHierarchy({
 
   // Clicking outside the grid while a row is being edited doesn't go through MUI's
   // own cell-focus-out handling (that only fires when focus moves to another grid
-  // cell), so the row is neither saved nor discarded by default. Commit it if it
-  // has real data (matching normal click-away-to-save UX and avoiding silent data
-  // loss); only a still-blank draft row is discarded.
+  // cell), so the row is neither saved nor discarded by default. A still-blank
+  // draft is discarded, a nameless-but-partially-filled draft is preserved
+  // locally the same way Escape does (attempting a real save would just reject
+  // for the missing name and strand the row in edit mode), and anything else is
+  // committed for real (matching normal click-away-to-save UX and avoiding
+  // silent data loss).
   const handleClickOutsideGrid = useCallback((): void => {
     const editingRowId = Object.entries(rowModesModel).find(
       ([, mode]) => mode.mode === GridRowModes.Edit,
@@ -881,7 +884,10 @@ function FieldsBedsHierarchy({
     if (editingRowId === undefined) return;
     const rowId = rowsById.get(editingRowId)?.id ?? editingRowId;
     const draftRow = getDraftRow(rowId);
-    if (draftRow && isCompletelyEmptyNewHierarchyRow(draftRow)) {
+    if (
+      draftRow &&
+      (isCompletelyEmptyNewHierarchyRow(draftRow) || isPartiallyFilledNamelessNewHierarchyRow(draftRow))
+    ) {
       discardRowEdit(rowId);
       return;
     }

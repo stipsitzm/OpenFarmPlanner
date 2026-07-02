@@ -108,7 +108,12 @@ vi.mock('@mui/x-data-grid', async () => {
     rowModesModel,
     rows,
   }: {
-    apiRef?: { current?: { getRowWithUpdatedValues?: (id: string | number, field: string) => unknown } };
+    apiRef?: {
+      current?: {
+        getRowWithUpdatedValues?: (id: string | number, field: string) => unknown;
+        stopRowEditMode?: (params: { id: string | number }) => void;
+      };
+    };
     columns: GridColDef[];
     isCellEditable?: (params: { row: Record<string, unknown>; field: string }) => boolean;
     onCellClick?: (params: { id: string | number; field: string; isEditable: boolean; row: Record<string, unknown> }) => void;
@@ -119,10 +124,6 @@ vi.mock('@mui/x-data-grid', async () => {
     rowModesModel: Record<string, { mode: string }>;
     rows: Array<Record<string, unknown> & { id: string | number }>;
   }) => {
-    if (apiRef?.current) {
-      apiRef.current.getRowWithUpdatedValues = (id: string | number) => mockDrafts.get(String(id)) ?? null;
-    }
-
     const commitBlur = async (row: Record<string, unknown> & { id: string | number }): Promise<void> => {
       const draft = mockDrafts.get(String(row.id)) ?? row;
       try {
@@ -132,6 +133,19 @@ vi.mock('@mui/x-data-grid', async () => {
       }
       onRowEditStop?.({ id: row.id, reason: GridRowEditStopReasons.rowFocusOut }, { defaultMuiPrevented: false });
     };
+
+    if (apiRef?.current) {
+      apiRef.current.getRowWithUpdatedValues = (id: string | number) => mockDrafts.get(String(id)) ?? null;
+      // Mirrors MUI's real stopRowEditMode: forces the same commit path the
+      // "Blur"/"Enter" test buttons use, since production code relies on this
+      // to actually save a row when focus leaves the grid entirely.
+      apiRef.current.stopRowEditMode = ({ id }: { id: string | number }) => {
+        const row = rows.find((candidate) => String(candidate.id) === String(id));
+        if (row) {
+          void commitBlur(row);
+        }
+      };
+    }
 
     return (
       <div data-testid="hierarchy-grid">
@@ -458,7 +472,10 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     await user.click(await screen.findByRole('button', { name: 'Edit field-10' }));
     fireEvent.mouseDown(document.body);
 
-    expect(screen.getByTestId('mode-field-10')).toHaveTextContent('view');
+    // Clicking outside now commits via the same async processRowUpdate path as a
+    // real blur, instead of synchronously discarding, so the mode change lags
+    // behind the (mocked) API response.
+    await waitFor(() => expect(screen.getByTestId('mode-field-10')).toHaveTextContent('view'));
     expect(fieldDeleteMock).not.toHaveBeenCalled();
     expect(screen.getByText('Nordfeld')).toBeInTheDocument();
   });
@@ -514,7 +531,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     expect(screen.queryByText('Zeile wurde nicht gespeichert, da der Name fehlt.')).not.toBeInTheDocument();
   });
 
-  it('keeps a partially filled new row available when clicking outside', async () => {
+  it('persists a new row with a name when clicking outside, instead of just keeping it local', async () => {
     const user = userEvent.setup();
     renderHierarchy();
     await addNewBed();
@@ -522,9 +539,12 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     await user.click(screen.getByRole('button', { name: 'Partial name -1700000000000' }));
     fireEvent.mouseDown(document.body);
 
-    expect(screen.getByTestId('row--1700000000000')).toBeInTheDocument();
+    // Unlike Escape (a deliberate "give up"), clicking outside a row that has a
+    // name is a real save attempt, matching normal click-away-to-save UX - the
+    // temporary negative id is replaced by the backend's real id once saved.
     expect(await screen.findByText('Teilweise gefuellt')).toBeInTheDocument();
-    expect(screen.getByTestId('mode--1700000000000')).toHaveTextContent('view');
+    await waitFor(() => expect(bedCreateMock).toHaveBeenCalled());
+    await waitFor(() => expect(screen.queryByTestId('row--1700000000000')).not.toBeInTheDocument());
   });
 
   it('allows invalid missing-name edits to leave edit mode after validation fails', async () => {
@@ -556,7 +576,7 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     fireEvent.mouseDown(document.body);
 
     expect(screen.getByTestId('row--1700000000000')).toBeInTheDocument();
-    expect(screen.getByTestId('mode--1700000000000')).toHaveTextContent('view');
+    await waitFor(() => expect(screen.getByTestId('mode--1700000000000')).toHaveTextContent('view'));
     expect(screen.getByText('Zeile wurde nicht gespeichert, da der Name fehlt.')).toBeInTheDocument();
     expect(bedCreateMock).not.toHaveBeenCalled();
   });
