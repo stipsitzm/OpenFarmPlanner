@@ -31,6 +31,16 @@
 - Run targeted tests when appropriate unless the user explicitly says not to run tests.
 - Do NOT execute CI workflows manually.
 
+## Playwright Screenshot Tests
+- Screenshot baselines must never be updated or committed automatically.
+- If a screenshot test fails, first determine whether the visual change is intentional or indicates a bug.
+- Only update baselines when:
+  - the UI change is explicitly intended, and
+  - the new screenshots have been visually reviewed.
+- Add new screenshot tests only for stable, important layouts (e.g. main pages, navigation, responsive layouts).
+- Prefer standard Playwright assertions (`toBeVisible`, `toHaveText`, `toBeFocused`, `toHaveValue`, etc.) for functional tests.
+- When creating or changing a screenshot test, document why a screenshot test is appropriate over functional assertions.
+
 ## Documentation Rules
 - Update relevant documentation when behavior changes.
 - Keep code comments minimal and useful.
