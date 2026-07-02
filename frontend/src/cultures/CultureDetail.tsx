@@ -1345,10 +1345,10 @@ export function CultureDetail({
                 {selectedCulture.harvest_method && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
-                      Erntemethode
+                      {t('form.yieldUnit')}
                     </Typography>
                     <Typography variant="body1">
-                      {selectedCulture.harvest_method === 'per_plant' ? 'Pro Pflanze' : 'Pro m²'}
+                      {selectedCulture.harvest_method === 'per_plant' ? t('form.yieldUnitPerPlant') : t('form.yieldUnitPerSqm')}
                     </Typography>
                   </Box>
                 )}

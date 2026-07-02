@@ -170,7 +170,7 @@ describe('validateCulture', () => {
     expect(result.errors.sowing_calculation_safety_percent).toBe('form.sowing_calculation_safety_percentError');
   });
 
-  it('validates display color format and harvest method dependency', () => {
+  it('validates display color format and yield unit dependency', () => {
     const invalidColor = validateCulture(
       {
         name: 'Salat',
@@ -199,7 +199,7 @@ describe('validateCulture', () => {
       },
       t
     );
-    expect(requiresMethod.errors.harvest_method).toBe('form.harvestMethodRequired');
+    expect(requiresMethod.errors.harvest_method).toBe('form.yieldUnitRequired');
 
     const withMethod = validateCulture(
       {

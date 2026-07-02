@@ -750,7 +750,7 @@ class Culture(TimestampedModel):
         max_length=20,
         choices=HARVEST_METHOD_CHOICES,
         blank=True,
-        help_text="Harvest method"
+        help_text="Yield unit for expected harvest"
     )
     expected_yield = models.DecimalField(
         max_digits=10,

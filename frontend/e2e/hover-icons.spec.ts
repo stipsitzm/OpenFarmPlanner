@@ -8,7 +8,7 @@
  * so the overlay is not in the DOM at all during editing (naturally hidden).
  */
 import { expect, test, type Page } from '@playwright/test';
-import { loginWithDeterministicProject } from './utils';
+import { loginWithDeterministicProject, tabSaveHierarchyRow } from './utils';
 
 async function getOverlayOpacity(locator: ReturnType<Page['locator']>): Promise<number> {
   return locator.evaluate((el: HTMLElement) => parseFloat(window.getComputedStyle(el).opacity));
@@ -30,10 +30,7 @@ test.describe('hover icons – keyboard must not trigger visibility', () => {
       const input = page.locator('.MuiDataGrid-row--editing input[type="text"]').first();
       await expect(input).toBeVisible({ timeout: 5000 });
       await input.fill('HoverTestParzelle');
-      // Tab-save through all editable cells (name → length_m → width_m → exits)
-      await page.keyboard.press('Tab');
-      await page.keyboard.press('Tab');
-      await page.keyboard.press('Tab');
+      await tabSaveHierarchyRow(page);
       await page.waitForTimeout(800);
       await expect(page.getByText('HoverTestParzelle')).toBeVisible({ timeout: 5000 });
 

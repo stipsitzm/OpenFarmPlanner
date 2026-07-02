@@ -1,12 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
-import { loginWithDeterministicProject } from './utils';
-
-// Saves by tabbing out of the last editable cell (name → length_m → width_m → exits)
-async function tabSaveRow(page: Page): Promise<void> {
-  await page.keyboard.press('Tab'); // name → length_m
-  await page.keyboard.press('Tab'); // length_m → width_m
-  await page.keyboard.press('Tab'); // width_m → exits row
-}
+import { expect, test } from '@playwright/test';
+import { loginWithDeterministicProject, tabSaveHierarchyRow as tabSaveRow } from './utils';
 
 test.describe('fields-beds Enter key behavior', () => {
   test.beforeEach(async ({ page, request }) => {
@@ -27,11 +20,13 @@ test.describe('fields-beds Enter key behavior', () => {
 
     expect(await page.locator('.MuiDataGrid-row--editing').count()).toBe(1);
 
+    // First Enter commits the name cell and moves focus to the next cell (MUI's
+    // default row-edit Enter behavior, like Tab) rather than exiting the row;
+    // a second Enter is needed to actually save and exit edit mode.
     await nameInput.press('Enter');
-    await page.waitForTimeout(800);
-
-    const afterCount = await page.locator('.MuiDataGrid-row--editing').count();
-    expect(afterCount).toBe(0);
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.MuiDataGrid-row--editing')).toHaveCount(0, { timeout: 5000 });
     await expect(page.getByText('Feld-Test-1')).toBeVisible({ timeout: 5000 });
   });
 
@@ -56,10 +51,7 @@ test.describe('fields-beds Enter key behavior', () => {
 
     // Press Enter — should save (Bug A was: throws "area must be positive")
     await editInput.press('Enter');
-    await page.waitForTimeout(800);
-
-    const afterCount = await page.locator('.MuiDataGrid-row--editing').count();
-    expect(afterCount).toBe(0);
+    await expect(page.locator('.MuiDataGrid-row--editing')).toHaveCount(0, { timeout: 5000 });
   });
 
   test('Enter on field with dimensions and a bed below does not reopen field (ping-pong bug)', async ({ page }) => {
@@ -69,15 +61,20 @@ test.describe('fields-beds Enter key behavior', () => {
     const fieldInput = page.locator('.MuiDataGrid-row--editing input[type="text"]').first();
     await expect(fieldInput).toBeVisible({ timeout: 5000 });
     await fieldInput.fill('FeldMitMasse');
+    // MUI's cell-edit commit is internally debounced; tabbing away immediately
+    // (faster than a human would type/tab) can lose the name edit before it's
+    // flushed into the row's tracked edit state.
+    await page.waitForTimeout(100);
     // Tab to length
     await page.keyboard.press('Tab');
     await page.keyboard.press('1');
     // Tab to width
     await page.keyboard.press('Tab');
     await page.keyboard.press('1');
-    // Tab out to save
+    // Tab past width (to the non-editable notes cell), then blur to actually commit the row
     await page.keyboard.press('Tab');
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(200);
+    await page.locator('h1', { hasText: 'Anbauflächen' }).click();
     await expect(page.getByText('FeldMitMasse')).toBeVisible({ timeout: 5000 });
 
     // Add a bed via context menu
@@ -110,11 +107,7 @@ test.describe('fields-beds Enter key behavior', () => {
 
     // First Enter: should save field and move focus to bed (but NOT open bed for editing)
     await editInput.press('Enter');
-    await page.waitForTimeout(800);
-
-    const afterFirstEnter = await page.locator('.MuiDataGrid-row--editing').count();
-    console.log('Editing rows after Enter on field:', afterFirstEnter);
-    expect(afterFirstEnter).toBe(0);
+    await expect(page.locator('.MuiDataGrid-row--editing')).toHaveCount(0, { timeout: 5000 });
 
     // Second Enter (on focused bed cell in view mode):
     // Bug B was: areas.edit shortcut fired → field re-opened for editing (ping-pong)

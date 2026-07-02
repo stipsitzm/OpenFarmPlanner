@@ -12,11 +12,22 @@ npm run test:e2e
 ## Notes
 
 - The Playwright configuration starts the backend and frontend web servers automatically.
+- The frontend server is the **production build** served via `vite preview`, not the Vite
+  dev server: `npm run test:e2e` runs `npm run build` first, and Playwright's `webServer`
+  entry only runs `vite preview` against the resulting `dist/`. This is intentional — it
+  catches production-only bugs (e.g. effect-ordering/timing issues that only show up once
+  code is bundled) that the dev server can mask. If you change frontend source and re-run
+  `npx playwright test` directly (skipping `npm run test:e2e`), remember to `npm run build`
+  first, or your changes won't be reflected.
 - A debug-only backend fixture endpoint is available only when:
   - `DEBUG=True`
   - `E2E_TEST_TOKEN` is set for the backend process started by Playwright
+- `FRONTEND_PORT` and `BACKEND_PORT` env vars override the default ports (4173 / 8000) if
+  you need to run E2E tests alongside an already-running dev environment.
 
-See `frontend/playwright.config.ts` for exact runtime settings.
+See `frontend/playwright.config.ts` for exact runtime settings. In CI, the
+`E2E (production build)` workflow (`.github/workflows/e2e.yml`) runs this same build+test
+flow on every pull request targeting `main`.
 
 
 ## Responsive screenshot baseline

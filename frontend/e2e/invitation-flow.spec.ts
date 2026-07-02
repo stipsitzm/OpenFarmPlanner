@@ -10,9 +10,14 @@ type InviteFixture = {
   admin: { email: string; password: string };
 };
 
+// Must default to the same BACKEND_PORT used to configure the backend webServer in
+// playwright.config.ts, or fixture setup silently hits whatever else happens to be
+// running on port 8000 (e.g. a developer's own long-running dev backend) instead of
+// the backend actually under test.
+const defaultBackendPort = process.env.BACKEND_PORT ?? '8000';
 const e2eApiBase =
   process.env.PLAYWRIGHT_E2E_API_BASE ??
-  'http://127.0.0.1:8000/api/__e2e__/invite-flow/';
+  `http://127.0.0.1:${defaultBackendPort}/api/__e2e__/invite-flow/`;
 const e2eToken = process.env.E2E_TEST_TOKEN || 'openfarmplanner-e2e-token';
 
 async function invokeE2EAction(
@@ -49,7 +54,9 @@ async function removeInviteeMembership(
 
 async function loginViaUi(page: Page, email: string, password: string): Promise<void> {
   await page.getByLabel('E-Mail').fill(email);
-  await page.getByLabel('Passwort').fill(password);
+  // getByLabel('Passwort') also matches the MUI show/hide password toggle button
+  // (aria-label "Passwort anzeigen"), so scope directly to the password input.
+  await page.locator('input[type="password"]').fill(password);
   await page.getByRole('button', { name: 'Anmelden' }).click();
 }
 
@@ -63,7 +70,7 @@ test.describe('project invitation flow', () => {
 
     await loginViaUi(page, fixture.invitee.email, fixture.invitee.password);
 
-    await expect(page).toHaveURL(/\/app\/(?:locations|anbauplaene)/);
+    await expect(page).toHaveURL(/\/app\/fields-beds/);
     await expect(page.getByText(fixture.projectName)).toBeVisible();
   });
 
@@ -73,7 +80,7 @@ test.describe('project invitation flow', () => {
 
     await page.goto(fixture.inviteUrl);
     await loginViaUi(page, fixture.invitee.email, fixture.invitee.password);
-    await expect(page).toHaveURL(/\/app\/(?:locations|anbauplaene)/);
+    await expect(page).toHaveURL(/\/app\/fields-beds/);
     await expect(page.getByText(fixture.projectName)).toBeVisible();
 
     await page.goto(fixture.inviteUrl);
@@ -86,7 +93,7 @@ test.describe('project invitation flow', () => {
 
     await page.goto(fixture.inviteUrl);
     await loginViaUi(page, fixture.invitee.email, fixture.invitee.password);
-    await expect(page).toHaveURL(/\/app\/(?:locations|anbauplaene)/);
+    await expect(page).toHaveURL(/\/app\/fields-beds/);
     await expect(page.getByText(fixture.projectName)).toBeVisible();
 
     await removeInviteeMembership(request, scenarioId);

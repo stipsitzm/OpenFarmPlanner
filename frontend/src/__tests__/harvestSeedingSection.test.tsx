@@ -7,7 +7,7 @@ const t = (key: string, options?: Record<string, unknown>) =>
   typeof options?.defaultValue === 'string' ? options.defaultValue : key;
 
 describe('HarvestSection and SeedingSection', () => {
-  it('changes harvest method via select', () => {
+  it('changes yield unit via select', () => {
     const onChange = vi.fn();
 
     render(
@@ -21,10 +21,10 @@ describe('HarvestSection and SeedingSection', () => {
 
     const harvestCombobox = screen.getAllByRole('combobox')[0];
     fireEvent.mouseDown(harvestCombobox);
-    fireEvent.click(screen.getByRole('option', { name: 'form.harvestMethodPerPlant' }));
+    fireEvent.click(screen.getByRole('option', { name: 'form.yieldUnitPerPlant' }));
 
     expect(onChange).toHaveBeenCalledWith('harvest_method', 'per_plant');
-    expect(screen.getByText('form.harvestMethodRequired')).toBeInTheDocument();
+    expect(screen.getByText('form.yieldUnitRequired')).toBeInTheDocument();
   });
 
   it('handles seeding unit select and blur callbacks', () => {

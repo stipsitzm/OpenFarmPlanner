@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const frontendPort = process.env.FRONTEND_PORT ? parseInt(process.env.FRONTEND_PORT) : 4173;
-const backendPort = 8000;
+const backendPort = process.env.BACKEND_PORT ? parseInt(process.env.BACKEND_PORT) : 8000;
 const e2eToken = process.env.E2E_TEST_TOKEN || 'openfarmplanner-e2e-token';
 
 export default defineConfig({
@@ -13,13 +13,18 @@ export default defineConfig({
     timeout: 10_000,
   },
   use: {
-    baseURL: `http://localhost:${frontendPort}`,
+    // Must match the 127.0.0.1 host used for FRONTEND_URL/CORS_ALLOWED_ORIGINS/
+    // CSRF_TRUSTED_ORIGINS below. Browsers treat "localhost" and "127.0.0.1" as
+    // different origins, so a relative page.goto() resolved against a "localhost"
+    // baseURL after logging in on 127.0.0.1 would silently lose the session
+    // cookie and fail CSRF checks on every subsequent authenticated request.
+    baseURL: `http://127.0.0.1:${frontendPort}`,
     trace: 'off',
     video: 'off',
   },
   webServer: [
     {
-      command: "bash -lc 'uv run python manage.py migrate && uv run python manage.py runserver 127.0.0.1:8000'",
+      command: `bash -lc 'uv run python manage.py migrate && uv run python manage.py runserver 127.0.0.1:${backendPort}'`,
       cwd: '../backend',
       port: backendPort,
       reuseExistingServer: true,
@@ -27,6 +32,9 @@ export default defineConfig({
       env: {
         ...process.env,
         DEBUG: 'True',
+        // Without a local .env file (e.g. in CI), DJANGO_ENV defaults to 'production',
+        // and settings.py refuses to boot with a localhost FRONTEND_URL in that mode.
+        DJANGO_ENV: process.env.DJANGO_ENV || 'development',
         FRONTEND_URL: `http://127.0.0.1:${frontendPort}`,
         CORS_ALLOWED_ORIGINS: `http://127.0.0.1:${frontendPort}`,
         CSRF_TRUSTED_ORIGINS: `http://127.0.0.1:${frontendPort}`,
@@ -34,14 +42,19 @@ export default defineConfig({
       },
     },
     {
-      command: `npm run dev -- --host 127.0.0.1 --port ${frontendPort}`,
+      // Serves the production bundle (`npm run build`'s dist/ output), not the Vite dev
+      // server, so E2E tests catch build-only bugs (e.g. effect-ordering/timing issues
+      // that only surface once code is bundled) instead of just dev-mode behavior.
+      // `dist/` must already exist — run `npm run build` first (see package.json's
+      // `test:e2e` script and the CI workflow).
+      command: `npm run preview -- --host 127.0.0.1 --port ${frontendPort} --strictPort`,
       cwd: '.',
       port: frontendPort,
       reuseExistingServer: true,
-      timeout: 120_000,
+      timeout: 30_000,
       env: {
         ...process.env,
-        VITE_API_BASE_URL: `http://127.0.0.1:${backendPort}/api`,
+        DEV_BACKEND_ORIGIN: `http://127.0.0.1:${backendPort}`,
       },
     },
   ],

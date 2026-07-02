@@ -1,5 +1,5 @@
 /**
- * HarvestSection: Harvest method, expected yield
+ * HarvestSection: yield unit and expected yield
  * @remarks Presentational, no internal state
  */
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
@@ -20,19 +20,19 @@ export function HarvestSection({ formData, errors, onChange, t }: HarvestSection
       <Typography variant="h6" sx={{ mt: 2 }}>{t('form.sectionHarvest')}</Typography>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <FormControl sx={fieldSx} error={Boolean(errors.harvest_method)}>
-          <InputLabel>{t('form.harvestMethod')}</InputLabel>
+          <InputLabel>{t('form.yieldUnit')}</InputLabel>
           <Select
             value={formData.harvest_method || ''}
             onChange={e => onChange('harvest_method', e.target.value)}
-            label={t('form.harvestMethod')}
+            label={t('form.yieldUnit')}
             fullWidth
           >
             <MenuItem value="">{t('noData')}</MenuItem>
-            <MenuItem value="per_plant">{t('form.harvestMethodPerPlant')}</MenuItem>
-            <MenuItem value="per_sqm">{t('form.harvestMethodPerSqm')}</MenuItem>
+            <MenuItem value="per_plant">{t('form.yieldUnitPerPlant')}</MenuItem>
+            <MenuItem value="per_sqm">{t('form.yieldUnitPerSqm')}</MenuItem>
           </Select>
           {errors.harvest_method && (
-            <Typography variant="caption" color="error">{t('form.harvestMethodRequired')}</Typography>
+            <Typography variant="caption" color="error">{t('form.yieldUnitRequired')}</Typography>
           )}
         </FormControl>
         <TextField

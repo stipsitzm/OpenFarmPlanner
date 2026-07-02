@@ -12,6 +12,15 @@ function normalizeBasePath(input?: string): string {
 const basePath = normalizeBasePath(process.env.VITE_BASE_PATH)
 const backendDevOrigin = process.env.DEV_BACKEND_ORIGIN || 'http://127.0.0.1:8000'
 
+// Shared by the dev server and `vite preview` (used for production-build E2E runs), so
+// requests to the Django backend work the same way regardless of which one serves the SPA.
+const backendProxy = {
+  '/admin': { target: backendDevOrigin, changeOrigin: true },
+  '/api': { target: backendDevOrigin, changeOrigin: true },
+  '/static': { target: backendDevOrigin, changeOrigin: true },
+  '/media': { target: backendDevOrigin, changeOrigin: true },
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   base: basePath,
@@ -31,24 +40,10 @@ export default defineConfig({
         '**/node_modules/.cache/**',
       ],
     },
-    proxy: {
-      '/admin': {
-        target: backendDevOrigin,
-        changeOrigin: true,
-      },
-      '/api': {
-        target: backendDevOrigin,
-        changeOrigin: true,
-      },
-      '/static': {
-        target: backendDevOrigin,
-        changeOrigin: true,
-      },
-      '/media': {
-        target: backendDevOrigin,
-        changeOrigin: true,
-      },
-    },
+    proxy: backendProxy,
+  },
+  preview: {
+    proxy: backendProxy,
   },
   test: {
     globals: true,

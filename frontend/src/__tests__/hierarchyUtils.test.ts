@@ -204,6 +204,45 @@ describe('buildHierarchyRows', () => {
     expect(existingBed?.isNew).toBe(false);
   });
 
+  it('should mark fields with negative IDs as new', () => {
+    const newFields = [
+      { id: -1, name: 'New Field', location: 1, area_sqm: 100 } as Field,
+      { id: 1, name: 'Existing Field', location: 1, area_sqm: 100 } as Field,
+    ];
+
+    expandedRows.add('location-1');
+
+    const result = buildHierarchyRows(mockLocations, newFields, [], expandedRows);
+
+    const newField = result.find((r) => r.type === 'field' && r.id === 'field--1');
+    const existingField = result.find((r) => r.type === 'field' && r.id === 'field-1');
+
+    expect(newField?.isNew).toBe(true);
+    expect(existingField?.isNew).toBe(false);
+  });
+
+  // Regression test: createHierarchyRowsProjector is the row-builder actually used at
+  // runtime (FieldsBedsHierarchy.tsx), and its getFieldRow helper was missing the isNew
+  // flag entirely (unlike the equivalent getBedRow). This left a new, empty field row
+  // stuck in the grid after pressing Escape, since discardRowEdit's cleanup only runs
+  // for rows where isNew is true.
+  it('marks a new field as isNew when projected via createHierarchyRowsProjector', () => {
+    const newFields = [
+      { id: -1, name: 'New Field', location: 1, area_sqm: 100 } as Field,
+      { id: 1, name: 'Existing Field', location: 1, area_sqm: 100 } as Field,
+    ];
+
+    const hierarchyIndex = buildHierarchyIndex(mockLocations, newFields, [], { field: 'name', direction: 'asc' });
+    const projectRows = createHierarchyRowsProjector(hierarchyIndex);
+    const result = projectRows(new Set(['location-1']));
+
+    const newField = result.find((r) => r.type === 'field' && r.fieldId === -1);
+    const existingField = result.find((r) => r.type === 'field' && r.fieldId === 1);
+
+    expect(newField?.isNew).toBe(true);
+    expect(existingField?.isNew).toBe(false);
+  });
+
   it('should filter fields by location correctly', () => {
     expandedRows.add('location-1');
     expandedRows.add('location-2');

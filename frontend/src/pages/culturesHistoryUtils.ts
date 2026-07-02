@@ -37,7 +37,7 @@ const HISTORY_FIELD_LABEL_KEYS: Record<string, string> = {
   growth_duration_days: 'form.growthDurationDays',
   harvest_duration_days: 'form.harvestDurationDays',
   propagation_duration_days: 'form.propagationDurationDays',
-  harvest_method: 'form.harvestMethod',
+  harvest_method: 'form.yieldUnit',
   expected_yield: 'form.expectedYield',
   allow_deviation_delivery_weeks: 'form.allowDeviationDeliveryWeeks',
   distance_within_row_m: 'form.distanceWithinRowCm',
@@ -199,10 +199,10 @@ export function formatHistoryChangeValue(
   }
   if (field === 'harvest_method') {
     if (value === 'per_plant') {
-      return t('form.harvestMethodPerPlant');
+      return t('form.yieldUnitPerPlant');
     }
     if (value === 'per_sqm') {
-      return t('form.harvestMethodPerSqm');
+      return t('form.yieldUnitPerSqm');
     }
   }
   if (field === 'nutrient_demand') {

@@ -191,6 +191,13 @@ cd frontend
 npm run test:e2e
 ```
 
+`npm run test:e2e` builds the production frontend bundle (`npm run build`) and runs
+Playwright against that build via `vite preview`, not the Vite dev server — this catches
+production-only bugs (e.g. behavior that only appears once code is bundled) that dev mode
+can hide. The `E2E (production build)` GitHub Actions workflow (`.github/workflows/e2e.yml`)
+runs the same build-then-test flow on every pull request targeting `main` and must pass
+before merging; it can be added as a required status check in branch protection.
+
 ## Version Bumping
 
 Project version is defined in `backend/config/version.py` as a semantic version (`MAJOR.MINOR.PATCH`).

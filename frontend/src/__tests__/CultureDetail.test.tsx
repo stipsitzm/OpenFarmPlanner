@@ -21,6 +21,7 @@ describe('CultureDetail Component', () => {
 
       growth_duration_days: 56,
       harvest_duration_days: 28,
+      harvest_method: 'per_plant',
       notes: 'Frisch und süß.',
     },
     {
@@ -176,6 +177,8 @@ describe('CultureDetail Component', () => {
     
     expect(screen.getByText(/56\s+Tage/)).toBeInTheDocument();
     expect(screen.getByText(/28\s+Tage/)).toBeInTheDocument();
+    expect(screen.getByText('Ertragseinheit')).toBeInTheDocument();
+    expect(screen.getByText('Pro Pflanze')).toBeInTheDocument();
   });
 
 

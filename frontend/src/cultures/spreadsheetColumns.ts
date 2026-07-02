@@ -35,12 +35,12 @@ export const CULTIVATION_TYPE_IMPORT: Record<string, string> = {
   pre_cultivation: 'pre_cultivation',
 };
 
-export const HARVEST_METHOD_EXPORT: Record<string, string> = {
+export const YIELD_UNIT_EXPORT: Record<string, string> = {
   per_plant: 'Pro Pflanze',
   per_sqm: 'Pro m²',
 };
 
-export const HARVEST_METHOD_IMPORT: Record<string, string> = {
+export const YIELD_UNIT_IMPORT: Record<string, string> = {
   'pro pflanze': 'per_plant',
   'je pflanze': 'per_plant',
   'pro m²': 'per_sqm',
@@ -133,11 +133,11 @@ export const CULTURE_COLUMNS: SpreadsheetColumnDef[] = [
   },
   {
     key: 'harvest_method',
-    header: 'Erntemethode',
-    aliases: ['ernte methode', 'ernteart', 'harvest_method'],
+    header: 'Ertragseinheit',
+    aliases: ['ertragseinheit', 'ernte methode', 'ernteart', 'harvest_method'],
     type: 'string',
-    enumExport: HARVEST_METHOD_EXPORT,
-    enumImport: HARVEST_METHOD_IMPORT,
+    enumExport: YIELD_UNIT_EXPORT,
+    enumImport: YIELD_UNIT_IMPORT,
   },
   {
     key: 'expected_yield',

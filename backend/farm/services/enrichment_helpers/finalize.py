@@ -87,7 +87,7 @@ def apply_complete_mode_filter(
 
 
 def maybe_default_harvest_method(culture: Any, suggested_fields: dict[str, Any], validation: dict[str, Any]) -> None:
-    """Default harvest method when harvest data exists without explicit method."""
+    """Default the yield unit when harvest data exists without an explicit unit."""
     if (
         'harvest_method' in suggested_fields
         or (culture.harvest_method or '').strip()
@@ -101,7 +101,7 @@ def maybe_default_harvest_method(culture: Any, suggested_fields: dict[str, Any],
         warnings.append({
             'field': 'harvest_method',
             'code': 'harvest_method_defaulted',
-            'message': 'Defaulted harvest_method to per_sqm because harvest data was suggested without method.',
+            'message': 'Defaulted harvest_method to per_sqm because harvest data was suggested without a yield unit.',
         })
 
 
