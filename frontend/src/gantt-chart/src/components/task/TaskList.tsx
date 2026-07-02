@@ -34,7 +34,9 @@ const TaskList: React.FC<TaskListProps> = ({
   rowHeight = 40,
   className = "",
   onGroupClick,
+  onGroupContextMenu,
   onToggleGroupExpand,
+  hoveredGroupId = null,
   viewMode,
   showTimelineHeader = true,
   leftColumnWidth = 160,
@@ -46,6 +48,10 @@ const TaskList: React.FC<TaskListProps> = ({
 
   // Calculate height for each group based on tasks
   const getGroupHeight = (taskGroup: TaskGroup) => {
+    if (taskGroup.rowHeightOverride !== undefined) {
+      return taskGroup.rowHeightOverride;
+    }
+
     const isTreeRow = taskGroup.depth !== undefined;
     const hierarchyLevels = isTreeRow ? null : getHierarchyLevels(taskGroup);
     const labelLinesSource = isTreeRow
@@ -75,6 +81,22 @@ const TaskList: React.FC<TaskListProps> = ({
   const handleChevronClick = (event: React.MouseEvent, groupId: string) => {
     event.stopPropagation();
     onToggleGroupExpand?.(groupId);
+  };
+
+  const longPressTimeoutRef = React.useRef<number | null>(null);
+  const handleGroupTouchStart = (event: React.TouchEvent, group: TaskGroup) => {
+    if (!onGroupContextMenu) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    longPressTimeoutRef.current = window.setTimeout(() => {
+      onGroupContextMenu(event, group);
+    }, 550);
+  };
+  const clearGroupLongPress = () => {
+    if (longPressTimeoutRef.current !== null) {
+      window.clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
   };
 
   return (
@@ -113,11 +135,18 @@ const TaskList: React.FC<TaskListProps> = ({
               className="rmg-task-group rmg-task-group-tree-row"
               style={{ minHeight: `${groupHeight}px` }}
               onClick={() => handleGroupClick(taskGroup)}
+              onContextMenu={
+                onGroupContextMenu ? (event) => onGroupContextMenu(event, taskGroup) : undefined
+              }
+              onTouchStart={(event) => handleGroupTouchStart(event, taskGroup)}
+              onTouchEnd={clearGroupLongPress}
+              onTouchMove={clearGroupLongPress}
               data-testid={`task-group-${taskGroup.id || "unknown"}`}
               data-rmg-component="task-group"
               data-group-id={taskGroup.id}
               data-depth={depth}
               data-expanded={taskGroup.isExpandable ? isExpanded : undefined}
+              data-hover-linked={hoveredGroupId === taskGroup.id ? "true" : undefined}
             >
               <div
                 className="rmg-task-group-content rmg-task-group-tree-content"
@@ -154,6 +183,15 @@ const TaskList: React.FC<TaskListProps> = ({
                   {displayName}
                 </span>
               </div>
+
+              {taskGroup.emptyRowLabel && (
+                <div
+                  className="rmg-task-group-meta"
+                  data-rmg-component="task-group-meta"
+                >
+                  {taskGroup.emptyRowLabel}
+                </div>
+              )}
 
               {showTaskCount && taskGroup.tasks && taskGroup.tasks.length > 0 && (
                 <div
@@ -256,4 +294,4 @@ const TaskList: React.FC<TaskListProps> = ({
   );
 };
 
-export default TaskList;
+export default React.memo(TaskList);

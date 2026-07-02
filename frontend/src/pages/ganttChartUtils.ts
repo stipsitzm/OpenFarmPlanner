@@ -46,6 +46,7 @@ export interface GanttTaskGroup {
   isExpandable?: boolean;
   isExpanded?: boolean;
   emptyRowLabel?: string;
+  rowHeightOverride?: number;
 }
 
 interface BuildTaskGroupsArgs {

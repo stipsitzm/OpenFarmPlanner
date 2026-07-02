@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
-import { useOutletContext, useSearchParams } from 'react-router-dom';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import { useTranslation } from '../i18n';
@@ -18,8 +18,10 @@ import {
   Button,
   ButtonGroup,
   Checkbox,
+  Divider,
   FormControlLabel,
   InputAdornment,
+  Menu,
   MenuItem,
   Select,
   TextField,
@@ -27,6 +29,11 @@ import {
   Typography,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import {
+  shouldOpenCustomContextMenu,
+  suppressNativeContextMenu,
+  useCloseCustomContextMenuOnNativeContextMenu,
+} from '../utils/contextMenu';
 import {
   bedAPI,
   cultureAPI,
@@ -58,6 +65,8 @@ import {
   buildOccupancyTooltipDetails,
   buildSeedlingTaskGroups,
   buildSeedlingTooltipDetails,
+  formatCultureDisplayLabel,
+  formatGanttDate,
   formatSeedlingTooltipTitle,
   formatPlantCount,
   parseDateString,
@@ -87,6 +96,10 @@ const GANTT_LEFT_COLUMN_WIDTH = 220;
 // Above this many combined location+field+bed nodes, default to
 // locations-expanded/fields-collapsed instead of fully expanding the tree.
 const OCCUPANCY_TREE_AUTO_EXPAND_ALL_THRESHOLD = 30;
+// Compact row height for Standort/Parzelle rows, which show a meta-text
+// summary instead of bars. Beet rows keep the normal, task-count-based
+// height computed by the Gantt library itself.
+const OCCUPANCY_COMPACT_ROW_HEIGHT = 30;
 const GANTT_HEADER_VIEW_MODES = [
   ViewMode.DAY,
   ViewMode.WEEK,
@@ -433,6 +446,7 @@ function dispatchSyntheticMouseEvent(
 
 function GanttChartPage() {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const authContext = useContext(AuthContext);
   const activeProjectId = authContext?.activeProjectId ?? null;
@@ -766,6 +780,191 @@ function GanttChartPage() {
     }
   };
 
+  // ---------------------------------------------------------------------
+  // Context navigation: right-click (desktop) / long-press (mobile) on a
+  // bar or a Standort/Parzelle/Beet row opens a menu with "open X" links
+  // into the relevant page plus edit/copy/delete. Double-click on a bar
+  // is a shortcut for its "Anbauplan öffnen" action.
+  // ---------------------------------------------------------------------
+  type GanttContextMenuTarget =
+    | { type: 'task'; task: GanttTask; group: GanttTaskGroup }
+    | { type: 'group'; group: GanttTaskGroup };
+  interface GanttContextMenuAction {
+    id: string;
+    label: string;
+    group: 'navigate' | 'edit' | 'danger';
+    onClick: () => void;
+  }
+
+  const [contextMenuState, setContextMenuState] = useState<{
+    target: GanttContextMenuTarget;
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
+
+  const closeContextMenu = useCallback(() => setContextMenuState(null), []);
+
+  const openContextMenu = useCallback((
+    event: React.MouseEvent | React.TouchEvent,
+    target: GanttContextMenuTarget,
+  ) => {
+    if (!shouldOpenCustomContextMenu(event.target)) return;
+    suppressNativeContextMenu(event);
+    const point = 'changedTouches' in event
+      ? event.changedTouches[0] ?? event.touches[0]
+      : event;
+    if (!point) return;
+    setContextMenuState({
+      target,
+      mouseX: point.clientX + 2,
+      mouseY: point.clientY - 6,
+    });
+  }, []);
+
+  const handleTaskContextMenu = useCallback((
+    event: React.MouseEvent | React.TouchEvent,
+    task: GanttTask,
+    group: GanttTaskGroup,
+  ) => {
+    openContextMenu(event, { type: 'task', task, group });
+  }, [openContextMenu]);
+
+  const handleGroupContextMenu = useCallback((
+    event: React.MouseEvent | React.TouchEvent,
+    group: GanttTaskGroup,
+  ) => {
+    openContextMenu(event, { type: 'group', group });
+  }, [openContextMenu]);
+
+  const isGanttContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
+    shouldOpenCustomContextMenu(target)
+    && target instanceof HTMLElement
+    && target.closest('[data-rmg-component="task"], [data-rmg-component="task-group"]') !== null
+  ), []);
+
+  useCloseCustomContextMenuOnNativeContextMenu(
+    contextMenuState !== null,
+    closeContextMenu,
+    isGanttContextMenuTarget,
+    (event) => setContextMenuState((current) => (
+      current ? { ...current, mouseX: event.clientX + 2, mouseY: event.clientY - 6 } : current
+    )),
+  );
+
+  const openPlantingPlanFromTask = useCallback((task: GanttTask) => {
+    const plan = plantingPlans.find((entry) => entry.id === task.plantingPlanId);
+    const params = new URLSearchParams();
+    if (plan?.bed) params.set('bedId', String(plan.bed));
+    if (plan?.culture) params.set('cultureId', String(plan.culture));
+    const query = params.toString();
+    navigate(`/app/planting-plans${query ? `?${query}` : ''}`);
+  }, [navigate, plantingPlans]);
+
+  // Stable (task, group) => void wrapper so it can be passed directly as a
+  // GanttChartProps callback without a fresh inline arrow on every render.
+  const handleTaskDoubleClickToPlan = useCallback((task: GanttTask) => {
+    openPlantingPlanFromTask(task);
+  }, [openPlantingPlanFromTask]);
+
+  const openCultureFromTask = useCallback((task: GanttTask) => {
+    const plan = plantingPlans.find((entry) => entry.id === task.plantingPlanId);
+    if (plan?.culture) {
+      navigate(`/app/cultures?cultureId=${plan.culture}`);
+    }
+  }, [navigate, plantingPlans]);
+
+  const openBedInPlantingPlans = useCallback((group: GanttTaskGroup) => {
+    if (group.bedId) {
+      navigate(`/app/planting-plans?bedId=${group.bedId}`);
+    }
+  }, [navigate]);
+
+  const addPlantingPlanForBed = useCallback((group: GanttTaskGroup) => {
+    if (group.bedId) {
+      navigate(`/app/planting-plans?bedId=${group.bedId}&create=true`);
+    }
+  }, [navigate]);
+
+  // Standort/Parzelle/Beet don't yet support a "scroll to and highlight
+  // this row" deep link on the areas page — see docs/occupancy-tree-hierarchy.md
+  // for the suggested next step. For now, "öffnen" and "bearbeiten" both
+  // just open the areas page.
+  const openAreasPage = useCallback(() => {
+    navigate('/app/fields-beds');
+  }, [navigate]);
+
+  const copyTaskSummary = useCallback((task: GanttTask, group: GanttTaskGroup) => {
+    const parts = [
+      task.cultureName ? formatCultureDisplayLabel(task.cultureName, task.cultureVariety) : task.name,
+      group.name,
+      `${formatGanttDate(task.startDate)} – ${formatGanttDate(task.endDate)}`,
+    ].filter(Boolean);
+    void navigator.clipboard?.writeText(parts.join(' · ')).catch(() => undefined);
+  }, []);
+
+  const deletePlantingPlanFromTask = useCallback(async (task: GanttTask) => {
+    if (!task.plantingPlanId) return;
+    const confirmed = window.confirm(t('ganttChart:contextMenu.confirmDeletePlan'));
+    if (!confirmed) return;
+    try {
+      await plantingPlanAPI.delete(task.plantingPlanId);
+      setPlantingPlans((previous) => previous.filter((entry) => entry.id !== task.plantingPlanId));
+    } catch (err) {
+      setError(extractApiErrorMessage(err, t, t('ganttChart:errors.updatePlan')));
+    }
+  }, [t]);
+
+  const getContextMenuActions = useCallback((target: GanttContextMenuTarget): GanttContextMenuAction[] => {
+    if (target.type === 'task') {
+      const { task, group } = target;
+      const actions: GanttContextMenuAction[] = [
+        { id: 'open-plan', label: t('ganttChart:contextMenu.openPlan'), group: 'navigate', onClick: () => openPlantingPlanFromTask(task) },
+      ];
+      if (task.cultureName) {
+        actions.push({ id: 'open-culture', label: t('ganttChart:contextMenu.openCulture'), group: 'navigate', onClick: () => openCultureFromTask(task) });
+      }
+      if (group.bedId) {
+        actions.push({ id: 'open-bed', label: t('ganttChart:contextMenu.openBed'), group: 'navigate', onClick: () => openBedInPlantingPlans(group) });
+      }
+      if (group.fieldId) {
+        actions.push({ id: 'open-field', label: t('ganttChart:contextMenu.openField'), group: 'navigate', onClick: openAreasPage });
+      }
+      if (group.locationId) {
+        actions.push({ id: 'open-location', label: t('ganttChart:contextMenu.openLocation'), group: 'navigate', onClick: openAreasPage });
+      }
+      actions.push(
+        { id: 'edit', label: t('common:actions.edit'), group: 'edit', onClick: () => openPlantingPlanFromTask(task) },
+        { id: 'copy', label: t('common:actions.copyRow'), group: 'edit', onClick: () => copyTaskSummary(task, group) },
+        { id: 'delete', label: t('common:actions.delete'), group: 'danger', onClick: () => { void deletePlantingPlanFromTask(task); } },
+      );
+      return actions;
+    }
+
+    const { group } = target;
+    if (group.bedId) {
+      return [
+        { id: 'open-bed', label: t('ganttChart:contextMenu.openBed'), group: 'navigate', onClick: openAreasPage },
+        { id: 'edit-bed', label: t('ganttChart:contextMenu.editBed'), group: 'edit', onClick: openAreasPage },
+        { id: 'add-plan', label: t('ganttChart:contextMenu.addPlan'), group: 'edit', onClick: () => addPlantingPlanForBed(group) },
+      ];
+    }
+    if (group.fieldId) {
+      return [
+        { id: 'open-field', label: t('ganttChart:contextMenu.openField'), group: 'navigate', onClick: openAreasPage },
+        { id: 'edit-field', label: t('ganttChart:contextMenu.editField'), group: 'edit', onClick: openAreasPage },
+      ];
+    }
+    if (group.locationId) {
+      return [
+        { id: 'open-location', label: t('ganttChart:contextMenu.openLocation'), group: 'navigate', onClick: openAreasPage },
+        { id: 'edit-location', label: t('ganttChart:contextMenu.editLocation'), group: 'edit', onClick: openAreasPage },
+      ];
+    }
+    return [];
+  }, [addPlantingPlanForBed, copyTaskSummary, deletePlantingPlanFromTask, openAreasPage, openBedInPlantingPlans, openCultureFromTask, openPlantingPlanFromTask, t]);
+
+  const contextMenuActions = contextMenuState ? getContextMenuActions(contextMenuState.target) : [];
+
   const occupancyHierarchyNodes = useMemo<OccupancyHierarchyNode[]>(() => buildFieldOccupancyHierarchy({
     locations,
     fields,
@@ -898,6 +1097,10 @@ function GanttChartPage() {
         isExpandable,
         isExpanded,
         emptyRowLabel,
+        // Standort/Parzelle rows have no bars of their own, so they don't
+        // need a full task-row height — Beet rows keep the normal,
+        // task-count-based height (rowHeightOverride left unset).
+        rowHeightOverride: node.type === 'bed' ? undefined : OCCUPANCY_COMPACT_ROW_HEIGHT,
         locationId: node.locationId,
         fieldId: node.fieldId,
         bedId: node.bedId,
@@ -1805,6 +2008,9 @@ function GanttChartPage() {
                       darkMode={false}
                       onTaskUpdate={calendarMode === 'occupancy' && editMode ? handleTaskUpdate : undefined}
                       onToggleGroupExpand={calendarMode === 'occupancy' ? handleToggleGroupExpand : undefined}
+                      onTaskDoubleClick={handleTaskDoubleClickToPlan}
+                      onTaskContextMenu={handleTaskContextMenu}
+                      onGroupContextMenu={calendarMode === 'occupancy' ? handleGroupContextMenu : undefined}
                       renderHeader={renderGanttHeader}
                       renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
                         ? renderSeedlingTooltip({ task })
@@ -1849,6 +2055,44 @@ function GanttChartPage() {
           </PageSurface>
         )}
 
+      <Menu
+        open={contextMenuState !== null}
+        onClose={closeContextMenu}
+        hideBackdrop
+        sx={{ pointerEvents: 'none' }}
+        slotProps={{
+          paper: {
+            className: 'ofp-custom-context-menu',
+            sx: { pointerEvents: 'auto' },
+          },
+        }}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenuState !== null
+            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
+            : undefined
+        }
+      >
+        {contextMenuActions.flatMap((action, index) => {
+          const previousAction = contextMenuActions[index - 1];
+          const shouldSeparateGroup = previousAction !== undefined && previousAction.group !== action.group;
+          const menuItem = (
+            <MenuItem
+              key={action.id}
+              onClick={() => {
+                closeContextMenu();
+                action.onClick();
+              }}
+              sx={{ color: action.group === 'danger' ? 'error.main' : undefined }}
+            >
+              {action.label}
+            </MenuItem>
+          );
+          return shouldSeparateGroup
+            ? [<Divider key={`${action.id}-divider`} role="separator" />, menuItem]
+            : [menuItem];
+        })}
+      </Menu>
     </PageContainer>
   );
 }

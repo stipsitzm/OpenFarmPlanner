@@ -162,5 +162,17 @@
     "allLocations": "Alle Standorte",
     "allFields": "Alle Parzellen",
     "onlyOccupiedBeds": "Nur belegte Beete"
+  },
+  "contextMenu": {
+    "openPlan": "Anbauplan öffnen",
+    "openCulture": "Kultur öffnen",
+    "openBed": "Beet öffnen",
+    "openField": "Parzelle öffnen",
+    "openLocation": "Standort öffnen",
+    "editBed": "Beet bearbeiten",
+    "editField": "Parzelle bearbeiten",
+    "editLocation": "Standort bearbeiten",
+    "addPlan": "Anbauplan hinzufügen",
+    "confirmDeletePlan": "Diesen Anbauplan wirklich löschen?"
   }
 }

@@ -2,6 +2,7 @@ import React, {
   useRef,
   useState,
   useEffect,
+  useCallback,
   useImperativeHandle,
   forwardRef,
 } from "react";
@@ -82,7 +83,10 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
       onTaskUpdate,
       onTaskClick,
       onTaskSelect,
+      onTaskDoubleClick,
+      onTaskContextMenu,
       onGroupClick,
+      onGroupContextMenu,
       onToggleGroupExpand,
       onViewModeChange,
 
@@ -99,6 +103,15 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
     const [, setSelectedTaskIds] = useState<string[]>([]);
     const [viewUnitWidth, setViewUnitWidth] = useState<number>(150);
     const [isAutoScrolling, setIsAutoScrolling] = useState<boolean>(false);
+    // Links the timeline: hovering a task bar dims/highlights its row in
+    // the left column, so the eye can follow across the two columns.
+    const [hoveredGroupId, setHoveredGroupId] = useState<string | null>(null);
+    const handleGroupHoverChange = useCallback((groupId: string, isHovering: boolean) => {
+      setHoveredGroupId((current) => {
+        if (isHovering) return groupId;
+        return current === groupId ? null : current;
+      });
+    }, []);
 
     // Add a forceRender counter to trigger re-renders when tasks update
     const [forceRender, setForceRender] = useState<number>(0);
@@ -606,8 +619,10 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
       }
     };
 
-    // Task interaction handlers
-    const handleTaskUpdate = (groupId: string, updatedTask: Task) => {
+    // Task interaction handlers — memoized so TaskRow (wrapped in
+    // React.memo) doesn't re-render every sibling row just because one
+    // row's hover state changed elsewhere in the chart.
+    const handleTaskUpdate = useCallback((groupId: string, updatedTask: Task) => {
       if (onTaskUpdate) {
         try {
           const ensuredTask = {
@@ -630,9 +645,9 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
           console.error("Error in handleTaskUpdate:", error);
         }
       }
-    };
+    }, [onTaskUpdate]);
 
-    const handleTaskClick = (task: Task, group: TaskGroup) => {
+    const handleTaskClick = useCallback((task: Task, group: TaskGroup) => {
       if (onTaskClick) {
         try {
           onTaskClick(task, group);
@@ -640,9 +655,9 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
           console.error("Error in handleTaskClick:", error);
         }
       }
-    };
+    }, [onTaskClick]);
 
-    const handleTaskSelect = (task: Task, isSelected: boolean) => {
+    const handleTaskSelect = useCallback((task: Task, isSelected: boolean) => {
       setSelectedTaskIds((prev) => {
         if (isSelected) {
           return [...prev, task.id];
@@ -658,7 +673,7 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
           console.error("Error in onTaskSelect handler:", error);
         }
       }
-    };
+    }, [onTaskSelect]);
 
     // Calculate scroll position to center "now" in view
     const calculateScrollToNow = (
@@ -1095,7 +1110,9 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
               tasks={tasks}
               headerLabel={resolvedHeaderLabel}
               onGroupClick={onGroupClick}
+              onGroupContextMenu={onGroupContextMenu}
               onToggleGroupExpand={onToggleGroupExpand}
+              hoveredGroupId={hoveredGroupId}
               className={getComponentClassName("taskList", "rmg-task-list")}
               viewMode={activeViewMode}
               showTimelineHeader={showTimelineHeader}
@@ -1168,6 +1185,10 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
                       onTaskUpdate={handleTaskUpdate}
                       onTaskClick={handleTaskClick}
                       onTaskSelect={handleTaskSelect}
+                      onTaskDoubleClick={onTaskDoubleClick}
+                      onTaskContextMenu={onTaskContextMenu}
+                      onGroupContextMenu={onGroupContextMenu}
+                      onGroupHoverChange={handleGroupHoverChange}
                       onAutoScrollChange={handleAutoScrollingChange}
                       className={getComponentClassName(
                         "taskRow",

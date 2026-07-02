@@ -23,6 +23,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
   onMouseEnter,
   onMouseLeave,
   onClick,
+  onDoubleClick,
+  onContextMenu,
   onProgressUpdate,
 }) => {
   // Show resize handles only when hovered or dragging, in edit mode, AND resizing is allowed
@@ -154,6 +156,23 @@ const TaskItem: React.FC<TaskItemProps> = ({
     setProgressPercent(task?.percent || 0);
   }, [task?.percent]);
 
+  // Long-press (touch) opens the same context menu as a desktop right-click.
+  const longPressTimeoutRef = useRef<number | null>(null);
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!onContextMenu) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    longPressTimeoutRef.current = window.setTimeout(() => {
+      onContextMenu(e as unknown as React.MouseEvent, task);
+    }, 550);
+  };
+  const clearLongPress = () => {
+    if (longPressTimeoutRef.current !== null) {
+      window.clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+  };
+
   if (!isValidTask) {
     return null;
   }
@@ -182,6 +201,11 @@ const TaskItem: React.FC<TaskItemProps> = ({
           top: `${topPx}px`,
         }}
         onClick={(e) => onClick(e, task)}
+        onDoubleClick={onDoubleClick ? (e) => onDoubleClick(e, task) : undefined}
+        onContextMenu={onContextMenu ? (e) => onContextMenu(e, task) : undefined}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={clearLongPress}
+        onTouchMove={clearLongPress}
         onMouseDown={canMoveTask ? handleTaskMouseDown : undefined}
         onMouseEnter={(e) => onMouseEnter(e, task)}
         onMouseLeave={onMouseLeave}
@@ -196,7 +220,9 @@ const TaskItem: React.FC<TaskItemProps> = ({
     );
   }
 
-  // Inline styles based on received task colors
+  // Inline styles based on received task colors. CSS enforces a 20px
+  // min-width on .rmg-task-item so very short tasks stay clickable/visible
+  // without distorting the actual date range in the data.
   const taskStyles: React.CSSProperties = {
     left: `${leftPx}px`,
     top: `${topPx}px`,
@@ -218,6 +244,11 @@ const TaskItem: React.FC<TaskItemProps> = ({
       className={`rmg-task-item ${isDragging ? "rmg-task-item-dragging" : ""}`}
       style={taskStyles}
       onClick={(e) => onClick(e, task)}
+      onDoubleClick={onDoubleClick ? (e) => onDoubleClick(e, task) : undefined}
+      onContextMenu={onContextMenu ? (e) => onContextMenu(e, task) : undefined}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={clearLongPress}
+      onTouchMove={clearLongPress}
       onMouseDown={canMoveTask ? handleTaskMouseDown : undefined}
       onMouseEnter={(e) => onMouseEnter(e, task)}
       onMouseLeave={onMouseLeave}
@@ -309,4 +340,4 @@ const TaskItem: React.FC<TaskItemProps> = ({
   );
 };
 
-export default TaskItem;
+export default React.memo(TaskItem);

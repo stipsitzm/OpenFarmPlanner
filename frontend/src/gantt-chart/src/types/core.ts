@@ -40,6 +40,12 @@ export interface TaskGroup {
    * content.
    */
   emptyRowLabel?: string;
+  /**
+   * Overrides the computed row height for this group only (e.g. a compact
+   * height for a tree parent row that has no bars of its own). Falls back
+   * to the normal task-row-count-based height when unset.
+   */
+  rowHeightOverride?: number;
   [key: string]: any;
 }
 

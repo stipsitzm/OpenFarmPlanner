@@ -28,6 +28,10 @@ const TaskRow: React.FC<TaskRowProps> = ({
   onTaskUpdate,
   onTaskClick,
   onTaskSelect,
+  onTaskDoubleClick,
+  onTaskContextMenu,
+  onGroupContextMenu,
+  onGroupHoverChange,
   onAutoScrollChange,
   viewMode = ViewMode.MONTH,
   scrollContainerRef,
@@ -144,10 +148,9 @@ const TaskRow: React.FC<TaskRowProps> = ({
     labelLinesSource,
     leftColumnWidth,
   );
-  const resolvedRowHeight = Math.max(
-    estimatedHeight,
-    taskRows.length * laneHeight + 20,
-  );
+  const resolvedRowHeight = taskGroup?.rowHeightOverride !== undefined
+    ? taskGroup.rowHeightOverride
+    : Math.max(estimatedHeight, taskRows.length * laneHeight + 20);
 
   // Update timeline limits for auto-scrolling
   useEffect(() => {
@@ -496,16 +499,26 @@ const TaskRow: React.FC<TaskRowProps> = ({
     }
   };
 
+  const handleTaskDoubleClick = (_event: React.MouseEvent, task: Task) => {
+    onTaskDoubleClick?.(task, taskGroup);
+  };
+
+  const handleTaskContextMenu = (event: React.MouseEvent, task: Task) => {
+    onTaskContextMenu?.(event, task, taskGroup);
+  };
+
   const handleTaskMouseEnter = (event: React.MouseEvent, task: Task) => {
     if (!draggingTask) {
       setHoveredTask(task);
       updateTooltipPosition(event);
+      onGroupHoverChange?.(taskGroupId, true);
     }
   };
 
   const handleTaskMouseLeave = () => {
     if (!draggingTask) {
       setHoveredTask(null);
+      onGroupHoverChange?.(taskGroupId, false);
     }
   };
 
@@ -882,6 +895,11 @@ const TaskRow: React.FC<TaskRowProps> = ({
           minHeight: `${resolvedRowHeight}px`,
           minWidth: `${totalMonths * monthWidth}px`,
         }}
+        onMouseEnter={() => onGroupHoverChange?.(taskGroupId, true)}
+        onMouseLeave={() => onGroupHoverChange?.(taskGroupId, false)}
+        onContextMenu={
+          onGroupContextMenu ? (e) => onGroupContextMenu(e, taskGroup) : undefined
+        }
         data-testid={`task-row-${taskGroupId}`}
         data-group-id={taskGroupId}
       >
@@ -902,7 +920,14 @@ const TaskRow: React.FC<TaskRowProps> = ({
         minWidth: `${totalMonths * monthWidth}px`,
       }}
       onMouseMove={(e) => handleMouseMove(e)}
-      onMouseLeave={() => setHoveredTask(null)}
+      onMouseEnter={() => onGroupHoverChange?.(taskGroupId, true)}
+      onMouseLeave={() => {
+        setHoveredTask(null);
+        onGroupHoverChange?.(taskGroupId, false);
+      }}
+      onContextMenu={
+        onGroupContextMenu ? (e) => onGroupContextMenu(e, taskGroup) : undefined
+      }
       ref={rowRef}
       data-testid={`task-row-${taskGroupId}`}
       data-instance-id={instanceId.current}
@@ -958,6 +983,8 @@ const TaskRow: React.FC<TaskRowProps> = ({
                   onMouseEnter={handleTaskMouseEnter}
                   onMouseLeave={handleTaskMouseLeave}
                   onClick={handleTaskClick}
+                  onDoubleClick={onTaskDoubleClick ? handleTaskDoubleClick : undefined}
+                  onContextMenu={onTaskContextMenu ? handleTaskContextMenu : undefined}
                   renderTask={renderTask}
                   getTaskColor={getTaskColor}
                   onProgressUpdate={handleProgressUpdate}
@@ -995,4 +1022,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
   );
 };
 
-export default TaskRow;
+// Memoized: a chart with many rows would otherwise re-render every
+// TaskRow whenever unrelated state changes at the GanttChart level (e.g.
+// hover-linking a single row, or an unrelated row's drag interaction).
+export default React.memo(TaskRow);

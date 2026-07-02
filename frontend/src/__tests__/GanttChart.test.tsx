@@ -15,7 +15,9 @@ const mocks = vi.hoisted(() => ({
   planList: vi.fn(),
   cultureList: vi.fn(),
   planUpdate: vi.fn(),
+  planDelete: vi.fn(),
   ganttProps: vi.fn(),
+  navigate: vi.fn(),
 }));
 const topbarContext = vi.hoisted(() => ({
   setTopbarContextActions: vi.fn(),
@@ -96,6 +98,7 @@ vi.mock('../api/api', async () => {
     plantingPlanAPI: {
       listAll: async () => (await mocks.planList()).data,
       update: mocks.planUpdate,
+      delete: mocks.planDelete,
     },
     cultureAPI: {
       listAll: async () => (await mocks.cultureList()).data,
@@ -122,6 +125,7 @@ vi.mock('react-router-dom', async () => {
         topbarContext.setTopbarTitleActions(actions);
       },
     }),
+    useNavigate: () => mocks.navigate,
   };
 });
 
@@ -131,14 +135,21 @@ vi.mock('../gantt-chart/src', () => ({
     tasks: Array<{
       id: string;
       name: string;
-      tasks: Array<Record<string, unknown> & { id: string; name: string }>;
+      tasks: Array<Record<string, unknown> & { id: string; name: string; plantingPlanId?: number }>;
       isExpandable?: boolean;
       isExpanded?: boolean;
       emptyRowLabel?: string;
+      rowHeightOverride?: number;
+      bedId?: number;
+      fieldId?: number;
+      locationId?: number;
     }>;
     renderTooltip?: ({ task }: { task: Record<string, unknown> }) => ReactNode;
     onTaskUpdate?: (groupId: string, task: { id: string; startDate: Date }) => void | Promise<void>;
     onToggleGroupExpand?: (groupId: string) => void;
+    onTaskDoubleClick?: (task: Record<string, unknown>, group: Record<string, unknown>) => void;
+    onTaskContextMenu?: (event: unknown, task: Record<string, unknown>, group: Record<string, unknown>) => void;
+    onGroupContextMenu?: (event: unknown, group: Record<string, unknown>) => void;
     editMode?: boolean;
     allowTaskMove?: boolean;
     renderHeader?: (props: {
@@ -218,8 +229,40 @@ vi.mock('../gantt-chart/src', () => ({
               {group.isExpanded ? 'collapse' : 'expand'}
             </button>
           ) : null}
-          {group.emptyRowLabel ? <span>{group.emptyRowLabel}</span> : null}
-          {group.tasks.map((task) => <span key={`${group.name}-${task.name}`}>{task.name}</span>)}
+          {group.emptyRowLabel ? <span data-testid={`meta-${group.name}`}>{group.emptyRowLabel}</span> : null}
+          <span data-testid={`row-height-${group.name}`}>{group.rowHeightOverride ?? 'auto'}</span>
+          {props.onGroupContextMenu ? (
+            <button
+              type="button"
+              aria-label={`context-menu-group-${group.name}`}
+              onClick={(event) => props.onGroupContextMenu?.(event, group)}
+            >
+              group-context-menu
+            </button>
+          ) : null}
+          {group.tasks.map((task) => (
+            <span key={`${group.name}-${task.name}`}>
+              {task.name}
+              {props.onTaskDoubleClick ? (
+                <button
+                  type="button"
+                  aria-label={`open-task-${task.id}`}
+                  onClick={() => props.onTaskDoubleClick?.(task, group)}
+                >
+                  open
+                </button>
+              ) : null}
+              {props.onTaskContextMenu ? (
+                <button
+                  type="button"
+                  aria-label={`context-menu-task-${task.id}`}
+                  onClick={(event) => props.onTaskContextMenu?.(event, task, group)}
+                >
+                  task-context-menu
+                </button>
+              ) : null}
+            </span>
+          ))}
           {group.tasks[0] && props.renderTooltip ? (
             <div data-testid={`mock-tooltip-${group.name}`}>
               {props.renderTooltip({ task: group.tasks[0] })}
@@ -252,6 +295,7 @@ beforeEach(() => {
   mocks.fieldList.mockResolvedValue({ data: { results: [{ id: 2, name: 'Feld', location: 1 }] } });
   mocks.bedList.mockResolvedValue({ data: { results: [{ id: 3, name: 'Beet 1', field: 2 }] } });
   mocks.planUpdate.mockResolvedValue({ data: {} });
+  mocks.planDelete.mockResolvedValue({ data: {} });
   topbarContext.setTopbarContextActions.mockReset();
   topbarContext.setTopbarTitleActions.mockReset();
   topbarContext.latestActions = [];
@@ -1177,6 +1221,114 @@ describe('GanttChartPage', () => {
       await waitFor(() => {
         expect(screen.getByText('Leerbeet')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('context navigation, double-click, and compact row heights', () => {
+    const setUpSinglePlanFixture = () => {
+      mocks.planList.mockResolvedValue({
+        data: {
+          results: [{
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-01',
+            harvest_date: '2026-05-01',
+          }],
+        },
+      });
+      mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+    };
+
+    it('double-clicking a task bar navigates to its planting plan (bed + culture filtered)', async () => {
+      setUpSinglePlanFixture();
+      renderWithAuth();
+
+      await screen.findByText('Beet 1');
+      fireEvent.click(screen.getByRole('button', { name: /^open-task-/ }));
+
+      expect(mocks.navigate).toHaveBeenCalledWith('/app/planting-plans?bedId=3&cultureId=5');
+    });
+
+    it('a task context menu offers plan/culture/bed navigation plus edit, copy, and delete', async () => {
+      setUpSinglePlanFixture();
+      renderWithAuth();
+
+      await screen.findByText('Beet 1');
+      fireEvent.click(screen.getByRole('button', { name: /^context-menu-task-/ }));
+
+      expect(await screen.findByRole('menuitem', { name: 'Anbauplan öffnen' })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Kultur öffnen' })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Beet öffnen' })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Zeile kopieren' })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+    });
+
+    it('choosing "Anbauplan öffnen" from the task context menu navigates to the plan', async () => {
+      setUpSinglePlanFixture();
+      renderWithAuth();
+
+      await screen.findByText('Beet 1');
+      fireEvent.click(screen.getByRole('button', { name: /^context-menu-task-/ }));
+      fireEvent.click(await screen.findByRole('menuitem', { name: 'Anbauplan öffnen' }));
+
+      expect(mocks.navigate).toHaveBeenCalledWith('/app/planting-plans?bedId=3&cultureId=5');
+    });
+
+    it('choosing "Löschen" from the task context menu deletes the plan after confirmation', async () => {
+      setUpSinglePlanFixture();
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      renderWithAuth();
+
+      await screen.findByText('Beet 1');
+      fireEvent.click(screen.getByRole('button', { name: /^context-menu-task-/ }));
+      fireEvent.click(await screen.findByRole('menuitem', { name: 'Löschen' }));
+
+      await waitFor(() => expect(mocks.planDelete).toHaveBeenCalledWith(10));
+      confirmSpy.mockRestore();
+    });
+
+    it('a Standort row context menu offers open/edit actions scoped to the location', async () => {
+      setUpSinglePlanFixture();
+      renderWithAuth();
+
+      await screen.findByText('Beet 1');
+      fireEvent.click(screen.getByRole('button', { name: 'context-menu-group-Hof' }));
+
+      expect(await screen.findByRole('menuitem', { name: 'Standort öffnen' })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Standort bearbeiten' })).toBeInTheDocument();
+      expect(screen.queryByRole('menuitem', { name: 'Beet öffnen' })).not.toBeInTheDocument();
+    });
+
+    it('a Beet row context menu includes "Anbauplan hinzufügen"', async () => {
+      setUpSinglePlanFixture();
+      renderWithAuth();
+
+      await screen.findByText('Beet 1');
+      fireEvent.click(screen.getByRole('button', { name: 'context-menu-group-Beet 1' }));
+
+      expect(await screen.findByRole('menuitem', { name: 'Anbauplan hinzufügen' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Anbauplan hinzufügen' }));
+      expect(mocks.navigate).toHaveBeenCalledWith('/app/planting-plans?bedId=3&create=true');
+    });
+
+    it('gives Standort and Parzelle rows a compact row height and leaves Beet rows at their normal computed height', async () => {
+      setUpSinglePlanFixture();
+      renderWithAuth();
+
+      await screen.findByText('Beet 1');
+
+      const locationHeight = Number(screen.getByTestId('row-height-Hof').textContent);
+      const fieldHeight = Number(screen.getByTestId('row-height-Feld').textContent);
+      const bedHeightText = screen.getByTestId('row-height-Beet 1').textContent;
+
+      expect(locationHeight).toBeGreaterThan(0);
+      expect(locationHeight).toBeLessThan(60);
+      expect(fieldHeight).toBe(locationHeight);
+      // Beet rows keep the library's normal task-count-based height (no override).
+      expect(bedHeightText).toBe('auto');
     });
   });
 });
