@@ -1,6 +1,11 @@
 import { expect, type APIRequestContext, type Page } from '@playwright/test';
 
-const e2eApiBase = process.env.PLAYWRIGHT_E2E_API_BASE ?? 'http://127.0.0.1:8000/api/__e2e__/invite-flow/';
+// Must default to the same BACKEND_PORT used to configure the backend webServer in
+// playwright.config.ts, or fixture setup silently hits whatever else happens to be
+// running on port 8000 (e.g. a developer's own long-running dev backend) instead of
+// the backend actually under test.
+const defaultBackendPort = process.env.BACKEND_PORT ?? '8000';
+const e2eApiBase = process.env.PLAYWRIGHT_E2E_API_BASE ?? `http://127.0.0.1:${defaultBackendPort}/api/__e2e__/invite-flow/`;
 const e2eToken = process.env.E2E_TEST_TOKEN || 'openfarmplanner-e2e-token';
 
 export const VIEWPORTS = [
@@ -42,6 +47,26 @@ export async function loginWithDeterministicProject(page: Page, request: APIRequ
   await page.locator('input[type="password"]').fill(fixture.invitee.password);
   await page.getByRole('button', { name: 'Anmelden' }).click();
   await expect(page).toHaveURL(/\/app\//);
+}
+
+// Saves a fields-beds hierarchy row by tabbing through the editable cells, then
+// forcing a blur. The row has a non-editable "notes" cell after width_m;
+// tabbing past it moves focus outside the grid entirely without MUI ever
+// firing rowEditStop, so the row stays visually in edit mode until something
+// else blurs it explicitly.
+export async function tabSaveHierarchyRow(page: Page): Promise<void> {
+  // Lets MUI's internal (debounced) cell-edit commit for the name field flush
+  // before tabbing away, since tabbing away immediately can lose that edit and
+  // cause the row to be wrongly treated as empty on blur.
+  await page.waitForTimeout(100);
+  await page.keyboard.press('Tab'); // name → length_m
+  await page.keyboard.press('Tab'); // length_m → width_m
+  await page.keyboard.press('Tab'); // width_m → notes (focusable but not editable)
+  // Let MUI finish processing the last Tab (committing the row's tracked edit
+  // state) before the click-away triggers the save; clicking immediately can
+  // read an incomplete edit state and wrongly treat the row as empty.
+  await page.waitForTimeout(200);
+  await page.locator('h1', { hasText: 'Anbauflächen' }).click();
 }
 
 export async function setViewportPreset(page: Page, preset: (typeof VIEWPORTS)[number]): Promise<void> {

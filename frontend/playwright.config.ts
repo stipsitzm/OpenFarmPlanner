@@ -13,7 +13,12 @@ export default defineConfig({
     timeout: 10_000,
   },
   use: {
-    baseURL: `http://localhost:${frontendPort}`,
+    // Must match the 127.0.0.1 host used for FRONTEND_URL/CORS_ALLOWED_ORIGINS/
+    // CSRF_TRUSTED_ORIGINS below. Browsers treat "localhost" and "127.0.0.1" as
+    // different origins, so a relative page.goto() resolved against a "localhost"
+    // baseURL after logging in on 127.0.0.1 would silently lose the session
+    // cookie and fail CSRF checks on every subsequent authenticated request.
+    baseURL: `http://127.0.0.1:${frontendPort}`,
     trace: 'off',
     video: 'off',
   },
