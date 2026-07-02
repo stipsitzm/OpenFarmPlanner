@@ -543,6 +543,69 @@ describe('GanttChartPage', () => {
     });
   });
 
+  it('renders the chart flush with the top of the viewport when a stale row-scroll offset exceeds the actual scrollable range', async () => {
+    // Simulates a real browser: the stored offset (e.g. saved while a different
+    // calendar mode/project had many more rows) exceeds what's actually
+    // scrollable here, so the browser clamps any scrollTop assignment to
+    // maxScrollTop. jsdom has no layout engine and doesn't clamp on its own, so
+    // this stubs Element.prototype.scrollTop to reproduce that clamping.
+    const scrollTopValues = new WeakMap<Element, number>();
+    const originalDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+    Object.defineProperty(Element.prototype, 'scrollTop', {
+      configurable: true,
+      get(this: Element) {
+        return scrollTopValues.get(this) ?? 0;
+      },
+      set(this: Element, value: number) {
+        scrollTopValues.set(this, Math.min(value, 40));
+      },
+    });
+
+    try {
+      window.localStorage.setItem(GANTT_STATE_STORAGE_KEY, JSON.stringify({
+        calendarMode: 'seedlings',
+        timelineViewMode: 'week',
+        referenceDate: '2026-04-15',
+        rowScrollTop: 5000,
+      }));
+      mocks.planList.mockResolvedValue({
+        data: {
+          results: [
+            {
+              id: 10,
+              culture: 5,
+              culture_name: 'Salat',
+              planting_date: '2026-04-20',
+              harvest_date: '2026-05-20',
+            },
+          ],
+        },
+      });
+      mocks.cultureList.mockResolvedValue({
+        data: {
+          results: [{
+            id: 5,
+            name: 'Salat',
+            propagation_days: 28,
+          }],
+        },
+      });
+
+      renderWithAuth();
+
+      const virtualViewport = await screen.findByTestId('gantt-virtual-viewport');
+      const chart = await screen.findByTestId('mock-gantt');
+      await waitFor(() => {
+        expect(virtualViewport.scrollTop).toBe(40);
+        expect(getComputedStyle(chart.parentElement as HTMLElement).top).toBe('40px');
+      });
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(Element.prototype, 'scrollTop', originalDescriptor);
+      }
+    }
+  });
+
   it('persists timeline view mode changes and keeps them during data updates', async () => {
     const initialPlan = {
       id: 10,

@@ -1237,7 +1237,7 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
         queryset: All Culture objects ordered by name and variety
         serializer_class: CultureSerializer for serialization
     """
-    queryset = Culture.objects.all()
+    queryset = Culture.objects.select_related('supplier', 'image_file', 'source_public_culture')
     serializer_class = CultureSerializer
 
     def _current_actor_label(self) -> str:
@@ -1947,7 +1947,7 @@ class PlantingPlanViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.Mod
     """
     queryset = (
         PlantingPlan.objects
-        .select_related('culture', 'bed')
+        .select_related('culture', 'bed', 'created_by', 'updated_by')
         .annotate(note_attachment_count=Count('attachments'))
         .order_by('-planting_date')
     )
