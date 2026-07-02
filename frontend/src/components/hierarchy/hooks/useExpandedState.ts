@@ -1,9 +1,10 @@
 /**
- * Custom hook for managing expansion state
+ * Custom hook for managing expansion state. Generic over any row/node id
+ * (string | number) — not tied to MUI DataGrid, so it can back any
+ * expandable tree UI (DataGrid tree, Accordion-based grouping, etc.).
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import type { GridRowId } from '@mui/x-data-grid';
 
 const EXPANDED_STORAGE_PREFIX = 'hierarchyExpanded.';
 
@@ -46,7 +47,7 @@ export function useExpandedState(storageKey?: string) {
     );
   }, [expandedRows, storageKey]);
 
-  const toggleExpand = useCallback((rowId: GridRowId) => {
+  const toggleExpand = useCallback((rowId: string | number) => {
     setExpandedRows((prevExpanded) => {
       const newExpanded = new Set(prevExpanded);
       if (newExpanded.has(rowId)) {
