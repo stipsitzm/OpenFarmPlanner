@@ -125,7 +125,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-vi.mock('react-modern-gantt', () => ({
+vi.mock('../gantt-chart/src', () => ({
   __esModule: true,
   default: (props: {
     tasks: Array<{ name: string; tasks: Array<Record<string, unknown> & { id: string; name: string }> }>;
