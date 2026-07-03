@@ -459,6 +459,7 @@ describe('CultureForm', () => {
       { name: 'Karotte', variety: 'Nantaise 2', exclude_id: 1 },
       expect.any(AbortSignal),
     ));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'form.save' })).not.toBeDisabled());
     const event = dispatchSaveShortcut({ metaKey: true });
 
     expect(event.defaultPrevented).toBe(true);
