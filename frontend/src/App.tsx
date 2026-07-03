@@ -2316,6 +2316,11 @@ function createAppRouter(basename: string) {
           path: 'invite/:token',
           element: <TokenInvitationRedirect />,
         },
+        // Reserved: a future public `/crops` branch (sibling to `/app`, not
+        // nested under <ProtectedRoute />) for the Crop Library — see
+        // docs/crop-library-architecture.md. Deliberately not added yet;
+        // `frontend/src/crops/pages/` is where its route components would
+        // live once it is.
         {
           path: 'app',
           element: <ProtectedRoute />,

@@ -18,7 +18,7 @@ import type {
 } from '../api/types';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
-import { PublicCultureLibraryDialog } from '../cultures/PublicCultureLibraryDialog';
+import { PublicCultureLibraryDialog } from '../crops/components/PublicCultureLibraryDialog';
 import {
   Alert,
   Box,

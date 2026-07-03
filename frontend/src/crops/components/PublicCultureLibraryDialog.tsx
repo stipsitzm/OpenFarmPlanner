@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useTranslation } from '../i18n';
-import type { PublicCulture } from '../api/types';
+import { useTranslation } from '../../i18n';
+import type { PublicCulture } from '../../api/types';
 import {
   Accordion,
   AccordionDetails,
@@ -31,7 +31,11 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { stripCitationMarkers } from '../components/data-grid/markdown';
+// Cross-domain import: a markdown helper that today lives under the
+// app-specific data-grid module. Kept as-is rather than duplicated/moved —
+// see docs/crop-library-architecture.md for why this is flagged as a
+// future cleanup candidate rather than fixed now.
+import { stripCitationMarkers } from '../../components/data-grid/markdown';
 
 interface PublicCultureLibraryDialogProps {
   open: boolean;
