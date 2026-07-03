@@ -6,6 +6,7 @@ export interface TaskListRenderProps {
   tasks: TaskGroup[];
   headerLabel?: string;
   onGroupClick?: (group: TaskGroup) => void;
+  onToggleGroupExpand?: (groupId: string) => void;
   viewMode: ViewMode;
   leftColumnWidth?: number;
 }
@@ -132,8 +133,18 @@ export interface GanttChartProps {
   onTaskUpdate?: (groupId: string, updatedTask: Task) => void;
   onTaskClick?: (task: Task, group: TaskGroup) => void;
   onTaskSelect?: (task: Task, isSelected: boolean) => void;
-  onTaskDoubleClick?: (task: Task) => void;
+  onTaskDoubleClick?: (task: Task, group: TaskGroup) => void;
+  onTaskContextMenu?: (
+    event: React.MouseEvent | React.TouchEvent,
+    task: Task,
+    group: TaskGroup,
+  ) => void;
   onGroupClick?: (group: TaskGroup) => void;
+  onGroupContextMenu?: (
+    event: React.MouseEvent | React.TouchEvent,
+    group: TaskGroup,
+  ) => void;
+  onToggleGroupExpand?: (groupId: string) => void;
   onViewModeChange?: (viewMode: ViewMode) => void;
 
   // Visual customization
@@ -162,6 +173,17 @@ export interface TaskRowProps {
   onTaskUpdate?: (groupId: string, updatedTask: Task) => void;
   onTaskClick?: (task: Task, group: TaskGroup) => void;
   onTaskSelect?: (task: Task, isSelected: boolean) => void;
+  onTaskDoubleClick?: (task: Task, group: TaskGroup) => void;
+  onTaskContextMenu?: (
+    event: React.MouseEvent | React.TouchEvent,
+    task: Task,
+    group: TaskGroup,
+  ) => void;
+  onGroupContextMenu?: (
+    event: React.MouseEvent | React.TouchEvent,
+    group: TaskGroup,
+  ) => void;
+  onGroupHoverChange?: (groupId: string, isHovering: boolean) => void;
   onAutoScrollChange?: (isScrolling: boolean) => void;
   viewMode?: ViewMode;
   rowHeight?: number;
@@ -193,6 +215,12 @@ export interface TaskListProps {
   rowHeight?: number;
   className?: string;
   onGroupClick?: (group: TaskGroup) => void;
+  onGroupContextMenu?: (
+    event: React.MouseEvent | React.TouchEvent,
+    group: TaskGroup,
+  ) => void;
+  onToggleGroupExpand?: (groupId: string) => void;
+  hoveredGroupId?: string | null;
   viewMode?: ViewMode;
   showTimelineHeader?: boolean; // Pass through for styling adjustments
   leftColumnWidth?: number;
@@ -236,6 +264,8 @@ export interface TaskItemProps {
   onMouseEnter: (event: React.MouseEvent, task: Task) => void;
   onMouseLeave: () => void;
   onClick: (event: React.MouseEvent, task: Task) => void;
+  onDoubleClick?: (event: React.MouseEvent, task: Task) => void;
+  onContextMenu?: (event: React.MouseEvent, task: Task) => void;
   onProgressUpdate?: (task: Task, newPercent: number) => void;
 }
 

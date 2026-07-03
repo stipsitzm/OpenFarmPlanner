@@ -712,6 +712,35 @@ function PlantingPlans() {
     urlParamProcessedRef.current = true;
   }, [initialSelection, replacePlantingPlanSearchParams, searchParams]);
 
+  // Consumes a `?planId=<id>` deep link (e.g. "Anbauplan öffnen"/"bearbeiten"
+  // or a double-click from the Gantt calendar's context menu): scrolls to and
+  // selects the existing plan row, instead of the `bedId`/`cultureId` path
+  // above which always prefills a brand-new draft row. An additional
+  // `edit=true` also opens it in edit mode straight away.
+  const planIdParamProcessedRef = useRef(false);
+  useEffect(() => {
+    if (planIdParamProcessedRef.current || isPlansLoading) {
+      return;
+    }
+
+    const planIdParam = searchParams.get("planId");
+    if (!planIdParam) {
+      return;
+    }
+
+    const planId = parseInt(planIdParam, 10);
+    const shouldStartEdit = searchParams.get("edit") === "true";
+    planIdParamProcessedRef.current = true;
+    if (!isNaN(planId)) {
+      gridCommandApiRef.current?.openRowById(planId, { startEdit: shouldStartEdit });
+    }
+
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("edit");
+    newParams.delete("planId");
+    replacePlantingPlanSearchParams(newParams);
+  }, [isPlansLoading, replacePlantingPlanSearchParams, searchParams]);
+
   /**
    * Define columns for the Data Grid with inline editing
    * Recalculates when cultures or beds change to update dropdown options

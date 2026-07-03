@@ -126,7 +126,7 @@ export function estimateLabelHeight(
     return total + Math.max(1, Math.ceil(trimmedLabel.length / charsPerLine));
   }, 0);
 
-  return Math.max(60, estimatedLabelLines * 16 + 28);
+  return Math.max(40, estimatedLabelLines * 16 + 20);
 }
 
 /**
@@ -146,4 +146,31 @@ export function getLabelLinesSource(
     taskGroup.name || "Unnamed",
     includeDescription ? (taskGroup.description ?? "") : "",
   ].filter(Boolean);
+}
+
+/** Indent applied per tree depth level in the left column (TaskList's tree
+ * rows) — subtracted from the available label width below, since indentation
+ * eats into the space a wrapped label actually has to render in. */
+export const TREE_INDENT_PX = 20;
+
+/**
+ * Estimates a task group's row height contribution from its label alone
+ * (before factoring in how many task bars need to stack). Used by both
+ * TaskList (left column) and TaskRow (timeline row) so a row's height never
+ * silently diverges between the two — this exact kind of divergence caused
+ * a real sidebar/timeline misalignment bug once already, when TaskRow didn't
+ * account for tree-depth indentation the way TaskList did.
+ */
+export function estimateTaskGroupLabelHeight(
+  taskGroup: TaskGroup,
+  leftColumnWidth: number,
+  options: { includeDescription?: boolean } = {},
+): number {
+  const isTreeRow = taskGroup.depth !== undefined;
+  const hierarchyLevels = isTreeRow ? null : getHierarchyLevels(taskGroup);
+  const labelLinesSource = isTreeRow
+    ? [taskGroup.name || "Unnamed"]
+    : getLabelLinesSource(taskGroup, hierarchyLevels, options.includeDescription ?? true);
+  const effectiveWidth = leftColumnWidth - (isTreeRow ? (taskGroup.depth ?? 0) * TREE_INDENT_PX : 0);
+  return estimateLabelHeight(labelLinesSource, effectiveWidth);
 }

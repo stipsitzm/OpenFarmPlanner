@@ -10,7 +10,7 @@
  * @returns JSX element rendering the culture selector and detail view
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Ref } from 'react';
 import { useMediaQuery, useTheme } from '@mui/material';
 import { useSearchParams } from 'react-router-dom';
@@ -488,6 +488,36 @@ export function CultureDetail({
     onCultureSelect(firstFilteredCulture ?? null);
   }, [cultures, filteredCultures, isLoading, onCultureSelect, selectedCultureId]);
 
+  // Scrolls to and focuses the selected culture's list item — covers both a
+  // manual click and a "Kultur öffnen" deep link (?cultureId=) landing here
+  // with a selection already made, so keyboard focus ends up on the actual
+  // row instead of nowhere in particular.
+  const cultureListItemRefs = useRef<Map<number, HTMLElement>>(new Map());
+  // Stable across renders (no deps) so React only invokes it on actual
+  // mount/unmount of a row, not on every re-render of this list (which an
+  // inline `ref={(el) => ...}` closing over `culture.id` would do, churning
+  // the whole Map on every keystroke in the filter box). The culture id
+  // comes from a `data-culture-id` attribute rather than a closed-over
+  // variable, and the returned cleanup (React 19 ref cleanup functions)
+  // removes the right entry on unmount.
+  const registerCultureListItemRef = useCallback((el: HTMLElement | null) => {
+    if (!el) return;
+    const cultureId = Number(el.dataset.cultureId);
+    if (!Number.isFinite(cultureId)) return;
+    cultureListItemRefs.current.set(cultureId, el);
+    return () => {
+      cultureListItemRefs.current.delete(cultureId);
+    };
+  }, []);
+  useEffect(() => {
+    if (selectedCultureId === undefined) {
+      return;
+    }
+    const listItem = cultureListItemRefs.current.get(selectedCultureId);
+    listItem?.scrollIntoView?.({ block: 'nearest' });
+    listItem?.focus();
+  }, [selectedCultureId]);
+
   const cultureOptions: SearchableSelectOption<Culture>[] = useMemo(
     () => {
       const optionCultures = [...filteredCultures];
@@ -878,6 +908,8 @@ export function CultureDetail({
                 return (
                   <ListItemButton
                     key={culture.id}
+                    ref={registerCultureListItemRef}
+                    data-culture-id={culture.id}
                     selected={selectedCulture?.id === culture.id}
                     onClick={() => onCultureSelect(culture)}
                     sx={{

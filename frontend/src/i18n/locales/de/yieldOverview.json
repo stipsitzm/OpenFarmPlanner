@@ -13,7 +13,12 @@
   },
   "chart": {
     "title": "Ertragsverteilung",
-    "tooltip": "{{period}} · {{culture}}: {{yield}} kg"
+    "tooltip": "{{period}} · {{culture}}: {{yield}} kg",
+    "tooltipPeriod": "Zeitraum",
+    "tooltipYield": "Ertrag"
+  },
+  "contextMenu": {
+    "openCulture": "Kultur öffnen"
   },
   "empty": {
     "noPlansTitle": "Noch keine Ertragsprognose verfügbar",

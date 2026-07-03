@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
-import { useOutletContext, useSearchParams } from 'react-router-dom';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import { useTranslation } from '../i18n';
@@ -17,11 +17,23 @@ import {
   Box,
   Button,
   ButtonGroup,
+  Checkbox,
+  Divider,
+  FormControlLabel,
+  InputAdornment,
+  Menu,
   MenuItem,
   Select,
+  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import {
+  shouldOpenCustomContextMenu,
+  suppressNativeContextMenu,
+  useCloseCustomContextMenuOnNativeContextMenu,
+} from '../utils/contextMenu';
 import {
   bedAPI,
   cultureAPI,
@@ -49,15 +61,18 @@ import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { AuthContext } from '../auth/authContextShared';
 import {
-  buildFieldOccupancyTaskGroups,
+  buildFieldOccupancyHierarchy,
   buildOccupancyTooltipDetails,
   buildSeedlingTaskGroups,
   buildSeedlingTooltipDetails,
+  formatCultureDisplayLabel,
+  formatGanttDate,
   formatSeedlingTooltipTitle,
   formatPlantCount,
   parseDateString,
   type GanttTask,
   type GanttTaskGroup,
+  type OccupancyHierarchyNode,
 } from './ganttChartUtils';
 import { getFirstMissingCultivationPlanRequirement, getProjectSetupActions } from './requirementFlow';
 import {
@@ -65,6 +80,8 @@ import {
   segmentedButtonGroupSx,
 } from '../components/buttons/segmentedControlStyles';
 import { getGanttRenderWindow } from './ganttRenderWindow';
+import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState';
+import { collectVisibleIdsWithAncestors, flattenTreeRows } from '../components/hierarchy/utils/treeRows';
 
 type CalendarMode = 'occupancy' | 'seedlings';
 const GanttChartWithFocusMode = GanttChart as React.ComponentType<
@@ -76,6 +93,19 @@ const CALENDAR_TIMELINE_VIEW_MODE_STORAGE_KEY = 'openFarmPlanner.ganttChart.time
 const GANTT_STATE_STORAGE_PREFIX = 'openfarmplanner:gantt';
 const DEFAULT_TIMELINE_VIEW_MODE = ViewMode.MONTH;
 const GANTT_LEFT_COLUMN_WIDTH = 220;
+// Above this many combined location+field+bed nodes, default to
+// locations-expanded/fields-collapsed instead of fully expanding the tree.
+const OCCUPANCY_TREE_AUTO_EXPAND_ALL_THRESHOLD = 30;
+// Compact row height for Standort/Parzelle rows, which show a meta-text
+// summary (as a title tooltip, not a second visible line — see
+// TaskList.tsx) instead of bars. Beet rows keep the normal, task-count-
+// based height computed by the Gantt library itself. Must be tall enough
+// to fit the sidebar's single content line (chevron + name, ~17px) plus
+// its ~8px vertical padding without TaskList's minHeight being exceeded
+// by actual content — otherwise the sidebar row silently renders taller
+// than TaskRow's timeline row and the two columns drift out of sync row
+// by row.
+const OCCUPANCY_COMPACT_ROW_HEIGHT = 32;
 const GANTT_HEADER_VIEW_MODES = [
   ViewMode.DAY,
   ViewMode.WEEK,
@@ -422,6 +452,7 @@ function dispatchSyntheticMouseEvent(
 
 function GanttChartPage() {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const authContext = useContext(AuthContext);
   const activeProjectId = authContext?.activeProjectId ?? null;
@@ -437,6 +468,34 @@ function GanttChartPage() {
   const [beds, setBeds] = useState<Bed[]>([]);
   const [plantingPlans, setPlantingPlans] = useState<PlantingPlan[]>([]);
   const [cultures, setCultures] = useState<Culture[]>([]);
+
+  // Standort/Parzelle/Beet tree: filter + search state for the occupancy view
+  const [occupancySearchText, setOccupancySearchText] = useState('');
+  const [occupancyLocationFilter, setOccupancyLocationFilter] = useState<number | 'all'>('all');
+  const [occupancyFieldFilter, setOccupancyFieldFilter] = useState<number | 'all'>('all');
+  const [onlyOccupiedBeds, setOnlyOccupiedBeds] = useState(true);
+
+  // Seedling (Anzucht) view: search-only, no hierarchy/location filters —
+  // it's a flat, culture-grouped list, not tied to a specific bed/field.
+  const [seedlingSearchText, setSeedlingSearchText] = useState('');
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const focusSearch = useCallback(() => {
+    searchInputRef.current?.focus();
+    searchInputRef.current?.select();
+  }, []);
+
+  const occupancyTreeStorageKey = activeProjectId
+    ? `occupancyTree.${activeProjectId}`
+    : 'occupancyTree';
+  const {
+    expandedRows: expandedHierarchyIds,
+    hasPersistedState: hasPersistedHierarchyExpansion,
+    toggleExpand: toggleHierarchyExpand,
+    expandAll: expandAllHierarchy,
+  } = useExpandedState(occupancyTreeStorageKey);
+  const hasInitiallyExpandedHierarchyRef = useRef(false);
+
   const [ganttRenderKey, setGanttRenderKey] = useState(0);
   const [ganttScrollTop, setGanttScrollTop] = useState(0);
   const [ganttViewportHeight, setGanttViewportHeight] = useState(640);
@@ -721,6 +780,15 @@ function GanttChartPage() {
         planting_date: newPlantingDate,
       };
 
+      // Apply the new date optimistically before awaiting the API response.
+      // TaskRow clears its local drag/preview state as soon as the mouse is
+      // released, so without this the bar would immediately re-render from
+      // the still-stale `plantingPlans` prop (briefly snapping back to its
+      // pre-drag position) until the request resolves and moving again.
+      setPlantingPlans((previous) => previous.map((entry) => (
+        entry.id === planId ? { ...entry, ...updatedPlan } as PlantingPlan : entry
+      )));
+
       const response = await plantingPlanAPI.update(planId, updatedPlan as PlantingPlan);
       setPlantingPlans((previous) => previous.map((entry) => (
         entry.id === planId ? response.data : entry
@@ -738,7 +806,191 @@ function GanttChartPage() {
     }
   };
 
-  const occupancyTaskGroups = useMemo<GanttTaskGroup[]>(() => buildFieldOccupancyTaskGroups({
+  // ---------------------------------------------------------------------
+  // Context navigation: right-click (desktop) / long-press (mobile) on a
+  // bar or a Standort/Parzelle/Beet row opens a menu with "open X" links
+  // into the relevant page plus edit/copy/delete. Double-click on a bar
+  // is a shortcut for its "Anbauplan öffnen" action.
+  // ---------------------------------------------------------------------
+  type GanttContextMenuTarget =
+    | { type: 'task'; task: GanttTask; group: GanttTaskGroup }
+    | { type: 'group'; group: GanttTaskGroup };
+  interface GanttContextMenuAction {
+    id: string;
+    label: string;
+    group: 'navigate' | 'edit' | 'danger';
+    onClick: () => void;
+  }
+
+  const [contextMenuState, setContextMenuState] = useState<{
+    target: GanttContextMenuTarget;
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
+
+  const closeContextMenu = useCallback(() => setContextMenuState(null), []);
+
+  const openContextMenu = useCallback((
+    event: React.MouseEvent | React.TouchEvent,
+    target: GanttContextMenuTarget,
+  ) => {
+    if (!shouldOpenCustomContextMenu(event.target)) return;
+    suppressNativeContextMenu(event);
+    const point = 'changedTouches' in event
+      ? event.changedTouches[0] ?? event.touches[0]
+      : event;
+    if (!point) return;
+    setContextMenuState({
+      target,
+      mouseX: point.clientX + 2,
+      mouseY: point.clientY - 6,
+    });
+  }, []);
+
+  const handleTaskContextMenu = useCallback((
+    event: React.MouseEvent | React.TouchEvent,
+    task: GanttTask,
+    group: GanttTaskGroup,
+  ) => {
+    openContextMenu(event, { type: 'task', task, group });
+  }, [openContextMenu]);
+
+  const handleGroupContextMenu = useCallback((
+    event: React.MouseEvent | React.TouchEvent,
+    group: GanttTaskGroup,
+  ) => {
+    openContextMenu(event, { type: 'group', group });
+  }, [openContextMenu]);
+
+  const isGanttContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
+    shouldOpenCustomContextMenu(target)
+    && target instanceof HTMLElement
+    && target.closest('[data-rmg-component="task"], [data-rmg-component="task-group"]') !== null
+  ), []);
+
+  useCloseCustomContextMenuOnNativeContextMenu(
+    contextMenuState !== null,
+    closeContextMenu,
+    isGanttContextMenuTarget,
+    (event) => setContextMenuState((current) => (
+      current ? { ...current, mouseX: event.clientX + 2, mouseY: event.clientY - 6 } : current
+    )),
+  );
+
+  const openPlantingPlanFromTask = useCallback((task: GanttTask, options?: { edit?: boolean }) => {
+    if (task.plantingPlanId) {
+      const query = options?.edit ? `planId=${task.plantingPlanId}&edit=true` : `planId=${task.plantingPlanId}`;
+      navigate(`/app/planting-plans?${query}`);
+      return;
+    }
+    navigate('/app/planting-plans');
+  }, [navigate]);
+
+  // Stable (task, group) => void wrapper so it can be passed directly as a
+  // GanttChartProps callback without a fresh inline arrow on every render.
+  const handleTaskDoubleClickToPlan = useCallback((task: GanttTask) => {
+    openPlantingPlanFromTask(task);
+  }, [openPlantingPlanFromTask]);
+
+  const openCultureFromTask = useCallback((task: GanttTask) => {
+    const plan = plantingPlans.find((entry) => entry.id === task.plantingPlanId);
+    if (plan?.culture) {
+      navigate(`/app/cultures?cultureId=${plan.culture}`);
+    }
+  }, [navigate, plantingPlans]);
+
+  const addPlantingPlanForBed = useCallback((group: GanttTaskGroup) => {
+    if (group.bedId) {
+      navigate(`/app/planting-plans?bedId=${group.bedId}&create=true`);
+    }
+  }, [navigate]);
+
+  // Navigates to the areas (Anbauflächen) page and, if a target is given,
+  // deep-links to the matching Standort/Parzelle/Beet row: FieldsBedsHierarchy
+  // expands its ancestors, scrolls it into view, and briefly flashes it.
+  const openAreasPage = useCallback((highlight?: { type: 'location' | 'field' | 'bed'; id: number }) => {
+    navigate(highlight ? `/app/fields-beds?highlight=${highlight.type}:${highlight.id}` : '/app/fields-beds');
+  }, [navigate]);
+
+  const copyTaskSummary = useCallback((task: GanttTask, group: GanttTaskGroup) => {
+    const parts = [
+      task.cultureName ? formatCultureDisplayLabel(task.cultureName, task.cultureVariety) : task.name,
+      group.name,
+      `${formatGanttDate(task.startDate)} – ${formatGanttDate(task.endDate)}`,
+    ].filter(Boolean);
+    void navigator.clipboard?.writeText(parts.join(' · ')).catch(() => undefined);
+  }, []);
+
+  const deletePlantingPlanFromTask = useCallback(async (task: GanttTask) => {
+    if (!task.plantingPlanId) return;
+    const confirmed = window.confirm(t('ganttChart:contextMenu.confirmDeletePlan'));
+    if (!confirmed) return;
+    try {
+      await plantingPlanAPI.delete(task.plantingPlanId);
+      setPlantingPlans((previous) => previous.filter((entry) => entry.id !== task.plantingPlanId));
+    } catch (err) {
+      setError(extractApiErrorMessage(err, t, t('ganttChart:errors.updatePlan')));
+    }
+  }, [t]);
+
+  const getContextMenuActions = useCallback((target: GanttContextMenuTarget): GanttContextMenuAction[] => {
+    if (target.type === 'task') {
+      const { task, group } = target;
+      const actions: GanttContextMenuAction[] = [
+        { id: 'open-plan', label: t('ganttChart:contextMenu.openPlan'), group: 'navigate', onClick: () => openPlantingPlanFromTask(task) },
+      ];
+      if (task.cultureName) {
+        actions.push({ id: 'open-culture', label: t('ganttChart:contextMenu.openCulture'), group: 'navigate', onClick: () => openCultureFromTask(task) });
+      }
+      if (group.bedId) {
+        const bedId = group.bedId;
+        actions.push({ id: 'open-bed', label: t('ganttChart:contextMenu.openBed'), group: 'navigate', onClick: () => openAreasPage({ type: 'bed', id: bedId }) });
+      }
+      if (group.fieldId) {
+        const fieldId = group.fieldId;
+        actions.push({ id: 'open-field', label: t('ganttChart:contextMenu.openField'), group: 'navigate', onClick: () => openAreasPage({ type: 'field', id: fieldId }) });
+      }
+      if (group.locationId) {
+        const locationId = group.locationId;
+        actions.push({ id: 'open-location', label: t('ganttChart:contextMenu.openLocation'), group: 'navigate', onClick: () => openAreasPage({ type: 'location', id: locationId }) });
+      }
+      actions.push(
+        { id: 'edit', label: t('common:actions.edit'), group: 'edit', onClick: () => openPlantingPlanFromTask(task, { edit: true }) },
+        { id: 'copy', label: t('common:actions.copyRow'), group: 'edit', onClick: () => copyTaskSummary(task, group) },
+        { id: 'delete', label: t('common:actions.delete'), group: 'danger', onClick: () => { void deletePlantingPlanFromTask(task); } },
+      );
+      return actions;
+    }
+
+    const { group } = target;
+    if (group.bedId) {
+      const bedId = group.bedId;
+      return [
+        { id: 'open-bed', label: t('ganttChart:contextMenu.openBed'), group: 'navigate', onClick: () => openAreasPage({ type: 'bed', id: bedId }) },
+        { id: 'edit-bed', label: t('ganttChart:contextMenu.editBed'), group: 'edit', onClick: () => openAreasPage({ type: 'bed', id: bedId }) },
+        { id: 'add-plan', label: t('ganttChart:contextMenu.addPlan'), group: 'edit', onClick: () => addPlantingPlanForBed(group) },
+      ];
+    }
+    if (group.fieldId) {
+      const fieldId = group.fieldId;
+      return [
+        { id: 'open-field', label: t('ganttChart:contextMenu.openField'), group: 'navigate', onClick: () => openAreasPage({ type: 'field', id: fieldId }) },
+        { id: 'edit-field', label: t('ganttChart:contextMenu.editField'), group: 'edit', onClick: () => openAreasPage({ type: 'field', id: fieldId }) },
+      ];
+    }
+    if (group.locationId) {
+      const locationId = group.locationId;
+      return [
+        { id: 'open-location', label: t('ganttChart:contextMenu.openLocation'), group: 'navigate', onClick: () => openAreasPage({ type: 'location', id: locationId }) },
+        { id: 'edit-location', label: t('ganttChart:contextMenu.editLocation'), group: 'edit', onClick: () => openAreasPage({ type: 'location', id: locationId }) },
+      ];
+    }
+    return [];
+  }, [addPlantingPlanForBed, copyTaskSummary, deletePlantingPlanFromTask, openAreasPage, openCultureFromTask, openPlantingPlanFromTask, t]);
+
+  const contextMenuActions = contextMenuState ? getContextMenuActions(contextMenuState.target) : [];
+
+  const occupancyHierarchyNodes = useMemo<OccupancyHierarchyNode[]>(() => buildFieldOccupancyHierarchy({
     locations,
     fields,
     beds,
@@ -747,14 +999,172 @@ function GanttChartPage() {
     displayYear,
   }), [beds, cultures, displayYear, fields, locations, plantingPlans]);
 
-  const seedlingTaskGroups = useMemo<GanttTaskGroup[]>(() => buildSeedlingTaskGroups({
-    locations: [],
-    fields: [],
-    beds: [],
-    plantingPlans,
-    cultures,
-    displayYear,
-  }), [cultures, displayYear, plantingPlans]);
+  // Default expansion — once per project, until the user manually
+  // expands/collapses something (which then persists via useExpandedState's
+  // sessionStorage backing). For small farms (few locations/fields/beds
+  // combined), fully expanding is more useful than hiding everything behind
+  // a chevron. Once the tree grows past a size where that would get
+  // unwieldy, fall back to locations-open/fields-collapsed so the view
+  // stays scannable.
+  useEffect(() => {
+    if (
+      !hasPersistedHierarchyExpansion
+      && !hasInitiallyExpandedHierarchyRef.current
+      && occupancyHierarchyNodes.length > 0
+    ) {
+      const canFullyExpand = occupancyHierarchyNodes.length <= OCCUPANCY_TREE_AUTO_EXPAND_ALL_THRESHOLD;
+      const idsToExpand = occupancyHierarchyNodes
+        .filter((node) => node.type === 'location' || (canFullyExpand && node.type === 'field'))
+        .map((node) => node.id);
+      expandAllHierarchy(idsToExpand);
+      hasInitiallyExpandedHierarchyRef.current = true;
+    }
+  }, [expandAllHierarchy, hasPersistedHierarchyExpansion, occupancyHierarchyNodes]);
+
+  const occupancyFieldOptions = useMemo(
+    () => (occupancyLocationFilter === 'all'
+      ? []
+      : occupancyHierarchyNodes.filter(
+        (node) => node.type === 'field' && node.locationId === occupancyLocationFilter,
+      )),
+    [occupancyHierarchyNodes, occupancyLocationFilter],
+  );
+
+  const occupancyTaskGroups = useMemo<GanttTaskGroup[]>(() => {
+    // Structural filter: "only occupied beds" removes empty beds (and any
+    // now-childless field/location ancestors) from the tree entirely,
+    // independent of expand/collapse state.
+    const structurallyVisibleIds = onlyOccupiedBeds
+      ? collectVisibleIdsWithAncestors(
+        occupancyHierarchyNodes,
+        new Set(
+          occupancyHierarchyNodes
+            .filter((node) => node.type === 'bed' && node.occupiedBedCount > 0)
+            .map((node) => node.id),
+        ),
+      )
+      : null;
+    const prunedNodes = structurallyVisibleIds
+      ? occupancyHierarchyNodes.filter((node) => structurallyVisibleIds.has(node.id))
+      : occupancyHierarchyNodes;
+
+    const fieldNameById = new Map<number, string>(
+      prunedNodes
+        .filter((node): node is OccupancyHierarchyNode & { fieldId: number } => node.type === 'field' && node.fieldId !== undefined)
+        .map((node) => [node.fieldId, node.name]),
+    );
+    const locationNameById = new Map<number, string>(
+      prunedNodes.filter((node) => node.type === 'location').map((node) => [node.locationId, node.name]),
+    );
+
+    const normalizedSearch = occupancySearchText.trim().toLowerCase();
+    const isActivelyFiltering = Boolean(normalizedSearch)
+      || occupancyLocationFilter !== 'all'
+      || occupancyFieldFilter !== 'all';
+
+    let visibleIds: Set<string | number> | null = null;
+    if (isActivelyFiltering) {
+      const matchedBedIds = new Set(
+        prunedNodes
+          .filter((node) => {
+            if (node.type !== 'bed') {
+              return false;
+            }
+            if (occupancyLocationFilter !== 'all' && node.locationId !== occupancyLocationFilter) {
+              return false;
+            }
+            if (occupancyFieldFilter !== 'all' && node.fieldId !== occupancyFieldFilter) {
+              return false;
+            }
+            if (!normalizedSearch) {
+              return true;
+            }
+            const haystack = [
+              node.name,
+              node.fieldId !== undefined ? fieldNameById.get(node.fieldId) : undefined,
+              locationNameById.get(node.locationId),
+              ...node.tasks.map((task) => task.cultureName),
+            ]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase();
+            return haystack.includes(normalizedSearch);
+          })
+          .map((node) => node.id),
+      );
+      visibleIds = collectVisibleIdsWithAncestors(prunedNodes, matchedBedIds);
+    }
+
+    const flatRows = flattenTreeRows(prunedNodes, {
+      expandedIds: expandedHierarchyIds,
+      visibleIds,
+    });
+
+    return flatRows.map(({ node, depth, hasChildren }) => {
+      const isExpandable = node.type !== 'bed' && hasChildren;
+      const isExpanded = expandedHierarchyIds.has(node.id);
+
+      let emptyRowLabel: string | undefined;
+      if (node.type === 'field') {
+        emptyRowLabel = `${node.bedCount} Beet${node.bedCount === 1 ? '' : 'e'} · ${node.occupiedBedCount} belegt`;
+      } else if (node.type === 'location') {
+        const fieldCount = prunedNodes.filter(
+          (candidate) => candidate.type === 'field' && candidate.parentId === node.id,
+        ).length;
+        emptyRowLabel = `${fieldCount} Parzelle${fieldCount === 1 ? '' : 'n'} · ${node.bedCount} Beet${node.bedCount === 1 ? '' : 'e'} · ${node.occupiedBedCount} belegt`;
+      }
+
+      const group: GanttTaskGroup = {
+        id: node.id,
+        name: node.name,
+        tasks: node.tasks,
+        depth,
+        isExpandable,
+        isExpanded,
+        emptyRowLabel,
+        // Standort/Parzelle rows have no bars of their own, so they don't
+        // need a full task-row height — Beet rows keep the normal,
+        // task-count-based height (rowHeightOverride left unset).
+        rowHeightOverride: node.type === 'bed' ? undefined : OCCUPANCY_COMPACT_ROW_HEIGHT,
+        locationId: node.locationId,
+        fieldId: node.fieldId,
+        bedId: node.bedId,
+        area: node.area,
+      };
+      return group;
+    });
+  }, [
+    expandedHierarchyIds,
+    occupancyFieldFilter,
+    occupancyHierarchyNodes,
+    occupancyLocationFilter,
+    occupancySearchText,
+    onlyOccupiedBeds,
+  ]);
+
+  const handleToggleGroupExpand = useCallback((groupId: string) => {
+    toggleHierarchyExpand(groupId);
+  }, [toggleHierarchyExpand]);
+
+  const seedlingTaskGroups = useMemo<GanttTaskGroup[]>(() => {
+    const allGroups = buildSeedlingTaskGroups({
+      locations: [],
+      fields: [],
+      beds: [],
+      plantingPlans,
+      cultures,
+      displayYear,
+    });
+
+    const normalizedSearch = seedlingSearchText.trim().toLowerCase();
+    if (!normalizedSearch) {
+      return allGroups;
+    }
+
+    return allGroups.filter((group) => (
+      (group.name || '').toLowerCase().includes(normalizedSearch)
+    ));
+  }, [cultures, displayYear, plantingPlans, seedlingSearchText]);
 
   const resolvedLocale = useMemo(() => {
     const language = i18n.resolvedLanguage || i18n.language || 'de';
@@ -942,8 +1352,13 @@ function GanttChartPage() {
   );
   const renderedTaskGroups = renderWindow.groups;
   const totalTimelineItems = useMemo(
-    () => activeTaskGroups.reduce((total, group) => total + group.tasks.length, 0),
-    [activeTaskGroups],
+    // For occupancy mode, count tasks across the full tree (every bed),
+    // not just the currently visible/expanded rows — collapsing a field
+    // shouldn't make the dataset look smaller than it is.
+    () => (calendarMode === 'occupancy'
+      ? occupancyHierarchyNodes.reduce((total, node) => total + node.tasks.length, 0)
+      : activeTaskGroups.reduce((total, group) => total + group.tasks.length, 0)),
+    [activeTaskGroups, calendarMode, occupancyHierarchyNodes],
   );
   const renderedTimelineItems = useMemo(
     () => renderedTaskGroups.reduce((total, group) => total + group.tasks.length, 0),
@@ -1035,6 +1450,17 @@ function GanttChartPage() {
       action: () => handleShortcutTimelineViewModeChange(mode),
     })),
     {
+      id: 'calendar.focusSearch',
+      label: t('ganttChart:shortcuts.focusSearch'),
+      group: 'navigation',
+      keywords: ['kalender', 'suchen', 'search', 'filter'],
+      shortcutHint: 'Alt+S',
+      keys: { alt: true, key: 's' },
+      contextTags: ['calendar'],
+      isEnabled: () => hasCalendarRequirements,
+      action: focusSearch,
+    },
+    {
       id: 'calendar.showOccupancy',
       label: t('ganttChart:shortcuts.showOccupancy'),
       group: 'navigation',
@@ -1085,6 +1511,7 @@ function GanttChartPage() {
   ], [
     calendarMode,
     editMode,
+    focusSearch,
     getCurrentTimelineReferenceDate,
     handleCalendarModeChange,
     handleShortcutTimelineViewModeChange,
@@ -1504,6 +1931,106 @@ function GanttChartPage() {
           </PageSurface>
         ) : (
           <PageSurface variant="fullWorkspace" sx={{ mt: 0.5 }}>
+          {calendarMode === 'occupancy' && (
+            <Box
+              data-testid="occupancy-tree-filters"
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 1.5,
+                alignItems: 'center',
+                mb: 1.5,
+              }}
+            >
+              <TextField
+                size="small"
+                placeholder={t('ganttChart:treeFilters.searchPlaceholder')}
+                value={occupancySearchText}
+                onChange={(event) => setOccupancySearchText(event.target.value)}
+                inputRef={searchInputRef}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+                sx={{ minWidth: 240, flex: '1 1 240px' }}
+              />
+              <Select
+                size="small"
+                value={occupancyLocationFilter === 'all' ? 'all' : String(occupancyLocationFilter)}
+                onChange={(event) => {
+                  const { value } = event.target;
+                  setOccupancyLocationFilter(value === 'all' ? 'all' : Number(value));
+                  setOccupancyFieldFilter('all');
+                }}
+                sx={{ minWidth: 160 }}
+              >
+                <MenuItem value="all">{t('ganttChart:treeFilters.allLocations')}</MenuItem>
+                {locations.filter((location) => location.id).map((location) => (
+                  <MenuItem key={location.id} value={String(location.id)}>{location.name}</MenuItem>
+                ))}
+              </Select>
+              <Select
+                size="small"
+                value={occupancyFieldFilter === 'all' ? 'all' : String(occupancyFieldFilter)}
+                onChange={(event) => {
+                  const { value } = event.target;
+                  setOccupancyFieldFilter(value === 'all' ? 'all' : Number(value));
+                }}
+                disabled={occupancyLocationFilter === 'all'}
+                sx={{ minWidth: 160 }}
+              >
+                <MenuItem value="all">{t('ganttChart:treeFilters.allFields')}</MenuItem>
+                {occupancyFieldOptions.map((field) => (
+                  <MenuItem key={field.id} value={String(field.fieldId)}>{field.name}</MenuItem>
+                ))}
+              </Select>
+              <FormControlLabel
+                control={(
+                  <Checkbox
+                    size="small"
+                    checked={onlyOccupiedBeds}
+                    onChange={(event) => setOnlyOccupiedBeds(event.target.checked)}
+                  />
+                )}
+                label={t('ganttChart:treeFilters.onlyOccupiedBeds')}
+              />
+            </Box>
+          )}
+          {calendarMode === 'seedlings' && (
+            <Box
+              data-testid="seedling-filters"
+              sx={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 1.5,
+                alignItems: 'center',
+                mb: 1.5,
+              }}
+            >
+              <TextField
+                size="small"
+                placeholder={t('ganttChart:treeFilters.searchPlaceholderSeedlings')}
+                value={seedlingSearchText}
+                onChange={(event) => setSeedlingSearchText(event.target.value)}
+                inputRef={searchInputRef}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+                sx={{ minWidth: 240, flex: '1 1 240px' }}
+              />
+            </Box>
+          )}
           <Box
             className={`gantt-container-wrapper gantt-container-wrapper--${calendarMode}`}
             sx={{
@@ -1550,6 +2077,7 @@ function GanttChartPage() {
                       localeText={ganttLocaleText}
                       viewMode={timelineViewMode}
                       leftColumnWidth={GANTT_LEFT_COLUMN_WIDTH}
+                      rowHeight={32}
                       startDate={startDate}
                       endDate={endDate}
                       focusMode={false}
@@ -1559,6 +2087,10 @@ function GanttChartPage() {
                       showProgress={false}
                       darkMode={false}
                       onTaskUpdate={calendarMode === 'occupancy' && editMode ? handleTaskUpdate : undefined}
+                      onToggleGroupExpand={calendarMode === 'occupancy' ? handleToggleGroupExpand : undefined}
+                      onTaskDoubleClick={handleTaskDoubleClickToPlan}
+                      onTaskContextMenu={handleTaskContextMenu}
+                      onGroupContextMenu={calendarMode === 'occupancy' ? handleGroupContextMenu : undefined}
                       renderHeader={renderGanttHeader}
                       renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
                         ? renderSeedlingTooltip({ task })
@@ -1603,6 +2135,44 @@ function GanttChartPage() {
           </PageSurface>
         )}
 
+      <Menu
+        open={contextMenuState !== null}
+        onClose={closeContextMenu}
+        hideBackdrop
+        sx={{ pointerEvents: 'none' }}
+        slotProps={{
+          paper: {
+            className: 'ofp-custom-context-menu',
+            sx: { pointerEvents: 'auto' },
+          },
+        }}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenuState !== null
+            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
+            : undefined
+        }
+      >
+        {contextMenuActions.flatMap((action, index) => {
+          const previousAction = contextMenuActions[index - 1];
+          const shouldSeparateGroup = previousAction !== undefined && previousAction.group !== action.group;
+          const menuItem = (
+            <MenuItem
+              key={action.id}
+              onClick={() => {
+                closeContextMenu();
+                action.onClick();
+              }}
+              sx={{ color: action.group === 'danger' ? 'error.main' : undefined }}
+            >
+              {action.label}
+            </MenuItem>
+          );
+          return shouldSeparateGroup
+            ? [<Divider key={`${action.id}-divider`} role="separator" />, menuItem]
+            : [menuItem];
+        })}
+      </Menu>
     </PageContainer>
   );
 }

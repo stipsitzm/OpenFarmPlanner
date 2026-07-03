@@ -69,7 +69,10 @@
   /* Layout */
   --rmg-row-height: 40px;
   --rmg-header-height: 40px;
-  --rmg-task-height: 32px;
+  /* Slightly shorter than a stacked lane (see GanttChart.tsx's rowHeight
+     prop / TaskRow's laneHeight) so overlapping bars in the same row get a
+     visible gap instead of touching edge-to-edge. */
+  --rmg-task-height: 26px;
   --rmg-border-radius: 8px;
   --rmg-task-border-radius: 4px;
 }
@@ -214,9 +217,12 @@
   border-bottom: 1px solid var(--rmg-border-color);
   background-color: var(--rmg-bg-color);
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.12s ease;
   position: relative;
   z-index: 200;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .rmg-task-group:hover {
@@ -225,6 +231,24 @@
 
 .rmg-dark .rmg-task-group:hover {
   background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Compact tree rows (e.g. a Gantt row-height override for a parent row
+   with no bars of its own) need tighter vertical padding so they don't
+   look like they're wasting space next to full-height leaf rows. */
+.rmg-task-group-tree-row {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* Dezent row highlight when the corresponding timeline bar is hovered
+   (see TaskRow's onGroupHoverChange -> GanttChart -> hoveredGroupId). */
+.rmg-task-group[data-hover-linked="true"] {
+  background-color: rgba(0, 0, 0, 0.045);
+}
+
+.rmg-dark .rmg-task-group[data-hover-linked="true"] {
+  background-color: rgba(255, 255, 255, 0.06);
 }
 
 .rmg-task-group-name {
@@ -291,6 +315,107 @@
 }
 
 .rmg-dark .rmg-task-group-description {
+  color: var(--rmg-gray-400);
+}
+
+.rmg-task-group-tree-content {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rmg-task-group-tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+}
+
+/* Fixed 16px chevron hit area at every depth — a file-tree/IDE-style
+   sidebar reads as "clean" largely because every row's icon column lines
+   up exactly, regardless of label length or row type. */
+.rmg-task-group-chevron,
+.rmg-task-group-chevron-spacer {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.rmg-task-group-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--rmg-gray-500);
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.rmg-task-group-chevron:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+  color: var(--rmg-gray-700);
+}
+
+.rmg-dark .rmg-task-group-chevron {
+  color: var(--rmg-gray-500);
+}
+
+.rmg-dark .rmg-task-group-chevron:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--rmg-gray-300);
+}
+
+.rmg-task-group-chevron-icon {
+  transition: transform 0.12s ease;
+}
+
+.rmg-task-group-chevron-icon-expanded {
+  transform: rotate(90deg);
+}
+
+/* Depth-based visual weight, like a file tree: shallower levels read as
+   "containers" (bolder, full-strength text), deeper levels progressively
+   more muted so the eye separates hierarchy levels without extra borders
+   or background bands. */
+.rmg-task-group-tree-row[data-depth="0"] .rmg-task-group-tree-name {
+  font-weight: 600;
+  color: var(--rmg-text-color);
+}
+
+.rmg-task-group-tree-row[data-depth="1"] .rmg-task-group-tree-name {
+  font-weight: 500;
+  color: var(--rmg-gray-700);
+}
+
+.rmg-task-group-tree-row[data-depth="2"] .rmg-task-group-tree-name,
+.rmg-task-group-tree-row[data-depth="3"] .rmg-task-group-tree-name {
+  font-weight: 400;
+  color: var(--rmg-gray-800);
+}
+
+.rmg-dark .rmg-task-group-tree-row[data-depth="1"] .rmg-task-group-tree-name {
+  color: var(--rmg-gray-300);
+}
+
+.rmg-dark .rmg-task-group-tree-row[data-depth="2"] .rmg-task-group-tree-name,
+.rmg-dark .rmg-task-group-tree-row[data-depth="3"] .rmg-task-group-tree-name {
+  color: var(--rmg-gray-200);
+}
+
+.rmg-task-row-empty-label {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding-left: 12px;
+  font-size: 0.75rem;
+  color: var(--rmg-gray-500);
+}
+
+.rmg-dark .rmg-task-row-empty-label {
   color: var(--rmg-gray-400);
 }
 

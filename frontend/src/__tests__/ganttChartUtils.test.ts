@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildFieldOccupancyHierarchy,
   buildFieldOccupancyTaskGroups,
   buildSeedlingTaskGroups,
   buildSeedlingTooltipDetails,
@@ -351,5 +352,154 @@ describe('buildSeedlingTaskGroups', () => {
     expect(groups).toHaveLength(1);
     expect(groups[0].tasks).toHaveLength(2);
     expect(groups[0].tasks[1].name).toBe('Salat (Bijella) (Ernte)');
+  });
+});
+
+describe('buildFieldOccupancyHierarchy', () => {
+  const multiLocationLocations = [
+    { id: 1, name: 'Hof' },
+    { id: 2, name: 'Pacht' },
+  ];
+  const multiLocationFields = [
+    { id: 10, name: 'Nordfeld', location: 1 },
+    { id: 20, name: 'Südfeld', location: 2 },
+  ];
+  const multiLocationBeds = [
+    { id: 100, name: 'Beet A', field: 10 },
+    { id: 101, name: 'Beet A2', field: 10 },
+    { id: 200, name: 'Beet B', field: 20 },
+  ];
+
+  it('always builds a location node and a field node, even for a single location', () => {
+    const nodes = buildFieldOccupancyHierarchy({
+      locations,
+      fields,
+      beds,
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [],
+    });
+
+    const locationNode = nodes.find((n) => n.type === 'location');
+    const fieldNode = nodes.find((n) => n.type === 'field');
+    expect(locationNode?.name).toBe('Hof');
+    expect(locationNode?.parentId).toBeNull();
+    expect(fieldNode?.name).toBe('Nordfeld');
+    expect(fieldNode?.parentId).toBe(locationNode?.id);
+  });
+
+  it('includes beds without any planting plan as empty leaf nodes', () => {
+    const nodes = buildFieldOccupancyHierarchy({
+      locations,
+      fields,
+      beds,
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [],
+    });
+
+    const bedNode = nodes.find((n) => n.type === 'bed');
+    expect(bedNode).toBeDefined();
+    expect(bedNode?.tasks).toEqual([]);
+    expect(bedNode?.occupiedBedCount).toBe(0);
+  });
+
+  it('sets parentId references forming a Standort -> Parzelle -> Beet chain', () => {
+    const nodes = buildFieldOccupancyHierarchy({
+      locations: multiLocationLocations,
+      fields: multiLocationFields,
+      beds: multiLocationBeds,
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [],
+    });
+
+    const bedA = nodes.find((n) => n.type === 'bed' && n.name === 'Beet A');
+    const fieldNord = nodes.find((n) => n.type === 'field' && n.name === 'Nordfeld');
+    const locationHof = nodes.find((n) => n.type === 'location' && n.name === 'Hof');
+
+    expect(bedA?.parentId).toBe(fieldNord?.id);
+    expect(fieldNord?.parentId).toBe(locationHof?.id);
+    expect(locationHof?.parentId).toBeNull();
+  });
+
+  it('aggregates bed/occupied-bed/plan counts up through field and location nodes', () => {
+    const nodes = buildFieldOccupancyHierarchy({
+      locations: multiLocationLocations,
+      fields: multiLocationFields,
+      beds: multiLocationBeds,
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [
+        {
+          id: 1,
+          culture: 1,
+          culture_name: 'Salat',
+          bed: 100,
+          planting_date: '2026-03-01',
+          harvest_date: '2026-04-15',
+        },
+        {
+          id: 2,
+          culture: 2,
+          culture_name: 'Kohl',
+          bed: 101,
+          planting_date: '2026-03-05',
+          harvest_date: '2026-04-20',
+        },
+      ],
+    });
+
+    const fieldNord = nodes.find((n) => n.type === 'field' && n.name === 'Nordfeld');
+    const locationHof = nodes.find((n) => n.type === 'location' && n.name === 'Hof');
+    const locationPacht = nodes.find((n) => n.type === 'location' && n.name === 'Pacht');
+
+    expect(fieldNord?.bedCount).toBe(2);
+    expect(fieldNord?.occupiedBedCount).toBe(2);
+    expect(fieldNord?.planCount).toBe(2);
+    expect(locationHof?.bedCount).toBe(2);
+    expect(locationHof?.occupiedBedCount).toBe(2);
+    expect(locationPacht?.bedCount).toBe(1);
+    expect(locationPacht?.occupiedBedCount).toBe(0);
+  });
+
+  it('builds growth and harvest tasks for occupied beds the same way as buildFieldOccupancyTaskGroups', () => {
+    const nodes = buildFieldOccupancyHierarchy({
+      locations,
+      fields,
+      beds,
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [
+        {
+          id: 21,
+          culture: 42,
+          culture_name: 'Salat',
+          culture_variety: 'Bijella',
+          bed: 100,
+          planting_date: '2026-03-01',
+          harvest_date: '2026-04-15',
+          harvest_end_date: '2026-04-30',
+        },
+      ],
+    });
+
+    const bedNode = nodes.find((n) => n.type === 'bed');
+    expect(bedNode?.tasks).toHaveLength(2);
+    expect(bedNode?.tasks[0].name).toBe('Salat (Bijella)');
+    expect(bedNode?.tasks[1].name).toBe('Salat (Bijella) (Ernte)');
+  });
+
+  it('returns an empty list when there are no locations', () => {
+    const nodes = buildFieldOccupancyHierarchy({
+      locations: [],
+      fields,
+      beds,
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [],
+    });
+
+    expect(nodes).toEqual([]);
   });
 });

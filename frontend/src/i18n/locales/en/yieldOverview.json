@@ -13,7 +13,12 @@
   },
   "chart": {
     "title": "Yield distribution",
-    "tooltip": "{{period}} · {{culture}}: {{yield}} kg"
+    "tooltip": "{{period}} · {{culture}}: {{yield}} kg",
+    "tooltipPeriod": "Period",
+    "tooltipYield": "Yield"
+  },
+  "contextMenu": {
+    "openCulture": "Open crop"
   },
   "empty": {
     "noPlansTitle": "No yield forecast available yet",
