@@ -69,7 +69,10 @@
   /* Layout */
   --rmg-row-height: 40px;
   --rmg-header-height: 40px;
-  --rmg-task-height: 32px;
+  /* Slightly shorter than a stacked lane (see GanttChart.tsx's rowHeight
+     prop / TaskRow's laneHeight) so overlapping bars in the same row get a
+     visible gap instead of touching edge-to-edge. */
+  --rmg-task-height: 26px;
   --rmg-border-radius: 8px;
   --rmg-task-border-radius: 4px;
 }
