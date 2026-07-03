@@ -25,7 +25,7 @@ export interface EditableDataGridCommandApi {
   commitDraftValues: (rowId: GridRowId, values: Partial<EditableRow>) => Promise<void>;
   reload: () => Promise<void>;
   focusTable: () => void;
-  openRowById: (rowId: GridRowId) => void;
+  openRowById: (rowId: GridRowId, options?: { startEdit?: boolean }) => void;
 }
 
 export interface EditableDataGridRowActionHelpers<T extends EditableRow> {

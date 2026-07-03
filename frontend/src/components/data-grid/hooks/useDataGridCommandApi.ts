@@ -16,7 +16,7 @@ interface UseDataGridCommandApiParams<T extends EditableRow> {
   commitDraftValues: (rowId: GridRowId, values: Partial<T>) => Promise<void>;
   reload: () => Promise<void>;
   focusTable: () => void;
-  openRowById: (rowId: GridRowId) => void;
+  openRowById: (rowId: GridRowId, options?: { startEdit?: boolean }) => void;
 }
 
 export function useDataGridCommandApi<T extends EditableRow>({

@@ -1370,6 +1370,17 @@ describe('GanttChartPage', () => {
       expect(mocks.navigate).toHaveBeenCalledWith('/app/planting-plans?planId=10');
     });
 
+    it('choosing "Bearbeiten" from the task context menu navigates to the plan in edit mode', async () => {
+      setUpSinglePlanFixture();
+      renderWithAuth();
+
+      await screen.findByText('Beet 1');
+      fireEvent.click(screen.getByRole('button', { name: /^context-menu-task-/ }));
+      fireEvent.click(await screen.findByRole('menuitem', { name: 'Bearbeiten' }));
+
+      expect(mocks.navigate).toHaveBeenCalledWith('/app/planting-plans?planId=10&edit=true');
+    });
+
     it('choosing "Löschen" from the task context menu deletes the plan after confirmation', async () => {
       setUpSinglePlanFixture();
       const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);

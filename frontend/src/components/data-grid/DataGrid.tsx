@@ -1238,18 +1238,20 @@ export function EditableDataGrid<T extends EditableRow>({
     }));
   }, [columns, rowsById]);
 
-  // Scrolls to, selects, and opens edit mode on a specific row by id —
-  // used by pages that deep-link into this grid (e.g. "Anbauplan öffnen"
-  // from the Gantt calendar's context menu) instead of just prefilling a
-  // brand-new draft row via `initialRow`.
-  const openRowById = useCallback((rowId: GridRowId): void => {
+  // Scrolls to and selects a specific row by id, optionally opening edit
+  // mode on it — used by pages that deep-link into this grid (e.g.
+  // "Anbauplan öffnen"/"bearbeiten" from the Gantt calendar's context menu)
+  // instead of just prefilling a brand-new draft row via `initialRow`.
+  const openRowById = useCallback((rowId: GridRowId, options?: { startEdit?: boolean }): void => {
     const api = gridApiRef.current;
     if (!api || !rowsById.has(String(rowId))) return;
     setSelectedRowIds([rowId]);
     requestAnimationFrame(() => {
       api.scrollToIndexes({ rowIndex: api.getRowIndexRelativeToVisibleRows(rowId) });
     });
-    handleStartRowEdit(rowId);
+    if (options?.startEdit !== false) {
+      handleStartRowEdit(rowId);
+    }
   }, [gridApiRef, handleStartRowEdit, rowsById, setSelectedRowIds]);
 
   useDataGridCommandApi<T>({

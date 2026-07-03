@@ -877,9 +877,10 @@ function GanttChartPage() {
     )),
   );
 
-  const openPlantingPlanFromTask = useCallback((task: GanttTask) => {
+  const openPlantingPlanFromTask = useCallback((task: GanttTask, options?: { edit?: boolean }) => {
     if (task.plantingPlanId) {
-      navigate(`/app/planting-plans?planId=${task.plantingPlanId}`);
+      const query = options?.edit ? `planId=${task.plantingPlanId}&edit=true` : `planId=${task.plantingPlanId}`;
+      navigate(`/app/planting-plans?${query}`);
       return;
     }
     navigate('/app/planting-plans');
@@ -959,7 +960,7 @@ function GanttChartPage() {
         actions.push({ id: 'open-location', label: t('ganttChart:contextMenu.openLocation'), group: 'navigate', onClick: () => openAreasPage({ type: 'location', id: locationId }) });
       }
       actions.push(
-        { id: 'edit', label: t('common:actions.edit'), group: 'edit', onClick: () => openPlantingPlanFromTask(task) },
+        { id: 'edit', label: t('common:actions.edit'), group: 'edit', onClick: () => openPlantingPlanFromTask(task, { edit: true }) },
         { id: 'copy', label: t('common:actions.copyRow'), group: 'edit', onClick: () => copyTaskSummary(task, group) },
         { id: 'delete', label: t('common:actions.delete'), group: 'danger', onClick: () => { void deletePlantingPlanFromTask(task); } },
       );
