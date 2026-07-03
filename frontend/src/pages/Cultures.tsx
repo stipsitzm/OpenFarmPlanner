@@ -49,7 +49,6 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import { useCommandContextTag, useRegisterCommands, useRegisterCreateActions } from '../commands/useCommandContext';
-import { isTypingInEditableElement } from '../hooks/useKeyboardShortcuts';
 import {
   type SnackbarState,
 } from './culturesPageUtils';
@@ -112,7 +111,6 @@ function Cultures() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [historyScope, setHistoryScope] = useState<HistoryScope>('culture');
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const focusSearch = useCallback(() => {
     searchInputRef.current?.focus();
@@ -463,25 +461,6 @@ function Cultures() {
       navigate(`/app/planting-plans?cultureId=${selectedCultureId}`);
     }
   };
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== '?') {
-        return;
-      }
-      if (event.ctrlKey || event.metaKey || event.altKey) {
-        return;
-      }
-      if (isTypingInEditableElement(document.activeElement)) {
-        return;
-      }
-      event.preventDefault();
-      setShortcutsOpen(true);
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
 
   const firstMissingPlanRequirement = getFirstMissingCultivationPlanRequirement({
     hasFields,
@@ -1072,39 +1051,6 @@ function Cultures() {
       </Dialog>
 
 
-
-      <Dialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{t('shortcuts.title')}</DialogTitle>
-        <DialogContent>
-          <List dense>
-            <ListItem>
-              <ListItemText primary={t('shortcuts.openShortcuts')} secondary="?" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary={t('shortcuts.commandPalette')} secondary="Alt+K" />
-            </ListItem>
-            <ListItem>
-              <ListItemText primary={t('shortcuts.closeDialog')} secondary="Esc" />
-            </ListItem>
-            {aiEnrichmentEnabled && (
-              <>
-                <ListItem>
-                  <ListItemText primary={t('shortcuts.aiComplete')} secondary="–" />
-                </ListItem>
-                <ListItem>
-                  <ListItemText primary={t('shortcuts.aiReresearch')} secondary="–" />
-                </ListItem>
-                <ListItem>
-                  <ListItemText primary={t('shortcuts.aiCompleteAll')} secondary="–" />
-                </ListItem>
-              </>
-            )}
-          </List>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShortcutsOpen(false)}>{t('history.closeButton')}</Button>
-        </DialogActions>
-      </Dialog>
 
       <Snackbar
         open={snackbar.open}

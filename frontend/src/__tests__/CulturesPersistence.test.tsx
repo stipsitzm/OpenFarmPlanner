@@ -4,6 +4,7 @@ import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom
 import type { ReactElement } from 'react';
 import Cultures from '../pages/Cultures';
 import { CommandProvider } from '../commands/CommandProvider';
+import { FocusManagerProvider } from '../focus/FocusManager';
 
 const {
   formCultureIdHistory,
@@ -79,7 +80,7 @@ function renderCultures(initialEntry = '/cultures'): void {
           element={(
             <>
               <SearchIndicator />
-              <CommandProvider><Cultures /></CommandProvider>
+              <FocusManagerProvider><CommandProvider><Cultures /></CommandProvider></FocusManagerProvider>
             </>
           )}
         />
@@ -94,7 +95,7 @@ function CrossRouteHarness(): ReactElement {
     <>
       <Link to="/locations">go-locations</Link>
       <SearchIndicator />
-      <CommandProvider><Cultures /></CommandProvider>
+      <FocusManagerProvider><CommandProvider><Cultures /></CommandProvider></FocusManagerProvider>
     </>
   );
 }

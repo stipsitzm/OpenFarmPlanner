@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { FocusManagerProvider } from "../focus/FocusManager";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldOverviewPage from "../pages/YieldOverview";
 import { getYieldAxisLabelStep } from "../pages/yieldOverviewUtils";
@@ -99,9 +100,9 @@ describe("YieldOverviewPage", () => {
     });
 
     render(
-      <MemoryRouter>
+      <FocusManagerProvider><MemoryRouter>
         <YieldOverviewPage />
-      </MemoryRouter>,
+      </MemoryRouter></FocusManagerProvider>,
     );
 
     await waitFor(() =>
@@ -172,9 +173,9 @@ describe("YieldOverviewPage", () => {
     Object.assign(navigator, { clipboard: { writeText } });
 
     render(
-      <MemoryRouter>
+      <FocusManagerProvider><MemoryRouter>
         <YieldOverviewPage />
-      </MemoryRouter>,
+      </MemoryRouter></FocusManagerProvider>,
     );
 
     const segment = await screen.findByTestId("yield-bar-2026-W13-1");
@@ -189,13 +190,115 @@ describe("YieldOverviewPage", () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("Kohl · W13 Mär · 0.70 kg"));
   });
 
+  describe("keyboard navigation on the chart bars", () => {
+    beforeEach(() => {
+      mocks.yieldList.mockResolvedValue({
+        data: [
+          {
+            iso_week: "2026-W13",
+            week_start: "2026-03-23",
+            cultures: [
+              { culture_id: 1, culture_name: "Kohl", yield: 0.7, color: "#16a34a" },
+              { culture_id: 2, culture_name: "Karotte", yield: 0.5, color: "#f97316" },
+            ],
+          },
+          {
+            iso_week: "2026-W14",
+            week_start: "2026-03-30",
+            cultures: [
+              { culture_id: 1, culture_name: "Kohl", yield: 0.9, color: "#16a34a" },
+              { culture_id: 2, culture_name: "Karotte", yield: 0.4, color: "#f97316" },
+            ],
+          },
+        ],
+      });
+    });
+
+    it("moves focus between periods with ArrowRight/ArrowLeft", async () => {
+      render(
+        <FocusManagerProvider><MemoryRouter>
+          <YieldOverviewPage />
+        </MemoryRouter></FocusManagerProvider>,
+      );
+
+      const week13Kohl = await screen.findByTestId("yield-bar-2026-W13-1");
+      const week14Kohl = screen.getByTestId("yield-bar-2026-W14-1");
+
+      fireEvent.keyDown(week13Kohl, { key: "ArrowRight" });
+      expect(week14Kohl).toHaveFocus();
+
+      fireEvent.keyDown(week14Kohl, { key: "ArrowLeft" });
+      expect(week13Kohl).toHaveFocus();
+    });
+
+    it("moves focus between stacked cultures within a period with ArrowUp/ArrowDown", async () => {
+      render(
+        <FocusManagerProvider><MemoryRouter>
+          <YieldOverviewPage />
+        </MemoryRouter></FocusManagerProvider>,
+      );
+
+      const week13Kohl = await screen.findByTestId("yield-bar-2026-W13-1");
+      const week13Karotte = screen.getByTestId("yield-bar-2026-W13-2");
+
+      fireEvent.keyDown(week13Kohl, { key: "ArrowUp" });
+      expect(week13Karotte).toHaveFocus();
+
+      fireEvent.keyDown(week13Karotte, { key: "ArrowDown" });
+      expect(week13Kohl).toHaveFocus();
+    });
+
+    it("opens the culture with Enter", async () => {
+      render(
+        <FocusManagerProvider><MemoryRouter>
+          <YieldOverviewPage />
+        </MemoryRouter></FocusManagerProvider>,
+      );
+
+      const week13Karotte = await screen.findByTestId("yield-bar-2026-W13-2");
+      fireEvent.keyDown(week13Karotte, { key: "Enter" });
+
+      expect(mocks.navigate).toHaveBeenCalledWith("/app/cultures?cultureId=2");
+    });
+
+    it("toggles the tooltip open with Space", async () => {
+      render(
+        <FocusManagerProvider><MemoryRouter>
+          <YieldOverviewPage />
+        </MemoryRouter></FocusManagerProvider>,
+      );
+
+      const week13Kohl = await screen.findByTestId("yield-bar-2026-W13-1");
+      expect(screen.queryByText("0.70 kg")).not.toBeInTheDocument();
+
+      fireEvent.keyDown(week13Kohl, { key: " " });
+      expect(await screen.findByText("0.70 kg")).toBeInTheDocument();
+
+      fireEvent.keyDown(week13Kohl, { key: " " });
+      await waitFor(() => expect(screen.queryByText("0.70 kg")).not.toBeInTheDocument());
+    });
+
+    it("opens the context menu at the focused segment with the ContextMenu key", async () => {
+      render(
+        <FocusManagerProvider><MemoryRouter>
+          <YieldOverviewPage />
+        </MemoryRouter></FocusManagerProvider>,
+      );
+
+      const week13Kohl = await screen.findByTestId("yield-bar-2026-W13-1");
+      fireEvent.keyDown(week13Kohl, { key: "ContextMenu" });
+
+      expect(await screen.findByRole("menuitem", { name: "Kultur öffnen" })).toBeInTheDocument();
+    });
+  });
+
   it("shows a helpful empty state when no planting plans exist", async () => {
     mocks.planList.mockResolvedValue({ data: { results: [] } });
 
     render(
-      <MemoryRouter>
+      <FocusManagerProvider><MemoryRouter>
         <YieldOverviewPage />
-      </MemoryRouter>,
+      </MemoryRouter></FocusManagerProvider>,
     );
 
     expect(
@@ -214,9 +317,9 @@ describe("YieldOverviewPage", () => {
   it("shows a yield-data empty state when planting plans have no calculable yields", async () => {
     const currentYear = new Date().getFullYear();
     render(
-      <MemoryRouter>
+      <FocusManagerProvider><MemoryRouter>
         <YieldOverviewPage />
-      </MemoryRouter>,
+      </MemoryRouter></FocusManagerProvider>,
     );
 
     expect(
@@ -232,9 +335,9 @@ describe("YieldOverviewPage", () => {
   it("reloads yield data when the year changes", async () => {
     const currentYear = new Date().getFullYear();
     render(
-      <MemoryRouter>
+      <FocusManagerProvider><MemoryRouter>
         <YieldOverviewPage />
-      </MemoryRouter>,
+      </MemoryRouter></FocusManagerProvider>,
     );
 
     await screen.findByText(`Keine erwarteten Erträge für ${currentYear}`);

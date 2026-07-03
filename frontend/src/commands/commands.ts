@@ -13,7 +13,10 @@ export interface RootCommandFactoryOptions {
   onOpenVersionHistory: () => void | Promise<void>;
   onLogout: () => void | Promise<void>;
   onOpenPalette: () => void;
-  onOpenShortcuts: () => void;
+  onOpenPageHelp: () => void;
+  onOpenShortcutsHelp: () => void;
+  onToggleSidebar: () => void;
+  isSidebarToggleVisible: () => boolean;
   labels: {
     nextPage: string;
     previousPage: string;
@@ -24,7 +27,9 @@ export interface RootCommandFactoryOptions {
     openVersionHistory: string;
     logout: string;
     openPalette: string;
-    openShortcuts: string;
+    openPageHelp: string;
+    openShortcutsHelp: string;
+    toggleSidebar: string;
   };
 }
 
@@ -122,28 +127,52 @@ export function createRootCommands(options: RootCommandFactoryOptions): CommandS
       contextTags: ['global'],
       action: options.onPreviousPage,
     },
+    {
+      id: 'navigation.toggleSidebar',
+      label: options.labels.toggleSidebar,
+      keywords: ['sidebar', 'seitenleiste', 'ein-', 'ausklappen'],
+      group: 'navigation',
+      shortcutHint: 'Ctrl+B',
+      keys: { ctrl: true, key: 'b' },
+      contextTags: ['global'],
+      isVisible: options.isSidebarToggleVisible,
+      action: options.onToggleSidebar,
+    },
   ];
 
   const helpCommands: CommandSpec[] = [
     {
       id: 'help.openPalette',
       label: options.labels.openPalette,
-      keywords: ['aktionssuche', 'palette', 'befehl', 'hilfe'],
+      keywords: ['aktionssuche', 'palette', 'befehl', 'hilfe', 'suche'],
       group: 'help',
-      shortcutHint: 'Alt+K',
-      keys: { alt: true, key: 'k' },
+      // Ctrl+K is the convention most professional apps (VS Code, Slack,
+      // Linear, GitHub) use for "search/command everywhere" — kept as the
+      // primary hint, with the app's original Alt+K still working.
+      shortcutHint: 'Ctrl+K / Alt+K',
+      keys: [{ ctrl: true, key: 'k' }, { alt: true, key: 'k' }],
       contextTags: ['global'],
       action: options.onOpenPalette,
     },
     {
-      id: 'help.openShortcuts',
-      label: options.labels.openShortcuts,
-      keywords: ['tastenkürzel', 'shortcuts', 'hilfe'],
+      id: 'help.openPageHelp',
+      label: options.labels.openPageHelp,
+      keywords: ['seitenhilfe', 'hilfe'],
       group: 'help',
       shortcutHint: 'Alt+H',
       keys: { alt: true, key: 'h' },
       contextTags: ['global'],
-      action: options.onOpenShortcuts,
+      action: options.onOpenPageHelp,
+    },
+    {
+      id: 'help.openShortcutsHelp',
+      label: options.labels.openShortcutsHelp,
+      keywords: ['tastenkürzel', 'shortcuts', 'hilfe'],
+      group: 'help',
+      shortcutHint: '?',
+      keys: { key: '?' },
+      contextTags: ['global'],
+      action: options.onOpenShortcutsHelp,
     },
   ];
 

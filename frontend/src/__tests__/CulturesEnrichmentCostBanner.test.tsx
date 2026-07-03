@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 import Cultures from '../pages/Cultures';
 import { CommandProvider } from '../commands/CommandProvider';
+import { FocusManagerProvider } from '../focus/FocusManager';
 import type { Culture } from '../api/types';
 
 
@@ -116,9 +117,9 @@ describe('Cultures enrichment cost banner', () => {
   it('renders formatted enrichment cost alert after successful run', async () => {
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <Cultures />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -137,9 +138,9 @@ describe('Cultures enrichment cost banner', () => {
   it('triggers AI actions via keyboard shortcuts', async () => {
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <Cultures />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -181,9 +182,9 @@ describe('Cultures enrichment cost banner', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <Cultures />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -226,9 +227,9 @@ describe('Cultures enrichment cost banner', () => {
     selectedCultureMock.supplier = { id: 9, name: 'ReinSaat', homepage_url: 'https://www.reinsaat.at', slug: 'reinsaat', allowed_domains: [] };
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <Cultures />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 

@@ -40,6 +40,7 @@ import {
 } from "../utils/contextMenu";
 import { ContextMenuIndicator } from "../components/contextMenu/ContextMenuIndicator";
 import { contextMenuIndicatorHostSx } from "../components/contextMenu/contextMenuIndicatorStyles";
+import { useFocusRegion } from "../focus/useFocusManager";
 import { parseDateString } from "./ganttChartUtils";
 import {
   getYieldAxisLabelStep,
@@ -242,6 +243,17 @@ function YieldDistributionChart({
     i18n.resolvedLanguage ?? i18n.language,
   );
   const axisRef = useRef<HTMLDivElement | null>(null);
+  const chartPlotRef = useRef<HTMLDivElement | null>(null);
+  useFocusRegion('yield-chart', chartPlotRef, { label: t('chart.title'), order: 3 });
+  const segmentElementsRef = useRef(new Map<string, HTMLElement>());
+  const [focusedSegmentKey, setFocusedSegmentKey] = useState<string | null>(null);
+  const [keyboardTooltipKey, setKeyboardTooltipKey] = useState<string | null>(null);
+  // MUI's Tooltip locks in "controlled" vs. "uncontrolled" mode on its first
+  // render and ignores later prop changes that would flip that (e.g. going
+  // from `open={undefined}` to `open={true}` later does nothing visible) —
+  // so hover has to be tracked explicitly here to keep the tooltip always
+  // controlled by a real boolean, letting the keyboard (Space) toggle work.
+  const [hoveredSegmentKey, setHoveredSegmentKey] = useState<string | null>(null);
 
   const [contextMenuState, setContextMenuState] = useState<{
     cultureId: number;
@@ -290,6 +302,80 @@ function YieldDistributionChart({
     const summary = `${payload.cultureName} · ${payload.periodLabel} · ${payload.yieldValue.toFixed(2)} kg`;
     void navigator.clipboard?.writeText(summary).catch(() => undefined);
   }, []);
+
+  // Keyboard navigation between bars — the chart-region reference
+  // implementation described in docs/keyboard-architecture.md. Only one
+  // segment is ever part of the tab order (roving tabindex); arrow keys move
+  // that "current" segment across periods (left/right) and, within a
+  // period's stacked bar, across cultures (up/down).
+  const getSegmentKey = useCallback((columnId: string, cultureId: number) => `${columnId}-${cultureId}`, []);
+
+  const defaultSegmentKey = useMemo(() => {
+    const firstColumn = chartData[0];
+    const firstCulture = firstColumn?.cultures[0];
+    return firstColumn && firstCulture ? getSegmentKey(firstColumn.id, firstCulture.culture_id) : null;
+  }, [chartData, getSegmentKey]);
+
+  const allSegmentKeys = useMemo(
+    () => new Set(chartData.flatMap((column) => column.cultures.map((culture) => getSegmentKey(column.id, culture.culture_id)))),
+    [chartData, getSegmentKey],
+  );
+
+  const activeSegmentKey = focusedSegmentKey && allSegmentKeys.has(focusedSegmentKey) ? focusedSegmentKey : defaultSegmentKey;
+
+  const focusSegment = useCallback((key: string) => {
+    setFocusedSegmentKey(key);
+    setKeyboardTooltipKey(null);
+    segmentElementsRef.current.get(key)?.focus();
+  }, []);
+
+  const handleSegmentKeyDown = useCallback((
+    event: React.KeyboardEvent,
+    columnIndex: number,
+    cultureIndex: number,
+    payload: { cultureId: number; cultureName: string; periodLabel: string; yieldValue: number },
+  ) => {
+    const column = chartData[columnIndex];
+    if (!column) return;
+
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      const nextColumn = chartData[columnIndex + (event.key === "ArrowLeft" ? -1 : 1)];
+      if (!nextColumn) return;
+      event.preventDefault();
+      const nextCulture = nextColumn.cultures[Math.min(cultureIndex, nextColumn.cultures.length - 1)];
+      if (nextCulture) focusSegment(getSegmentKey(nextColumn.id, nextCulture.culture_id));
+      return;
+    }
+
+    if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+      // The stack renders column-reverse (first array entry at the bottom),
+      // so moving "up" means the next array index.
+      const nextCulture = column.cultures[cultureIndex + (event.key === "ArrowUp" ? 1 : -1)];
+      if (!nextCulture) return;
+      event.preventDefault();
+      focusSegment(getSegmentKey(column.id, nextCulture.culture_id));
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      openCulture(payload.cultureId);
+      return;
+    }
+
+    if (event.key === " " || event.key === "Spacebar") {
+      event.preventDefault();
+      const key = getSegmentKey(column.id, payload.cultureId);
+      setKeyboardTooltipKey((current) => (current === key ? null : key));
+      return;
+    }
+
+    if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+      event.preventDefault();
+      const rect = event.currentTarget.getBoundingClientRect();
+      setContextMenuState({ ...payload, mouseX: rect.left + 2, mouseY: rect.bottom - 6 });
+    }
+  }, [chartData, focusSegment, getSegmentKey, openCulture]);
 
   const longPressTimeoutRef = useRef<number | null>(null);
   const handleSegmentTouchStart = useCallback((
@@ -420,6 +506,7 @@ function YieldDistributionChart({
 
           <Box ref={axisRef} sx={{ minWidth: 0 }}>
             <Box
+              ref={chartPlotRef}
               data-testid="yield-chart-plot"
               sx={{
                 width: "100%",
@@ -433,7 +520,7 @@ function YieldDistributionChart({
                 gap: { xs: "1px", sm: "2px" },
               }}
             >
-              {chartData.map((column) => (
+              {chartData.map((column, columnIndex) => (
                 <Box
                   key={column.id}
                   data-testid={`yield-bar-column-${column.id}`}
@@ -454,7 +541,7 @@ function YieldDistributionChart({
                       justifyContent: "flex-start",
                     }}
                   >
-                    {column.cultures.map((culture) => {
+                    {column.cultures.map((culture, cultureIndex) => {
                       const periodLabel = `${column.primaryLabel} ${column.secondaryLabel}`;
                       const segmentPayload = {
                         cultureId: culture.culture_id,
@@ -462,14 +549,16 @@ function YieldDistributionChart({
                         periodLabel,
                         yieldValue: culture.yield,
                       };
+                      const segmentKey = getSegmentKey(column.id, culture.culture_id);
                       return (
                         <Tooltip
                           key={`${column.id}-${culture.culture_id}`}
-                          // Force-close while a context menu is open — MUI's
-                          // hover-driven tooltip would otherwise stay visible
-                          // (the pointer is still technically hovering the
-                          // segment) and overlap the menu.
-                          open={contextMenuState ? false : undefined}
+                          // Always an explicit boolean (never `undefined`) —
+                          // driven by hover and the keyboard (Space) toggle.
+                          // Force-closed while a context menu is open, since
+                          // the pointer may still technically be hovering
+                          // the segment underneath it.
+                          open={!contextMenuState && (hoveredSegmentKey === segmentKey || keyboardTooltipKey === segmentKey)}
                           slotProps={{
                             tooltip: {
                               sx: {
@@ -504,8 +593,19 @@ function YieldDistributionChart({
                           }
                         >
                           <Box
+                            ref={(element: HTMLElement | null) => {
+                              if (element) segmentElementsRef.current.set(segmentKey, element);
+                              else segmentElementsRef.current.delete(segmentKey);
+                            }}
                             data-testid={`yield-bar-${column.id}-${culture.culture_id}`}
                             data-rmg-component="yield-segment"
+                            role="button"
+                            tabIndex={segmentKey === activeSegmentKey ? 0 : -1}
+                            aria-label={`${culture.culture_name}, ${periodLabel}, ${culture.yield.toFixed(2)} kg`}
+                            onFocus={() => setFocusedSegmentKey(segmentKey)}
+                            onKeyDown={(event) => handleSegmentKeyDown(event, columnIndex, cultureIndex, segmentPayload)}
+                            onMouseEnter={() => setHoveredSegmentKey(segmentKey)}
+                            onMouseLeave={() => setHoveredSegmentKey((current) => (current === segmentKey ? null : current))}
                             onContextMenu={(event) => openContextMenu(event, segmentPayload)}
                             onTouchStart={(event) => handleSegmentTouchStart(event, segmentPayload)}
                             onTouchEnd={clearSegmentLongPress}

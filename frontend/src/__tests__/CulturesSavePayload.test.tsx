@@ -5,6 +5,7 @@ import type { ReactElement } from 'react';
 import Cultures from '../pages/Cultures';
 import { buildCultureSavePayload } from '../pages/culturesSaveUtils';
 import { CommandProvider } from '../commands/CommandProvider';
+import { FocusManagerProvider } from '../focus/FocusManager';
 import type { Culture } from '../api/types';
 
 const { listMock, updateMock, createMock, saveCultureMock } = vi.hoisted(() => ({
@@ -123,9 +124,9 @@ describe('Cultures save payload', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <Cultures />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -154,9 +155,9 @@ describe('Cultures save payload', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <Cultures />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -248,9 +249,9 @@ describe('Cultures save payload', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <Cultures />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -313,9 +314,9 @@ describe('Cultures save payload', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <Cultures />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -382,9 +383,9 @@ describe('Cultures save payload', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <Cultures />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -424,9 +425,9 @@ describe('Cultures save payload', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <Cultures />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 

@@ -8,15 +8,18 @@ import { CssBaseline } from '@mui/material'
 import theme from './theme'
 import { CommandProvider } from './commands/CommandProvider'
 import { AuthProvider } from './auth/AuthContext'
+import { FocusManagerProvider } from './focus/FocusManager'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <CommandProvider>
-          <App />
-        </CommandProvider>
+        <FocusManagerProvider>
+          <CommandProvider>
+            <App />
+          </CommandProvider>
+        </FocusManagerProvider>
       </AuthProvider>
     </ThemeProvider>
   </StrictMode>,

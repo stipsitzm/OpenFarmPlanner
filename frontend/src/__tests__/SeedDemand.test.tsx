@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import SeedDemandPage from '../pages/SeedDemand';
 import { CommandProvider } from '../commands/CommandProvider';
+import { FocusManagerProvider } from '../focus/FocusManager';
 
 const { listMock, saveSelectionMock, cultureListMock, planListMock, locationListMock, fieldListMock, bedListMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
@@ -78,9 +79,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -103,9 +104,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -126,9 +127,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -154,9 +155,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -175,9 +176,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -194,9 +195,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -213,9 +214,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -255,9 +256,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -311,9 +312,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -363,9 +364,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -408,9 +409,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -456,9 +457,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -504,9 +505,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -551,9 +552,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -627,9 +628,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -671,9 +672,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -714,9 +715,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -760,9 +761,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 
@@ -809,9 +810,9 @@ describe('SeedDemandPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <SeedDemandPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>
     );
 

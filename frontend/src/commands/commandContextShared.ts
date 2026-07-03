@@ -7,6 +7,8 @@ export interface CommandContextValue {
   setContextTag: (tag: CommandContextTag, active: boolean) => void;
   openPalette: () => void;
   closePalette: () => void;
+  openShortcutsHelp: () => void;
+  closeShortcutsHelp: () => void;
   currentContextTags: CommandContextTag[];
   activeCreateActions: CreateAction[];
   runPrimaryCreateAction: () => void;
