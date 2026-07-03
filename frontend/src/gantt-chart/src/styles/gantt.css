@@ -660,15 +660,20 @@
 }
 
 /* "Weitere Aktionen" affordance (shared ContextMenuIndicator component) —
-   invisible until the bar is hovered/focused, always visible on touch. */
+   invisible until the bar is hovered/focused, always visible on touch.
+   Covers both the default bar (.rmg-task-item) and any custom-rendered one
+   (.rmg-task-item-custom, e.g. the seedling calendar's bars). */
 .rmg-task-item:hover .ofp-context-menu-indicator,
-.rmg-task-item:focus-within .ofp-context-menu-indicator {
+.rmg-task-item:focus-within .ofp-context-menu-indicator,
+.rmg-task-item-custom:hover .ofp-context-menu-indicator,
+.rmg-task-item-custom:focus-within .ofp-context-menu-indicator {
   opacity: 1;
   pointer-events: auto;
 }
 
 @media (pointer: coarse) {
-  .rmg-task-item .ofp-context-menu-indicator {
+  .rmg-task-item .ofp-context-menu-indicator,
+  .rmg-task-item-custom .ofp-context-menu-indicator {
     opacity: 1;
     pointer-events: auto;
   }
