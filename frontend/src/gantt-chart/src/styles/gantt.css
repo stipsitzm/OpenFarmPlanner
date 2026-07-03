@@ -233,6 +233,21 @@
   background-color: rgba(255, 255, 255, 0.05);
 }
 
+/* "Weitere Aktionen" affordance (shared ContextMenuIndicator component) —
+   invisible until the row is hovered/focused, always visible on touch. */
+.rmg-task-group:hover .ofp-context-menu-indicator,
+.rmg-task-group:focus-within .ofp-context-menu-indicator {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (pointer: coarse) {
+  .rmg-task-group .ofp-context-menu-indicator {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 /* Compact tree rows (e.g. a Gantt row-height override for a parent row
    with no bars of its own) need tighter vertical padding so they don't
    look like they're wasting space next to full-height leaf rows. */
@@ -617,6 +632,21 @@
 
 .rmg-task-item:hover .rmg-resize-handle {
   opacity: 1;
+}
+
+/* "Weitere Aktionen" affordance (shared ContextMenuIndicator component) —
+   invisible until the bar is hovered/focused, always visible on touch. */
+.rmg-task-item:hover .ofp-context-menu-indicator,
+.rmg-task-item:focus-within .ofp-context-menu-indicator {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (pointer: coarse) {
+  .rmg-task-item .ofp-context-menu-indicator {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 /* ======================================================

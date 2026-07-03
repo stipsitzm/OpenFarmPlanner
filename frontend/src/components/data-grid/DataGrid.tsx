@@ -26,13 +26,13 @@ import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRenderCellParams, GridRowParams, GridPaginationModel } from '@mui/x-data-grid';
 import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { ContextMenuIndicator } from '../contextMenu/ContextMenuIndicator';
+import { contextMenuActionsOverlaySx } from '../contextMenu/contextMenuIndicatorStyles';
 import { useNavigationBlocker } from '../../hooks/autosave';
 import { usePersistentSortModel } from '../../hooks/usePersistentSortModel';
 import { useTranslation } from '../../i18n';
@@ -1424,43 +1424,7 @@ export function EditableDataGrid<T extends EditableRow>({
         <Box
           className="ofp-inline-row-actions"
           sx={{
-            position: 'absolute',
-            right: 0,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 0.5,
-            py: 0.25,
-            pl: 0.25,
-            pr: 0.25,
-            borderRadius: 1,
-            bgcolor: 'background.paper',
-            opacity: 0,
-            pointerEvents: 'none',
-            transition: 'background-color 120ms ease-in-out, opacity 120ms ease-in-out',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              bottom: 0,
-              right: '100%',
-              width: 16,
-              pointerEvents: 'none',
-              background: (theme) =>
-                `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 100%)`,
-            },
-            '.MuiDataGrid-row:hover &': {
-              bgcolor: 'surface.surfaceHoverBackground',
-              opacity: 1,
-              pointerEvents: 'auto',
-            },
-            '.MuiDataGrid-row:hover &::before': {
-              background: (theme) => {
-                const hoverBackground = theme.palette.surface?.surfaceHoverBackground ?? theme.palette.action.hover;
-                return `linear-gradient(90deg, ${alpha(hoverBackground, 0)} 0%, ${hoverBackground} 100%)`;
-              },
-            },
+            ...contextMenuActionsOverlaySx('.MuiDataGrid-row:hover &'),
             '.MuiDataGrid-row--editing:hover &, .ofp-row-editing:hover &': {
               opacity: 0,
               pointerEvents: 'none',
@@ -1487,22 +1451,13 @@ export function EditableDataGrid<T extends EditableRow>({
             </Tooltip>
           ))}
           {hasInlineMenuAction ? (
-            <Tooltip title={t('actions.actions')} arrow>
-              <span>
-                <IconButton
-                  size="small"
-                  aria-label={t('actions.actions')}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    openRowActionMenuAt(row.id, event.currentTarget, rect.right - 8, rect.top + 12);
-                  }}
-                >
-                  <MoreVertIcon fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
+            <ContextMenuIndicator
+              label={t('actions.actions')}
+              onClick={(event) => {
+                const rect = event.currentTarget.getBoundingClientRect();
+                openRowActionMenuAt(row.id, event.currentTarget, rect.right - 8, rect.top + 12);
+              }}
+            />
           ) : null}
         </Box>
       </Box>

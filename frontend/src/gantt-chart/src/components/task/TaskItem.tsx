@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import type { TaskItemProps } from "../../types";
+import { ContextMenuIndicator } from "../../../../components/contextMenu/ContextMenuIndicator";
 
 /**
  * TaskItem Component - Renders an individual task bar in the Gantt chart
@@ -271,6 +272,16 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
       {/* Task name */}
       <div className="rmg-task-item-name">{task.name || "Unnamed Task"}</div>
+
+      {onContextMenu && (
+        <ContextMenuIndicator
+          label="Aktionen"
+          tabIndex={-1}
+          onClick={(e) => onContextMenu(e, task)}
+          withBackdrop
+          sx={{ position: "absolute", top: 2, right: 2 }}
+        />
+      )}
 
       {/* Progress bar with interactive bubble */}
       {showProgress && typeof progressPercent === "number" && (

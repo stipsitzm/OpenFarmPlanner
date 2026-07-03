@@ -24,14 +24,14 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
 import PageSurface from '../components/layout/PageSurface';
+import { ContextMenuIndicator } from '../components/contextMenu/ContextMenuIndicator';
+import { contextMenuActionsOverlaySx } from '../components/contextMenu/contextMenuIndicatorStyles';
 import TableSurface from '../components/layout/TableSurface';
 import type { Supplier, SupplierDeleteUndoPayload, SupplierDeleteUsage } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -641,8 +641,6 @@ export default function Suppliers() {
                     sx={{
                       cursor: 'pointer',
                       WebkitTouchCallout: 'none',
-                      '&:hover .supplier-row-actions': { opacity: 1, pointerEvents: 'auto' },
-                      '&:focus-within .supplier-row-actions': { opacity: 1, pointerEvents: 'auto' },
                     }}
                   >
                     <TableCell sx={{ py: 1.25, maxWidth: { xs: 180, sm: 240 } }}>
@@ -671,43 +669,7 @@ export default function Suppliers() {
                         </Box>
                         <Box
                           className="supplier-row-actions"
-                          sx={{
-                            position: 'absolute',
-                            right: 0,
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 0.5,
-                            py: 0.25,
-                            pl: 0.25,
-                            pr: 0.25,
-                            borderRadius: 1,
-                            bgcolor: 'background.paper',
-                            opacity: 0,
-                            pointerEvents: 'none',
-                            transition: 'background-color 120ms ease-in-out, opacity 120ms ease-in-out',
-                            '&::before': {
-                              content: '""',
-                              position: 'absolute',
-                              top: 0,
-                              bottom: 0,
-                              right: '100%',
-                              width: 16,
-                              pointerEvents: 'none',
-                              background: (theme) =>
-                                `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 100%)`,
-                            },
-                            'tr:hover &': {
-                              bgcolor: 'surface.surfaceHoverBackground',
-                            },
-                            'tr:hover &::before': {
-                              background: (theme) => {
-                                const hoverBackground = theme.palette.surface?.surfaceHoverBackground ?? theme.palette.action.hover;
-                                return `linear-gradient(90deg, ${alpha(hoverBackground, 0)} 0%, ${hoverBackground} 100%)`;
-                              },
-                            },
-                          }}
+                          sx={contextMenuActionsOverlaySx('tr:hover &', 'tr:focus-within &')}
                         >
                           <IconButton
                             size="small"
@@ -725,13 +687,10 @@ export default function Suppliers() {
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
-                          <IconButton
-                            size="small"
-                            aria-label={t('common:actions.actions')}
+                          <ContextMenuIndicator
+                            label={t('common:actions.actions')}
                             onClick={(event) => openSupplierInlineActionMenu(event, supplier)}
-                          >
-                            <MoreVertIcon fontSize="small" />
-                          </IconButton>
+                          />
                         </Box>
                       </Box>
                     </TableCell>

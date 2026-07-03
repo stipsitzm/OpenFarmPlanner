@@ -38,6 +38,8 @@ import {
   suppressNativeContextMenu,
   useCloseCustomContextMenuOnNativeContextMenu,
 } from "../utils/contextMenu";
+import { ContextMenuIndicator } from "../components/contextMenu/ContextMenuIndicator";
+import { contextMenuIndicatorHostSx } from "../components/contextMenu/contextMenuIndicatorStyles";
 import { parseDateString } from "./ganttChartUtils";
 import {
   getYieldAxisLabelStep,
@@ -463,6 +465,11 @@ function YieldDistributionChart({
                       return (
                         <Tooltip
                           key={`${column.id}-${culture.culture_id}`}
+                          // Force-close while a context menu is open — MUI's
+                          // hover-driven tooltip would otherwise stay visible
+                          // (the pointer is still technically hovering the
+                          // segment) and overlap the menu.
+                          open={contextMenuState ? false : undefined}
                           slotProps={{
                             tooltip: {
                               sx: {
@@ -504,13 +511,22 @@ function YieldDistributionChart({
                             onTouchEnd={clearSegmentLongPress}
                             onTouchMove={clearSegmentLongPress}
                             sx={{
+                              position: "relative",
                               width: "100%",
                               height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
                               minHeight: culture.yield > 0 ? "2px" : 0,
                               backgroundColor: culture.color,
-                              cursor: "context-menu",
+                              ...contextMenuIndicatorHostSx,
                             }}
-                          />
+                          >
+                            <ContextMenuIndicator
+                              label={t('common:actions.actions')}
+                              tabIndex={-1}
+                              onClick={(event) => openContextMenu(event, segmentPayload)}
+                              withBackdrop
+                              sx={{ position: "absolute", top: -2, right: -2 }}
+                            />
+                          </Box>
                         </Tooltip>
                       );
                     })}
