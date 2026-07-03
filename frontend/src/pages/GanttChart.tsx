@@ -34,8 +34,7 @@ import {
   type Location,
   type PlantingPlan,
 } from '../api/api';
-import GanttChart, { ViewMode } from 'react-modern-gantt';
-import 'react-modern-gantt/dist/index.css';
+import GanttChart, { ViewMode } from '../gantt-chart/src';
 import './GanttChart.css';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import PageContainer from '../components/layout/PageContainer';
@@ -1104,13 +1103,20 @@ function GanttChartPage() {
     }
 
     const storedRowScrollTop = storedGanttState?.rowScrollTop;
-    const nextScrollTop = typeof storedRowScrollTop === 'number' && Number.isFinite(storedRowScrollTop)
+    const requestedScrollTop = typeof storedRowScrollTop === 'number' && Number.isFinite(storedRowScrollTop)
       ? Math.max(0, storedRowScrollTop)
       : 0;
-    setGanttScrollTop(nextScrollTop);
+    // The stored offset is shared across calendar modes/projects with differing row
+    // counts, so it can exceed what's actually scrollable here. Assign it to the DOM
+    // first and read back the browser-clamped value, otherwise the absolutely
+    // positioned chart content (top: ganttScrollTop) renders offset past the visible
+    // viewport, leaving a blank gap above it instead of starting at the top.
+    let appliedScrollTop = requestedScrollTop;
     if (ganttViewportRef.current) {
-      ganttViewportRef.current.scrollTop = nextScrollTop;
+      ganttViewportRef.current.scrollTop = requestedScrollTop;
+      appliedScrollTop = ganttViewportRef.current.scrollTop;
     }
+    setGanttScrollTop(appliedScrollTop);
     hasRestoredTimelineRef.current = false;
   }, [activeProjectId, calendarMode, hasCalendarRequirements, loading, storedGanttState?.rowScrollTop]);
 
