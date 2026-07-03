@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import {
   Alert,
   Box,
   Card,
   CardContent,
+  Divider,
   FormControl,
+  Menu,
   MenuItem,
   Select,
   Stack,
@@ -30,6 +33,11 @@ import EmptyStateCard from "../components/project/EmptyStateCard";
 import ProjectRequiredState from "../components/project/ProjectRequiredState";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { useTranslation } from "../i18n";
+import {
+  shouldOpenCustomContextMenu,
+  suppressNativeContextMenu,
+  useCloseCustomContextMenuOnNativeContextMenu,
+} from "../utils/contextMenu";
 import { parseDateString } from "./ganttChartUtils";
 import {
   getYieldAxisLabelStep,
@@ -223,7 +231,8 @@ function YieldDistributionChart({
   selectedCultureId,
   period,
 }: YieldDistributionChartProps) {
-  const { t, i18n } = useTranslation("yieldOverview");
+  const { t, i18n } = useTranslation(["yieldOverview", "common"]);
+  const navigate = useNavigate();
   const { chartData, chartCultures, maxTotalYield } = useYieldChartData(
     weeklyYield,
     selectedCultureId,
@@ -231,6 +240,72 @@ function YieldDistributionChart({
     i18n.resolvedLanguage ?? i18n.language,
   );
   const axisRef = useRef<HTMLDivElement | null>(null);
+
+  const [contextMenuState, setContextMenuState] = useState<{
+    cultureId: number;
+    cultureName: string;
+    periodLabel: string;
+    yieldValue: number;
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
+
+  const closeContextMenu = useCallback(() => setContextMenuState(null), []);
+
+  const openContextMenu = useCallback((
+    event: React.MouseEvent | React.TouchEvent,
+    payload: { cultureId: number; cultureName: string; periodLabel: string; yieldValue: number },
+  ) => {
+    if (!shouldOpenCustomContextMenu(event.target)) return;
+    suppressNativeContextMenu(event);
+    const point = "changedTouches" in event
+      ? event.changedTouches[0] ?? event.touches[0]
+      : event;
+    if (!point) return;
+    setContextMenuState({ ...payload, mouseX: point.clientX + 2, mouseY: point.clientY - 6 });
+  }, []);
+
+  const isYieldContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
+    shouldOpenCustomContextMenu(target)
+    && target instanceof HTMLElement
+    && target.closest('[data-rmg-component="yield-segment"]') !== null
+  ), []);
+
+  useCloseCustomContextMenuOnNativeContextMenu(
+    contextMenuState !== null,
+    closeContextMenu,
+    isYieldContextMenuTarget,
+    (event) => setContextMenuState((current) => (
+      current ? { ...current, mouseX: event.clientX + 2, mouseY: event.clientY - 6 } : current
+    )),
+  );
+
+  const openCulture = useCallback((cultureId: number) => {
+    navigate(`/app/cultures?cultureId=${cultureId}`);
+  }, [navigate]);
+
+  const copySegmentSummary = useCallback((payload: { cultureName: string; periodLabel: string; yieldValue: number }) => {
+    const summary = `${payload.cultureName} · ${payload.periodLabel} · ${payload.yieldValue.toFixed(2)} kg`;
+    void navigator.clipboard?.writeText(summary).catch(() => undefined);
+  }, []);
+
+  const longPressTimeoutRef = useRef<number | null>(null);
+  const handleSegmentTouchStart = useCallback((
+    event: React.TouchEvent,
+    payload: { cultureId: number; cultureName: string; periodLabel: string; yieldValue: number },
+  ) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    longPressTimeoutRef.current = window.setTimeout(() => {
+      openContextMenu(event, payload);
+    }, 550);
+  }, [openContextMenu]);
+  const clearSegmentLongPress = useCallback(() => {
+    if (longPressTimeoutRef.current !== null) {
+      window.clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+  }, []);
   const [axisWidth, setAxisWidth] = useState(0);
   const labelStep = getYieldAxisLabelStep(
     axisWidth,
@@ -272,6 +347,7 @@ function YieldDistributionChart({
   }, []);
 
   return (
+    <>
     <Card
       variant="outlined"
       sx={{
@@ -376,26 +452,68 @@ function YieldDistributionChart({
                       justifyContent: "flex-start",
                     }}
                   >
-                    {column.cultures.map((culture) => (
-                      <Tooltip
-                        key={`${column.id}-${culture.culture_id}`}
-                        title={t("chart.tooltip", {
-                          period: column.id,
-                          culture: culture.culture_name,
-                          yield: culture.yield.toFixed(2),
-                        })}
-                      >
-                        <Box
-                          data-testid={`yield-bar-${column.id}-${culture.culture_id}`}
-                          sx={{
-                            width: "100%",
-                            height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
-                            minHeight: culture.yield > 0 ? "2px" : 0,
-                            backgroundColor: culture.color,
+                    {column.cultures.map((culture) => {
+                      const periodLabel = `${column.primaryLabel} ${column.secondaryLabel}`;
+                      const segmentPayload = {
+                        cultureId: culture.culture_id,
+                        cultureName: culture.culture_name,
+                        periodLabel,
+                        yieldValue: culture.yield,
+                      };
+                      return (
+                        <Tooltip
+                          key={`${column.id}-${culture.culture_id}`}
+                          slotProps={{
+                            tooltip: {
+                              sx: {
+                                bgcolor: "background.paper",
+                                color: "text.primary",
+                                border: "1px solid",
+                                borderColor: "divider",
+                                borderRadius: 1,
+                                boxShadow: 3,
+                                p: 1,
+                                minWidth: "12rem",
+                                maxWidth: 320,
+                              },
+                            },
                           }}
-                        />
-                      </Tooltip>
-                    ))}
+                          title={
+                            <Box>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                                {culture.culture_name}
+                              </Typography>
+                              <Box sx={{ display: "grid", gridTemplateColumns: "auto 1fr", columnGap: 1, rowGap: 0.25 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+                                  {t("chart.tooltipPeriod")}:
+                                </Typography>
+                                <Typography variant="caption">{periodLabel}</Typography>
+                                <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+                                  {t("chart.tooltipYield")}:
+                                </Typography>
+                                <Typography variant="caption">{culture.yield.toFixed(2)} kg</Typography>
+                              </Box>
+                            </Box>
+                          }
+                        >
+                          <Box
+                            data-testid={`yield-bar-${column.id}-${culture.culture_id}`}
+                            data-rmg-component="yield-segment"
+                            onContextMenu={(event) => openContextMenu(event, segmentPayload)}
+                            onTouchStart={(event) => handleSegmentTouchStart(event, segmentPayload)}
+                            onTouchEnd={clearSegmentLongPress}
+                            onTouchMove={clearSegmentLongPress}
+                            sx={{
+                              width: "100%",
+                              height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
+                              minHeight: culture.yield > 0 ? "2px" : 0,
+                              backgroundColor: culture.color,
+                              cursor: "context-menu",
+                            }}
+                          />
+                        </Tooltip>
+                      );
+                    })}
                   </Box>
                 </Box>
               ))}
@@ -453,6 +571,45 @@ function YieldDistributionChart({
         </Box>
       </CardContent>
     </Card>
+    <Menu
+      open={contextMenuState !== null}
+      onClose={closeContextMenu}
+      hideBackdrop
+      sx={{ pointerEvents: "none" }}
+      slotProps={{
+        paper: {
+          className: "ofp-custom-context-menu",
+          sx: { pointerEvents: "auto" },
+        },
+      }}
+      anchorReference="anchorPosition"
+      anchorPosition={
+        contextMenuState !== null
+          ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
+          : undefined
+      }
+    >
+      <MenuItem
+        onClick={() => {
+          if (!contextMenuState) return;
+          closeContextMenu();
+          openCulture(contextMenuState.cultureId);
+        }}
+      >
+        {t("contextMenu.openCulture")}
+      </MenuItem>
+      <Divider role="separator" />
+      <MenuItem
+        onClick={() => {
+          if (!contextMenuState) return;
+          closeContextMenu();
+          copySegmentSummary(contextMenuState);
+        }}
+      >
+        {t("common:actions.copyRow")}
+      </MenuItem>
+    </Menu>
+    </>
   );
 }
 

@@ -7,6 +7,7 @@ import { getYieldAxisLabelStep } from "../pages/yieldOverviewUtils";
 const mocks = vi.hoisted(() => ({
   planList: vi.fn(),
   yieldList: vi.fn(),
+  navigate: vi.fn(),
 }));
 const projectRequirementState = vi.hoisted(() => ({
   shouldShowProjectRequiredState: false,
@@ -26,6 +27,14 @@ vi.mock("../api/api", async () => {
 vi.mock("../hooks/useProjectRequirement", () => ({
   useProjectRequirement: () => projectRequirementState,
 }));
+
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => mocks.navigate,
+  };
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -134,9 +143,8 @@ describe("YieldOverviewPage", () => {
     ).not.toBeInTheDocument();
 
     fireEvent.mouseOver(screen.getByTestId("yield-bar-2026-W13-1"));
-    expect(
-      await screen.findByText("2026-W13 · Kohl: 0.70 kg"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("W13 Mär")).toBeInTheDocument();
+    expect(screen.getByText("0.70 kg")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Monat" }));
 
@@ -146,6 +154,39 @@ describe("YieldOverviewPage", () => {
     );
     expect(screen.getByText("Mär")).toHaveStyle({ visibility: "visible" });
     expect(screen.getByText("Apr")).toHaveStyle({ visibility: "visible" });
+  });
+
+  it("offers a context menu on a yield segment to open the culture or copy its summary", async () => {
+    mocks.yieldList.mockResolvedValue({
+      data: [
+        {
+          iso_week: "2026-W13",
+          week_start: "2026-03-23",
+          cultures: [
+            { culture_id: 1, culture_name: "Kohl", yield: 0.7, color: "#16a34a" },
+          ],
+        },
+      ],
+    });
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    render(
+      <MemoryRouter>
+        <YieldOverviewPage />
+      </MemoryRouter>,
+    );
+
+    const segment = await screen.findByTestId("yield-bar-2026-W13-1");
+    fireEvent.contextMenu(segment);
+
+    expect(await screen.findByRole("menuitem", { name: "Kultur öffnen" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Kultur öffnen" }));
+    expect(mocks.navigate).toHaveBeenCalledWith("/app/cultures?cultureId=1");
+
+    fireEvent.contextMenu(segment);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Zeile kopieren" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("Kohl · W13 Mär · 0.70 kg"));
   });
 
   it("shows a helpful empty state when no planting plans exist", async () => {
