@@ -656,9 +656,18 @@ function FieldsBedsHierarchy({
       // Expansion needs a render pass before the target row exists in the
       // DataGrid's virtualized viewport.
       window.setTimeout(() => {
-        const rowIndex = gridApiRef.current?.getRowIndexRelativeToVisibleRows(targetRowId!);
+        const api = gridApiRef.current;
+        if (!api) return;
+        const rowIndex = api.getRowIndexRelativeToVisibleRows(targetRowId!);
+        const firstField = api.getVisibleColumns()
+          .find((col) => col.field !== "actions" && col.field !== "rowEditActions")?.field;
         if (typeof rowIndex === "number" && rowIndex >= 0) {
-          gridApiRef.current?.scrollToIndexes({ rowIndex });
+          api.scrollToIndexes(firstField
+            ? { rowIndex, colIndex: api.getColumnIndexRelativeToVisibleColumns(firstField) }
+            : { rowIndex });
+          if (firstField) {
+            api.setCellFocus(targetRowId!, firstField);
+          }
         }
       }, 50);
 
