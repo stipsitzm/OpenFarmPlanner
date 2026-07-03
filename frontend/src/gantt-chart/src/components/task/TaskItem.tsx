@@ -217,6 +217,15 @@ const TaskItem: React.FC<TaskItemProps> = ({
         data-rmg-component="task"
       >
         {customTaskContent}
+        {onContextMenu && (
+          <ContextMenuIndicator
+            label="Aktionen"
+            tabIndex={-1}
+            onClick={(e) => onContextMenu(e, task)}
+            withBackdrop
+            sx={{ position: "absolute", top: 2, right: 2 }}
+          />
+        )}
       </div>
     );
   }
@@ -271,7 +280,9 @@ const TaskItem: React.FC<TaskItemProps> = ({
       )}
 
       {/* Task name */}
-      <div className="rmg-task-item-name">{task.name || "Unnamed Task"}</div>
+      <div className={`rmg-task-item-name${onContextMenu ? " rmg-task-item-name-maskable" : ""}`}>
+        {task.name || "Unnamed Task"}
+      </div>
 
       {onContextMenu && (
         <ContextMenuIndicator

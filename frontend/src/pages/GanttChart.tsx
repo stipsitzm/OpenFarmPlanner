@@ -2118,7 +2118,11 @@ function GanttChartPage() {
                                 cursor: 'default',
                               }}
                             >
-                              <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <Typography
+                                variant="caption"
+                                className="rmg-task-item-name-maskable"
+                                sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}
+                              >
                                 {typeof task.plantsCount === 'number' && task.plantsCount > 0
                                   ? `${task.name} · ${formatPlantCount(task.plantsCount)} ${t('ganttChart:seedlings.plantsUnit')}`
                                   : task.name}
