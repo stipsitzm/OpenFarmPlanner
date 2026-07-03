@@ -899,12 +899,6 @@ function GanttChartPage() {
     }
   }, [navigate, plantingPlans]);
 
-  const openBedInPlantingPlans = useCallback((group: GanttTaskGroup) => {
-    if (group.bedId) {
-      navigate(`/app/planting-plans?bedId=${group.bedId}`);
-    }
-  }, [navigate]);
-
   const addPlantingPlanForBed = useCallback((group: GanttTaskGroup) => {
     if (group.bedId) {
       navigate(`/app/planting-plans?bedId=${group.bedId}&create=true`);
@@ -949,7 +943,8 @@ function GanttChartPage() {
         actions.push({ id: 'open-culture', label: t('ganttChart:contextMenu.openCulture'), group: 'navigate', onClick: () => openCultureFromTask(task) });
       }
       if (group.bedId) {
-        actions.push({ id: 'open-bed', label: t('ganttChart:contextMenu.openBed'), group: 'navigate', onClick: () => openBedInPlantingPlans(group) });
+        const bedId = group.bedId;
+        actions.push({ id: 'open-bed', label: t('ganttChart:contextMenu.openBed'), group: 'navigate', onClick: () => openAreasPage({ type: 'bed', id: bedId }) });
       }
       if (group.fieldId) {
         const fieldId = group.fieldId;
@@ -991,7 +986,7 @@ function GanttChartPage() {
       ];
     }
     return [];
-  }, [addPlantingPlanForBed, copyTaskSummary, deletePlantingPlanFromTask, openAreasPage, openBedInPlantingPlans, openCultureFromTask, openPlantingPlanFromTask, t]);
+  }, [addPlantingPlanForBed, copyTaskSummary, deletePlantingPlanFromTask, openAreasPage, openCultureFromTask, openPlantingPlanFromTask, t]);
 
   const contextMenuActions = contextMenuState ? getContextMenuActions(contextMenuState.target) : [];
 

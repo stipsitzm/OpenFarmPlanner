@@ -47,6 +47,18 @@ export default function FieldsBedsPage() {
     const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
     return stored === 'graphical' ? 'graphical' : 'table';
   });
+  // A `?highlight=` deep link (e.g. "Beet/Parzelle/Standort öffnen" from the
+  // Gantt calendar) only has scroll-to/flash support in the table view
+  // (FieldsBedsHierarchy). Force that view for the rest of this page visit
+  // when we arrive with the param, without touching/persisting the user's
+  // actual `viewMode` preference. Captured once at mount (not derived from
+  // the live URL) because FieldsBedsHierarchy strips the param right after
+  // starting the highlight/flash — deriving this live would flip back to
+  // the user's real (possibly graphical) view mid-flash and unmount it.
+  const [forceTableViewForDeepLink] = useState(
+    () => new URLSearchParams(window.location.search).has('highlight'),
+  );
+  const effectiveViewMode: ViewMode = forceTableViewForDeepLink ? 'table' : viewMode;
   const [globalActionError, setGlobalActionError] = useState<string>('');
   const [globalActionSuccess, setGlobalActionSuccess] = useState<string>('');
   const [createFieldRequest, setCreateFieldRequest] = useState(0);
@@ -363,15 +375,15 @@ export default function FieldsBedsPage() {
         ) : null}
       </PageContainer>
 
-      <PageContainer variant={viewMode === 'graphical' ? 'full' : 'standard'}>
-        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy && viewMode === 'graphical' ? (
+      <PageContainer variant={effectiveViewMode === 'graphical' ? 'full' : 'standard'}>
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy && effectiveViewMode === 'graphical' ? (
           <GraphicalFields
             showTitle={false}
             showModeToggle={false}
             hierarchyData={hierarchyData}
           />
         ) : null}
-        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy && viewMode !== 'graphical' ? (
+        {!shouldShowProjectRequiredState && !isAreaDataLoading && shouldRenderHierarchy && effectiveViewMode !== 'graphical' ? (
           <FieldsBedsHierarchy
             showTitle={false}
             createFieldRequest={createFieldRequest}

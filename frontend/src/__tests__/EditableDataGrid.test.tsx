@@ -494,11 +494,15 @@ describe('EditableDataGrid', () => {
     await waitFor(() => {
       expect(screen.getByTestId('mode-1')).toHaveTextContent('view');
       expect(screen.getByTestId('row-1')).toHaveAttribute('data-selected', 'false');
-      expect(screen.getByTestId('focused-cell')).toHaveTextContent('none');
     });
     expect(updateSpy).not.toHaveBeenCalled();
     expect(screen.queryByText('messages.validationErrors')).not.toBeInTheDocument();
     expect(screen.queryByText('Name ist erforderlich')).not.toBeInTheDocument();
+
+    // Cancelling edit mode suppresses MUI's own default Escape handling
+    // (which normally restores keyboard focus), so it has to be restored
+    // manually — otherwise focus is stranded outside the grid entirely.
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('1-name'));
   });
 
   it('moves through a new planting plan row with Tab without row validation', async () => {

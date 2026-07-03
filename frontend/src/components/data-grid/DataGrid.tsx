@@ -566,10 +566,19 @@ export function EditableDataGrid<T extends EditableRow>({
     const rowKey = String(rowId);
     canceledRowIdsRef.current.add(rowKey);
     setError('');
+    // Escape's default MUI behavior (which normally restores keyboard focus
+    // to the cell) is intentionally suppressed above so Escape can cancel
+    // instead of just exiting edit mode — so focus has to be restored here,
+    // or it's left stranded outside the grid entirely once the edit input
+    // unmounts.
+    const currentRowMode = rowModesModel[rowId];
+    const fieldToRestoreFocus = (currentRowMode?.mode === GridRowModes.Edit ? currentRowMode.fieldToFocus : undefined)
+      ?? columns.find((column) => column.editable !== false)?.field;
     const snapshot = rowSnapshotRef.current.get(rowKey);
     const currentRow = rowsById.get(rowKey) ?? snapshot;
+    const rowWasRemoved = Boolean(currentRow && isUnsavedDraftRow(currentRow));
 
-    if (currentRow && isUnsavedDraftRow(currentRow)) {
+    if (rowWasRemoved) {
       setRows((prevRows) => prevRows.filter((row) => String(row.id) !== rowKey));
       setStableRowOrder((previousOrder) => previousOrder.filter((orderedId) => String(orderedId) !== rowKey));
       rowSnapshotRef.current.delete(rowKey);
@@ -595,7 +604,12 @@ export function EditableDataGrid<T extends EditableRow>({
     window.setTimeout(() => {
       canceledRowIdsRef.current.delete(rowKey);
     }, 0);
-  }, [clearSavedRowInteractionState, rowsById]);
+    if (fieldToRestoreFocus && !rowWasRemoved) {
+      requestAnimationFrame(() => {
+        gridApiRef.current?.setCellFocus(rowId, fieldToRestoreFocus);
+      });
+    }
+  }, [clearSavedRowInteractionState, columns, gridApiRef, rowModesModel, rowsById]);
 
   const markRowDirty = useCallback((rowKey: string): void => {
     setDirtyRowIds((previous) => {
@@ -1245,11 +1259,24 @@ export function EditableDataGrid<T extends EditableRow>({
   const openRowById = useCallback((rowId: GridRowId, options?: { startEdit?: boolean }): void => {
     const api = gridApiRef.current;
     if (!api || !rowsById.has(String(rowId))) return;
+    const shouldStartEdit = options?.startEdit !== false;
     setSelectedRowIds([rowId]);
+    const firstField = api.getVisibleColumns()
+      .find((col) => col.field !== 'actions' && col.field !== 'rowEditActions')?.field;
     requestAnimationFrame(() => {
-      api.scrollToIndexes({ rowIndex: api.getRowIndexRelativeToVisibleRows(rowId) });
+      api.scrollToIndexes(firstField
+        ? {
+            rowIndex: api.getRowIndexRelativeToVisibleRows(rowId),
+            colIndex: api.getColumnIndexRelativeToVisibleColumns(firstField),
+          }
+        : { rowIndex: api.getRowIndexRelativeToVisibleRows(rowId) });
+      // Edit mode moves focus into its own input via `fieldToFocus` below;
+      // only move keyboard focus here for the view-only (non-edit) case.
+      if (!shouldStartEdit && firstField) {
+        api.setCellFocus(rowId, firstField);
+      }
     });
-    if (options?.startEdit !== false) {
+    if (shouldStartEdit) {
       handleStartRowEdit(rowId);
     }
   }, [gridApiRef, handleStartRowEdit, rowsById, setSelectedRowIds]);
