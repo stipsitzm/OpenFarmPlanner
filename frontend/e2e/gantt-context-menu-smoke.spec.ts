@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-const backendPort = process.env.BACKEND_PORT ?? '8099';
+// Must match playwright.config.ts's webServer default, or this hits whatever
+// else happens to be running on port 8000 (e.g. a developer's own dev backend)
+// instead of the backend actually under test.
+const backendPort = process.env.BACKEND_PORT ?? '8000';
 const e2eToken = process.env.E2E_TEST_TOKEN || 'openfarmplanner-e2e-token';
 const apiBase = `http://127.0.0.1:${backendPort}/api`;
 

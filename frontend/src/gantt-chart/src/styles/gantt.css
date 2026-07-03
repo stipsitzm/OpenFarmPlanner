@@ -233,6 +233,21 @@
   background-color: rgba(255, 255, 255, 0.05);
 }
 
+/* "Weitere Aktionen" affordance (shared ContextMenuIndicator component) —
+   invisible until the row is hovered/focused, always visible on touch. */
+.rmg-task-group:hover .ofp-context-menu-indicator,
+.rmg-task-group:focus-within .ofp-context-menu-indicator {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (pointer: coarse) {
+  .rmg-task-group .ofp-context-menu-indicator {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 /* Compact tree rows (e.g. a Gantt row-height override for a parent row
    with no bars of its own) need tighter vertical padding so they don't
    look like they're wasting space next to full-height leaf rows. */
@@ -588,6 +603,31 @@
   min-width: 0;
 }
 
+/* When a bar has a context-menu indicator, its text fades out (rather than
+   getting cut off mid-letter) over the last ~30px before the icon, exactly
+   while the icon itself is revealed (hover/focus-within/touch) — same
+   condition, so the bar's static appearance is untouched otherwise. A CSS
+   mask (not a solid-color gradient overlay) reveals whatever the bar's
+   actual background is, so this works for any task color without knowing
+   it, and needs no JS/measurement — pure CSS, GPU-composited, no repaints.
+   Shared by both the default bar (.rmg-task-item) and any custom-rendered
+   one (.rmg-task-item-custom, e.g. the seedling calendar's bars). */
+.rmg-task-item:hover .rmg-task-item-name-maskable,
+.rmg-task-item:focus-within .rmg-task-item-name-maskable,
+.rmg-task-item-custom:hover .rmg-task-item-name-maskable,
+.rmg-task-item-custom:focus-within .rmg-task-item-name-maskable {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 30px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 calc(100% - 30px), transparent 100%);
+}
+
+@media (pointer: coarse) {
+  .rmg-task-item .rmg-task-item-name-maskable,
+  .rmg-task-item-custom .rmg-task-item-name-maskable {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 30px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 calc(100% - 30px), transparent 100%);
+  }
+}
+
 /* ======================================================
    8. Resize Handles
    ====================================================== */
@@ -617,6 +657,26 @@
 
 .rmg-task-item:hover .rmg-resize-handle {
   opacity: 1;
+}
+
+/* "Weitere Aktionen" affordance (shared ContextMenuIndicator component) —
+   invisible until the bar is hovered/focused, always visible on touch.
+   Covers both the default bar (.rmg-task-item) and any custom-rendered one
+   (.rmg-task-item-custom, e.g. the seedling calendar's bars). */
+.rmg-task-item:hover .ofp-context-menu-indicator,
+.rmg-task-item:focus-within .ofp-context-menu-indicator,
+.rmg-task-item-custom:hover .ofp-context-menu-indicator,
+.rmg-task-item-custom:focus-within .ofp-context-menu-indicator {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (pointer: coarse) {
+  .rmg-task-item .ofp-context-menu-indicator,
+  .rmg-task-item-custom .ofp-context-menu-indicator {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 /* ======================================================

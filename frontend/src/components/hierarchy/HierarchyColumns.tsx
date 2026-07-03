@@ -6,12 +6,10 @@ import type { ReactElement, KeyboardEvent, MouseEvent } from 'react';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import type { TFunction } from 'i18next';
 import { Box, IconButton, Tooltip } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import DeleteIcon from '@mui/icons-material/Delete';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import type { HierarchyRow } from './utils/types';
@@ -19,6 +17,8 @@ import { NotesCell } from '../data-grid/NotesCell';
 import { HierarchyAddIcon } from './HierarchyAddIcon';
 import { getPlainExcerpt } from '../data-grid/markdown';
 import { CALCULATED_COLUMN_CELL_CLASS, getCalculatedColumnProps } from '../data-grid/calculatedColumns';
+import { ContextMenuIndicator } from '../contextMenu/ContextMenuIndicator';
+import { contextMenuActionsOverlaySx } from '../contextMenu/contextMenuIndicatorStyles';
 
 export interface HierarchyColumnWidths {
   name: number;
@@ -197,24 +197,15 @@ function renderMoreActionsButton(
   row: HierarchyRow,
   callbacks: NameCellCallbacks,
   t: TFunction,
+  isStandaloneRender: boolean,
 ): ReactElement {
-  const label = t('common:actions.actions');
-
   return (
-    <Tooltip title={label} {...NON_BLOCKING_TOOLTIP_PROPS}>
-      <IconButton
-        size="small"
-        aria-label={label}
-        tabIndex={-1}
-        onClick={(event) => {
-          event.stopPropagation();
-          callbacks.onOpenContextMenu(event, row);
-        }}
-        sx={{ p: 0.5, '& .MuiSvgIcon-root': { fontSize: 18 } }}
-      >
-        <MoreVertIcon />
-      </IconButton>
-    </Tooltip>
+    <ContextMenuIndicator
+      label={t('common:actions.actions')}
+      tabIndex={-1}
+      onClick={(event) => callbacks.onOpenContextMenu(event, row)}
+      sx={isStandaloneRender ? { opacity: 1, pointerEvents: 'auto' } : undefined}
+    />
   );
 }
 
@@ -223,6 +214,7 @@ function renderInlineActions(
   callbacks: NameCellCallbacks,
   t: TFunction,
   options: HierarchyColumnOptions,
+  isStandaloneRender: boolean,
 ): ReactElement | null {
   if (options.disableInlineHoverActions) {
     return null;
@@ -236,7 +228,7 @@ function renderInlineActions(
           onClick: () => callbacks.onAddField(row.locationId),
         })}
         {renderDeleteActionButton(row, callbacks, t)}
-        {renderMoreActionsButton(row, callbacks, t)}
+        {renderMoreActionsButton(row, callbacks, t, isStandaloneRender)}
       </Box>
     );
   }
@@ -249,7 +241,7 @@ function renderInlineActions(
           onClick: () => callbacks.onAddBed(row.fieldId!),
         })}
         {renderDeleteActionButton(row, callbacks, t)}
-        {renderMoreActionsButton(row, callbacks, t)}
+        {renderMoreActionsButton(row, callbacks, t, isStandaloneRender)}
       </Box>
     );
   }
@@ -259,7 +251,7 @@ function renderInlineActions(
       <Box className="action-icons" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
         {renderPlantingPlanActionButton(row, callbacks, t)}
         {renderDeleteActionButton(row, callbacks, t)}
-        {renderMoreActionsButton(row, callbacks, t)}
+        {renderMoreActionsButton(row, callbacks, t, isStandaloneRender)}
       </Box>
     );
   }
@@ -278,7 +270,7 @@ function renderNameCell(
   const hasChildren = row.hasChildren === true;
   const hasExpandToggle = (row.type === 'location' || row.type === 'field') && hasChildren;
   const isStandaloneRender = params.api === undefined;
-  const inlineActions = renderInlineActions(row, callbacks, t, options);
+  const inlineActions = renderInlineActions(row, callbacks, t, options, isStandaloneRender);
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', pl: `${baseIndent}px`, width: '100%', gap: 0.5 }}>
@@ -360,46 +352,9 @@ function renderNameCell(
           <Box
             data-testid="hierarchy-name-actions-overlay"
             sx={{
-              position: 'absolute',
-              right: 0,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              py: 0.25,
-              pl: 0.25,
-              pr: 0.25,
-              borderRadius: 1,
-              bgcolor: 'background.paper',
-              opacity: isStandaloneRender ? 1 : 0,
-              pointerEvents: isStandaloneRender ? 'auto' : 'none',
-              transition: 'background-color 120ms ease-in-out, opacity 120ms ease-in-out',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                right: '100%',
-                width: 16,
-                pointerEvents: 'none',
-                background: (theme) =>
-                  `linear-gradient(90deg, ${alpha(theme.palette.background.paper, 0)} 0%, ${theme.palette.background.paper} 100%)`,
-              },
-              '.MuiDataGrid-row:hover &': {
-                bgcolor: 'surface.surfaceHoverBackground',
-                opacity: 1,
-                pointerEvents: 'auto',
-              },
-              '.MuiDataGrid-row:hover &::before': {
-                background: (theme) => {
-                  const hoverBackground = theme.palette.surface?.surfaceHoverBackground ?? theme.palette.action.hover;
-                  return `linear-gradient(90deg, ${alpha(hoverBackground, 0)} 0%, ${hoverBackground} 100%)`;
-                },
-              },
-              '.MuiDataGrid-row--editing:hover &': {
-                opacity: 0,
-                pointerEvents: 'none',
-              },
+              ...contextMenuActionsOverlaySx('.MuiDataGrid-row:hover &'),
+              ...(isStandaloneRender ? { opacity: 1, pointerEvents: 'auto' } : {}),
+              '.MuiDataGrid-row--editing:hover &': { opacity: 0, pointerEvents: 'none' },
             }}
           >
             {inlineActions}

@@ -7,6 +7,7 @@ import {
   normalizeLeftColumnWidth,
   TREE_INDENT_PX,
 } from "../../utils";
+import { ContextMenuIndicator } from "../../../../components/contextMenu/ContextMenuIndicator";
 
 /**
  * TaskList Component - Displays the list of task groups on the left side of the Gantt chart
@@ -187,6 +188,15 @@ const TaskList: React.FC<TaskListProps> = ({
                   {taskGroup.tasks.length}{" "}
                   {taskGroup.tasks.length === 1 ? "task" : "tasks"}
                 </div>
+              )}
+
+              {onGroupContextMenu && (
+                <ContextMenuIndicator
+                  label="Aktionen"
+                  tabIndex={-1}
+                  onClick={(event) => onGroupContextMenu(event, taskGroup)}
+                  sx={{ position: "absolute", top: "50%", right: 4, transform: "translateY(-50%)" }}
+                />
               )}
             </div>
           );

@@ -2096,14 +2096,10 @@ function GanttChartPage() {
                         ? renderSeedlingTooltip({ task })
                         : renderOccupancyTooltip({ task }))}
                       renderTask={calendarMode === 'seedlings'
-                        ? ({ task, leftPx, widthPx, topPx }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
+                        ? ({ task }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
                             <Box
                               sx={{
-                                position: 'absolute',
-                                left: `${leftPx}px`,
-                                top: `${topPx}px`,
-                                width: `${widthPx}px`,
-                                minWidth: `${widthPx}px`,
+                                width: '100%',
                                 height: 26,
                                 px: 1,
                                 borderRadius: 1,
@@ -2118,7 +2114,11 @@ function GanttChartPage() {
                                 cursor: 'default',
                               }}
                             >
-                              <Typography variant="caption" sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <Typography
+                                variant="caption"
+                                className="rmg-task-item-name-maskable"
+                                sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}
+                              >
                                 {typeof task.plantsCount === 'number' && task.plantsCount > 0
                                   ? `${task.name} · ${formatPlantCount(task.plantsCount)} ${t('ganttChart:seedlings.plantsUnit')}`
                                   : task.name}
