@@ -1,16 +1,21 @@
-import type { GridRowId } from "@mui/x-data-grid";
-import type { HierarchyRow } from "./types";
+/**
+ * Generic arrow-key navigation state machine for expandable tree/list UIs.
+ * Only depends on `id` and `hasChildren`, so it works for any row shape
+ * (DataGrid tree rows, Accordion-based grouping, etc.), not just
+ * `HierarchyRow`.
+ */
+export interface KeyboardNavigableRow {
+  id: string | number;
+  hasChildren?: boolean;
+}
 
 export type HierarchyKeyboardAction =
-  | { type: "select"; rowId: GridRowId }
-  | { type: "toggle"; rowId: GridRowId };
+  | { type: "select"; rowId: string | number }
+  | { type: "toggle"; rowId: string | number };
 
-const canToggleChildren = (row: HierarchyRow | undefined): row is HierarchyRow =>
-  Boolean(
-    row &&
-      (row.type === "location" || row.type === "field") &&
-      row.hasChildren === true,
-  );
+const canToggleChildren = (
+  row: KeyboardNavigableRow | undefined,
+): row is KeyboardNavigableRow => Boolean(row && row.hasChildren === true);
 
 export const getHierarchyKeyboardAction = ({
   expandedRows,
@@ -18,10 +23,10 @@ export const getHierarchyKeyboardAction = ({
   rows,
   selectedRowId,
 }: {
-  expandedRows: Set<GridRowId>;
+  expandedRows: Set<string | number>;
   key: string;
-  rows: readonly HierarchyRow[];
-  selectedRowId: GridRowId;
+  rows: readonly KeyboardNavigableRow[];
+  selectedRowId: string | number;
 }): HierarchyKeyboardAction | null => {
   const currentIndex = rows.findIndex((row) => row.id === selectedRowId);
   if (currentIndex === -1) {

@@ -33,6 +33,7 @@ import { Group, Layer, Rect, Stage, Text } from "react-konva";
 import type Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { useHierarchyData, type HierarchyDataState } from "../components/hierarchy/hooks/useHierarchyData";
+import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
 import {
   layoutAPI,
   type BedLayoutEntry,
@@ -130,7 +131,6 @@ const FIELD_INNER_OFFSET_Y = FIELD_INNER_OFFSET_X + FIELD_LABEL_HEIGHT;
 const FIELD_INNER_BOTTOM_PADDING = FIELD_INNER_OFFSET_X;
 const SNAP_THRESHOLD = 8;
 const FIELD_SNAP_THRESHOLD = 14;
-const EXPANDED_STORAGE_KEY = "graphicalFieldsExpandedLocations";
 const DEFAULT_STAGE_HEIGHT = 420;
 const MIN_STAGE_HEIGHT = 320;
 const MAX_STAGE_HEIGHT = 560;
@@ -264,23 +264,14 @@ export default function GraphicalFields({
   const { t } = useTranslation(["fields", "common"]);
   const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
   const { loading, error, locations, fields, beds } = hierarchyData ?? internalHierarchyData;
-  const [hasAutoExpanded, setHasAutoExpanded] = useState<boolean>(
-    Boolean(window.localStorage.getItem(EXPANDED_STORAGE_KEY)),
-  );
-  const [expanded, setExpanded] = useState<Record<number, boolean>>(() => {
-    try {
-      const raw = window.localStorage.getItem(EXPANDED_STORAGE_KEY);
-      if (!raw) return {};
-      const parsed: number[] = JSON.parse(raw);
-      return parsed.reduce<Record<number, boolean>>((acc, id) => {
-        acc[id] = true;
-        return acc;
-      }, {});
-    } catch (storageError) {
-      console.error("Failed to parse expanded locations state", storageError);
-      return {};
-    }
-  });
+  const {
+    expandedRows: expandedLocationIds,
+    hasPersistedState: hasPersistedExpandedState,
+    toggleExpand: toggleLocationExpanded,
+    ensureExpanded: ensureLocationExpanded,
+    expandAll: expandAllLocations,
+  } = useExpandedState("graphicalFields");
+  const hasInitiallyExpandedRef = useRef(false);
   const [layoutsByBed, setLayoutsByBed] = useState<
     Record<number, BedLayoutEntry>
   >({});
@@ -394,26 +385,19 @@ export default function GraphicalFields({
   }, []);
 
   useEffect(() => {
-    const expandedIds = Object.entries(expanded)
-      .filter(([, isExpanded]) => isExpanded)
-      .map(([locationId]) => Number(locationId));
-    window.localStorage.setItem(
-      EXPANDED_STORAGE_KEY,
-      JSON.stringify(expandedIds),
-    );
-  }, [expanded]);
-
-  useEffect(() => {
-    if (!hasAutoExpanded && locations.length > 0) {
-      setExpanded(
-        locations.reduce<Record<number, boolean>>((acc, location) => {
-          if (location.id) acc[location.id] = true;
-          return acc;
-        }, {}),
+    if (
+      !hasPersistedExpandedState &&
+      !hasInitiallyExpandedRef.current &&
+      locations.length > 0
+    ) {
+      expandAllLocations(
+        locations
+          .map((location) => location.id)
+          .filter((id): id is number => Boolean(id)),
       );
-      setHasAutoExpanded(true);
+      hasInitiallyExpandedRef.current = true;
     }
-  }, [locations, hasAutoExpanded]);
+  }, [expandAllLocations, hasPersistedExpandedState, locations]);
 
   useEffect(() => {
     let active = true;
@@ -483,7 +467,7 @@ export default function GraphicalFields({
     setEditableLocationId((currentLocationId) =>
       currentLocationId === locationId ? null : locationId,
     );
-    setExpanded((prev) => ({ ...prev, [locationId]: true }));
+    ensureLocationExpanded(locationId);
   };
 
   useKeyboardShortcuts(
@@ -1247,10 +1231,8 @@ export default function GraphicalFields({
           return (
             <Accordion
               key={locationId}
-              expanded={Boolean(expanded[locationId])}
-              onChange={(_, isExpanded) =>
-                setExpanded((prev) => ({ ...prev, [locationId]: isExpanded }))
-              }
+              expanded={expandedLocationIds.has(locationId)}
+              onChange={() => toggleLocationExpanded(locationId)}
               sx={{
                 ...(locationIsEditable
                   ? {
