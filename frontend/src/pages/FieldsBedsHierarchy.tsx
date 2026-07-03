@@ -605,92 +605,6 @@ function FieldsBedsHierarchy({
     );
   }, [fields, handleAddBed, loading, location.pathname, location.search, navigate]);
 
-  // Consumes a `?highlight=location:<id>|field:<id>|bed:<id>` deep link (e.g.
-  // from the Gantt calendar's "Standort/Parzelle/Beet öffnen" context menu
-  // actions): expands the ancestor chain so the target row is visible,
-  // scrolls it into view, and flashes it briefly so the user can find it.
-  useEffect(() => {
-    if (!location.pathname.startsWith("/app/fields-beds")) {
-      return;
-    }
-
-    const searchParams = new URLSearchParams(location.search);
-    const highlightParam = searchParams.get("highlight");
-    if (!highlightParam || loading) {
-      return;
-    }
-
-    const [highlightType, highlightIdRaw] = highlightParam.split(":");
-    const highlightId = Number(highlightIdRaw);
-
-    let targetRowId: GridRowId | null = null;
-    let locationIdToExpand: number | undefined;
-    let fieldIdToExpand: number | undefined;
-
-    if (Number.isFinite(highlightId)) {
-      if (highlightType === "location") {
-        targetRowId = `location-${highlightId}`;
-      } else if (highlightType === "field") {
-        const field = fields.find((entry) => entry.id === highlightId);
-        targetRowId = `field-${highlightId}`;
-        locationIdToExpand = field?.location;
-      } else if (highlightType === "bed") {
-        const bed = beds.find((entry) => entry.id === highlightId);
-        const field = bed ? fields.find((entry) => entry.id === bed.field) : undefined;
-        targetRowId = highlightId;
-        fieldIdToExpand = bed?.field;
-        locationIdToExpand = field?.location;
-      }
-    }
-
-    if (targetRowId !== null) {
-      if (locationIdToExpand !== undefined) {
-        ensureExpanded(`location-${locationIdToExpand}`);
-      }
-      if (fieldIdToExpand !== undefined) {
-        ensureExpanded(`field-${fieldIdToExpand}`);
-      }
-
-      setHighlightedRowId(targetRowId);
-
-      // Expansion needs a render pass before the target row exists in the
-      // DataGrid's virtualized viewport.
-      window.setTimeout(() => {
-        const api = gridApiRef.current;
-        if (!api) return;
-        const rowIndex = api.getRowIndexRelativeToVisibleRows(targetRowId!);
-        const firstField = api.getVisibleColumns()
-          .find((col) => col.field !== "actions" && col.field !== "rowEditActions")?.field;
-        if (typeof rowIndex === "number" && rowIndex >= 0) {
-          api.scrollToIndexes(firstField
-            ? { rowIndex, colIndex: api.getColumnIndexRelativeToVisibleColumns(firstField) }
-            : { rowIndex });
-          if (firstField) {
-            api.setCellFocus(targetRowId!, firstField);
-          }
-        }
-      }, 50);
-
-      if (highlightClearTimeoutRef.current !== null) {
-        window.clearTimeout(highlightClearTimeoutRef.current);
-      }
-      highlightClearTimeoutRef.current = window.setTimeout(() => {
-        setHighlightedRowId(null);
-        highlightClearTimeoutRef.current = null;
-      }, 2500);
-    }
-
-    searchParams.delete("highlight");
-    const nextSearch = searchParams.toString();
-    navigate(
-      {
-        pathname: location.pathname,
-        search: nextSearch ? `?${nextSearch}` : "",
-      },
-      { replace: true },
-    );
-  }, [beds, ensureExpanded, fields, gridApiRef, loading, location.pathname, location.search, navigate]);
-
   useEffect(() => () => {
     if (highlightClearTimeoutRef.current !== null) {
       window.clearTimeout(highlightClearTimeoutRef.current);
@@ -808,6 +722,88 @@ function FieldsBedsHierarchy({
     selectRowTransient(rowId);
     focusRow(rowId);
   }, [focusRow, selectRowTransient]);
+
+  // Consumes a `?highlight=location:<id>|field:<id>|bed:<id>` deep link (e.g.
+  // from the Gantt calendar's "Standort/Parzelle/Beet öffnen" context menu
+  // actions): expands the ancestor chain so the target row is visible,
+  // scrolls it into view, makes it the active row for keyboard nav (reusing
+  // activateFirstRowForKeyboard/focusRow above instead of touching the grid
+  // API directly), and flashes it briefly so the user can find it.
+  useEffect(() => {
+    if (!location.pathname.startsWith("/app/fields-beds")) {
+      return;
+    }
+
+    const searchParams = new URLSearchParams(location.search);
+    const highlightParam = searchParams.get("highlight");
+    if (!highlightParam || loading) {
+      return;
+    }
+
+    const [highlightType, highlightIdRaw] = highlightParam.split(":");
+    const highlightId = Number(highlightIdRaw);
+
+    let targetRowId: GridRowId | null = null;
+    let locationIdToExpand: number | undefined;
+    let fieldIdToExpand: number | undefined;
+
+    if (Number.isFinite(highlightId)) {
+      if (highlightType === "location") {
+        targetRowId = `location-${highlightId}`;
+      } else if (highlightType === "field") {
+        const field = fields.find((entry) => entry.id === highlightId);
+        targetRowId = `field-${highlightId}`;
+        locationIdToExpand = field?.location;
+      } else if (highlightType === "bed") {
+        const bed = beds.find((entry) => entry.id === highlightId);
+        const field = bed ? fields.find((entry) => entry.id === bed.field) : undefined;
+        targetRowId = highlightId;
+        fieldIdToExpand = bed?.field;
+        locationIdToExpand = field?.location;
+      }
+    }
+
+    if (targetRowId !== null) {
+      if (locationIdToExpand !== undefined) {
+        ensureExpanded(`location-${locationIdToExpand}`);
+      }
+      if (fieldIdToExpand !== undefined) {
+        ensureExpanded(`field-${fieldIdToExpand}`);
+      }
+
+      setHighlightedRowId(targetRowId);
+
+      // Expansion needs a render pass before the target row exists in the
+      // DataGrid's virtualized viewport.
+      requestAnimationFrame(() => {
+        const api = gridApiRef.current;
+        if (!api) return;
+        const rowIndex = api.getRowIndexRelativeToVisibleRows(targetRowId!);
+        if (typeof rowIndex === "number" && rowIndex >= 0) {
+          api.scrollToIndexes({ rowIndex });
+          activateFirstRowForKeyboard(targetRowId!);
+        }
+      });
+
+      if (highlightClearTimeoutRef.current !== null) {
+        window.clearTimeout(highlightClearTimeoutRef.current);
+      }
+      highlightClearTimeoutRef.current = window.setTimeout(() => {
+        setHighlightedRowId(null);
+        highlightClearTimeoutRef.current = null;
+      }, 2500);
+    }
+
+    searchParams.delete("highlight");
+    const nextSearch = searchParams.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+      },
+      { replace: true },
+    );
+  }, [activateFirstRowForKeyboard, beds, ensureExpanded, fields, gridApiRef, loading, location.pathname, location.search, navigate]);
 
   const handleHierarchyProcessRowUpdate = useCallback(
     async (newRow: HierarchyRow): Promise<HierarchyRow> => {

@@ -2,16 +2,15 @@ import React from "react";
 import type { TaskGroup, TaskListProps } from "../../types";
 import { CollisionService } from "../../services";
 import {
-  estimateLabelHeight,
+  estimateTaskGroupLabelHeight,
   getHierarchyLevels,
-  getLabelLinesSource,
   normalizeLeftColumnWidth,
+  TREE_INDENT_PX,
 } from "../../utils";
 
 /**
  * TaskList Component - Displays the list of task groups on the left side of the Gantt chart
  */
-const TREE_INDENT_PX = 20;
 
 const ChevronIcon: React.FC<{ expanded: boolean }> = ({ expanded }) => (
   <svg
@@ -52,15 +51,9 @@ const TaskList: React.FC<TaskListProps> = ({
       return taskGroup.rowHeightOverride;
     }
 
-    const isTreeRow = taskGroup.depth !== undefined;
-    const hierarchyLevels = isTreeRow ? null : getHierarchyLevels(taskGroup);
-    const labelLinesSource = isTreeRow
-      ? [taskGroup.name || "Unnamed"]
-      : getLabelLinesSource(taskGroup, hierarchyLevels, showDescription);
-    const estimatedHeight = estimateLabelHeight(
-      labelLinesSource,
-      normalizedLeftColumnWidth - (isTreeRow ? (taskGroup.depth ?? 0) * TREE_INDENT_PX : 0),
-    );
+    const estimatedHeight = estimateTaskGroupLabelHeight(taskGroup, normalizedLeftColumnWidth, {
+      includeDescription: showDescription,
+    });
 
     if (!taskGroup.tasks || !Array.isArray(taskGroup.tasks)) {
       return estimatedHeight;

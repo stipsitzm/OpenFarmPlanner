@@ -108,6 +108,35 @@ const isComboboxInteractionTarget = (target: EventTarget | null): boolean => {
 const isEnterSaveInputTarget = (target: EventTarget | null): boolean =>
   target instanceof HTMLInputElement && !isComboboxInteractionTarget(target);
 
+interface ScrollFocusGridApi {
+  getVisibleColumns: () => { field: string }[];
+  getRowIndexRelativeToVisibleRows: (id: GridRowId) => number;
+  getColumnIndexRelativeToVisibleColumns: (field: string) => number;
+  scrollToIndexes: (params: { rowIndex?: number; colIndex?: number }) => void;
+  setCellFocus: (id: GridRowId, field: string) => void;
+}
+
+// Scrolls a row into view and, unless `focus: false`, moves keyboard focus
+// onto its first non-action column — deferred to the next animation frame
+// since the row may not exist in the grid's virtualized viewport until
+// after the current render pass (e.g. right after an expand/select state
+// change). Shared by focusTable and openRowById below.
+function scrollAndFocusRow(api: ScrollFocusGridApi, rowId: GridRowId, options: { focus?: boolean } = {}): void {
+  const firstField = api.getVisibleColumns()
+    .find((col) => col.field !== 'actions' && col.field !== 'rowEditActions')?.field;
+  requestAnimationFrame(() => {
+    api.scrollToIndexes(firstField
+      ? {
+          rowIndex: api.getRowIndexRelativeToVisibleRows(rowId),
+          colIndex: api.getColumnIndexRelativeToVisibleColumns(firstField),
+        }
+      : { rowIndex: api.getRowIndexRelativeToVisibleRows(rowId) });
+    if (options.focus !== false && firstField) {
+      api.setCellFocus(rowId, firstField);
+    }
+  });
+}
+
 export function EditableDataGrid<T extends EditableRow>({
   columns,
   api,
@@ -1220,16 +1249,7 @@ export function EditableDataGrid<T extends EditableRow>({
     const targetId = selectedRowIds[0] ?? api.getAllRowIds()[0];
     if (targetId == null) return;
     setSelectedRowIds([targetId]);
-    const firstField = api.getVisibleColumns()
-      .find((col) => col.field !== 'actions' && col.field !== 'rowEditActions')?.field;
-    if (!firstField) return;
-    requestAnimationFrame(() => {
-      api.scrollToIndexes({
-        rowIndex: api.getRowIndexRelativeToVisibleRows(targetId),
-        colIndex: api.getColumnIndexRelativeToVisibleColumns(firstField),
-      });
-      api.setCellFocus(targetId, firstField);
-    });
+    scrollAndFocusRow(api, targetId);
   }, [
     gridApiRef,
     selectedRowIds,
@@ -1261,21 +1281,10 @@ export function EditableDataGrid<T extends EditableRow>({
     if (!api || !rowsById.has(String(rowId))) return;
     const shouldStartEdit = options?.startEdit !== false;
     setSelectedRowIds([rowId]);
-    const firstField = api.getVisibleColumns()
-      .find((col) => col.field !== 'actions' && col.field !== 'rowEditActions')?.field;
-    requestAnimationFrame(() => {
-      api.scrollToIndexes(firstField
-        ? {
-            rowIndex: api.getRowIndexRelativeToVisibleRows(rowId),
-            colIndex: api.getColumnIndexRelativeToVisibleColumns(firstField),
-          }
-        : { rowIndex: api.getRowIndexRelativeToVisibleRows(rowId) });
-      // Edit mode moves focus into its own input via `fieldToFocus` below;
-      // only move keyboard focus here for the view-only (non-edit) case.
-      if (!shouldStartEdit && firstField) {
-        api.setCellFocus(rowId, firstField);
-      }
-    });
+    // Edit mode moves focus into its own input via handleStartRowEdit's
+    // `fieldToFocus` below; only move keyboard focus here for the
+    // view-only (non-edit) case.
+    scrollAndFocusRow(api, rowId, { focus: !shouldStartEdit });
     if (shouldStartEdit) {
       handleStartRowEdit(rowId);
     }
@@ -2046,7 +2055,12 @@ export function EditableDataGrid<T extends EditableRow>({
               }
               return;
             }
-            if (event.key === 'Escape') {
+            if (event.key === 'Escape' && rowModesModel[params.id]?.mode === GridRowModes.Edit) {
+              // Only intercept Escape for a row actually being edited — MUI's
+              // default Escape handling (and its own focus-restoration) is
+              // fine for a row that isn't, and this keeps
+              // handleDiscardRowChanges' focus-restore fallback from firing
+              // on unrelated cells.
               event.preventDefault();
               event.defaultMuiPrevented = true;
               handleDiscardRowChanges(params.id);

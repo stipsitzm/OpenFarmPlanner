@@ -3,11 +3,7 @@ import { type Task, ViewMode, type TaskRowProps } from "../../../types";
 import { TaskService, CollisionService } from "../../../services";
 import TaskItem from "../../../components/task/TaskItem";
 import { Tooltip } from "../../../components/ui";
-import {
-  estimateLabelHeight,
-  getHierarchyLevels,
-  getLabelLinesSource,
-} from "../../../utils";
+import { estimateTaskGroupLabelHeight } from "../../../utils";
 
 /**
  * TaskRow Component - Displays and manages tasks for a single task group
@@ -140,14 +136,8 @@ const TaskRow: React.FC<TaskRowProps> = ({
 
   // Calculate row height based on task arrangement
   const laneHeight = Math.max(1, rowHeight);
-  const hierarchyLevels = taskGroup ? getHierarchyLevels(taskGroup) : null;
-  const labelLinesSource = taskGroup
-    ? getLabelLinesSource(taskGroup, hierarchyLevels)
-    : [];
-  const estimatedHeight = estimateLabelHeight(
-    labelLinesSource,
-    leftColumnWidth,
-  );
+  // 40 matches estimateTaskGroupLabelHeight's own floor for an empty label.
+  const estimatedHeight = taskGroup ? estimateTaskGroupLabelHeight(taskGroup, leftColumnWidth) : 40;
   const resolvedRowHeight = taskGroup?.rowHeightOverride !== undefined
     ? taskGroup.rowHeightOverride
     : Math.max(estimatedHeight, taskRows.length * laneHeight + 12);
