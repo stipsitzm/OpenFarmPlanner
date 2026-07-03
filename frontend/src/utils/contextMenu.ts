@@ -1,8 +1,54 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type React from 'react';
 
 interface SuppressibleEvent {
   preventDefault: () => void;
   stopPropagation: () => void;
+}
+
+/** Duration a touch must be held before it counts as a long press (ca. 500-700ms). */
+export const LONG_PRESS_THRESHOLD_MS = 600;
+
+export interface LongPressHandlers {
+  onTouchStart: (event: React.TouchEvent) => void;
+  onTouchEnd: () => void;
+  onTouchMove: () => void;
+  /** True while a touch is held but the long-press threshold hasn't fired yet — for optional, low-overhead "pressed" feedback. */
+  isLongPressing: boolean;
+}
+
+/**
+ * Shared touch long-press detection used by the yield distribution, seedling
+ * and field occupancy charts to open the same context menu that a desktop
+ * right-click opens. A plain tap never fires `onLongPress`; moving the
+ * finger or releasing before `thresholdMs` cancels it.
+ */
+export function useLongPress(
+  onLongPress: (event: React.TouchEvent) => void,
+  thresholdMs: number = LONG_PRESS_THRESHOLD_MS,
+): LongPressHandlers {
+  const timeoutRef = useRef<number | null>(null);
+  const [isLongPressing, setIsLongPressing] = useState(false);
+
+  const clear = useCallback(() => {
+    if (timeoutRef.current !== null) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setIsLongPressing(false);
+  }, []);
+
+  const onTouchStart = useCallback((event: React.TouchEvent) => {
+    if (!event.touches[0]) return;
+    setIsLongPressing(true);
+    timeoutRef.current = window.setTimeout(() => {
+      timeoutRef.current = null;
+      setIsLongPressing(false);
+      onLongPress(event);
+    }, thresholdMs);
+  }, [onLongPress, thresholdMs]);
+
+  return { onTouchStart, onTouchEnd: clear, onTouchMove: clear, isLongPressing };
 }
 
 const editableSelector = [

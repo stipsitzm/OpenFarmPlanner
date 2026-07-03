@@ -16,15 +16,14 @@ const revealOnHoverOrFocus = {
 /**
  * Spread into a hoverable/focusable ancestor's `sx` (e.g. a Gantt bar, a
  * chart segment, a sidebar tree row) so any `ContextMenuIndicator` rendered
- * inside it fades in on hover/focus-within, and stays visible on touch.
+ * inside it fades in on hover/focus-within. On touch devices it stays
+ * hidden at all times — a long press opens the context menu directly
+ * instead of relying on the icon.
  * Use this for simple cases with no adjacent truncated text to mask — for
  * data-grid-style rows, use `contextMenuActionsOverlaySx` instead.
  */
 export const contextMenuIndicatorHostSx: SystemStyleObject<Theme> = {
   [`&:hover .${CONTEXT_MENU_INDICATOR_CLASS}, &:focus-within .${CONTEXT_MENU_INDICATOR_CLASS}`]: revealOnHoverOrFocus,
-  '@media (pointer: coarse)': {
-    [`& .${CONTEXT_MENU_INDICATOR_CLASS}`]: revealOnHoverOrFocus,
-  },
 };
 
 /**

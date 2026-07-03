@@ -1,9 +1,11 @@
-import { fireEvent, render } from '@testing-library/react';
+import { act, fireEvent, render } from '@testing-library/react';
 import { useCallback } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  LONG_PRESS_THRESHOLD_MS,
   shouldOpenCustomContextMenu,
   useCloseCustomContextMenuOnNativeContextMenu,
+  useLongPress,
 } from '../utils/contextMenu';
 
 function ContextMenuBoundary({
@@ -81,5 +83,92 @@ describe('context menu helpers', () => {
     expect(event.defaultPrevented).toBe(true);
     expect(onClose).not.toHaveBeenCalled();
     expect(onOpenMenuContextMenu).toHaveBeenCalledTimes(1);
+  });
+});
+
+function LongPressProbe({ onLongPress }: { onLongPress: () => void }) {
+  const { onTouchStart, onTouchEnd, onTouchMove, isLongPressing } = useLongPress(onLongPress);
+
+  return (
+    <div
+      data-testid="press-target"
+      data-long-pressing={isLongPressing ? 'true' : undefined}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onTouchMove={onTouchMove}
+    />
+  );
+}
+
+describe('useLongPress', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('opens the context menu after the touch is held past the threshold', () => {
+    const onLongPress = vi.fn();
+    const { getByTestId } = render(<LongPressProbe onLongPress={onLongPress} />);
+    const target = getByTestId('press-target');
+
+    fireEvent.touchStart(target, { touches: [{ identifier: 1, clientX: 10, clientY: 10 }] });
+    expect(target).toHaveAttribute('data-long-pressing', 'true');
+    expect(onLongPress).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS_THRESHOLD_MS);
+    });
+
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not open the context menu on a short tap', () => {
+    const onLongPress = vi.fn();
+    const { getByTestId } = render(<LongPressProbe onLongPress={onLongPress} />);
+    const target = getByTestId('press-target');
+
+    fireEvent.touchStart(target, { touches: [{ identifier: 1, clientX: 10, clientY: 10 }] });
+    fireEvent.touchEnd(target);
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS_THRESHOLD_MS);
+    });
+
+    expect(onLongPress).not.toHaveBeenCalled();
+    expect(target).not.toHaveAttribute('data-long-pressing');
+  });
+
+  it('cancels the long press when the finger moves (scroll/drag)', () => {
+    const onLongPress = vi.fn();
+    const { getByTestId } = render(<LongPressProbe onLongPress={onLongPress} />);
+    const target = getByTestId('press-target');
+
+    fireEvent.touchStart(target, { touches: [{ identifier: 1, clientX: 10, clientY: 10 }] });
+    fireEvent.touchMove(target, { touches: [{ identifier: 1, clientX: 40, clientY: 40 }] });
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS_THRESHOLD_MS);
+    });
+
+    expect(onLongPress).not.toHaveBeenCalled();
+    expect(target).not.toHaveAttribute('data-long-pressing');
+  });
+
+  it('cancels the long press when released just before the threshold', () => {
+    const onLongPress = vi.fn();
+    const { getByTestId } = render(<LongPressProbe onLongPress={onLongPress} />);
+    const target = getByTestId('press-target');
+
+    fireEvent.touchStart(target, { touches: [{ identifier: 1, clientX: 10, clientY: 10 }] });
+    act(() => {
+      vi.advanceTimersByTime(LONG_PRESS_THRESHOLD_MS - 50);
+    });
+    fireEvent.touchEnd(target);
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
+    expect(onLongPress).not.toHaveBeenCalled();
   });
 });
