@@ -10,6 +10,7 @@ import { mockT } from './helpers/testI18n';
 const mockUseNavigationBlocker = vi.fn();
 const mockStopRowEditMode = vi.hoisted(() => vi.fn());
 const mockSetCellFocus = vi.hoisted(() => vi.fn());
+const mockSetEditCellValue = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 
 vi.mock('../hooks/autosave', () => ({
   useNavigationBlocker: (...args: unknown[]) => mockUseNavigationBlocker(...args),
@@ -22,7 +23,7 @@ vi.mock('../i18n', () => ({
 vi.mock('@mui/x-data-grid', async () => {
   const React = await import('react');
   const createGridApiMockRefValue = () => ({
-    setEditCellValue: vi.fn().mockResolvedValue(true),
+    setEditCellValue: mockSetEditCellValue,
     stopRowEditMode: mockStopRowEditMode,
   });
   const useGridApiRef = vi.fn(() => React.useRef(createGridApiMockRefValue()));
@@ -242,6 +243,7 @@ describe('EditableDataGrid', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSetEditCellValue.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -370,6 +372,85 @@ describe('EditableDataGrid', () => {
     await waitFor(() => {
       expect(mockUseNavigationBlocker).toHaveBeenLastCalledWith(true, 'messages.unsavedChanges');
     });
+  });
+
+  it('starts editing from a typed number and replaces the focused cell value', async () => {
+    render(<EditableDataGrid {...baseProps()} showDeleteAction={false} />);
+
+    const cell = await screen.findByRole('button', { name: 'Zelle 1-area_sqm' });
+    fireEvent.keyDown(cell, { key: '5' });
+
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+    await waitFor(() => {
+      expect(mockSetEditCellValue).toHaveBeenCalledWith({ id: 1, field: 'area_sqm', value: '5' });
+    });
+    expect(mockSetCellFocus).toHaveBeenCalledWith(1, 'area_sqm');
+  });
+
+  it('starts editing from a typed letter and replaces the focused cell value', async () => {
+    render(<EditableDataGrid {...baseProps()} showDeleteAction={false} />);
+
+    const cell = await screen.findByRole('button', { name: 'Zelle 1-name' });
+    fireEvent.keyDown(cell, { key: 'T' });
+
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+    await waitFor(() => {
+      expect(mockSetEditCellValue).toHaveBeenCalledWith({ id: 1, field: 'name', value: 'T' });
+    });
+  });
+
+  it('keeps multiple fast typed characters when starting edit mode', async () => {
+    render(<EditableDataGrid {...baseProps()} showDeleteAction={false} />);
+
+    const cell = await screen.findByRole('button', { name: 'Zelle 1-area_sqm' });
+    fireEvent.keyDown(cell, { key: '1' });
+    fireEvent.keyDown(cell, { key: '2' });
+    fireEvent.keyDown(cell, { key: '3' });
+
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+    await waitFor(() => {
+      expect(mockSetEditCellValue).toHaveBeenCalledWith({ id: 1, field: 'area_sqm', value: '123' });
+    });
+  });
+
+  it('starts editing with F2 without replacing the existing value', async () => {
+    render(<EditableDataGrid {...baseProps()} showDeleteAction={false} />);
+
+    const cell = await screen.findByRole('button', { name: 'Zelle 1-name' });
+    fireEvent.keyDown(cell, { key: 'F2' });
+
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+    expect(mockSetEditCellValue).not.toHaveBeenCalled();
+    expect(mockSetCellFocus).toHaveBeenCalledWith(1, 'name');
+  });
+
+  it('does not start editing for browser shortcut keys', async () => {
+    render(<EditableDataGrid {...baseProps()} showDeleteAction={false} />);
+
+    const cell = await screen.findByRole('button', { name: 'Zelle 1-name' });
+    fireEvent.keyDown(cell, { key: 'c', ctrlKey: true });
+
+    expect(screen.getByTestId('mode-1')).toHaveTextContent('view');
+    expect(mockSetEditCellValue).not.toHaveBeenCalled();
+  });
+
+  it('does not start editing from typed keys on readonly cells', async () => {
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        columns={[
+          { field: 'name', headerName: 'Name', editable: true },
+          { field: 'area_sqm', headerName: 'Fläche', editable: false },
+        ]}
+        showDeleteAction={false}
+      />,
+    );
+
+    const cell = await screen.findByRole('button', { name: 'Zelle 1-area_sqm' });
+    fireEvent.keyDown(cell, { key: '5' });
+
+    expect(screen.getByTestId('mode-1')).toHaveTextContent('view');
+    expect(mockSetEditCellValue).not.toHaveBeenCalled();
   });
 
   it('keeps draft rows local and exposes save controls until saved', async () => {
