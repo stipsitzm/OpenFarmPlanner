@@ -5,7 +5,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 
-from farm.models import Culture, MediaFile, CultureRevision, Project, ProjectMembership, ProjectRevision
+from farm.models import Culture, EntityRevision, MediaFile, CultureRevision, Project, ProjectMembership, ProjectRevision
 
 User = get_user_model()
 
@@ -38,13 +38,14 @@ class CultureHistoryTests(TestCase):
         )
 
     def test_restore_endpoint(self):
-        original_revision = self.culture.revisions.first()
+        history_before = self.client.get(f'/openfarmplanner/api/cultures/{self.culture.id}/history/')
+        original_revision_id = history_before.json()[0]['history_id']
         self.culture.name = 'Changed'
         self.culture.save()
 
         response = self.client.post(
             f'/openfarmplanner/api/cultures/{self.culture.id}/restore/',
-            data={'history_id': original_revision.id},
+            data={'history_id': original_revision_id},
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 200)
@@ -79,10 +80,11 @@ class CultureHistoryTests(TestCase):
         delete_response = self.client.delete(f'/openfarmplanner/api/cultures/{self.culture.id}/')
         self.assertEqual(delete_response.status_code, 204)
 
-        revision = self.culture.revisions.first()
+        global_history = self.client.get('/openfarmplanner/api/history/global/')
+        revision_id = global_history.json()[0]['history_id']
         restore_response = self.client.post(
             '/openfarmplanner/api/history/global/restore/',
-            data={'history_id': revision.id},
+            data={'history_id': revision_id},
             content_type='application/json',
         )
         self.assertEqual(restore_response.status_code, 200)
@@ -151,13 +153,42 @@ class CultureHistoryTests(TestCase):
         self.culture.refresh_from_db()
         self.assertEqual(self.culture.name, 'Carrot')
 
-    def test_cleanup_history_command(self):
-        old = self.culture.revisions.first()
+    def test_cleanup_history_command_prunes_legacy_culture_revisions(self):
+        old = CultureRevision.objects.create(culture=self.culture, snapshot={}, changed_fields=[])
         old.created_at = timezone.now() - timedelta(days=40)
         old.save(update_fields=['created_at'])
 
         call_command('cleanup_history')
         self.assertFalse(CultureRevision.objects.filter(id=old.id).exists())
+
+    def test_cleanup_history_command_prunes_old_non_latest_entity_revisions(self):
+        self.culture.name = 'Carrot Updated'
+        self.culture.save()
+
+        revisions = list(
+            EntityRevision.objects.filter(project=self.project, entity_type='culture', object_id=self.culture.id)
+            .order_by('created_at')
+        )
+        self.assertEqual(len(revisions), 2)
+        oldest = revisions[0]
+        oldest.created_at = timezone.now() - timedelta(days=40)
+        oldest.save(update_fields=['created_at'])
+
+        call_command('cleanup_history')
+
+        self.assertFalse(EntityRevision.objects.filter(id=oldest.id).exists())
+        self.assertTrue(EntityRevision.objects.filter(id=revisions[1].id).exists())
+
+    def test_cleanup_history_command_keeps_latest_entity_revision_indefinitely(self):
+        """An entity's only/latest revision must survive cleanup even when old,
+        otherwise point-in-time project restore would lose untouched entities."""
+        revision = EntityRevision.objects.get(project=self.project, entity_type='culture', object_id=self.culture.id)
+        revision.created_at = timezone.now() - timedelta(days=400)
+        revision.save(update_fields=['created_at'])
+
+        call_command('cleanup_history')
+
+        self.assertTrue(EntityRevision.objects.filter(id=revision.id).exists())
 
     def test_cleanup_history_command_also_prunes_project_revisions(self):
         recent = ProjectRevision.objects.create(snapshot={}, summary='Recent snapshot', project=self.project)

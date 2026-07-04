@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+# The public culture library (PublicCulture + this module) is a candidate for
+# extraction into a separate service consumed by OFP over an API (under
+# discussion as of 2026-07). Keep this module's dependency on `farm.models`
+# limited to Culture/Project/PublicCulture, and avoid pulling in
+# project-history/EntityRevision or other farm-app-internal concerns here.
+
 from dataclasses import dataclass
 import re
 from typing import Any

@@ -385,6 +385,19 @@ class Supplier(TimestampedModel):
 
 
 
+def format_culture_display_name(name: str | None, variety: str | None) -> str | None:
+    """Build a "name (variety)" label, falling back to whichever part is set."""
+    normalized_name = (name or '').strip()
+    normalized_variety = (variety or '').strip()
+    if normalized_name and normalized_variety:
+        return f'{normalized_name} ({normalized_variety})'
+    if normalized_name:
+        return normalized_name
+    if normalized_variety:
+        return normalized_variety
+    return None
+
+
 def is_supplier_domain(url: str, supplier: Supplier | None) -> bool:
     """Return True when URL host matches supplier allowed domains."""
     if not supplier or not url:
@@ -1028,8 +1041,18 @@ class Culture(TimestampedModel):
         else:
             changed_fields.append('created')
 
-        CultureRevision.objects.create(
-            culture=self,
+        history_action = getattr(self, '_history_action', None)
+        if hasattr(self, '_history_action'):
+            del self._history_action
+        if history_action is None:
+            history_action = EntityRevision.ACTION_CREATED if not previous else EntityRevision.ACTION_UPDATED
+
+        EntityRevision.objects.create(
+            project=self.project,
+            entity_type='culture',
+            object_id=self.pk,
+            action=history_action,
+            display_name=format_culture_display_name(self.name, self.variety) or '',
             snapshot=serializable_snapshot,
             changed_fields=changed_fields,
         )
@@ -1191,7 +1214,13 @@ class CultureSupplierData(TimestampedModel):
 
 
 class PublicCulture(TimestampedModel):
-    """Published culture template in the shared public library."""
+    """Published culture template in the shared public library.
+
+    Candidate for extraction into a separate service consumed by OFP over an
+    API (under discussion as of 2026-07). Keep this model, its serializer, and
+    PublicCultureViewSet loosely coupled from farm-project-scoped models/logic
+    (Culture, EntityRevision, etc.) so such an extraction stays feasible.
+    """
 
     STATUS_PUBLISHED = 'published'
     STATUS_CHOICES = [
@@ -1279,7 +1308,8 @@ class EnrichmentAccountingRun(models.Model):
 
 
 class CultureRevision(models.Model):
-    """Versioned snapshot of a culture record."""
+    """Deprecated: superseded by EntityRevision. Retained only so existing rows
+    can drain via the cleanup_history command; no new rows are written here."""
 
     culture = models.ForeignKey('Culture', on_delete=models.CASCADE, related_name='revisions')
     snapshot = models.JSONField()
@@ -1293,7 +1323,8 @@ class CultureRevision(models.Model):
 
 
 class ProjectRevision(models.Model):
-    """Snapshot of the full project state for point-in-time restore."""
+    """Deprecated: superseded by EntityRevision. Retained only so existing rows
+    can drain via the cleanup_history command; no new rows are written here."""
 
     snapshot = models.JSONField()
     summary = models.CharField(max_length=255, blank=True)
@@ -1304,6 +1335,48 @@ class ProjectRevision(models.Model):
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['project', '-created_at']),
+        ]
+
+
+
+class EntityRevision(models.Model):
+    """Per-entity snapshot recorded on every create/update/delete/restore.
+
+    Replaces the old ProjectRevision (full-project JSON dump per mutation) and
+    CultureRevision (per-culture only) with one generic, per-entity-sized
+    record. A revision's `snapshot` holds the full field dict of the single
+    entity at that point in time (not the whole project), so write cost scales
+    with entity size instead of project size. Point-in-time project restore is
+    reconstructed by taking, for every (entity_type, object_id), the latest
+    revision at or before the target time.
+    """
+
+    ACTION_CREATED = 'created'
+    ACTION_UPDATED = 'updated'
+    ACTION_DELETED = 'deleted'
+    ACTION_RESTORED = 'restored'
+    ACTION_CHOICES = [
+        (ACTION_CREATED, 'Created'),
+        (ACTION_UPDATED, 'Updated'),
+        (ACTION_DELETED, 'Deleted'),
+        (ACTION_RESTORED, 'Restored'),
+    ]
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='entity_revisions')
+    entity_type = models.CharField(max_length=32)
+    object_id = models.PositiveIntegerField()
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    display_name = models.CharField(max_length=255, blank=True)
+    snapshot = models.JSONField()
+    changed_fields = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    user_name = models.CharField(max_length=150, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['project', '-created_at']),
+            models.Index(fields=['project', 'entity_type', 'object_id', '-created_at']),
         ]
 
 
