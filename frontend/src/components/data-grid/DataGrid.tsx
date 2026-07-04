@@ -562,15 +562,20 @@ export function EditableDataGrid<T extends EditableRow>({
       const newRow = { ...createNewRow(), ...initialRow };
       setRows((oldRows) => [...oldRows, newRow]);
       setStableRowOrder((previousOrder) => [...previousOrder, newRow.id]);
+      setSelectedRowIds([newRow.id]);
       // Set row to edit mode after a small delay to ensure row is added first
       setTimeout(() => {
+        const fieldToFocus = columns.find((column) => column.editable !== false)?.field ?? columns[0]?.field;
         setRowModesModel((oldModel) => ({
           ...oldModel,
-          [newRow.id]: { mode: GridRowModes.Edit },
+          [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus },
         }));
+        if (fieldToFocus) {
+          gridApiRef.current?.setCellFocus(newRow.id, fieldToFocus);
+        }
       }, 0);
     }
-  }, [initialRow, dataFetched, loading, createNewRow]);
+  }, [columns, gridApiRef, initialRow, dataFetched, loading, createNewRow, setSelectedRowIds]);
 
   /**
    * Handle adding a new row to the grid
