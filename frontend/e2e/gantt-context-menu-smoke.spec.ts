@@ -108,6 +108,45 @@ test.describe('gantt calendar context-menu smoke test', () => {
     await expect(page).toHaveURL(/\/app\/planting-plans\?planId=\d+&edit=true/, { timeout: 10_000 });
     await expect(page.locator('.MuiDataGrid-row--editing')).toHaveCount(1, { timeout: 5_000 });
 
+    // --- Mobile context menu links: the selected plan opens expanded, and
+    // related culture/area links still land on the intended target. ---
+    await page.setViewportSize({ width: 390, height: 844 });
+    const openMobileTaskMenu = async (): Promise<void> => {
+      await page.goto('/app/gantt-chart');
+      await expect(page.getByText('Testhof')).toBeVisible({ timeout: 10_000 });
+      const mobileTaskBar = page.locator('[data-rmg-component="task"]').first();
+      await expect(mobileTaskBar).toBeVisible({ timeout: 10_000 });
+      await mobileTaskBar.click({ button: 'right' });
+    };
+
+    await openMobileTaskMenu();
+    await page.getByRole('menuitem', { name: 'Anbauplan öffnen' }).click();
+    await expect(page).toHaveURL(/\/app\/planting-plans/, { timeout: 10_000 });
+    await expect(page.getByText('Testkultur (Sorte A)').first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Anbauart:/)).toBeVisible({ timeout: 10_000 });
+
+    await openMobileTaskMenu();
+    await page.getByRole('menuitem', { name: 'Kultur öffnen' }).click();
+    await expect(page).toHaveURL(new RegExp(`/app/cultures\\?cultureId=${culture.id}`), { timeout: 10_000 });
+    await expect(page.getByText('Testkultur')).toBeVisible({ timeout: 10_000 });
+
+    await openMobileTaskMenu();
+    await page.getByRole('menuitem', { name: 'Beet öffnen' }).click();
+    await expect(page).toHaveURL(new RegExp(`/app/fields-beds\\?highlight=bed:${bed.id}`), { timeout: 10_000 });
+    await expect(page.getByText('Testbeet')).toBeVisible({ timeout: 10_000 });
+
+    await openMobileTaskMenu();
+    await page.getByRole('menuitem', { name: 'Parzelle öffnen' }).click();
+    await expect(page).toHaveURL(new RegExp(`/app/fields-beds\\?highlight=field:${field.id}`), { timeout: 10_000 });
+    await expect(page.getByText('Testfeld')).toBeVisible({ timeout: 10_000 });
+
+    await openMobileTaskMenu();
+    await page.getByRole('menuitem', { name: 'Standort öffnen' }).click();
+    await expect(page).toHaveURL(new RegExp(`/app/fields-beds\\?highlight=location:${location.id}`), { timeout: 10_000 });
+    await expect(page.getByText('Testhof')).toBeVisible({ timeout: 10_000 });
+
+    await page.setViewportSize({ width: 1280, height: 720 });
+
     // --- Drag-and-drop: moving a bar persists a new planting_date, and the
     // bar's on-screen position never regresses back toward its start once
     // the drag begins (the "snaps back, then moves" flicker this session's
