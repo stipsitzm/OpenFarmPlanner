@@ -41,7 +41,7 @@ export function MobileCardList<T extends MobileCardListItem>({
       {items.map((item) => {
         const isExpanded = expandedIds.has(item.id);
         return (
-          <Card key={item.id} variant="outlined">
+          <Card key={item.id} variant="outlined" data-mobile-card-id={item.id}>
             <CardContent sx={{ px: 1.5, py: 1.25, '&:last-child': { pb: 1.25 } }}>
               <Stack spacing={1}>
                 <Stack direction="row" spacing={0.5} alignItems="flex-start">
