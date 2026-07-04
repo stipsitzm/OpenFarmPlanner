@@ -234,18 +234,22 @@
 }
 
 /* "Weitere Aktionen" affordance (shared ContextMenuIndicator component) —
-   invisible until the row is hovered/focused, always visible on touch. */
+   invisible until the row is hovered/focused. On touch devices it stays
+   hidden at all times; a long press opens the context menu directly. */
 .rmg-task-group:hover .ofp-context-menu-indicator,
 .rmg-task-group:focus-within .ofp-context-menu-indicator {
   opacity: 1;
   pointer-events: auto;
 }
 
-@media (pointer: coarse) {
-  .rmg-task-group .ofp-context-menu-indicator {
-    opacity: 1;
-    pointer-events: auto;
-  }
+/* Subtle feedback while a long press is being held, cleared as soon as it
+   fires, is released, or is cancelled by movement. */
+.rmg-task-group[data-long-pressing="true"] {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.rmg-dark .rmg-task-group[data-long-pressing="true"] {
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 /* Compact tree rows (e.g. a Gantt row-height override for a parent row
@@ -620,14 +624,6 @@
   mask-image: linear-gradient(to right, #000 calc(100% - 30px), transparent 100%);
 }
 
-@media (pointer: coarse) {
-  .rmg-task-item .rmg-task-item-name-maskable,
-  .rmg-task-item-custom .rmg-task-item-name-maskable {
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 30px), transparent 100%);
-    mask-image: linear-gradient(to right, #000 calc(100% - 30px), transparent 100%);
-  }
-}
-
 /* ======================================================
    8. Resize Handles
    ====================================================== */
@@ -660,7 +656,8 @@
 }
 
 /* "Weitere Aktionen" affordance (shared ContextMenuIndicator component) —
-   invisible until the bar is hovered/focused, always visible on touch.
+   invisible until the bar is hovered/focused. On touch devices it stays
+   hidden at all times; a long press opens the context menu directly.
    Covers both the default bar (.rmg-task-item) and any custom-rendered one
    (.rmg-task-item-custom, e.g. the seedling calendar's bars). */
 .rmg-task-item:hover .ofp-context-menu-indicator,
@@ -671,12 +668,11 @@
   pointer-events: auto;
 }
 
-@media (pointer: coarse) {
-  .rmg-task-item .ofp-context-menu-indicator,
-  .rmg-task-item-custom .ofp-context-menu-indicator {
-    opacity: 1;
-    pointer-events: auto;
-  }
+/* Subtle feedback while a long press is being held, cleared as soon as it
+   fires, is released, or is cancelled by movement. */
+.rmg-task-item[data-long-pressing="true"],
+.rmg-task-item-custom[data-long-pressing="true"] {
+  filter: brightness(0.92);
 }
 
 /* ======================================================

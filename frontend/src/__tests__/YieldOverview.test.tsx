@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { FocusManagerProvider } from "../focus/FocusManager";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LONG_PRESS_THRESHOLD_MS } from "../utils/contextMenu";
 import YieldOverviewPage from "../pages/YieldOverview";
 import { getYieldAxisLabelStep } from "../pages/yieldOverviewUtils";
 
@@ -289,6 +290,95 @@ describe("YieldOverviewPage", () => {
       fireEvent.keyDown(week13Kohl, { key: "ContextMenu" });
 
       expect(await screen.findByRole("menuitem", { name: "Kultur öffnen" })).toBeInTheDocument();
+    });
+  });
+
+  describe("mobile long-press behavior on yield segments", () => {
+    beforeEach(() => {
+      mocks.yieldList.mockResolvedValue({
+        data: [
+          {
+            iso_week: "2026-W13",
+            week_start: "2026-03-23",
+            cultures: [
+              { culture_id: 1, culture_name: "Kohl", yield: 0.7, color: "#16a34a" },
+            ],
+          },
+        ],
+      });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("never permanently shows the three-dot context-menu icon", async () => {
+      render(
+        <FocusManagerProvider><MemoryRouter>
+          <YieldOverviewPage />
+        </MemoryRouter></FocusManagerProvider>,
+      );
+      await screen.findByTestId("yield-bar-2026-W13-1");
+
+      const indicator = screen.getByRole("button", { name: "Aktionen" });
+      expect(getComputedStyle(indicator).opacity).toBe("0");
+      expect(getComputedStyle(indicator).pointerEvents).toBe("none");
+    });
+
+    it("opens the context menu after a long press", async () => {
+      render(
+        <FocusManagerProvider><MemoryRouter>
+          <YieldOverviewPage />
+        </MemoryRouter></FocusManagerProvider>,
+      );
+      const segment = await screen.findByTestId("yield-bar-2026-W13-1");
+
+      vi.useFakeTimers();
+      fireEvent.touchStart(segment, { touches: [{ identifier: 1, clientX: 10, clientY: 10 }] });
+      act(() => {
+        vi.advanceTimersByTime(LONG_PRESS_THRESHOLD_MS);
+      });
+      vi.useRealTimers();
+
+      expect(await screen.findByRole("menuitem", { name: "Kultur öffnen" })).toBeInTheDocument();
+    });
+
+    it("does not open the context menu on a short tap", async () => {
+      render(
+        <FocusManagerProvider><MemoryRouter>
+          <YieldOverviewPage />
+        </MemoryRouter></FocusManagerProvider>,
+      );
+      const segment = await screen.findByTestId("yield-bar-2026-W13-1");
+
+      vi.useFakeTimers();
+      fireEvent.touchStart(segment, { touches: [{ identifier: 1, clientX: 10, clientY: 10 }] });
+      fireEvent.touchEnd(segment);
+      act(() => {
+        vi.advanceTimersByTime(LONG_PRESS_THRESHOLD_MS);
+      });
+      vi.useRealTimers();
+
+      expect(screen.queryByRole("menuitem", { name: "Kultur öffnen" })).not.toBeInTheDocument();
+    });
+
+    it("cancels the long press when the touch moves (scroll/drag)", async () => {
+      render(
+        <FocusManagerProvider><MemoryRouter>
+          <YieldOverviewPage />
+        </MemoryRouter></FocusManagerProvider>,
+      );
+      const segment = await screen.findByTestId("yield-bar-2026-W13-1");
+
+      vi.useFakeTimers();
+      fireEvent.touchStart(segment, { touches: [{ identifier: 1, clientX: 10, clientY: 10 }] });
+      fireEvent.touchMove(segment, { touches: [{ identifier: 1, clientX: 60, clientY: 60 }] });
+      act(() => {
+        vi.advanceTimersByTime(LONG_PRESS_THRESHOLD_MS);
+      });
+      vi.useRealTimers();
+
+      expect(screen.queryByRole("menuitem", { name: "Kultur öffnen" })).not.toBeInTheDocument();
     });
   });
 

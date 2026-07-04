@@ -493,7 +493,7 @@ const TaskRow: React.FC<TaskRowProps> = ({
     onTaskDoubleClick?.(task, taskGroup);
   };
 
-  const handleTaskContextMenu = (event: React.MouseEvent, task: Task) => {
+  const handleTaskContextMenu = (event: React.MouseEvent | React.TouchEvent, task: Task) => {
     // Dismiss the hover tooltip immediately — otherwise it stays visible
     // (the pointer is still technically "hovering" the bar) and overlaps
     // the context menu that's about to open.
