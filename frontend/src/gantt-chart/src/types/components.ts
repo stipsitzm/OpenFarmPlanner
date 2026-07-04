@@ -265,7 +265,7 @@ export interface TaskItemProps {
   onMouseLeave: () => void;
   onClick: (event: React.MouseEvent, task: Task) => void;
   onDoubleClick?: (event: React.MouseEvent, task: Task) => void;
-  onContextMenu?: (event: React.MouseEvent, task: Task) => void;
+  onContextMenu?: (event: React.MouseEvent | React.TouchEvent, task: Task) => void;
   onProgressUpdate?: (task: Task, newPercent: number) => void;
 }
 

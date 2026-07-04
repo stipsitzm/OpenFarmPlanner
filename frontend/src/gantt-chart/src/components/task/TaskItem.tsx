@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import type { TaskItemProps } from "../../types";
 import { ContextMenuIndicator } from "../../../../components/contextMenu/ContextMenuIndicator";
+import { useLongPress } from "../../../../utils/contextMenu";
 
 /**
  * TaskItem Component - Renders an individual task bar in the Gantt chart
@@ -158,21 +159,9 @@ const TaskItem: React.FC<TaskItemProps> = ({
   }, [task?.percent]);
 
   // Long-press (touch) opens the same context menu as a desktop right-click.
-  const longPressTimeoutRef = useRef<number | null>(null);
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (!onContextMenu) return;
-    const touch = e.touches[0];
-    if (!touch) return;
-    longPressTimeoutRef.current = window.setTimeout(() => {
-      onContextMenu(e as unknown as React.MouseEvent, task);
-    }, 550);
-  };
-  const clearLongPress = () => {
-    if (longPressTimeoutRef.current !== null) {
-      window.clearTimeout(longPressTimeoutRef.current);
-      longPressTimeoutRef.current = null;
-    }
-  };
+  const { onTouchStart, onTouchEnd, onTouchMove, isLongPressing } = useLongPress((event) => {
+    onContextMenu?.(event, task);
+  });
 
   if (!isValidTask) {
     return null;
@@ -204,9 +193,9 @@ const TaskItem: React.FC<TaskItemProps> = ({
         onClick={(e) => onClick(e, task)}
         onDoubleClick={onDoubleClick ? (e) => onDoubleClick(e, task) : undefined}
         onContextMenu={onContextMenu ? (e) => onContextMenu(e, task) : undefined}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={clearLongPress}
-        onTouchMove={clearLongPress}
+        onTouchStart={onContextMenu ? onTouchStart : undefined}
+        onTouchEnd={onContextMenu ? onTouchEnd : undefined}
+        onTouchMove={onContextMenu ? onTouchMove : undefined}
         onMouseDown={canMoveTask ? handleTaskMouseDown : undefined}
         onMouseEnter={(e) => onMouseEnter(e, task)}
         onMouseLeave={onMouseLeave}
@@ -214,6 +203,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
         data-task-id={task.id}
         data-instance-id={instanceId}
         data-dragging={isDragging ? "true" : "false"}
+        data-long-pressing={onContextMenu && isLongPressing ? "true" : undefined}
         data-rmg-component="task"
       >
         {customTaskContent}
@@ -256,9 +246,9 @@ const TaskItem: React.FC<TaskItemProps> = ({
       onClick={(e) => onClick(e, task)}
       onDoubleClick={onDoubleClick ? (e) => onDoubleClick(e, task) : undefined}
       onContextMenu={onContextMenu ? (e) => onContextMenu(e, task) : undefined}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={clearLongPress}
-      onTouchMove={clearLongPress}
+      onTouchStart={onContextMenu ? onTouchStart : undefined}
+      onTouchEnd={onContextMenu ? onTouchEnd : undefined}
+      onTouchMove={onContextMenu ? onTouchMove : undefined}
       onMouseDown={canMoveTask ? handleTaskMouseDown : undefined}
       onMouseEnter={(e) => onMouseEnter(e, task)}
       onMouseLeave={onMouseLeave}
@@ -266,6 +256,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
       data-task-id={task.id}
       data-instance-id={instanceId}
       data-dragging={isDragging ? "true" : "false"}
+      data-long-pressing={onContextMenu && isLongPressing ? "true" : undefined}
       data-rmg-component="task"
     >
       {/* Left resize handle */}

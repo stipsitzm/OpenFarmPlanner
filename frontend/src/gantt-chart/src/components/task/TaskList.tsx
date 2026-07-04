@@ -8,6 +8,7 @@ import {
   TREE_INDENT_PX,
 } from "../../utils";
 import { ContextMenuIndicator } from "../../../../components/contextMenu/ContextMenuIndicator";
+import { useLongPress } from "../../../../utils/contextMenu";
 
 /**
  * TaskList Component - Displays the list of task groups on the left side of the Gantt chart
@@ -77,20 +78,29 @@ const TaskList: React.FC<TaskListProps> = ({
     onToggleGroupExpand?.(groupId);
   };
 
-  const longPressTimeoutRef = React.useRef<number | null>(null);
+  // Only one row can be pressed at a time, so a single long-press timer
+  // (keyed by the currently pressed group) covers every tree row.
+  const [pressedGroupId, setPressedGroupId] = React.useState<string | null>(null);
+  const pressedGroupRef = React.useRef<TaskGroup | null>(null);
+  const {
+    onTouchStart: startGroupLongPress,
+    onTouchEnd: clearGroupLongPressBase,
+    isLongPressing,
+  } = useLongPress((event) => {
+    const group = pressedGroupRef.current;
+    if (group && onGroupContextMenu) {
+      onGroupContextMenu(event, group);
+    }
+  });
   const handleGroupTouchStart = (event: React.TouchEvent, group: TaskGroup) => {
     if (!onGroupContextMenu) return;
-    const touch = event.touches[0];
-    if (!touch) return;
-    longPressTimeoutRef.current = window.setTimeout(() => {
-      onGroupContextMenu(event, group);
-    }, 550);
+    pressedGroupRef.current = group;
+    setPressedGroupId(group.id);
+    startGroupLongPress(event);
   };
   const clearGroupLongPress = () => {
-    if (longPressTimeoutRef.current !== null) {
-      window.clearTimeout(longPressTimeoutRef.current);
-      longPressTimeoutRef.current = null;
-    }
+    clearGroupLongPressBase();
+    setPressedGroupId(null);
   };
 
   return (
@@ -141,6 +151,7 @@ const TaskList: React.FC<TaskListProps> = ({
               data-depth={depth}
               data-expanded={taskGroup.isExpandable ? isExpanded : undefined}
               data-hover-linked={hoveredGroupId === taskGroup.id ? "true" : undefined}
+              data-long-pressing={isLongPressing && pressedGroupId === taskGroup.id ? "true" : undefined}
             >
               <div
                 className="rmg-task-group-content rmg-task-group-tree-content"

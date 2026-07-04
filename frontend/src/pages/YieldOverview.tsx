@@ -37,6 +37,7 @@ import {
   shouldOpenCustomContextMenu,
   suppressNativeContextMenu,
   useCloseCustomContextMenuOnNativeContextMenu,
+  useLongPress,
 } from "../utils/contextMenu";
 import { ContextMenuIndicator } from "../components/contextMenu/ContextMenuIndicator";
 import { contextMenuIndicatorHostSx } from "../components/contextMenu/contextMenuIndicatorStyles";
@@ -291,23 +292,31 @@ function YieldDistributionChart({
     void navigator.clipboard?.writeText(summary).catch(() => undefined);
   }, []);
 
-  const longPressTimeoutRef = useRef<number | null>(null);
+  // Only one segment can be pressed at a time, so a single long-press timer
+  // (keyed by the currently pressed segment's payload) covers every bar.
+  const [pressedSegmentKey, setPressedSegmentKey] = useState<string | null>(null);
+  const pressedSegmentPayloadRef = useRef<
+    { cultureId: number; cultureName: string; periodLabel: string; yieldValue: number } | null
+  >(null);
+  const { onTouchStart: startSegmentLongPress, onTouchEnd: clearSegmentLongPressBase, isLongPressing } = useLongPress(
+    (event) => {
+      const payload = pressedSegmentPayloadRef.current;
+      if (payload) openContextMenu(event, payload);
+    },
+  );
   const handleSegmentTouchStart = useCallback((
     event: React.TouchEvent,
     payload: { cultureId: number; cultureName: string; periodLabel: string; yieldValue: number },
+    segmentKey: string,
   ) => {
-    const touch = event.touches[0];
-    if (!touch) return;
-    longPressTimeoutRef.current = window.setTimeout(() => {
-      openContextMenu(event, payload);
-    }, 550);
-  }, [openContextMenu]);
+    pressedSegmentPayloadRef.current = payload;
+    setPressedSegmentKey(segmentKey);
+    startSegmentLongPress(event);
+  }, [startSegmentLongPress]);
   const clearSegmentLongPress = useCallback(() => {
-    if (longPressTimeoutRef.current !== null) {
-      window.clearTimeout(longPressTimeoutRef.current);
-      longPressTimeoutRef.current = null;
-    }
-  }, []);
+    clearSegmentLongPressBase();
+    setPressedSegmentKey(null);
+  }, [clearSegmentLongPressBase]);
   const [axisWidth, setAxisWidth] = useState(0);
   const labelStep = getYieldAxisLabelStep(
     axisWidth,
@@ -506,8 +515,9 @@ function YieldDistributionChart({
                           <Box
                             data-testid={`yield-bar-${column.id}-${culture.culture_id}`}
                             data-rmg-component="yield-segment"
+                            data-long-pressing={pressedSegmentKey === `${column.id}-${culture.culture_id}` && isLongPressing ? "true" : undefined}
                             onContextMenu={(event) => openContextMenu(event, segmentPayload)}
-                            onTouchStart={(event) => handleSegmentTouchStart(event, segmentPayload)}
+                            onTouchStart={(event) => handleSegmentTouchStart(event, segmentPayload, `${column.id}-${culture.culture_id}`)}
                             onTouchEnd={clearSegmentLongPress}
                             onTouchMove={clearSegmentLongPress}
                             sx={{
@@ -516,6 +526,10 @@ function YieldDistributionChart({
                               height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
                               minHeight: culture.yield > 0 ? "2px" : 0,
                               backgroundColor: culture.color,
+                              filter: pressedSegmentKey === `${column.id}-${culture.culture_id}` && isLongPressing
+                                ? "brightness(0.9)"
+                                : undefined,
+                              transition: "filter 0.15s ease",
                               ...contextMenuIndicatorHostSx,
                             }}
                           >
