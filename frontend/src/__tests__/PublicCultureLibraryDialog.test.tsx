@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { PublicCultureLibraryDialog } from '../cultures/PublicCultureLibraryDialog';
+import { PublicCultureLibraryDialog } from '../crops/components/PublicCultureLibraryDialog';
 import type { PublicCulture } from '../api/types';
 
 const culture: PublicCulture = {

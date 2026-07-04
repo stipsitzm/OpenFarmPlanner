@@ -30,6 +30,10 @@ urlpatterns = [
     path(_with_prefix('admin/'), admin.site.urls),
     path(_with_prefix('api/auth/'), include('accounts.urls')),
     path(_with_prefix('api/'), include('farm.urls')),
+    # Additive, forward-looking crop-library surface — see
+    # docs/crop-library-architecture.md. Not yet public: same
+    # IsAuthenticated requirement as everything else.
+    path(_with_prefix('api/crops/'), include('crops.urls')),
     path(_with_prefix('agent-login/<str:token>/'), agent_login_consume_view, name='agent-login-consume'),
 ]
 
@@ -38,6 +42,7 @@ if getattr(settings, 'URL_PREFIX', '').strip('/') != legacy_prefix:
     urlpatterns += [
         path(f'{legacy_prefix}/api/auth/', include('accounts.urls')),
         path(f'{legacy_prefix}/api/', include('farm.urls')),
+        path(f'{legacy_prefix}/api/crops/', include('crops.urls')),
         path(f'{legacy_prefix}/agent-login/<str:token>/', agent_login_consume_view, name='agent-login-consume-legacy'),
     ]
 
