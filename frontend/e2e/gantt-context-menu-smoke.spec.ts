@@ -151,7 +151,7 @@ test.describe('gantt calendar context-menu smoke test', () => {
     await expect(page.getByPlaceholder('Suche nach Kultur…')).toBeVisible();
     await expect(page.getByPlaceholder('Suche nach Kultur, Beet, Parzelle oder Standort…')).toHaveCount(0);
 
-    await page.keyboard.press('Alt+s');
+    await page.keyboard.press('/');
     await expect(page.getByPlaceholder('Suche nach Kultur…')).toBeFocused();
     await page.getByPlaceholder('Suche nach Kultur…').fill('Nichts passt hier');
     await expect(page.getByText('Testkultur')).toHaveCount(0);

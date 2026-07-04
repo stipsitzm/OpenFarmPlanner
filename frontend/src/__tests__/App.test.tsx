@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../App';
 import { resolveRouterBasename } from '../routerBasename';
 import { CommandProvider } from '../commands/CommandProvider';
+import { FocusManagerProvider } from '../focus/FocusManager';
 import translations from '@/test-utils/translations';
 import type { AuthUser } from '../auth/types';
 
@@ -81,7 +82,7 @@ describe('App', () => {
   });
 
   it('renders public home page on root path', async () => {
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
 
     expect(await screen.findByText('OpenFarmPlanner')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Anmelden' })).toBeInTheDocument();
@@ -92,7 +93,7 @@ describe('App', () => {
   it('renders imprint route', async () => {
     window.history.pushState({}, '', '/impressum');
 
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
 
     expect(await screen.findByRole('heading', { name: 'Impressum' })).toBeInTheDocument();
   });
@@ -100,7 +101,7 @@ describe('App', () => {
   it('renders privacy route', async () => {
     window.history.pushState({}, '', '/datenschutz');
 
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
 
     expect(await screen.findByRole('heading', { name: 'Datenschutzerklärung' })).toBeInTheDocument();
   });
@@ -123,7 +124,7 @@ describe('App', () => {
     authState.activeProjectId = null;
     window.history.pushState({}, '', '/app/anbauplaene');
 
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
 
     expect(await screen.findByText('Anbauflächen')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: translations.navigation.locations })).not.toBeInTheDocument();
@@ -152,7 +153,7 @@ describe('App', () => {
     authState.activeProjectId = 1;
     window.history.pushState({}, '', '/app/locations');
 
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
 
     const logoLinks = await screen.findAllByRole('link', { name: 'Zur Übersicht' });
     expect(logoLinks[0]).toHaveAttribute('href', '/app/dashboard');
@@ -175,7 +176,7 @@ describe('App', () => {
     };
     window.history.pushState({}, '', '/app');
 
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
     fireEvent.click(await screen.findByLabelText('Mehr'));
     expect(await screen.findByText('Kontoeinstellungen')).toBeInTheDocument();
     expect(screen.getByText('Projekteinstellungen')).toBeInTheDocument();
@@ -201,7 +202,7 @@ describe('App', () => {
     authState.activeProjectId = 1;
     window.history.pushState({}, '', '/app/anbauplaene');
 
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
     fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
     expect(await screen.findByText('Projekteinstellungen')).toBeInTheDocument();
     expect(screen.queryByText('Mitglieder verwalten')).not.toBeInTheDocument();
@@ -228,7 +229,7 @@ describe('App', () => {
     authState.activeProjectId = 1;
     window.history.pushState({}, '', '/app/anbauplaene');
 
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
     fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
     fireEvent.click(await screen.findByText('Projekteinstellungen'));
 
@@ -253,7 +254,7 @@ describe('App', () => {
     authState.activeProjectId = null;
     window.history.pushState({}, '', '/app/fields-beds');
 
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
     fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
     fireEvent.click(await screen.findByText('Neues Projekt'));
     expect(await screen.findByRole('heading', { name: 'Projekt anlegen' })).toBeInTheDocument();
@@ -278,7 +279,7 @@ describe('App', () => {
     authState.activeProjectId = 1;
     window.history.pushState({}, '', '/app/dashboard');
 
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
     fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
     fireEvent.click(await screen.findByText('Neues Projekt'));
 
@@ -315,7 +316,7 @@ describe('App', () => {
     authState.activeProjectId = null;
     window.history.pushState({}, '', '/app/cultures');
 
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
 
     expect(await screen.findByRole('heading', { name: 'Kulturen' })).toBeInTheDocument();
     expect(screen.queryByText('Fehler beim Laden der Kulturen')).not.toBeInTheDocument();
@@ -339,7 +340,7 @@ describe('App', () => {
     authState.activeProjectId = null;
     window.history.pushState({}, '', '/app/suppliers?create=1');
 
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
 
     expect(await screen.findByRole('heading', { name: 'Lieferanten' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ Lieferant anlegen' })).not.toBeInTheDocument();
@@ -371,7 +372,7 @@ describe('App', () => {
         localStorage.setItem('selectedCultureId', '1');
       }
       window.history.pushState({}, '', initialPath);
-      const { unmount } = render(<CommandProvider><App /></CommandProvider>);
+      const { unmount } = render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
 
       await screen.findByText('Anbauflächen');
       const fieldsBedsLink = screen
@@ -402,7 +403,7 @@ describe('App', () => {
 
   it('redirects unauthenticated users from /app to login', async () => {
     window.history.pushState({}, '', '/app');
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
     expect(await screen.findByRole('heading', { name: 'Anmelden' })).toBeInTheDocument();
   });
 
@@ -424,7 +425,7 @@ describe('App', () => {
     authState.activeProjectId = null;
     window.history.pushState({}, '', '/app/this-does-not-exist');
 
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
 
     await screen.findByText('Anbauflächen');
     expect(window.location.pathname).toBe('/app/dashboard');
@@ -433,7 +434,7 @@ describe('App', () => {
   it('redirects unknown top-level routes to home', async () => {
     window.history.pushState({}, '', '/this-page-does-not-exist');
 
-    render(<CommandProvider><App /></CommandProvider>);
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
 
     expect(await screen.findByText('OpenFarmPlanner')).toBeInTheDocument();
     expect(window.location.pathname).toBe('/');

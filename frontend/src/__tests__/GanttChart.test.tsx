@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../auth/authContextShared';
 import { CommandProvider } from '../commands/CommandProvider';
+import { FocusManagerProvider } from '../focus/FocusManager';
 import GanttChartPage from '../pages/GanttChart';
 import { getGanttRenderWindow } from '../pages/ganttRenderWindow';
 
@@ -75,9 +76,9 @@ const authContextValue: AuthContextValue = {
 const renderWithAuth = (): ReturnType<typeof render> => render(
   <MemoryRouter>
     <AuthContext.Provider value={authContextValue}>
-      <CommandProvider>
+      <FocusManagerProvider><CommandProvider>
         <GanttChartPage />
-      </CommandProvider>
+      </CommandProvider></FocusManagerProvider>
     </AuthContext.Provider>
   </MemoryRouter>,
 );
@@ -369,9 +370,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
@@ -397,9 +398,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
@@ -419,9 +420,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
@@ -439,9 +440,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
@@ -470,9 +471,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
@@ -789,9 +790,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
@@ -868,9 +869,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
@@ -931,9 +932,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
@@ -957,7 +958,7 @@ describe('GanttChartPage', () => {
     });
   });
 
-  it('focuses the active search field with Alt+S', async () => {
+  it('focuses the active search field with /', async () => {
     mocks.planList.mockResolvedValue({
       data: {
         results: [
@@ -976,16 +977,16 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
     const searchField = await screen.findByPlaceholderText('Suche nach Kultur, Beet, Parzelle oder Standort…');
     expect(searchField).not.toHaveFocus();
 
-    fireEvent.keyDown(window, { key: 's', altKey: true });
+    fireEvent.keyDown(window, { key: '/' });
 
     await waitFor(() => expect(searchField).toHaveFocus());
   });
@@ -1009,9 +1010,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
@@ -1054,9 +1055,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
@@ -1090,9 +1091,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
@@ -1118,9 +1119,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
@@ -1160,9 +1161,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 
@@ -1196,9 +1197,9 @@ describe('GanttChartPage', () => {
 
     render(
       <MemoryRouter>
-        <CommandProvider>
+        <FocusManagerProvider><CommandProvider>
           <GanttChartPage />
-        </CommandProvider>
+        </CommandProvider></FocusManagerProvider>
       </MemoryRouter>,
     );
 

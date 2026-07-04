@@ -81,11 +81,11 @@ export function createCulturesCommandSpecs({
   return [
     {
       id: 'culture.focusSearch',
-      label: 'Kultur suchen fokussieren (Alt+S)',
+      label: 'Kultur suchen fokussieren (/)',
       group: 'navigation',
       keywords: ['kultur', 'suchen', 'search', 'filter'],
-      shortcutHint: 'Alt+S',
-      keys: { alt: true, key: 's' },
+      shortcutHint: '/',
+      keys: { key: '/' },
       contextTags: ['cultures'],
       isEnabled: () => true,
       action: focusSearch,

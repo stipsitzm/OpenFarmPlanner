@@ -91,6 +91,7 @@ import { getHistoryEntryTarget, getHistoryEntryTitle, isCurrentHistoryEntry } fr
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { useGlobalOverlayKeyboardScroll } from './hooks/useDialogKeyboardScroll';
+import { useFocusRegion } from './focus/useFocusManager';
 import { useTopbarActionsRouteReset } from './hooks/useTopbarActionsRouteReset';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, getKeyboardNavigationRouteFromPathname, normalizeMainRoutePath } from './navigation/mainNavigation';
 import {
@@ -357,6 +358,15 @@ function RootLayout() {
   const currentPathnameRef = React.useRef(location.pathname);
   const expandSidebarBtnRef = React.useRef<HTMLButtonElement>(null);
   const collapseSidebarBtnRef = React.useRef<HTMLButtonElement>(null);
+  // The three primary F6-reachable focus regions of the app shell — see
+  // docs/keyboard-architecture.md. Individual pages register further, more
+  // specific regions (e.g. a chart or table) nested inside 'main-content'.
+  const sidebarRegionRef = React.useRef<HTMLElement | null>(null);
+  const topbarRegionRef = React.useRef<HTMLElement | null>(null);
+  const mainContentRegionRef = React.useRef<HTMLElement | null>(null);
+  useFocusRegion('sidebar', sidebarRegionRef, { label: 'Sidebar', order: 0 });
+  useFocusRegion('topbar', topbarRegionRef, { label: 'Topbar', order: 1 });
+  useFocusRegion('main-content', mainContentRegionRef, { label: 'Hauptinhalt', order: 2 });
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isDesktopUp = useMediaQuery(theme.breakpoints.up('md'));
@@ -370,7 +380,7 @@ function RootLayout() {
   const isTabletOrNarrowDesktop = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const { user, logout, activeProjectId, switchActiveProject } = useAuth();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
-  const { activeCreateActions, openPalette, runPrimaryCreateAction } = useCommandContext();
+  const { activeCreateActions, openPalette, runPrimaryCreateAction, openShortcutsHelp } = useCommandContext();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
   const [projectMenuAnchor, setProjectMenuAnchor] = useState<null | HTMLElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -439,7 +449,7 @@ function RootLayout() {
     }
   }, []);
 
-  const toggleSidebarCollapsed = (): void => {
+  const toggleSidebarCollapsed = useCallback((): void => {
     setSidebarCollapsed((prev) => {
       const next = !prev;
       window.localStorage.setItem('openfarmplanner.sidebarCollapsed', String(next));
@@ -453,7 +463,7 @@ function RootLayout() {
       });
       return next;
     });
-  };
+  }, []);
 
   const handleCollapsedSidebarBackgroundClick = (event: React.MouseEvent<HTMLElement>): void => {
     if (!sidebarCollapsed) {
@@ -471,7 +481,6 @@ function RootLayout() {
   };
 
   const [projectHistoryOpen, setProjectHistoryOpen] = useState(false);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [globalHelpOpen, setGlobalHelpOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [pendingRestoreEntry, setPendingRestoreEntry] = useState<CultureHistoryEntry | null>(null);
@@ -530,7 +539,7 @@ function RootLayout() {
 
   const handleOpenShortcuts = () => {
     handleGlobalMenuClose();
-    setShortcutsOpen(true);
+    openShortcutsHelp();
   };
 
   const openCurrentPageHelp = useCallback((): void => {
@@ -754,7 +763,10 @@ function RootLayout() {
     onOpenVersionHistory: () => { void handleOpenProjectHistory(); },
     onLogout: () => { void handleLogout(); },
     onOpenPalette: openPalette,
-    onOpenShortcuts: openCurrentPageHelp,
+    onOpenPageHelp: openCurrentPageHelp,
+    onOpenShortcutsHelp: openShortcutsHelp,
+    onToggleSidebar: toggleSidebarCollapsed,
+    isSidebarToggleVisible: () => isDesktopUp,
     labels: {
       nextPage: t('commandPalette.commands.nextPage'),
       previousPage: t('commandPalette.commands.previousPage'),
@@ -765,7 +777,9 @@ function RootLayout() {
       openVersionHistory: t('commandPalette.commands.openVersionHistory'),
       logout: t('commandPalette.commands.logout'),
       openPalette: t('commandPalette.label'),
-      openShortcuts: t('commandPalette.commands.openShortcuts'),
+      openPageHelp: t('commandPalette.commands.openPageHelp'),
+      openShortcutsHelp: t('commandPalette.commands.openShortcutsHelp'),
+      toggleSidebar: t('commandPalette.commands.toggleSidebar'),
     },
   }), [
     activeProjectId,
@@ -777,49 +791,18 @@ function RootLayout() {
     handleOpenProjectHistory,
     handleOpenProjectSettings,
     handleSwitchProject,
+    isDesktopUp,
     memberships,
     navigate,
     openCurrentPageHelp,
     openPalette,
+    openShortcutsHelp,
     t,
+    toggleSidebarCollapsed,
   ]);
 
   useRegisterCommands('global-app', globalCommands);
 
-  useEffect(() => {
-    const handleHelpShortcut = (event: KeyboardEvent): void => {
-      const target = event.target as HTMLElement | null;
-      const isTypingTarget = target instanceof HTMLInputElement
-        || target instanceof HTMLTextAreaElement
-        || target?.isContentEditable;
-      if (isTypingTarget) {
-        return;
-      }
-      if (event.key === '?') {
-        event.preventDefault();
-        setGlobalHelpOpen(true);
-      }
-    };
-    window.addEventListener('keydown', handleHelpShortcut);
-    return () => window.removeEventListener('keydown', handleHelpShortcut);
-  }, []);
-  useEffect(() => {
-    const handleSidebarShortcut = (event: KeyboardEvent): void => {
-      const target = event.target as HTMLElement | null;
-      const isTypingTarget = target instanceof HTMLInputElement
-        || target instanceof HTMLTextAreaElement
-        || target?.isContentEditable;
-      if (isTypingTarget || !isDesktopUp) {
-        return;
-      }
-      if (event.ctrlKey && !event.altKey && !event.metaKey && event.key.toLowerCase() === 'b') {
-        event.preventDefault();
-        toggleSidebarCollapsed();
-      }
-    };
-    window.addEventListener('keydown', handleSidebarShortcut);
-    return () => window.removeEventListener('keydown', handleSidebarShortcut);
-  }, [isDesktopUp]);
   useEffect(() => {
     setSidebarCollapsed(!isLargeDesktop);
   }, [isLargeDesktop]);
@@ -886,6 +869,7 @@ function RootLayout() {
       {isDesktopUp ? (
         <Box
           component="aside"
+          ref={sidebarRegionRef}
           onClick={handleCollapsedSidebarBackgroundClick}
           sx={getNavigationShellSx(sidebarWidth, sidebarCollapsed)}
         >
@@ -979,6 +963,7 @@ function RootLayout() {
         })}
       </Box>
       <AppBar
+        ref={topbarRegionRef}
         position="sticky"
         color="inherit"
         elevation={0}
@@ -1814,6 +1799,7 @@ function RootLayout() {
 
       <Box
         component="main"
+        ref={mainContentRegionRef}
         sx={{
           width: '100%',
           // Global outer page gutter (single source of truth for workspace pages).
@@ -1964,47 +1950,6 @@ function RootLayout() {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>{t('commandPalette.shortcutsTitle')}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={1.5}>
-            <Typography variant="subtitle2">{t('commandPalette.shortcutSections.navigation')}</Typography>
-            <List dense disablePadding>
-              <ListItem><ListItemText primary={t('commandPalette.createNewShortcut')} secondary="Alt+Shift+N" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.nextPage')} secondary="Ctrl+Shift+↓" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.previousPage')} secondary="Ctrl+Shift+↑" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.openVersionHistory')} secondary="Alt+V" /></ListItem>
-            </List>
-            <Typography variant="subtitle2">{t('commandPalette.shortcutSections.viewsLayout')}</Typography>
-            <List dense disablePadding>
-              <ListItem><ListItemText primary={t('commandPalette.commands.toggleSidebar')} secondary="Ctrl+B" /></ListItem>
-            </List>
-            <Typography variant="subtitle2">{t('commandPalette.contextTitles.calendar')}</Typography>
-            <List dense disablePadding>
-              <ListItem><ListItemText primary={t('commandPalette.commands.calendarToday')} secondary="T" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.calendarPreviousPeriod')} secondary="←" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.calendarNextPeriod')} secondary="→" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.calendarDayView')} secondary="1" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.calendarWeekView')} secondary="2" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.calendarMonthView')} secondary="3" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.calendarQuarterView')} secondary="4" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.calendarYearView')} secondary="5" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.calendarOccupancy')} secondary="F" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.calendarSeedlings')} secondary="A" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.calendarToggleMove')} secondary="Z" /></ListItem>
-            </List>
-            <Typography variant="subtitle2">{t('commandPalette.shortcutSections.dialogsHelp')}</Typography>
-            <List dense disablePadding>
-              <ListItem><ListItemText primary={t('commandPalette.commands.openPageHelp')} secondary="Alt+H" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.label')} secondary="Alt+K" /></ListItem>
-              <ListItem><ListItemText primary={t('commandPalette.commands.closeDialog')} secondary="Esc" /></ListItem>
-            </List>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShortcutsOpen(false)}>{t('common:actions.close')}</Button>
-        </DialogActions>
-      </Dialog>
       <HelpDialog open={globalHelpOpen} onClose={closeGlobalHelp} />
       <Dialog open={mobileProjectSwitcherOpen} onClose={handleCloseMobileProjectSwitcher} fullWidth maxWidth="sm">
         <DialogTitle>{t('projectSwitcher.ariaLabel')}</DialogTitle>

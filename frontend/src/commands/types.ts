@@ -1,4 +1,4 @@
-import type { ShortcutKeys } from '../hooks/useKeyboardShortcuts';
+import type { ShortcutKeyBinding } from '../hooks/useKeyboardShortcuts';
 
 export type CommandContextTag =
   | 'global'
@@ -27,7 +27,7 @@ export interface CommandSpec {
   keywords: string[];
   group: CommandGroup;
   shortcutHint?: string;
-  keys?: ShortcutKeys;
+  keys?: ShortcutKeyBinding;
   allowRepeat?: boolean;
   contextTags: CommandContextTag[];
   isVisible?: () => boolean;

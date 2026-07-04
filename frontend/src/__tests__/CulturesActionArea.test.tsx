@@ -5,6 +5,7 @@ import type { ReactElement } from 'react';
 import type { AxiosError } from 'axios';
 import Cultures from '../pages/Cultures';
 import { CommandProvider } from '../commands/CommandProvider';
+import { FocusManagerProvider } from '../focus/FocusManager';
 
 const {
   listMock,
@@ -115,7 +116,7 @@ function renderCultures(initialPath = '/cultures'): ReturnType<typeof render> {
         <Route
           path="/cultures"
           element={(
-            <CommandProvider><Cultures /></CommandProvider>
+            <FocusManagerProvider><CommandProvider><Cultures /></CommandProvider></FocusManagerProvider>
           )}
         />
       </Routes>

@@ -22,14 +22,14 @@ function buildOptions(overrides: Partial<Parameters<typeof createCulturesCommand
 }
 
 describe('createCulturesCommandSpecs', () => {
-  it('registers a culture.focusSearch command bound to Alt+S', () => {
+  it('registers a culture.focusSearch command bound to /', () => {
     const options = buildOptions();
     const commands = createCulturesCommandSpecs(options);
     const focusSearchCommand = commands.find((command) => command.id === 'culture.focusSearch');
 
     expect(focusSearchCommand).toBeDefined();
-    expect(focusSearchCommand?.keys).toEqual({ alt: true, key: 's' });
-    expect(focusSearchCommand?.shortcutHint).toBe('Alt+S');
+    expect(focusSearchCommand?.keys).toEqual({ key: '/' });
+    expect(focusSearchCommand?.shortcutHint).toBe('/');
     expect(focusSearchCommand?.isEnabled?.()).toBe(true);
 
     focusSearchCommand?.action();

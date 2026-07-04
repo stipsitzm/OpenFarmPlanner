@@ -1,0 +1,185 @@
+# Keyboard Navigation Architecture
+
+Date: 2026-07-03
+Scope: `frontend/src`
+
+Goal: OpenFarmPlanner should be operable almost entirely without a mouse, the
+way VS Code, Figma, or Excel are — via a small number of general rules
+applied consistently, not a growing pile of page-specific shortcuts.
+
+This doc describes the architecture that makes that possible: a **focus
+model** (which area of the screen is "active") and a **shortcut model**
+(what a keypress does while that area is active). Both already existed in
+part before this pass (`commands/`); this pass adds the focus half and wires
+the two together.
+
+## 1. Focus model — `frontend/src/focus/FocusManager.tsx`
+
+The screen is divided into **focus regions**: the sidebar, the topbar, a
+page's main content, and (optionally) more specific regions nested inside
+that — a chart, a table, a calendar. Each region is registered with a
+`FocusManagerProvider` (mounted once, in `main.tsx`, above `CommandProvider`):
+
+```tsx
+const containerRef = useRef<HTMLElement | null>(null);
+useFocusRegion('yield-chart', containerRef, { label: 'Ertragsverteilung', order: 3 });
+
+return <Box ref={containerRef} sx={{ ... }}>...</Box>;
+```
+
+- **F6** moves to the next region, **Shift+F6** to the previous one, cycling
+  by each region's `order`. Landing in a region focuses its first focusable
+  element (or the region container itself, which `useFocusRegion` makes
+  focusable automatically).
+- **Tab / Shift+Tab only move within the currently active region.** Each
+  region traps Tab at its boundary and wraps (last → first, first → last)
+  instead of letting focus escape into the next region. Set `trapTab: false`
+  for a region that already has its own trap (e.g. an MUI `Dialog`, which
+  traps focus internally) to avoid two traps fighting each other.
+- The **active region** is tracked automatically: a single `focusin`
+  listener on `document` finds which registered region contains
+  `event.target`, picking the most deeply nested match when regions are
+  nested (e.g. a chart region inside the page's main-content region).
+- Regions get a visible focus ring for free (`.ofp-focus-region:focus` in
+  `theme.ts`'s `MuiCssBaseline` override) — the container is focusable even
+  with no children, so F6 always lands somewhere visible.
+
+Registered app-wide regions (`App.tsx`, `RootLayout`): `sidebar` (order 0),
+`topbar` (order 1), `main-content` (order 2, wraps the routed page). Pages
+add more specific regions nested inside `main-content` as needed — see §4.
+
+## 2. Shortcut model — `frontend/src/commands/` + `frontend/src/hooks/useKeyboardShortcuts.ts`
+
+This already existed and is the app's shortcut manager; this pass extended
+it rather than building a second one (see AGENTS.md: avoid parallel
+implementations).
+
+- `useKeyboardShortcuts(specs, enabled, { currentContexts })` is the single
+  engine that matches `keydown` against a list of `{ keys, action, when }`
+  specs. It always ignores keys while the user is typing in an editable
+  field (`isTypingInEditableElement`), unless a spec opts in.
+- **Global commands** (`commands/commands.ts`, `commands/CommandProvider.tsx`)
+  are registered by scope (`useRegisterCommands('scope-name', specs)`) and
+  gated by `contextTags` (`'cultures' | 'calendar' | 'plans' | ...`), which a
+  page activates for as long as it's mounted (`useCommandContextTag('cultures')`).
+  This is *page-level* scoping — "this shortcut only applies on this page."
+- **Region shortcuts** (`frontend/src/focus/useRegionShortcuts.ts`) are the
+  new, finer-grained layer: single-key shortcuts (`N`, `E`, `D`, `L`, `G`, …)
+  that only fire while a specific *focus region* is active, reusing the same
+  `useKeyboardShortcuts` engine underneath (no second listener, no second
+  matching logic):
+
+  ```tsx
+  useRegionShortcuts('cultures-table', [
+    { key: 'n', label: 'Neu anlegen', action: createCulture },
+    { key: 'e', label: 'Bearbeiten', action: editSelected },
+  ]);
+  ```
+
+  Because these are single letters gated on "region is active AND not
+  typing," they can't collide with anything — different regions (and
+  different pages, via context tags) can reuse the same letter for a
+  different, locally obvious action.
+- A binding can list more than one key combination
+  (`keys: [{ ctrl: true, key: 'k' }, { alt: true, key: 'k' }]`) — used for
+  the command palette, which now opens on **Ctrl+K** (the convention used by
+  VS Code, Slack, Linear, GitHub) as well as the app's original **Alt+K**.
+- Punctuation keys (`?`, `/`) match regardless of the Shift key's actual
+  state, since whether they need Shift depends on keyboard layout (e.g. `/`
+  is Shift+7 on a German keyboard) — see `isShiftInsensitiveKey` in
+  `useKeyboardShortcuts.ts`.
+
+### Migrated/removed shortcuts
+
+- **Alt+S is gone.** It was used inconsistently as a page-local "focus
+  search" shortcut (Cultures, the calendar). It's replaced by **`/`**
+  (focus the page's filter/search field) — chosen over `F` because `F`
+  already means "show Feldbelegung" in the calendar; picking a shortcut that
+  collides with an existing one just to match a suggestion literally would
+  have been worse than picking a different, equally standard key. `/` is
+  also the more universally recognized "jump to search" key (GitHub, etc.).
+- **`?`, Ctrl+B (sidebar toggle)** used to be raw `window.addEventListener('keydown', ...)`
+  listeners in `App.tsx`, duplicated a second time for `?` in
+  `pages/Cultures.tsx` (which meant pressing `?` on the Cultures page could
+  open two different dialogs at once). Both are now regular commands
+  registered through the same system as everything else — one listener,
+  one source of truth.
+
+## 3. Shortcuts help (`?`)
+
+`?` opens a single dialog (`CommandProvider`'s `helpOpen` state, previously
+built but never wired to anything) showing:
+1. Universal keys (F6, Shift+F6, Tab/Shift+Tab, Esc) — always relevant.
+2. The **current focus region's** single-key shortcuts (from
+   `useRegionShortcuts`'s registry, filtered by `activeRegionId`).
+3. All commands active for the current page (grouped by context tag, same
+   list the command palette searches).
+
+This replaced three separate, drifting implementations (a static, hand
+maintained list in `App.tsx`, a near-duplicate in `pages/Cultures.tsx`, and
+dead code in `CommandProvider.tsx` that built the right data but was never
+opened) with one dynamic one that can't go stale relative to what's actually
+registered.
+
+## 4. Component model for interactive widgets (tables, charts, calendars)
+
+There's no single shared base class for "an interactive widget" — MUI
+context menus (`<Menu>`) already give Arrow/Home/End/Enter/Esc for free, and
+DataGrid has its own working cell-navigation layer
+(`components/data-grid/keyboardNavigation.ts`). What's shared going forward
+is the *pattern*, demonstrated end-to-end on the yield distribution chart
+(`pages/YieldOverview.tsx`):
+
+1. Register the widget's container as a focus region (`useFocusRegion`).
+2. Track "the current item" in state (roving tabindex): every item gets
+   `tabIndex={-1}` except the current one (`tabIndex={0}`), and moving
+   focus calls `.focus()` on the new current item's DOM node directly
+   (`focusSegment` in `YieldOverview.tsx`) rather than relying on the
+   browser to figure out where Tab should go next.
+3. Arrow keys move "current item" within the widget; **Enter** activates
+   the item's primary action; **Space** toggles a secondary
+   view (a tooltip, in the chart's case); the `ContextMenu` key and
+   **Shift+F10** open the same context menu a right-click would, positioned
+   from the focused element's bounding rect instead of a mouse event.
+4. A tooltip or popover driven by keyboard state must be a *fully controlled*
+   MUI `Tooltip` (`open` always a real boolean, never `undefined`) — MUI
+   locks a `Tooltip` into "uncontrolled" mode forever if its first render has
+   `open={undefined}`, so a later prop flip to `true` is silently ignored.
+
+Applying this same pattern to the Gantt calendar's bars (2D, collision-based
+layout) and to DataGrid (which already has its own cell-navigation code) is
+future work — the reference implementation and this write-up are meant to
+make that a mechanical port rather than a fresh design exercise each time.
+
+## 5. Adding this to a new page
+
+```tsx
+// 1. Register the page's own region(s), nested under 'main-content'.
+const tableRef = useRef<HTMLElement | null>(null);
+useFocusRegion('my-page-table', tableRef, { label: 'Meine Tabelle', order: 10 });
+
+// 2. Register single-key shortcuts, scoped to that region.
+useRegionShortcuts('my-page-table', [
+  { key: 'n', label: 'Neu anlegen', action: handleCreate },
+  { key: 'e', label: 'Bearbeiten', action: handleEdit, when: () => Boolean(selectedRow) },
+]);
+
+// 3. If the widget has a list of items, use roving tabindex + arrow keys
+//    (see YieldOverview.tsx's segments for the reference pattern).
+```
+
+No new provider, no new listener, no page-specific keydown plumbing — the
+existing `FocusManagerProvider` and `CommandProvider` (already mounted once
+in `main.tsx`) pick it up automatically, and it shows up in the `?` dialog
+without any extra wiring.
+
+## 6. Testing
+
+- `frontend/src/__tests__/focus/FocusManager.test.tsx` — region
+  registration/cycling/Tab-trap/active-region-tracking, and
+  `useRegionShortcuts` scoping.
+- `frontend/src/__tests__/commandProvider.test.tsx` — Ctrl+K/Alt+K palette
+  alias, `?` shortcuts-help dialog, Ctrl+B sidebar toggle as a command.
+- `frontend/src/__tests__/YieldOverview.test.tsx` — chart arrow-key/Enter/
+  Space/ContextMenu-key navigation (`describe('keyboard navigation on the
+  chart bars')`).

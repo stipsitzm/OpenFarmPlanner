@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { useMemo } from 'react';
 import { CommandProvider } from '../commands/CommandProvider';
+import { FocusManagerProvider } from '../focus/FocusManager';
 import { useCommandContext, useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import { createRootCommands } from '../commands/commands';
 import type { CommandSpec } from '../commands/types';
@@ -30,9 +31,9 @@ function RootCommandFixture(props: {
   onPreviousPage?: () => void;
   onOpenPalette?: () => void;
   onOpenProjectSettings?: () => void;
-  onOpenShortcuts?: () => void;
+  onOpenPageHelp?: () => void;
 }): React.ReactElement {
-  const { openPalette } = useCommandContext();
+  const { openPalette, openShortcutsHelp } = useCommandContext();
   const commands = useMemo(() => createRootCommands({
     currentPath: props.currentPath ?? '/app/cultures',
     activeProjectId: 1,
@@ -49,7 +50,10 @@ function RootCommandFixture(props: {
     onOpenVersionHistory: vi.fn(),
     onLogout: vi.fn(),
     onOpenPalette: props.onOpenPalette ?? openPalette,
-    onOpenShortcuts: props.onOpenShortcuts ?? vi.fn(),
+    onOpenPageHelp: props.onOpenPageHelp ?? vi.fn(),
+    onOpenShortcutsHelp: openShortcutsHelp,
+    onToggleSidebar: vi.fn(),
+    isSidebarToggleVisible: () => true,
     labels: {
       nextPage: 'Nächste Seite',
       previousPage: 'Vorherige Seite',
@@ -60,9 +64,11 @@ function RootCommandFixture(props: {
       openVersionHistory: 'Versionsverlauf',
       logout: 'Abmelden',
       openPalette: 'Aktionssuche',
-      openShortcuts: 'Tastenkürzel',
+      openPageHelp: 'Seitenhilfe',
+      openShortcutsHelp: 'Tastenkürzel anzeigen',
+      toggleSidebar: 'Sidebar ein-/ausklappen',
     },
-  }), [openPalette, props.currentPath, props.onNextPage, props.onOpenPalette, props.onOpenProjectSettings, props.onOpenShortcuts, props.onPreviousPage]);
+  }), [openPalette, openShortcutsHelp, props.currentPath, props.onNextPage, props.onOpenPalette, props.onOpenProjectSettings, props.onOpenPageHelp, props.onPreviousPage]);
 
   useRegisterCommands('root', commands);
   return <div>root fixture</div>;
@@ -75,9 +81,9 @@ describe('CommandProvider', () => {
 
   it('hides unavailable commands in palette', async () => {
     render(
-      <CommandProvider>
+      <FocusManagerProvider><CommandProvider>
         <CommandFixture available={false} />
-      </CommandProvider>,
+      </CommandProvider></FocusManagerProvider>,
     );
 
     fireEvent.keyDown(window, { key: 'k', altKey: true });
@@ -95,9 +101,9 @@ describe('CommandProvider', () => {
     }
 
     const { rerender } = render(
-      <CommandProvider>
+      <FocusManagerProvider><CommandProvider>
         <FeaturePageFixture />
-      </CommandProvider>,
+      </CommandProvider></FocusManagerProvider>,
     );
 
     act(() => {
@@ -106,9 +112,9 @@ describe('CommandProvider', () => {
     expect(localStorage.getItem('ofp.shortcutHintSeen')).toBe('1');
 
     rerender(
-      <CommandProvider>
+      <FocusManagerProvider><CommandProvider>
         <div>second</div>
-      </CommandProvider>,
+      </CommandProvider></FocusManagerProvider>,
     );
 
     act(() => {
@@ -121,15 +127,15 @@ describe('CommandProvider', () => {
 
   it('shows root shortcut commands but hides direct page navigation entries', () => {
     render(
-      <CommandProvider>
+      <FocusManagerProvider><CommandProvider>
         <RootCommandFixture currentPath="/app/cultures" />
-      </CommandProvider>,
+      </CommandProvider></FocusManagerProvider>,
     );
 
     fireEvent.keyDown(window, { key: 'k', altKey: true });
 
     expect(screen.getAllByText('Aktionssuche').length).toBeGreaterThan(0);
-    expect(screen.getByText('Tastenkürzel')).toBeInTheDocument();
+    expect(screen.getByText('Seitenhilfe')).toBeInTheDocument();
     expect(screen.getByText('Projekteinstellungen')).toBeInTheDocument();
     expect(screen.getByText('Projekt wechseln: Garten')).toBeInTheDocument();
     expect(screen.getByText('Nächste Seite')).toBeInTheDocument();
@@ -138,9 +144,9 @@ describe('CommandProvider', () => {
 
   it('opens the command palette with Alt+K when not typing', () => {
     render(
-      <CommandProvider>
+      <FocusManagerProvider><CommandProvider>
         <RootCommandFixture />
-      </CommandProvider>,
+      </CommandProvider></FocusManagerProvider>,
     );
 
     fireEvent.keyDown(window, { key: 'k', altKey: true });
@@ -150,10 +156,10 @@ describe('CommandProvider', () => {
 
   it('does not open the command palette with Alt+K while typing in an input', () => {
     render(
-      <CommandProvider>
+      <FocusManagerProvider><CommandProvider>
         <RootCommandFixture />
         <input aria-label="focused input" />
-      </CommandProvider>,
+      </CommandProvider></FocusManagerProvider>,
     );
 
     const input = screen.getByRole('textbox', { name: 'focused input' });
@@ -166,9 +172,9 @@ describe('CommandProvider', () => {
   it('keeps Ctrl+Shift+Arrow navigation working through root commands', () => {
     const onNextPage = vi.fn();
     render(
-      <CommandProvider>
+      <FocusManagerProvider><CommandProvider>
         <RootCommandFixture onNextPage={onNextPage} />
-      </CommandProvider>,
+      </CommandProvider></FocusManagerProvider>,
     );
 
     fireEvent.keyDown(window, { key: 'ArrowDown', ctrlKey: true, shiftKey: true });
@@ -179,9 +185,9 @@ describe('CommandProvider', () => {
   it('shows project settings as root command without requiring a keyboard shortcut', () => {
     const onOpenProjectSettings = vi.fn();
     render(
-      <CommandProvider>
+      <FocusManagerProvider><CommandProvider>
         <RootCommandFixture onOpenProjectSettings={onOpenProjectSettings} />
-      </CommandProvider>,
+      </CommandProvider></FocusManagerProvider>,
     );
 
     fireEvent.keyDown(window, { key: 'k', altKey: true });
@@ -191,15 +197,69 @@ describe('CommandProvider', () => {
   });
 
   it('runs page help shortcut with Alt+H', () => {
-    const onOpenShortcuts = vi.fn();
+    const onOpenPageHelp = vi.fn();
     render(
-      <CommandProvider>
-        <RootCommandFixture onOpenShortcuts={onOpenShortcuts} />
-      </CommandProvider>,
+      <FocusManagerProvider><CommandProvider>
+        <RootCommandFixture onOpenPageHelp={onOpenPageHelp} />
+      </CommandProvider></FocusManagerProvider>,
     );
 
     fireEvent.keyDown(window, { key: 'h', altKey: true });
 
-    expect(onOpenShortcuts).toHaveBeenCalledTimes(1);
+    expect(onOpenPageHelp).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the command palette with Ctrl+K, the professional-app convention, alongside the legacy Alt+K', () => {
+    render(
+      <FocusManagerProvider><CommandProvider>
+        <RootCommandFixture />
+      </CommandProvider></FocusManagerProvider>,
+    );
+
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+
+    expect(screen.getByRole('textbox', { name: 'Aktionssuche' })).toBeInTheDocument();
+  });
+
+  it('opens the dynamic shortcuts-help dialog with a bare "?"', () => {
+    render(
+      <FocusManagerProvider><CommandProvider>
+        <RootCommandFixture />
+      </CommandProvider></FocusManagerProvider>,
+    );
+
+    fireEvent.keyDown(window, { key: '?' });
+
+    expect(screen.getByText('Projekteinstellungen')).toBeInTheDocument();
+  });
+
+  it('toggles the sidebar with Ctrl+B through the registered command', () => {
+    const onToggleSidebar = vi.fn();
+    function Fixture() {
+      const commands = useMemo<CommandSpec[]>(() => [
+        {
+          id: 'view.toggleSidebar',
+          label: 'Sidebar ein-/ausklappen',
+          group: 'navigation',
+          keywords: ['sidebar'],
+          shortcutHint: 'Ctrl+B',
+          keys: { ctrl: true, key: 'b' },
+          contextTags: ['global'],
+          action: onToggleSidebar,
+        },
+      ], []);
+      useRegisterCommands('fixture-sidebar', commands);
+      return <div>fixture</div>;
+    }
+
+    render(
+      <FocusManagerProvider><CommandProvider>
+        <Fixture />
+      </CommandProvider></FocusManagerProvider>,
+    );
+
+    fireEvent.keyDown(window, { key: 'b', ctrlKey: true });
+
+    expect(onToggleSidebar).toHaveBeenCalledTimes(1);
   });
 });

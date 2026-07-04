@@ -18,6 +18,7 @@ import type { ShortcutSpec } from '../hooks/useKeyboardShortcuts';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useTranslation } from '../i18n';
 import { CommandContext } from './commandContextShared';
+import { useFocusManager } from '../focus/useFocusManager';
 
 const CONTEXT_TITLE_KEYS: Record<CommandContextTag, string> = {
   global: 'commandPalette.contextTitles.global',
@@ -39,6 +40,7 @@ const getAvailableCreateActions = (actions: CreateAction[]): CreateAction[] => a
 
 export function CommandProvider({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation(['navigation', 'common']);
+  const { activeRegionId, getRegionShortcutsHelp } = useFocusManager();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [createChooserOpen, setCreateChooserOpen] = useState(false);
@@ -84,6 +86,16 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
 
   const closePalette = useCallback(() => {
     setPaletteOpen(false);
+    previouslyFocusedElementRef.current?.focus();
+  }, []);
+
+  const openShortcutsHelp = useCallback(() => {
+    previouslyFocusedElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setHelpOpen(true);
+  }, []);
+
+  const closeShortcutsHelp = useCallback(() => {
+    setHelpOpen(false);
     previouslyFocusedElementRef.current?.focus();
   }, []);
 
@@ -210,6 +222,11 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
       .filter((group) => group.commands.length > 0);
   }, [helpCommands, t]);
 
+  const currentRegionShortcuts = useMemo(
+    () => getRegionShortcutsHelp(activeRegionId),
+    [activeRegionId, getRegionShortcutsHelp],
+  );
+
   const contextValue = useMemo(
     () => ({
       registerCommands,
@@ -217,6 +234,8 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
       setContextTag,
       openPalette,
       closePalette,
+      openShortcutsHelp,
+      closeShortcutsHelp,
       currentContextTags,
       activeCreateActions,
       runPrimaryCreateAction,
@@ -224,8 +243,10 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
     [
       activeCreateActions,
       closePalette,
+      closeShortcutsHelp,
       currentContextTags,
       openPalette,
+      openShortcutsHelp,
       registerCommands,
       registerCreateActions,
       runPrimaryCreateAction,
@@ -255,12 +276,49 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
           </List>
         </DialogContent>
       </Dialog>
-      <Dialog open={helpOpen} onClose={() => setHelpOpen(false)} fullWidth maxWidth="md">
+      <Dialog open={helpOpen} onClose={closeShortcutsHelp} fullWidth maxWidth="md">
         <DialogTitle>{t('commandPalette.contextualShortcutsTitle')}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
             {t('commandPalette.contextualShortcutsDescription')}
           </Typography>
+          <div>
+            <Typography variant="h6" sx={{ mt: 2 }}>{t('commandPalette.universalShortcutsTitle')}</Typography>
+            <List dense>
+              <ListItem>
+                <ListItemText primary={t('commandPalette.universalShortcuts.nextRegion')} secondary="F6" slotProps={{ secondary: { style: { textAlign: 'right' } } }} />
+              </ListItem>
+              <ListItem>
+                <ListItemText primary={t('commandPalette.universalShortcuts.previousRegion')} secondary="Shift+F6" slotProps={{ secondary: { style: { textAlign: 'right' } } }} />
+              </ListItem>
+              <ListItem>
+                <ListItemText primary={t('commandPalette.universalShortcuts.withinRegion')} secondary="Tab / Shift+Tab" slotProps={{ secondary: { style: { textAlign: 'right' } } }} />
+              </ListItem>
+              <ListItem>
+                <ListItemText primary={t('commandPalette.universalShortcuts.closeDialog')} secondary="Esc" slotProps={{ secondary: { style: { textAlign: 'right' } } }} />
+              </ListItem>
+            </List>
+          </div>
+          {currentRegionShortcuts.length > 0 && (
+            <div>
+              <Typography variant="h6" sx={{ mt: 2 }}>{t('commandPalette.currentRegionShortcutsTitle')}</Typography>
+              <List dense>
+                {currentRegionShortcuts.map((shortcut) => (
+                  <ListItem key={`region-${shortcut.key}`}>
+                    <ListItemText
+                      primary={shortcut.label}
+                      secondary={shortcut.key}
+                      slotProps={{
+                        secondary: {
+                          style: { textAlign: 'right' },
+                        },
+                      }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </div>
+          )}
           {groupedHelpCommands.map((group) => (
             <div key={group.tag}>
               <Typography variant="h6" sx={{ mt: 2 }}>{group.title}</Typography>

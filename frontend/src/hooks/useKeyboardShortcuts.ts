@@ -7,10 +7,15 @@ export interface ShortcutKeys {
   key: string;
 }
 
+/** One shortcut can be reachable via more than one key combination (e.g. a
+ * command palette bound to both the app's legacy Alt+K and the Ctrl+K
+ * convention most professional apps use). */
+export type ShortcutKeyBinding = ShortcutKeys | ShortcutKeys[];
+
 export interface ShortcutSpec {
   id: string;
   title: string;
-  keys: ShortcutKeys;
+  keys: ShortcutKeyBinding;
   contexts: string[];
   allowRepeat?: boolean;
   when?: () => boolean;
@@ -25,15 +30,25 @@ const normalizeKey = (key: string): string => {
   return key;
 };
 
+/** A single, non-alphanumeric character (e.g. `?`, `!`) usually requires
+ * Shift to type on common layouts, but not on all of them — so unless a
+ * binding explicitly cares about Shift, punctuation keys match regardless of
+ * the Shift key's actual state. Letters/digits still require an exact Shift
+ * match, since Shift there changes the produced key entirely. */
+const isShiftInsensitiveKey = (keys: ShortcutKeys): boolean => (
+  keys.shift === undefined && keys.key.length === 1 && !/[a-z0-9]/i.test(keys.key)
+);
+
 const hasModifierMismatch = (event: KeyboardEvent, keys: ShortcutKeys): boolean => {
   const expectedAlt = Boolean(keys.alt);
   const expectedCtrl = Boolean(keys.ctrl);
   const expectedShift = Boolean(keys.shift);
+  const shiftMismatch = !isShiftInsensitiveKey(keys) && event.shiftKey !== expectedShift;
 
   return (
     event.altKey !== expectedAlt ||
     event.ctrlKey !== expectedCtrl ||
-    event.shiftKey !== expectedShift ||
+    shiftMismatch ||
     event.metaKey
   );
 };
@@ -78,6 +93,26 @@ export const matchesShortcut = (event: KeyboardEvent, keys: ShortcutKeys): boole
   return normalizeKey(event.key) === normalizeKey(keys.key);
 };
 
+export const matchesShortcutBinding = (event: KeyboardEvent, binding: ShortcutKeyBinding): boolean => {
+  const bindings = Array.isArray(binding) ? binding : [binding];
+  return bindings.some((keys) => matchesShortcut(event, keys));
+};
+
+/** Renders a binding as a human-readable hint, e.g. "Ctrl+K" or "Ctrl+K / Alt+K". */
+export const describeShortcutBinding = (binding: ShortcutKeyBinding): string => {
+  const bindings = Array.isArray(binding) ? binding : [binding];
+  return bindings
+    .map((keys) => {
+      const parts: string[] = [];
+      if (keys.ctrl) parts.push('Ctrl');
+      if (keys.alt) parts.push('Alt');
+      if (keys.shift) parts.push('Shift');
+      parts.push(keys.key.length === 1 ? keys.key.toUpperCase() : keys.key);
+      return parts.join('+');
+    })
+    .join(' / ');
+};
+
 interface UseKeyboardShortcutsOptions {
   currentContexts: string[];
   allowWhenTyping?: boolean;
@@ -114,7 +149,7 @@ export function useKeyboardShortcuts(
           return false;
         }
 
-        return matchesShortcut(event, shortcut.keys);
+        return matchesShortcutBinding(event, shortcut.keys);
       });
 
       if (!matchedShortcut) {

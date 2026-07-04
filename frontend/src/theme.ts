@@ -159,6 +159,27 @@ const theme = createTheme({
   },
   components: {
 
+    MuiCssBaseline: {
+      styleOverrides: (theme) => ({
+        // Baseline visible-focus ring for anything that doesn't already get
+        // one from a component-specific override below (custom focus
+        // regions, chart bars, gantt tasks, etc.) — part of the keyboard
+        // navigation architecture (see docs/keyboard-architecture.md): the
+        // user must always be able to see which area/element is active.
+        ':focus-visible': {
+          outline: `2px solid ${theme.palette.primary.main}`,
+          outlineOffset: 2,
+        },
+        // Focus regions (see src/focus/FocusManager.tsx) are focused
+        // programmatically (F6), which some browsers don't treat as
+        // ":focus-visible" — so they get a plain ":focus" ring instead.
+        '.ofp-focus-region:focus': {
+          outline: `2px solid ${theme.palette.primary.main}`,
+          outlineOffset: 2,
+        },
+      }),
+    },
+
     MuiDialogContent: {
       styleOverrides: {
         root: {

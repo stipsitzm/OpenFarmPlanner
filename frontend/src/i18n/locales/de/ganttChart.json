@@ -106,7 +106,7 @@
     "yearView": "Jahresansicht anzeigen",
     "showOccupancy": "Feldbelegung anzeigen",
     "showSeedlings": "Anzucht anzeigen",
-    "focusSearch": "Suche fokussieren (Alt+S)"
+    "focusSearch": "Suche fokussieren (/)"
   },
   "modeDescriptions": {
     "occupancy": "Belegung von Parzellen und Beeten im Jahresverlauf. Diese Ansicht unterstützt weiterhin das Verschieben bestehender Anbaupläne.",
