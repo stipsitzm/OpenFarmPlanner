@@ -3,17 +3,56 @@
  */
 
 .gantt-container-wrapper {
-  overflow: auto;
+  overflow: hidden;
   width: 100%;
   margin-top: 1rem;
-  min-height: 400px;
+  min-width: 0;
 }
 
-@media (max-width: 900px) and (max-height: 500px) {
-  .gantt-container-wrapper {
-    width: 100vw;
-    margin-left: calc(50% - 50vw);
-    margin-right: calc(50% - 50vw);
+.gantt-container-wrapper .rmg-gantt-chart {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.gantt-container-wrapper .rmg-container {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gantt-container-wrapper .rmg-container {
+    scrollbar-width: none;
+  }
+
+  .gantt-container-wrapper .rmg-container:hover,
+  .gantt-container-wrapper .rmg-container:focus-within {
+    scrollbar-width: thin;
+  }
+
+  .gantt-container-wrapper .rmg-container::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  .gantt-container-wrapper .rmg-container:hover::-webkit-scrollbar,
+  .gantt-container-wrapper .rmg-container:focus-within::-webkit-scrollbar {
+    width: var(--rmg-scrollbar-size);
+    height: var(--rmg-scrollbar-size);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .gantt-container-wrapper .rmg-container {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .gantt-container-wrapper .rmg-container::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
   }
 }
 

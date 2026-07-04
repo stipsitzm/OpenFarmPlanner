@@ -47,6 +47,8 @@ import {
   type PlantingPlan,
 } from '../api/api';
 import GanttChart, { ViewMode } from '../gantt-chart/src';
+import { CollisionService } from '../gantt-chart/src/services/CollisionService';
+import { estimateTaskGroupLabelHeight } from '../gantt-chart/src/utils';
 import './GanttChart.css';
 import { useCommandContextTag, useRegisterCommands } from '../commands/useCommandContext';
 import PageContainer from '../components/layout/PageContainer';
@@ -93,6 +95,8 @@ const CALENDAR_TIMELINE_VIEW_MODE_STORAGE_KEY = 'openFarmPlanner.ganttChart.time
 const GANTT_STATE_STORAGE_PREFIX = 'openfarmplanner:gantt';
 const DEFAULT_TIMELINE_VIEW_MODE = ViewMode.MONTH;
 const GANTT_LEFT_COLUMN_WIDTH = 220;
+const GANTT_ROW_HEIGHT = 32;
+const GANTT_VIEWPORT_MAX_HEIGHT_SX = { xs: '70svh', sm: '72svh', lg: '76svh' } as const;
 // Above this many combined location+field+bed nodes, default to
 // locations-expanded/fields-collapsed instead of fully expanding the tree.
 const OCCUPANCY_TREE_AUTO_EXPAND_ALL_THRESHOLD = 30;
@@ -122,6 +126,17 @@ const GANTT_UNIT_WIDTH_BY_VIEW_MODE: Record<ViewMode, number> = {
   [ViewMode.QUARTER]: 180,
   [ViewMode.YEAR]: 200,
 };
+
+function getCalendarGanttRowHeight(group: GanttTaskGroup, viewMode: ViewMode): number {
+  if (group.rowHeightOverride !== undefined) {
+    return group.rowHeightOverride;
+  }
+
+  const estimatedLabelHeight = estimateTaskGroupLabelHeight(group, GANTT_LEFT_COLUMN_WIDTH);
+  const taskRows = CollisionService.detectOverlaps(group.tasks, viewMode);
+  return Math.max(estimatedLabelHeight, taskRows.length * GANTT_ROW_HEIGHT + 12);
+}
+
 const CALENDAR_SHORTCUT_VIEW_MODES: Array<{ mode: ViewMode; shortcut: string; labelKey: string }> = [
   { mode: ViewMode.DAY, shortcut: '1', labelKey: 'dayView' },
   { mode: ViewMode.WEEK, shortcut: '2', labelKey: 'weekView' },
@@ -1342,15 +1357,21 @@ function GanttChartPage() {
   ), [calendarMode, editMode, handleTimelineViewModeChange, t]);
 
   const activeTaskGroups = calendarMode === 'occupancy' ? occupancyTaskGroups : seedlingTaskGroups;
+  const getActiveGanttRowHeight = useCallback(
+    (group: GanttTaskGroup): number => getCalendarGanttRowHeight(group, timelineViewMode),
+    [timelineViewMode],
+  );
   const renderWindow = useMemo(
     () => getGanttRenderWindow(
       activeTaskGroups,
       ganttScrollTop,
       ganttViewportHeight,
+      getActiveGanttRowHeight,
     ),
-    [activeTaskGroups, ganttScrollTop, ganttViewportHeight],
+    [activeTaskGroups, ganttScrollTop, ganttViewportHeight, getActiveGanttRowHeight],
   );
   const renderedTaskGroups = renderWindow.groups;
+  const isGanttRenderWindowVirtualized = renderWindow.startIndex > 0 || renderWindow.endIndex < activeTaskGroups.length;
   const totalTimelineItems = useMemo(
     // For occupancy mode, count tasks across the full tree (every bed),
     // not just the currently visible/expanded rows — collapsing a field
@@ -1889,6 +1910,68 @@ function GanttChartPage() {
   useTopbarContextActions(setTopbarContextActions, contextActions);
   useTopbarTitleActions(setTopbarTitleActions, viewModeActions);
 
+  const calendarGanttChart = (
+    <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
+      <GanttChartWithFocusMode
+        key={`${calendarMode}-${ganttRenderKey}`}
+        tasks={renderedTaskGroups}
+        locale={resolvedLocale}
+        localeText={ganttLocaleText}
+        viewMode={timelineViewMode}
+        leftColumnWidth={GANTT_LEFT_COLUMN_WIDTH}
+        rowHeight={GANTT_ROW_HEIGHT}
+        startDate={startDate}
+        endDate={endDate}
+        focusMode={false}
+        editMode={calendarMode === 'occupancy' ? editMode : false}
+        allowTaskResize={false}
+        allowTaskMove={calendarMode === 'occupancy' && editMode}
+        showProgress={false}
+        darkMode={false}
+        onTaskUpdate={calendarMode === 'occupancy' && editMode ? handleTaskUpdate : undefined}
+        onToggleGroupExpand={calendarMode === 'occupancy' ? handleToggleGroupExpand : undefined}
+        onTaskDoubleClick={handleTaskDoubleClickToPlan}
+        onTaskContextMenu={handleTaskContextMenu}
+        onGroupContextMenu={calendarMode === 'occupancy' ? handleGroupContextMenu : undefined}
+        renderHeader={renderGanttHeader}
+        renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
+          ? renderSeedlingTooltip({ task })
+          : renderOccupancyTooltip({ task }))}
+        renderTask={calendarMode === 'seedlings'
+          ? ({ task }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
+              <Box
+                sx={{
+                  width: '100%',
+                  height: 26,
+                  px: 1,
+                  borderRadius: 1,
+                  backgroundColor: task.color || '#3b82f6',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                  boxSizing: 'border-box',
+                  cursor: 'default',
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  className="rmg-task-item-name-maskable"
+                  sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}
+                >
+                  {typeof task.plantsCount === 'number' && task.plantsCount > 0
+                    ? `${task.name} · ${formatPlantCount(task.plantsCount)} ${t('ganttChart:seedlings.plantsUnit')}`
+                    : task.name}
+                </Typography>
+              </Box>
+            )
+          : undefined}
+      />
+    </GanttRenderBoundary>
+  );
+
   if (loading) {
     return (
       <PageContainer variant="workspacePage">
@@ -2054,82 +2137,26 @@ function GanttChartPage() {
               }}
               sx={{
                 position: 'relative',
-                height: 'calc(100vh - 220px)',
-                minHeight: 420,
+                maxHeight: GANTT_VIEWPORT_MAX_HEIGHT_SX,
                 overflowY: 'auto',
                 overflowX: 'hidden',
+                overscrollBehavior: 'contain',
               }}
             >
-              <Box sx={{ height: Math.max(renderWindow.totalHeight, ganttViewportHeight), position: 'relative' }}>
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: ganttScrollTop,
-                    left: 0,
-                    right: 0,
-                  }}
-                >
-                  <GanttRenderBoundary fallback={<Alert severity="error">{t('ganttChart:errors.render')}</Alert>}>
-                    <GanttChartWithFocusMode
-                      key={`${calendarMode}-${ganttRenderKey}`}
-                      tasks={renderedTaskGroups}
-                      locale={resolvedLocale}
-                      localeText={ganttLocaleText}
-                      viewMode={timelineViewMode}
-                      leftColumnWidth={GANTT_LEFT_COLUMN_WIDTH}
-                      rowHeight={32}
-                      startDate={startDate}
-                      endDate={endDate}
-                      focusMode={false}
-                      editMode={calendarMode === 'occupancy' ? editMode : false}
-                      allowTaskResize={false}
-                      allowTaskMove={calendarMode === 'occupancy' && editMode}
-                      showProgress={false}
-                      darkMode={false}
-                      onTaskUpdate={calendarMode === 'occupancy' && editMode ? handleTaskUpdate : undefined}
-                      onToggleGroupExpand={calendarMode === 'occupancy' ? handleToggleGroupExpand : undefined}
-                      onTaskDoubleClick={handleTaskDoubleClickToPlan}
-                      onTaskContextMenu={handleTaskContextMenu}
-                      onGroupContextMenu={calendarMode === 'occupancy' ? handleGroupContextMenu : undefined}
-                      renderHeader={renderGanttHeader}
-                      renderTooltip={({ task }: { task: GanttTask }) => (calendarMode === 'seedlings'
-                        ? renderSeedlingTooltip({ task })
-                        : renderOccupancyTooltip({ task }))}
-                      renderTask={calendarMode === 'seedlings'
-                        ? ({ task }: { task: GanttTask; leftPx: number; widthPx: number; topPx: number }) => (
-                            <Box
-                              sx={{
-                                width: '100%',
-                                height: 26,
-                                px: 1,
-                                borderRadius: 1,
-                                backgroundColor: task.color || '#3b82f6',
-                                color: '#fff',
-                                display: 'flex',
-                                alignItems: 'center',
-                                overflow: 'hidden',
-                                whiteSpace: 'nowrap',
-                                textOverflow: 'ellipsis',
-                                boxSizing: 'border-box',
-                                cursor: 'default',
-                              }}
-                            >
-                              <Typography
-                                variant="caption"
-                                className="rmg-task-item-name-maskable"
-                                sx={{ color: 'inherit', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}
-                              >
-                                {typeof task.plantsCount === 'number' && task.plantsCount > 0
-                                  ? `${task.name} · ${formatPlantCount(task.plantsCount)} ${t('ganttChart:seedlings.plantsUnit')}`
-                                  : task.name}
-                              </Typography>
-                            </Box>
-                          )
-                        : undefined}
-                    />
-                  </GanttRenderBoundary>
+              {isGanttRenderWindowVirtualized ? (
+                <Box sx={{ height: renderWindow.totalHeight, position: 'relative' }}>
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: ganttScrollTop,
+                      left: 0,
+                      right: 0,
+                    }}
+                  >
+                    {calendarGanttChart}
+                  </Box>
                 </Box>
-              </Box>
+              ) : calendarGanttChart}
             </Box>
           </Box>
           </PageSurface>

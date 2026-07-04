@@ -323,6 +323,28 @@ describe('GanttChartPage', () => {
     expect(window.totalHeight).toBeGreaterThan(720);
   });
 
+  it('uses measured row heights for the Gantt render window when provided', () => {
+    const groups = [
+      { id: 'location-1', name: 'Location', tasks: [], rowHeightOverride: 32 },
+      { id: 'field-1', name: 'Field', tasks: [], rowHeightOverride: 32 },
+      {
+        id: 'bed-1',
+        name: 'Bed',
+        tasks: [{
+          id: 'task-1',
+          name: 'Salat',
+          startDate: new Date('2026-04-01'),
+          endDate: new Date('2026-05-01'),
+        }],
+      },
+    ];
+
+    const window = getGanttRenderWindow(groups, 0, 720, (group) => group.rowHeightOverride ?? 44);
+
+    expect(window.totalHeight).toBe(108);
+    expect(window.groups).toHaveLength(3);
+  });
+
   it.each([
     ['small', 5],
     ['medium', 80],
@@ -668,13 +690,38 @@ describe('GanttChartPage', () => {
       const chart = await screen.findByTestId('mock-gantt');
       await waitFor(() => {
         expect(virtualViewport.scrollTop).toBe(40);
-        expect(getComputedStyle(chart.parentElement as HTMLElement).top).toBe('40px');
+        expect(getComputedStyle(chart.parentElement as HTMLElement).position).not.toBe('absolute');
+        expect((chart.parentElement as HTMLElement).style.top).toBe('');
       });
     } finally {
       if (originalDescriptor) {
         Object.defineProperty(Element.prototype, 'scrollTop', originalDescriptor);
       }
     }
+  });
+
+  it('lets short calendars size to content instead of forcing viewport-height whitespace', async () => {
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [{
+          id: 10,
+          culture: 5,
+          culture_name: 'Salat',
+          bed: 3,
+          planting_date: '2026-04-01',
+          harvest_date: '2026-05-01',
+        }],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    renderWithAuth();
+
+    const virtualViewport = await screen.findByTestId('gantt-virtual-viewport');
+    await waitFor(() => expect(screen.getByTestId('mock-gantt')).toBeInTheDocument());
+
+    expect(virtualViewport).not.toHaveStyle({ height: 'calc(100vh - 220px)' });
+    expect(virtualViewport).not.toHaveStyle({ minHeight: '420px' });
   });
 
   it('persists timeline view mode changes and keeps them during data updates', async () => {
