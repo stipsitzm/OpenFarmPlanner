@@ -10,7 +10,6 @@ import logging
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import json
-import re
 from typing import Any
 
 from django.conf import settings
@@ -34,7 +33,7 @@ from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 from django.utils.dateparse import parse_date
 from django.utils.translation import gettext as _
-from .models import AgentLoginToken, Location, Field, Bed, BedLayout, FieldLayout, Culture, CultureSupplierData, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, PublicCulture, culture_media_upload_path, CultureRevision, ProjectRevision, Project, ProjectMembership, ProjectInvitation
+from .models import AgentLoginToken, Location, Field, Bed, BedLayout, FieldLayout, Culture, CultureSupplierData, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, PublicCulture, culture_media_upload_path, EntityRevision, Project, ProjectMembership, ProjectInvitation, format_culture_display_name
 from .project_context import get_active_project_or_400, require_project_admin, resolve_project_for_user
 from .serializers import (
     LocationSerializer,
@@ -105,8 +104,6 @@ from config.frontend_urls import build_public_frontend_url
 
 logger = logging.getLogger(__name__)
 
-BOOTSTRAP_PROJECT_NAME = 'Gelawi Zwiebelzopf'
-BOOTSTRAP_PROJECT_SLUG = 'gelawi-zwiebelzopf'
 MAX_MEDIA_UPLOAD_BYTES = 10 * 1024 * 1024
 ALLOWED_MEDIA_UPLOAD_CONTENT_TYPES = {
     'image/jpeg',
@@ -278,57 +275,103 @@ def _iso_week_key(day: date) -> str:
     return f"{iso_year}-W{iso_week:02d}"
 
 
-def _serialize_project_state(project: Project) -> dict[str, list[dict]]:
-    """Serialize project-scoped entities to JSON-compatible dictionaries."""
-    return {
-        'locations': list(Location.objects.filter(project=project).order_by('id').values()),
-        'fields': list(Field.objects.filter(project=project).order_by('id').values()),
-        'beds': list(Bed.objects.filter(project=project).order_by('id').values()),
-        'bed_layouts': list(BedLayout.objects.filter(project=project).order_by('id').values()),
-        'field_layouts': list(FieldLayout.objects.filter(project=project).order_by('id').values()),
-        'suppliers': list(Supplier.objects.filter(project=project).order_by('id').values()),
-        'cultures': list(Culture.all_objects.filter(project=project).order_by('id').values()),
-        'planting_plans': list(PlantingPlan.objects.filter(project=project).order_by('id').values()),
-        'tasks': list(Task.objects.filter(project=project).order_by('id').values()),
-        'note_attachments': list(NoteAttachment.objects.filter(project=project).order_by('id').values()),
-    }
+# Entity types that participate in per-entity revision history and whole-project
+# point-in-time restore, in FK-dependency order (parents before children).
+_RESTORABLE_ENTITY_TYPES: list[tuple[type, str]] = [
+    (Location, 'location'),
+    (Field, 'field'),
+    (Bed, 'bed'),
+    (BedLayout, 'bed_layout'),
+    (FieldLayout, 'field_layout'),
+    (Supplier, 'supplier'),
+    (Culture, 'culture'),
+    (PlantingPlan, 'planting_plan'),
+    (Task, 'task'),
+    (NoteAttachment, 'note_attachment'),
+]
+
+# Entity types recorded in history but not part of whole-project restore
+# (mirrors the entities `_serialize_project_state` used to omit).
+_ENTITY_TYPE_LABELS: dict[type, str] = {model: label for model, label in _RESTORABLE_ENTITY_TYPES} | {
+    MediaFile: 'media_file',
+    SeedPackage: 'seed_package',
+    CultureSupplierData: 'culture_supplier_data',
+}
 
 
-def _get_bootstrap_project() -> Project:
-    """Return the bootstrap project, creating it when missing."""
-    project, _ = Project.objects.get_or_create(
-        slug=BOOTSTRAP_PROJECT_SLUG,
-        defaults={'name': BOOTSTRAP_PROJECT_NAME, 'description': '', 'is_active': True},
+def _entity_type_for(instance) -> str:
+    return _ENTITY_TYPE_LABELS.get(type(instance), type(instance).__name__.lower())
+
+
+def _current_actor_label(request) -> str:
+    user = getattr(request, 'user', None)
+    if not user or not getattr(user, 'is_authenticated', False):
+        return ''
+    display_name = (getattr(user, 'display_name', '') or '').strip()
+    if display_name:
+        return display_name
+    full_name = (user.get_full_name() or '').strip()
+    if full_name:
+        return full_name
+    return user.email or user.username or ''
+
+
+def _serialize_instance(instance) -> dict[str, Any]:
+    """Serialize a single model instance's current DB row to a JSON-safe dict."""
+    manager = getattr(type(instance), 'all_objects', None) or type(instance)._base_manager
+    row = manager.filter(pk=instance.pk).values().first()
+    if row is None:
+        # Instance has already been deleted from the DB (hard delete) — fall back
+        # to its still-populated in-memory field values.
+        row = {field.attname: getattr(instance, field.attname) for field in instance._meta.concrete_fields}
+    return json.loads(json.dumps(row, cls=DjangoJSONEncoder))
+
+
+def _diff_changed_fields(previous: dict[str, Any], current: dict[str, Any]) -> list[str]:
+    return [
+        key for key, value in current.items()
+        if key not in {'created_at', 'updated_at'} and previous.get(key) != value
+    ]
+
+
+def _entity_display_name(instance) -> str:
+    if isinstance(instance, Culture):
+        return format_culture_display_name(instance.name, instance.variety) or ''
+    if isinstance(instance, PlantingPlan):
+        culture_label = format_culture_display_name(instance.culture.name, instance.culture.variety) if instance.culture_id else None
+        bed_label = instance.bed.name if instance.bed_id else None
+        return ' / '.join(part for part in (culture_label, bed_label) if part)
+    if isinstance(instance, (CultureSupplierData, SeedPackage)):
+        return format_culture_display_name(instance.culture.name, instance.culture.variety) if instance.culture_id else ''
+    if isinstance(instance, Task):
+        return instance.title or ''
+    return getattr(instance, 'name', None) or ''
+
+
+def record_entity_revision(
+    *,
+    project: Project,
+    entity_type: str,
+    object_id: int,
+    action: str,
+    snapshot: dict[str, Any],
+    display_name: str = '',
+    changed_fields: list[str] | None = None,
+    user_name: str = '',
+) -> None:
+    EntityRevision.objects.create(
+        project=project,
+        entity_type=entity_type,
+        object_id=object_id,
+        action=action,
+        display_name=display_name or '',
+        snapshot=snapshot,
+        changed_fields=changed_fields if changed_fields is not None else ([EntityRevision.ACTION_CREATED] if action == EntityRevision.ACTION_CREATED else []),
+        user_name=user_name or '',
     )
-    return project
 
 
-def _create_project_revision(summary: str, project: Project | None = None, *, display_name: str | None = None) -> None:
-    target_project = project or _get_bootstrap_project()
-    final_summary = f"{summary} ({display_name})" if display_name else summary
-    snapshot = json.loads(json.dumps(_serialize_project_state(target_project), cls=DjangoJSONEncoder))
-    ProjectRevision.objects.create(snapshot=snapshot, summary=final_summary, project=target_project)
-
-
-_PROJECT_SUMMARY_PATTERN = re.compile(
-    r'^(?P<object>[A-Za-z]+)\s+(?P<action>created|updated|deleted|soft-deleted|undeleted|restored|uploaded|used)\s+#(?P<object_id>\d+)(?:\s+\((?P<display_name>[^)]+)\))?$'
-)
-_PROJECT_RESTORE_PATTERN = re.compile(r'^Project restored from snapshot #(?P<object_id>\d+)$')
-
-
-def _format_culture_display_name(name: str | None, variety: str | None) -> str | None:
-    normalized_name = (name or '').strip()
-    normalized_variety = (variety or '').strip()
-    if normalized_name and normalized_variety:
-        return f'{normalized_name} ({normalized_variety})'
-    if normalized_name:
-        return normalized_name
-    if normalized_variety:
-        return normalized_variety
-    return None
-
-
-_CULTURE_HISTORY_IGNORED_FIELDS = {
+_ENTITY_HISTORY_IGNORED_FIELDS = {
     'id',
     'created_at',
     'updated_at',
@@ -341,12 +384,12 @@ _CULTURE_HISTORY_IGNORED_FIELDS = {
 }
 
 
-def _build_culture_revision_changes(
+def _build_entity_revision_changes(
     snapshot: dict[str, Any],
     previous_snapshot: dict[str, Any] | None,
     changed_fields: list[str] | None,
 ) -> list[dict[str, Any]]:
-    """Build displayable field changes from culture revision snapshots."""
+    """Build displayable field changes from entity revision snapshots."""
     if not isinstance(snapshot, dict):
         return []
 
@@ -355,9 +398,9 @@ def _build_culture_revision_changes(
 
     changes: list[dict[str, Any]] = []
     for field in changed_fields:
-        if field in _CULTURE_HISTORY_IGNORED_FIELDS:
+        if field in _ENTITY_HISTORY_IGNORED_FIELDS:
             continue
-        if field == 'created':
+        if field == EntityRevision.ACTION_CREATED:
             changes.append({
                 'field': field,
                 'old_value': None,
@@ -377,162 +420,44 @@ def _build_culture_revision_changes(
     return changes
 
 
-def _find_snapshot_row(snapshot: dict, key: str, object_id: int) -> dict | None:
-    rows = snapshot.get(key, [])
-    if not isinstance(rows, list):
-        return None
-    for row in rows:
-        if isinstance(row, dict) and row.get('id') == object_id:
-            return row
-    return None
+def _entity_states_at(project: Project, entity_type: str, target_time) -> dict[int, dict[str, Any] | None]:
+    """Return {object_id: snapshot} for every object with a revision at/before
+    target_time; a value of None marks an object that was deleted by then."""
+    revisions = (
+        EntityRevision.objects
+        .filter(project=project, entity_type=entity_type, created_at__lte=target_time)
+        .order_by('object_id', '-created_at')
+    )
+    states: dict[int, dict[str, Any] | None] = {}
+    for revision in revisions:
+        if revision.object_id in states:
+            continue
+        states[revision.object_id] = None if revision.action == EntityRevision.ACTION_DELETED else revision.snapshot
+    return states
 
 
-def _build_planting_plan_label(snapshot: dict, row: dict | None) -> str | None:
-    if not row:
-        return None
-
-    culture_name = None
-    culture_variety = None
-    culture_id = row.get('culture_id')
-    if isinstance(culture_id, int):
-        culture_row = _find_snapshot_row(snapshot, 'cultures', culture_id)
-        if culture_row:
-            culture_name = culture_row.get('name')
-            culture_variety = culture_row.get('variety')
-    culture_label = _format_culture_display_name(culture_name, culture_variety)
-
-    bed_label = None
-    bed_id = row.get('bed_id')
-    if isinstance(bed_id, int):
-        bed_row = _find_snapshot_row(snapshot, 'beds', bed_id)
-        if bed_row:
-            bed_label = bed_row.get('name')
-
-    start = row.get('planting_date')
-    end = row.get('harvest_end_date') or row.get('harvest_date')
-    date_label = None
-    if start and end:
-        date_label = f'{start}–{end}'
-    elif start:
-        date_label = str(start)
-
-    parts = [part for part in [culture_label, bed_label, date_label] if part]
-    if not parts:
-        return None
-    return ' / '.join(parts)
-
-
-def _parse_project_summary(summary: str) -> tuple[str, str, int | None, str | None]:
-    normalized_summary = (summary or '').strip()
-    restore_match = _PROJECT_RESTORE_PATTERN.match(normalized_summary)
-    if restore_match:
-        return 'project', 'restored', int(restore_match.group('object_id')), None
-
-    match = _PROJECT_SUMMARY_PATTERN.match(normalized_summary)
-    if not match:
-        return 'project', 'updated', None, None
-
-    object_type_raw = match.group('object').lower()
-    action_raw = match.group('action').lower()
-    object_id = int(match.group('object_id'))
-    display_name = match.group('display_name') or None
-
-    object_type_map = {
-        'culture': 'culture',
-        'plantingplan': 'planting_plan',
-        'location': 'location',
-        'field': 'field',
-        'bed': 'bed',
-        'supplier': 'supplier',
-        'task': 'task',
-        'noteattachment': 'note_attachment',
-        'media': 'media_file',
-        'seed': 'seed_package',
-        'project': 'project',
-    }
-    action_map = {
-        'created': 'created',
-        'updated': 'updated',
-        'deleted': 'deleted',
-        'soft-deleted': 'deleted',
-        'undeleted': 'restored',
-        'restored': 'restored',
-        'uploaded': 'created',
-        'used': 'updated',
-    }
-    return object_type_map.get(object_type_raw, object_type_raw), action_map.get(action_raw, 'updated'), object_id, display_name
-
-
-def _resolve_project_object_display_name(snapshot: dict, object_type: str, object_id: int | None) -> str | None:
-    if object_id is None:
-        return None
-
-    if object_type == 'culture':
-        row = _find_snapshot_row(snapshot, 'cultures', object_id)
-        if row:
-            return _format_culture_display_name(row.get('name'), row.get('variety'))
-        return None
-    if object_type == 'planting_plan':
-        row = _find_snapshot_row(snapshot, 'planting_plans', object_id)
-        return _build_planting_plan_label(snapshot, row)
-    if object_type == 'location':
-        row = _find_snapshot_row(snapshot, 'locations', object_id)
-        return row.get('name') if row else None
-    if object_type == 'field':
-        row = _find_snapshot_row(snapshot, 'fields', object_id)
-        return row.get('name') if row else None
-    if object_type == 'bed':
-        row = _find_snapshot_row(snapshot, 'beds', object_id)
-        return row.get('name') if row else None
-    if object_type == 'supplier':
-        row = _find_snapshot_row(snapshot, 'suppliers', object_id)
-        return row.get('name') if row else None
-    if object_type == 'task':
-        row = _find_snapshot_row(snapshot, 'tasks', object_id)
-        return row.get('title') if row else None
-    if object_type == 'note_attachment':
-        row = _find_snapshot_row(snapshot, 'note_attachments', object_id)
-        if row:
-            return row.get('title') or row.get('kind')
-        return None
-    return None
-
-
-def _restore_project_state(snapshot: dict[str, list[dict]], *, project: Project) -> None:
+def _restore_project_state_at(project: Project, target_time) -> None:
+    """Reconstruct every restorable entity type to its state at target_time."""
     with transaction.atomic():
-        Task.objects.filter(project=project).delete()
-        NoteAttachment.objects.filter(project=project).delete()
-        PlantingPlan.objects.filter(project=project).delete()
-        Culture.all_objects.filter(project=project).delete()
-        BedLayout.objects.filter(project=project).delete()
-        FieldLayout.objects.filter(project=project).delete()
-        Bed.objects.filter(project=project).delete()
-        Field.objects.filter(project=project).delete()
-        Location.objects.filter(project=project).delete()
-        Supplier.objects.filter(project=project).delete()
+        for model, _entity_type in reversed(_RESTORABLE_ENTITY_TYPES):
+            manager = getattr(model, 'all_objects', None) or model._base_manager
+            manager.filter(project=project).delete()
 
-        for model, key in [
-            (Location, 'locations'),
-            (Field, 'fields'),
-            (Bed, 'beds'),
-            (BedLayout, 'bed_layouts'),
-            (FieldLayout, 'field_layouts'),
-            (Supplier, 'suppliers'),
-            (Culture, 'cultures'),
-            (PlantingPlan, 'planting_plans'),
-            (Task, 'tasks'),
-            (NoteAttachment, 'note_attachments'),
-        ]:
-            rows = snapshot.get(key, [])
-            if not rows:
-                continue
-            project_rows = []
-            for row in rows:
-                row_data = dict(row)
-                if 'project_id' in row_data:
-                    row_data['project_id'] = project.id
-                project_rows.append(model(**row_data))
-            model.objects.bulk_create(project_rows)
+        for model, entity_type in _RESTORABLE_ENTITY_TYPES:
+            allowed_fields = {field.attname for field in model._meta.concrete_fields}
+            states = _entity_states_at(project, entity_type, target_time)
+            rows = []
+            for snapshot in states.values():
+                if snapshot is None:
+                    continue
+                # Old snapshots may carry fields since renamed/removed from the model
+                # (schema changes don't rewrite historical JSON) — drop anything the
+                # current model no longer has instead of crashing on an unknown kwarg.
+                row_data = {key: value for key, value in snapshot.items() if key in allowed_fields}
+                row_data['project_id'] = project.id
+                rows.append(model(**row_data))
+            if rows:
+                model.objects.bulk_create(rows)
 
 
 
@@ -743,10 +668,38 @@ class YieldCalendarListView(generics.GenericAPIView):
 
 
 class ProjectRevisionMixin:
-    """Create a project snapshot after mutating operations."""
+    """Record an EntityRevision for the active project after a mutation."""
 
-    def create_project_revision(self, summary: str, *, display_name: str | None = None) -> None:
-        _create_project_revision(summary, project=getattr(self.request, 'active_project', None), display_name=display_name)
+    def record_revision(
+        self,
+        instance,
+        action: str,
+        *,
+        previous_snapshot: dict[str, Any] | None = None,
+        object_id: int | None = None,
+        snapshot: dict[str, Any] | None = None,
+        display_name: str | None = None,
+        changed_fields: list[str] | None = None,
+    ) -> None:
+        resolved_snapshot = snapshot if snapshot is not None else _serialize_instance(instance)
+        resolved_changed_fields = changed_fields
+        if resolved_changed_fields is None:
+            if action == EntityRevision.ACTION_CREATED:
+                resolved_changed_fields = [EntityRevision.ACTION_CREATED]
+            elif previous_snapshot is not None:
+                resolved_changed_fields = _diff_changed_fields(previous_snapshot, resolved_snapshot)
+            else:
+                resolved_changed_fields = []
+        record_entity_revision(
+            project=getattr(self.request, 'active_project', None),
+            entity_type=_entity_type_for(instance),
+            object_id=object_id if object_id is not None else instance.pk,
+            action=action,
+            snapshot=resolved_snapshot,
+            display_name=display_name if display_name is not None else _entity_display_name(instance),
+            changed_fields=resolved_changed_fields,
+            user_name=_current_actor_label(self.request),
+        )
 
 
 
@@ -801,17 +754,22 @@ class LocationViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
 
     def perform_create(self, serializer):
         instance = serializer.save(project=self.request.active_project)
-        self.create_project_revision(f"Location created #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_CREATED)
 
     def perform_update(self, serializer):
+        previous_snapshot = _serialize_instance(serializer.instance)
         instance = serializer.save()
-        self.create_project_revision(f"Location updated #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_UPDATED, previous_snapshot=previous_snapshot)
 
     def perform_destroy(self, instance):
         instance_id = instance.pk
-        name = instance.name
+        snapshot = _serialize_instance(instance)
+        display_name = _entity_display_name(instance)
         instance.delete()
-        self.create_project_revision(f"Location deleted #{instance_id}", display_name=name)
+        self.record_revision(
+            instance, EntityRevision.ACTION_DELETED,
+            object_id=instance_id, snapshot=snapshot, display_name=display_name, changed_fields=[],
+        )
 
 
 
@@ -913,11 +871,12 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
         }
 
     def perform_update(self, serializer):
+        previous_snapshot = _serialize_instance(serializer.instance)
         try:
             instance = serializer.save()
         except IntegrityError as exc:
             raise DRFValidationError({'name': ['Ein Lieferant mit diesem Namen existiert bereits.']}) from exc
-        self.create_project_revision(f"Supplier updated #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_UPDATED, previous_snapshot=previous_snapshot)
 
     @action(detail=True, methods=['get'], url_path='delete-usage')
     def delete_usage(self, request: Request, pk: int | None = None) -> Response:
@@ -952,9 +911,13 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
             ).update(selected_seed_demand_supplier=None)
             CultureSupplierData.objects.filter(project=supplier.project, supplier=supplier).delete()
             supplier_id = supplier.pk
+            supplier_snapshot = _serialize_instance(supplier)
             supplier_name = supplier.name
             supplier.delete()
-            self.create_project_revision(f"Supplier unlinked and deleted #{supplier_id}", display_name=supplier_name)
+            self.record_revision(
+                supplier, EntityRevision.ACTION_DELETED,
+                object_id=supplier_id, snapshot=supplier_snapshot, display_name=supplier_name, changed_fields=[],
+            )
 
         return Response({
             'affected_culture_count': usage['total_culture_count'],
@@ -1037,7 +1000,7 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
                     )
                     restored_supplier_data_count += 1
 
-                self.create_project_revision(f"Supplier restored #{supplier.pk}")
+                self.record_revision(supplier, EntityRevision.ACTION_RESTORED)
         except (IntegrityError, ValueError) as exc:
             raise DRFValidationError({'detail': ['Supplier could not be restored.']}) from exc
 
@@ -1050,9 +1013,13 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
 
     def perform_destroy(self, instance: Supplier) -> None:
         instance_id = instance.pk
+        snapshot = _serialize_instance(instance)
         name = instance.name
         instance.delete()
-        self.create_project_revision(f"Supplier deleted #{instance_id}", display_name=name)
+        self.record_revision(
+            instance, EntityRevision.ACTION_DELETED,
+            object_id=instance_id, snapshot=snapshot, display_name=name, changed_fields=[],
+        )
 
     
     def get_queryset(self):
@@ -1150,7 +1117,7 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
         data = serializer.data
         data['created'] = True
         
-        self.create_project_revision(f"Supplier created #{supplier.pk}")
+        self.record_revision(supplier, EntityRevision.ACTION_CREATED)
         return Response(
             data,
             status=status.HTTP_201_CREATED
@@ -1175,20 +1142,25 @@ class FieldViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewS
             instance = serializer.save(project=self.request.active_project)
         except IntegrityError as exc:
             raise DRFValidationError({'name': [FIELD_NAME_DUPLICATE_MESSAGE]}) from exc
-        self.create_project_revision(f"Field created #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_CREATED)
 
     def perform_update(self, serializer):
+        previous_snapshot = _serialize_instance(serializer.instance)
         try:
             instance = serializer.save()
         except IntegrityError as exc:
             raise DRFValidationError({'name': [FIELD_NAME_DUPLICATE_MESSAGE]}) from exc
-        self.create_project_revision(f"Field updated #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_UPDATED, previous_snapshot=previous_snapshot)
 
     def perform_destroy(self, instance):
         instance_id = instance.pk
+        snapshot = _serialize_instance(instance)
         name = instance.name
         instance.delete()
-        self.create_project_revision(f"Field deleted #{instance_id}", display_name=name)
+        self.record_revision(
+            instance, EntityRevision.ACTION_DELETED,
+            object_id=instance_id, snapshot=snapshot, display_name=name, changed_fields=[],
+        )
 
 
 
@@ -1210,24 +1182,29 @@ class BedViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet
             instance = serializer.save(project=self.request.active_project)
         except IntegrityError as exc:
             raise DRFValidationError({'name': [BED_NAME_DUPLICATE_MESSAGE]}) from exc
-        self.create_project_revision(f"Bed created #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_CREATED)
 
     def perform_update(self, serializer):
+        previous_snapshot = _serialize_instance(serializer.instance)
         try:
             instance = serializer.save()
         except IntegrityError as exc:
             raise DRFValidationError({'name': [BED_NAME_DUPLICATE_MESSAGE]}) from exc
-        self.create_project_revision(f"Bed updated #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_UPDATED, previous_snapshot=previous_snapshot)
 
     def perform_destroy(self, instance):
         instance_id = instance.pk
+        snapshot = _serialize_instance(instance)
         name = instance.name
         instance.delete()
-        self.create_project_revision(f"Bed deleted #{instance_id}", display_name=name)
+        self.record_revision(
+            instance, EntityRevision.ACTION_DELETED,
+            object_id=instance_id, snapshot=snapshot, display_name=name, changed_fields=[],
+        )
 
 
 
-class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
+class CultureViewSet(ProjectScopedMixin, viewsets.ModelViewSet):
     """ViewSet for Culture model providing CRUD operations.
     
     Provides list, create, retrieve, update, and delete operations
@@ -1240,32 +1217,23 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
     queryset = Culture.objects.select_related('supplier', 'image_file', 'source_public_culture')
     serializer_class = CultureSerializer
 
-    def _current_actor_label(self) -> str:
-        user = getattr(self.request, 'user', None)
-        if not user or not getattr(user, 'is_authenticated', False):
-            return ''
-        display_name = (getattr(user, 'display_name', '') or '').strip()
-        if display_name:
-            return display_name
-        full_name = (user.get_full_name() or '').strip()
-        if full_name:
-            return full_name
-        return user.email or user.username or ''
-
     def _set_latest_revision_actor(self, culture: Culture) -> None:
-        actor_label = self._current_actor_label()
+        actor_label = _current_actor_label(self.request)
         if not actor_label:
             return
-        latest_revision = culture.revisions.order_by('-id').first()
+        latest_revision = (
+            EntityRevision.objects
+            .filter(project_id=culture.project_id, entity_type='culture', object_id=culture.pk)
+            .order_by('-id')
+            .first()
+        )
         if latest_revision and not latest_revision.user_name:
             latest_revision.user_name = actor_label[:150]
             latest_revision.save(update_fields=['user_name'])
 
-    
     def perform_create(self, serializer):
         instance = serializer.save(project=self.request.active_project)
         self._set_latest_revision_actor(instance)
-        self.create_project_revision(f"Culture created #{instance.pk}")
 
     def get_queryset(self):
         include_deleted = self.request.query_params.get('include_deleted') in {'1', 'true', 'True'}
@@ -1585,24 +1553,24 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
             return Response(status=status.HTTP_204_NO_CONTENT)
 
         culture.deleted_at = timezone.now()
+        culture._history_action = EntityRevision.ACTION_DELETED
         culture.save()
         self._set_latest_revision_actor(culture)
 
         if culture.image_file_id:
             MediaFile.objects.filter(id=culture.image_file_id, orphaned_at__isnull=True).update(orphaned_at=timezone.now())
 
-        self.create_project_revision(f"Culture soft-deleted #{culture.pk}")
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['post'], url_path='undelete')
     def undelete(self, request, pk=None):
         culture = self.get_object()
         culture.deleted_at = None
+        culture._history_action = EntityRevision.ACTION_RESTORED
         culture.save()
         self._set_latest_revision_actor(culture)
         if culture.image_file_id:
             MediaFile.objects.filter(id=culture.image_file_id).update(orphaned_at=None)
-        self.create_project_revision(f"Culture undeleted #{culture.pk}")
         return Response(self.get_serializer(culture).data, status=status.HTTP_200_OK)
 
     def perform_update(self, serializer):
@@ -1614,31 +1582,31 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
             MediaFile.objects.filter(id=previous_media_id, orphaned_at__isnull=True).update(orphaned_at=timezone.now())
         if updated.image_file_id:
             MediaFile.objects.filter(id=updated.image_file_id).update(orphaned_at=None)
-        self.create_project_revision(f"Culture updated #{updated.pk}")
 
     @action(detail=True, methods=['get'], url_path='history')
     def history(self, request, pk=None):
         culture = self.get_object()
         since = timezone.now() - timedelta(days=30)
-        rows = list(culture.revisions.filter(created_at__gte=since).order_by('-created_at'))
+        rows = list(
+            EntityRevision.objects
+            .filter(project_id=culture.project_id, entity_type='culture', object_id=culture.pk, created_at__gte=since)
+            .order_by('-created_at')
+        )
         current_revision_id = rows[0].id if rows else None
         payload = [
             {
                 'history_id': row.id,
-                'culture_id': row.culture_id,
+                'culture_id': row.object_id,
                 'history_date': row.created_at,
                 'history_type': 'snapshot',
                 'history_user': row.user_name or None,
                 'summary': ', '.join(row.changed_fields[:5]) if row.changed_fields else 'snapshot',
                 'object_type': 'culture',
-                'object_display_name': _format_culture_display_name(
-                    row.snapshot.get('name') if isinstance(row.snapshot, dict) else None,
-                    row.snapshot.get('variety') if isinstance(row.snapshot, dict) else None,
-                ),
-                'action': 'created' if isinstance(row.changed_fields, list) and 'created' in row.changed_fields else 'updated',
+                'object_display_name': row.display_name or None,
+                'action': row.action,
                 'actor_label': row.user_name or None,
                 'is_current_version': row.id == current_revision_id,
-                'changes': _build_culture_revision_changes(
+                'changes': _build_entity_revision_changes(
                     row.snapshot,
                     rows[index + 1].snapshot if index + 1 < len(rows) else None,
                     row.changed_fields,
@@ -1656,7 +1624,10 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
         serializer.is_valid(raise_exception=True)
         revision_id = serializer.validated_data['history_id']
 
-        revision = get_object_or_404(culture.revisions.all(), id=revision_id)
+        revision = get_object_or_404(
+            EntityRevision.objects.filter(project_id=culture.project_id, entity_type='culture', object_id=culture.pk),
+            id=revision_id,
+        )
         snapshot = revision.snapshot
         allowed_fields = {f.name for f in Culture._meta.fields if f.name not in {'id', 'created_at', 'updated_at'}}
 
@@ -1665,10 +1636,10 @@ class CultureViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVie
                 if key in allowed_fields:
                     setattr(culture, key, value)
             culture.deleted_at = None
+            culture._history_action = EntityRevision.ACTION_RESTORED
             culture.save()
         self._set_latest_revision_actor(culture)
 
-        self.create_project_revision(f"Culture restored #{culture.pk}")
         return Response(self.get_serializer(culture).data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path='publish-public')
@@ -1849,20 +1820,31 @@ class CultureSupplierDataViewSet(ProjectScopedMixin, ProjectRevisionMixin, views
 
     def perform_create(self, serializer):
         instance = serializer.save(project=self.request.active_project)
-        self.create_project_revision(f"CultureSupplierData created #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_CREATED)
 
     def perform_update(self, serializer):
+        previous_snapshot = _serialize_instance(serializer.instance)
         instance = serializer.save()
-        self.create_project_revision(f"CultureSupplierData updated #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_UPDATED, previous_snapshot=previous_snapshot)
 
     def perform_destroy(self, instance):
         instance_id = instance.pk
+        snapshot = _serialize_instance(instance)
+        display_name = _entity_display_name(instance)
         instance.delete()
-        self.create_project_revision(f"CultureSupplierData deleted #{instance_id}")
+        self.record_revision(
+            instance, EntityRevision.ACTION_DELETED,
+            object_id=instance_id, snapshot=snapshot, display_name=display_name, changed_fields=[],
+        )
 
 
 class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
-    """Read-only public library for published cultures with project import action."""
+    """Read-only public library for published cultures with project import action.
+
+    Candidate for extraction into a separate service consumed by OFP over an
+    API (under discussion as of 2026-07) — avoid deepening its coupling to
+    project-scoped concerns like EntityRevision/history.
+    """
 
     queryset = PublicCulture.objects.filter(status=PublicCulture.STATUS_PUBLISHED).order_by('name', 'variety')
     serializer_class = PublicCultureSerializer
@@ -1923,16 +1905,22 @@ class SeedPackageViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.Mode
 
     def perform_create(self, serializer):
         instance = serializer.save(project=self.request.active_project)
-        self.create_project_revision(f"Seed package created #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_CREATED)
 
     def perform_update(self, serializer):
+        previous_snapshot = _serialize_instance(serializer.instance)
         instance = serializer.save()
-        self.create_project_revision(f"Seed package updated #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_UPDATED, previous_snapshot=previous_snapshot)
 
     def perform_destroy(self, instance):
         package_id = instance.pk
+        snapshot = _serialize_instance(instance)
+        display_name = _entity_display_name(instance)
         instance.delete()
-        self.create_project_revision(f"Seed package deleted #{package_id}")
+        self.record_revision(
+            instance, EntityRevision.ACTION_DELETED,
+            object_id=package_id, snapshot=snapshot, display_name=display_name, changed_fields=[],
+        )
 
 class PlantingPlanViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for PlantingPlan model providing CRUD operations.
@@ -1956,22 +1944,23 @@ class PlantingPlanViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.Mod
     def perform_create(self, serializer):
         current_user = self.request.user if self.request.user.is_authenticated else None
         instance = serializer.save(created_by=current_user, updated_by=current_user, project=self.request.active_project)
-        self.create_project_revision(f"PlantingPlan created #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_CREATED)
 
     def perform_update(self, serializer):
         current_user = self.request.user if self.request.user.is_authenticated else None
+        previous_snapshot = _serialize_instance(serializer.instance)
         instance = serializer.save(updated_by=current_user)
-        self.create_project_revision(f"PlantingPlan updated #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_UPDATED, previous_snapshot=previous_snapshot)
 
     def perform_destroy(self, instance):
         instance_id = instance.pk
-        culture = getattr(instance, 'culture', None)
-        culture_name = _format_culture_display_name(
-            getattr(culture, 'name', None),
-            getattr(culture, 'variety', None),
-        ) if culture else None
+        snapshot = _serialize_instance(instance)
+        display_name = _entity_display_name(instance)
         instance.delete()
-        self.create_project_revision(f"PlantingPlan deleted #{instance_id}", display_name=culture_name)
+        self.record_revision(
+            instance, EntityRevision.ACTION_DELETED,
+            object_id=instance_id, snapshot=snapshot, display_name=display_name, changed_fields=[],
+        )
 
 
     @action(detail=False, methods=['get'], url_path='remaining-area')
@@ -2061,17 +2050,22 @@ class TaskViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSe
 
     def perform_create(self, serializer):
         instance = serializer.save(project=self.request.active_project)
-        self.create_project_revision(f"Task created #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_CREATED)
 
     def perform_update(self, serializer):
+        previous_snapshot = _serialize_instance(serializer.instance)
         instance = serializer.save()
-        self.create_project_revision(f"Task updated #{instance.pk}")
+        self.record_revision(instance, EntityRevision.ACTION_UPDATED, previous_snapshot=previous_snapshot)
 
     def perform_destroy(self, instance):
         instance_id = instance.pk
+        snapshot = _serialize_instance(instance)
         title = getattr(instance, 'title', None)
         instance.delete()
-        self.create_project_revision(f"Task deleted #{instance_id}", display_name=title)
+        self.record_revision(
+            instance, EntityRevision.ACTION_DELETED,
+            object_id=instance_id, snapshot=snapshot, display_name=title, changed_fields=[],
+        )
 
 
 
@@ -2085,39 +2079,39 @@ class CultureUndeleteView(APIView):
         active_project = get_active_project_or_400(request)
         culture = get_object_or_404(Culture.all_objects.filter(project=active_project), pk=pk)
         culture.deleted_at = None
+        culture._history_action = EntityRevision.ACTION_RESTORED
         culture.save()
         if culture.image_file_id:
             MediaFile.objects.filter(id=culture.image_file_id).update(orphaned_at=None)
-        _create_project_revision(f"Culture undeleted #{culture.pk}", project=culture.project)
         return Response(CultureSerializer(culture).data, status=status.HTTP_200_OK)
 
 
 class ProjectHistoryListView(APIView):
-    """List full-project snapshots."""
+    """List recent per-entity revisions across the whole project."""
 
     def get(self, request):
         active_project = get_active_project_or_400(request)
         since = timezone.now() - timedelta(days=30)
-        rows = ProjectRevision.objects.filter(project=active_project, created_at__gte=since).order_by('-created_at')
-        payload = []
-        for row in rows:
-            object_type, action, object_id, summary_display_name = _parse_project_summary(row.summary or '')
-            payload.append({
+        rows = EntityRevision.objects.filter(project=active_project, created_at__gte=since).order_by('-created_at')
+        payload = [
+            {
                 'history_id': row.id,
                 'history_date': row.created_at,
                 'history_type': 'project_snapshot',
-                'history_user': None,
-                'summary': row.summary or 'Project snapshot',
-                'object_type': object_type,
-                'object_display_name': _resolve_project_object_display_name(row.snapshot or {}, object_type, object_id) or summary_display_name,
-                'action': action,
-                'actor_label': None,
-            })
+                'history_user': row.user_name or None,
+                'summary': f'{row.entity_type} {row.action} #{row.object_id}',
+                'object_type': row.entity_type,
+                'object_display_name': row.display_name or None,
+                'action': row.action,
+                'actor_label': row.user_name or None,
+            }
+            for row in rows
+        ]
         return Response(CultureHistoryEntrySerializer(payload, many=True).data)
 
 
 class ProjectHistoryRestoreView(APIView):
-    """Restore whole project state from a snapshot."""
+    """Restore whole project state to a past point in time."""
 
     def post(self, request):
         active_project = get_active_project_or_400(request)
@@ -2126,9 +2120,18 @@ class ProjectHistoryRestoreView(APIView):
         serializer.is_valid(raise_exception=True)
         revision_id = serializer.validated_data['history_id']
 
-        revision = get_object_or_404(ProjectRevision.objects.filter(project=active_project), id=revision_id)
-        _restore_project_state(revision.snapshot, project=active_project)
-        _create_project_revision(f"Project restored from snapshot #{revision_id}", project=revision.project)
+        revision = get_object_or_404(EntityRevision.objects.filter(project=active_project), id=revision_id)
+        _restore_project_state_at(active_project, revision.created_at)
+        record_entity_revision(
+            project=active_project,
+            entity_type='project',
+            object_id=active_project.id,
+            action=EntityRevision.ACTION_RESTORED,
+            snapshot={},
+            display_name=active_project.name,
+            changed_fields=[],
+            user_name=_current_actor_label(request),
+        )
 
         return Response({'detail': 'Project restored successfully.'}, status=status.HTTP_200_OK)
 
@@ -2139,34 +2142,29 @@ class GlobalHistoryListView(APIView):
     def get(self, request):
         active_project = get_active_project_or_400(request)
         since = timezone.now() - timedelta(days=30)
-        rows = (
-            CultureRevision.objects
-            .select_related('culture')
-            .filter(culture__project=active_project, created_at__gte=since)
+        rows = list(
+            EntityRevision.objects
+            .filter(project=active_project, entity_type='culture', created_at__gte=since)
             .order_by('-created_at')
         )
-        rows = list(rows)
         current_revision_id = rows[0].id if rows else None
         payload = [
             {
                 'history_id': row.id,
-                'culture_id': row.culture_id,
+                'culture_id': row.object_id,
                 'history_date': row.created_at,
                 'history_type': 'snapshot',
                 'history_user': row.user_name or None,
-                'summary': f"Culture #{row.culture_id}: " + (', '.join(row.changed_fields[:5]) if row.changed_fields else 'snapshot'),
+                'summary': f"Culture #{row.object_id}: " + (', '.join(row.changed_fields[:5]) if row.changed_fields else 'snapshot'),
                 'object_type': 'culture',
-                'object_display_name': _format_culture_display_name(
-                    row.snapshot.get('name') if isinstance(row.snapshot, dict) else None,
-                    row.snapshot.get('variety') if isinstance(row.snapshot, dict) else None,
-                ),
-                'action': 'created' if isinstance(row.changed_fields, list) and 'created' in row.changed_fields else 'updated',
+                'object_display_name': row.display_name or None,
+                'action': row.action,
                 'actor_label': row.user_name or None,
                 'is_current_version': row.id == current_revision_id,
-                'changes': _build_culture_revision_changes(
+                'changes': _build_entity_revision_changes(
                     row.snapshot,
                     next(
-                        (candidate.snapshot for candidate in rows[index + 1:] if candidate.culture_id == row.culture_id),
+                        (candidate.snapshot for candidate in rows[index + 1:] if candidate.object_id == row.object_id),
                         None,
                     ),
                     row.changed_fields,
@@ -2188,10 +2186,10 @@ class GlobalHistoryRestoreView(APIView):
         revision_id = serializer.validated_data['history_id']
 
         revision = get_object_or_404(
-            CultureRevision.objects.select_related('culture').filter(culture__project=active_project),
+            EntityRevision.objects.filter(project=active_project, entity_type='culture'),
             id=revision_id,
         )
-        culture = revision.culture
+        culture = get_object_or_404(Culture.all_objects.filter(project=active_project), pk=revision.object_id)
         snapshot = revision.snapshot
         allowed_fields = {f.name for f in Culture._meta.fields if f.name not in {'id', 'created_at', 'updated_at'}}
 
@@ -2200,9 +2198,9 @@ class GlobalHistoryRestoreView(APIView):
                 if key in allowed_fields:
                     setattr(culture, key, value)
             culture.deleted_at = None
+            culture._history_action = EntityRevision.ACTION_RESTORED
             culture.save()
 
-        _create_project_revision(f"Culture undeleted #{culture.pk}", project=culture.project)
         return Response(CultureSerializer(culture).data, status=status.HTTP_200_OK)
 
 
@@ -2223,7 +2221,14 @@ class MediaFileUploadView(APIView):
         rel_path = culture_media_upload_path(None, upload.name)
         saved_path = default_storage.save(rel_path, upload)
         media = MediaFile.objects.create(storage_path=saved_path)
-        _create_project_revision(f"Media uploaded #{media.pk}", project=active_project)
+        record_entity_revision(
+            project=active_project,
+            entity_type='media_file',
+            object_id=media.pk,
+            action=EntityRevision.ACTION_CREATED,
+            snapshot=_serialize_instance(media),
+            user_name=_current_actor_label(request),
+        )
         return Response({'id': media.id, 'storage_path': media.storage_path, 'uploaded_at': media.uploaded_at}, status=status.HTTP_201_CREATED)
 
 class NoteAttachmentListCreateView(APIView):
@@ -2273,7 +2278,14 @@ class NoteAttachmentListCreateView(APIView):
         attachment.save()
 
         serializer = NoteAttachmentSerializer(attachment, context={'request': request})
-        _create_project_revision(f"NoteAttachment created #{attachment.pk}", project=attachment.project)
+        record_entity_revision(
+            project=attachment.project,
+            entity_type='note_attachment',
+            object_id=attachment.pk,
+            action=EntityRevision.ACTION_CREATED,
+            snapshot=_serialize_instance(attachment),
+            user_name=_current_actor_label(request),
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -2285,9 +2297,18 @@ class NoteAttachmentDeleteView(APIView):
         attachment = get_object_or_404(NoteAttachment, pk=attachment_id, project=active_project)
         attachment_id = attachment.pk
         attachment_project = attachment.project
+        snapshot = _serialize_instance(attachment)
         attachment.image.delete(save=False)
         attachment.delete()
-        _create_project_revision(f"NoteAttachment deleted #{attachment_id}", project=attachment_project)
+        record_entity_revision(
+            project=attachment_project,
+            entity_type='note_attachment',
+            object_id=attachment_id,
+            action=EntityRevision.ACTION_DELETED,
+            snapshot=snapshot,
+            changed_fields=[],
+            user_name=_current_actor_label(request),
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

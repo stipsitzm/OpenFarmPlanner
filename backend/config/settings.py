@@ -192,6 +192,7 @@ if db_engine == 'sqlite':
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
+            'ATOMIC_REQUESTS': True,
         }
     }
 else:
@@ -203,6 +204,7 @@ else:
             'PASSWORD': os.getenv('DB_PASSWORD', 'farmplanner'),
             'HOST': os.getenv('DB_HOST', 'localhost'),
             'PORT': os.getenv('DB_PORT', '5432'),
+            'ATOMIC_REQUESTS': True,
         }
     }
 

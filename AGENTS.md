@@ -59,6 +59,8 @@
 
 Follow existing placement patterns before creating new directories.
 
+Deploy scripts, cron/scheduling config, and infra are **not** in this repo — they live in the separate `OpenFarmPlanner-ops` repo (sibling directory `OpenFarmPlanner-ops/`). Before concluding that a management command is never scheduled, or that a deploy/retention step is missing, check `OpenFarmPlanner-ops` (`cron.d/`, `deploy/`, `services.d/`) as well as this repo.
+
 ## Frontend Rules
 - UI text must always use i18n resources.
 - Never hardcode user-visible strings directly into components, dialogs, tables, filters, tooltips, snackbars, or form helpers.
@@ -100,6 +102,7 @@ Follow existing placement patterns before creating new directories.
   `git@github.com:stipsitzm/OpenFarmPlanner.git`
 - If origin uses HTTPS and a push is requested, switch to SSH.
 - Assume SSH works unless push errors indicate otherwise.
+- Never commit directly to `main`. Always work on a feature/fix branch and open a pull request, even for small changes.
 
 ## Commit and PR Title Rules
 
@@ -135,6 +138,10 @@ Follow existing placement patterns before creating new directories.
 - Prefer contextual actions over disabled controls.
 - Keep styling and interaction patterns consistent across pages.
 - Reuse existing empty-state, dialog, and topbar patterns.
+
+## Agent Collaboration Preferences
+- When discussing how to approach a non-trivial task (architecture redesign, risky refactor, planning work), proactively recommend a reasoning-effort/model level (e.g. low/medium/high/xhigh, or a specific model) with a short rationale, before being asked.
+- User-workflow/collaboration preferences like this one should be recorded here in AGENTS.md, not only in a tool-specific private memory, since AGENTS.md is the shared, centrally-linked ruleset read by all coding agents (Claude, Codex, Copilot, etc.).
 
 ## QA / Exploratory Testing
 When asked to search for bugs, run exploratory tests, or do a QA sweep:

@@ -17,6 +17,7 @@ from .models import (
     BedLayout,
     Culture,
     Field,
+    EntityRevision,
     FieldLayout,
     Location,
     NoteAttachment,
@@ -172,11 +173,20 @@ class CultureAdmin(admin.ModelAdmin):
 
 @admin.register(ProjectRevision)
 class ProjectRevisionAdmin(admin.ModelAdmin):
-    """Admin interface configuration for ProjectRevision model."""
+    """Admin interface for the deprecated ProjectRevision model (draining via cleanup_history)."""
 
     list_display = ['id', 'project', 'summary', 'created_at']
     list_filter = ['project']
     search_fields = ['summary', 'project__name', 'project__slug']
+
+
+@admin.register(EntityRevision)
+class EntityRevisionAdmin(admin.ModelAdmin):
+    """Admin interface configuration for EntityRevision model."""
+
+    list_display = ['id', 'project', 'entity_type', 'object_id', 'action', 'display_name', 'created_at']
+    list_filter = ['project', 'entity_type', 'action']
+    search_fields = ['display_name', 'project__name', 'project__slug']
 
 
 @admin.register(SeedPackage)

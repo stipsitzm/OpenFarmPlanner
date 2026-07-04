@@ -1,20 +1,42 @@
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand
+from django.db.models import Max
 from django.utils import timezone
 
-from farm.models import CultureRevision, ProjectRevision
+from farm.models import CultureRevision, EntityRevision, ProjectRevision
 
 
 class Command(BaseCommand):
-    help = 'Delete culture and project history entries older than 30 days.'
+    help = (
+        'Delete history entries older than 30 days. For EntityRevision, the latest '
+        'revision per (project, entity_type, object_id) is kept indefinitely so '
+        'point-in-time project restore stays correct for entities that were never '
+        'touched again after creation; CultureRevision/ProjectRevision are legacy '
+        'tables with a flat cutoff, draining until empty.'
+    )
 
     def handle(self, *args, **options):
         cutoff = timezone.now() - timedelta(days=30)
+
+        latest_ids = (
+            EntityRevision.objects
+            .values('project_id', 'entity_type', 'object_id')
+            .annotate(latest_id=Max('id'))
+            .values_list('latest_id', flat=True)
+        )
+        deleted_entity, _ = (
+            EntityRevision.objects
+            .filter(created_at__lt=cutoff)
+            .exclude(id__in=list(latest_ids))
+            .delete()
+        )
+
         deleted_culture, _ = CultureRevision.objects.filter(created_at__lt=cutoff).delete()
         deleted_project, _ = ProjectRevision.objects.filter(created_at__lt=cutoff).delete()
         self.stdout.write(
             self.style.SUCCESS(
-                f'Deleted {deleted_culture} culture and {deleted_project} project historical records.'
+                f'Deleted {deleted_entity} entity, {deleted_culture} legacy culture and '
+                f'{deleted_project} legacy project historical records.'
             )
         )
