@@ -444,12 +444,16 @@ def _restore_project_state_at(project: Project, target_time) -> None:
             manager.filter(project=project).delete()
 
         for model, entity_type in _RESTORABLE_ENTITY_TYPES:
+            allowed_fields = {field.attname for field in model._meta.concrete_fields}
             states = _entity_states_at(project, entity_type, target_time)
             rows = []
             for snapshot in states.values():
                 if snapshot is None:
                     continue
-                row_data = dict(snapshot)
+                # Old snapshots may carry fields since renamed/removed from the model
+                # (schema changes don't rewrite historical JSON) — drop anything the
+                # current model no longer has instead of crashing on an unknown kwarg.
+                row_data = {key: value for key, value in snapshot.items() if key in allowed_fields}
                 row_data['project_id'] = project.id
                 rows.append(model(**row_data))
             if rows:
