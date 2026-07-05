@@ -83,6 +83,31 @@ const renderWithAuth = (): ReturnType<typeof render> => render(
   </MemoryRouter>,
 );
 
+const withMobileCalendarViewport = (): (() => void) => {
+  const originalMatchMedia = window.matchMedia;
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes('max-width:899.95px'),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+  return () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: originalMatchMedia,
+    });
+  };
+};
+
 vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
   return {
@@ -1362,6 +1387,41 @@ describe('GanttChartPage', () => {
       await waitFor(() => {
         expect(screen.getByText('Leerbeet')).toBeInTheDocument();
       });
+    });
+
+    it('uses compact search and filter controls on mobile', async () => {
+      const restoreViewport = withMobileCalendarViewport();
+      try {
+        setUpMultiLocationFixture();
+        renderWithAuth();
+
+        await screen.findByText('Karottenbeet');
+        expect(screen.queryByPlaceholderText('Suche nach Kultur, Beet, Parzelle oder Standort…')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Suchen' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Filter (1)' })).toBeInTheDocument();
+        expect(screen.getByText('Nur belegte Beete')).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+        fireEvent.change(await screen.findByPlaceholderText('Suche nach Kultur, Beet, Parzelle oder Standort…'), {
+          target: { value: 'Karotte' },
+        });
+
+        await waitFor(() => {
+          expect(screen.getByText('Suche: Karotte')).toBeInTheDocument();
+          expect(screen.queryByText('Tomatenbeet')).not.toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Filter (1)' }));
+        fireEvent.mouseDown(await screen.findByLabelText('Standort'));
+        fireEvent.click(await screen.findByRole('option', { name: 'Pacht' }));
+
+        await waitFor(() => {
+          expect(screen.getAllByText('Pacht').length).toBeGreaterThanOrEqual(2);
+          expect(screen.getByText('Filter (2)')).toBeInTheDocument();
+        });
+      } finally {
+        restoreViewport();
+      }
     });
   });
 

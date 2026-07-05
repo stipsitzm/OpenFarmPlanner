@@ -163,7 +163,16 @@
     "searchPlaceholderSeedlings": "Suche nach Kultur…",
     "allLocations": "Alle Standorte",
     "allFields": "Alle Parzellen",
-    "onlyOccupiedBeds": "Nur belegte Beete"
+    "onlyOccupiedBeds": "Nur belegte Beete",
+    "filterButton": "Filter",
+    "filterButtonWithCount": "Filter ({{count}})",
+    "locationLabel": "Standort",
+    "fieldLabel": "Parzelle",
+    "resetFilters": "Filter zurücksetzen",
+    "clearSearch": "Suche löschen",
+    "searchChip": "Suche: {{query}}",
+    "selectedLocationFallback": "Standort",
+    "selectedFieldFallback": "Parzelle"
   },
   "contextMenu": {
     "openPlan": "Anbauplan öffnen",

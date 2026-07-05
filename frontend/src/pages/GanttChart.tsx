@@ -10,7 +10,9 @@
 import React, { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CloseIcon from '@mui/icons-material/Close';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import TuneIcon from '@mui/icons-material/Tune';
 import { useTranslation } from '../i18n';
 import {
   Alert,
@@ -18,15 +20,23 @@ import {
   Button,
   ButtonGroup,
   Checkbox,
+  Chip,
   Divider,
+  FormControl,
   FormControlLabel,
+  IconButton,
   InputAdornment,
+  InputLabel,
   Menu,
   MenuItem,
+  Popover,
   Select,
+  Stack,
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import {
@@ -467,6 +477,8 @@ function dispatchSyntheticMouseEvent(
 
 function GanttChartPage() {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
+  const theme = useTheme();
+  const useMobileFilterLayout = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const authContext = useContext(AuthContext);
@@ -493,12 +505,27 @@ function GanttChartPage() {
   // Seedling (Anzucht) view: search-only, no hierarchy/location filters —
   // it's a flat, culture-grouped list, not tied to a specific bed/field.
   const [seedlingSearchText, setSeedlingSearchText] = useState('');
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [calendarFilterAnchorEl, setCalendarFilterAnchorEl] = useState<HTMLElement | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const focusSearch = useCallback(() => {
+    if (useMobileFilterLayout) {
+      setMobileSearchOpen(true);
+    }
     searchInputRef.current?.focus();
     searchInputRef.current?.select();
-  }, []);
+  }, [useMobileFilterLayout]);
+  useEffect(() => {
+    if (!mobileSearchOpen) {
+      return undefined;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [mobileSearchOpen]);
 
   const occupancyTreeStorageKey = activeProjectId
     ? `occupancyTree.${activeProjectId}`
@@ -1043,6 +1070,90 @@ function GanttChartPage() {
         (node) => node.type === 'field' && node.locationId === occupancyLocationFilter,
       )),
     [occupancyHierarchyNodes, occupancyLocationFilter],
+  );
+  const selectedLocationName = useMemo(
+    () => (occupancyLocationFilter === 'all'
+      ? null
+      : locations.find((location) => location.id === occupancyLocationFilter)?.name ?? null),
+    [locations, occupancyLocationFilter],
+  );
+  const selectedFieldName = useMemo(
+    () => (occupancyFieldFilter === 'all'
+      ? null
+      : occupancyHierarchyNodes.find(
+        (node) => node.type === 'field' && node.fieldId === occupancyFieldFilter,
+      )?.name ?? null),
+    [occupancyFieldFilter, occupancyHierarchyNodes],
+  );
+  const activeHierarchyFilterCount = [
+    occupancyLocationFilter !== 'all',
+    occupancyFieldFilter !== 'all',
+    onlyOccupiedBeds,
+  ].filter(Boolean).length;
+  const activeSearchText = calendarMode === 'occupancy' ? occupancySearchText.trim() : seedlingSearchText.trim();
+  const isCalendarFilterPopoverOpen = Boolean(calendarFilterAnchorEl);
+  const resetOccupancyHierarchyFilters = useCallback(() => {
+    setOccupancyLocationFilter('all');
+    setOccupancyFieldFilter('all');
+    setOnlyOccupiedBeds(false);
+  }, []);
+  const clearActiveSearch = useCallback(() => {
+    if (calendarMode === 'occupancy') {
+      setOccupancySearchText('');
+    } else {
+      setSeedlingSearchText('');
+    }
+    setMobileSearchOpen(false);
+  }, [calendarMode]);
+  const activeMobileFilterChips = useMemo(
+    () => {
+      const chips: Array<{ key: string; label: string; onDelete: () => void }> = [];
+      if (activeSearchText) {
+        chips.push({
+          key: 'search',
+          label: t('ganttChart:treeFilters.searchChip', { query: activeSearchText }),
+          onDelete: clearActiveSearch,
+        });
+      }
+      if (calendarMode === 'occupancy') {
+        if (occupancyLocationFilter !== 'all') {
+          chips.push({
+            key: 'location',
+            label: selectedLocationName ?? t('ganttChart:treeFilters.selectedLocationFallback'),
+            onDelete: () => {
+              setOccupancyLocationFilter('all');
+              setOccupancyFieldFilter('all');
+            },
+          });
+        }
+        if (occupancyFieldFilter !== 'all') {
+          chips.push({
+            key: 'field',
+            label: selectedFieldName ?? t('ganttChart:treeFilters.selectedFieldFallback'),
+            onDelete: () => setOccupancyFieldFilter('all'),
+          });
+        }
+        if (onlyOccupiedBeds) {
+          chips.push({
+            key: 'only-occupied',
+            label: t('ganttChart:treeFilters.onlyOccupiedBeds'),
+            onDelete: () => setOnlyOccupiedBeds(false),
+          });
+        }
+      }
+      return chips;
+    },
+    [
+      activeSearchText,
+      calendarMode,
+      clearActiveSearch,
+      occupancyFieldFilter,
+      occupancyLocationFilter,
+      onlyOccupiedBeds,
+      selectedFieldName,
+      selectedLocationName,
+      t,
+    ],
   );
 
   const occupancyTaskGroups = useMemo<GanttTaskGroup[]>(() => {
@@ -2018,100 +2129,333 @@ function GanttChartPage() {
             <Box
               data-testid="occupancy-tree-filters"
               sx={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 1.5,
-                alignItems: 'center',
-                mb: 1.5,
+                mb: { xs: 0.75, md: 1.5 },
               }}
             >
-              <TextField
-                size="small"
-                placeholder={t('ganttChart:treeFilters.searchPlaceholder')}
-                value={occupancySearchText}
-                onChange={(event) => setOccupancySearchText(event.target.value)}
-                inputRef={searchInputRef}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon fontSize="small" />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ minWidth: 240, flex: '1 1 240px' }}
-              />
-              <Select
-                size="small"
-                value={occupancyLocationFilter === 'all' ? 'all' : String(occupancyLocationFilter)}
-                onChange={(event) => {
-                  const { value } = event.target;
-                  setOccupancyLocationFilter(value === 'all' ? 'all' : Number(value));
-                  setOccupancyFieldFilter('all');
-                }}
-                sx={{ minWidth: 160 }}
-              >
-                <MenuItem value="all">{t('ganttChart:treeFilters.allLocations')}</MenuItem>
-                {locations.filter((location) => location.id).map((location) => (
-                  <MenuItem key={location.id} value={String(location.id)}>{location.name}</MenuItem>
-                ))}
-              </Select>
-              <Select
-                size="small"
-                value={occupancyFieldFilter === 'all' ? 'all' : String(occupancyFieldFilter)}
-                onChange={(event) => {
-                  const { value } = event.target;
-                  setOccupancyFieldFilter(value === 'all' ? 'all' : Number(value));
-                }}
-                disabled={occupancyLocationFilter === 'all'}
-                sx={{ minWidth: 160 }}
-              >
-                <MenuItem value="all">{t('ganttChart:treeFilters.allFields')}</MenuItem>
-                {occupancyFieldOptions.map((field) => (
-                  <MenuItem key={field.id} value={String(field.fieldId)}>{field.name}</MenuItem>
-                ))}
-              </Select>
-              <FormControlLabel
-                control={(
-                  <Checkbox
+              {useMobileFilterLayout ? (
+                <Stack spacing={0.75}>
+                  {mobileSearchOpen || activeSearchText ? (
+                    <Stack direction="row" spacing={0.75} alignItems="center">
+                      <TextField
+                        size="small"
+                        placeholder={t('ganttChart:treeFilters.searchPlaceholder')}
+                        value={occupancySearchText}
+                        onChange={(event) => setOccupancySearchText(event.target.value)}
+                        inputRef={searchInputRef}
+                        slotProps={{
+                          input: {
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <SearchIcon fontSize="small" />
+                              </InputAdornment>
+                            ),
+                          },
+                        }}
+                        sx={{ flex: '1 1 auto', minWidth: 0 }}
+                      />
+                      <Tooltip title={t('ganttChart:treeFilters.clearSearch')}>
+                        <IconButton
+                          size="small"
+                          aria-label={t('ganttChart:treeFilters.clearSearch')}
+                          onClick={clearActiveSearch}
+                          sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Button
+                        size="small"
+                        variant={activeHierarchyFilterCount > 0 ? 'contained' : 'outlined'}
+                        color={activeHierarchyFilterCount > 0 ? 'success' : 'inherit'}
+                        startIcon={<TuneIcon fontSize="small" />}
+                        onClick={(event) => setCalendarFilterAnchorEl(event.currentTarget)}
+                        aria-expanded={isCalendarFilterPopoverOpen}
+                        aria-haspopup="dialog"
+                        aria-controls={isCalendarFilterPopoverOpen ? 'calendar-filters-popover' : undefined}
+                        sx={{ minHeight: 40, minWidth: 0, px: 1, whiteSpace: 'nowrap' }}
+                      >
+                        {activeHierarchyFilterCount > 0
+                          ? t('ganttChart:treeFilters.filterButtonWithCount', { count: activeHierarchyFilterCount })
+                          : t('ganttChart:treeFilters.filterButton')}
+                      </Button>
+                    </Stack>
+                  ) : (
+                    <Stack direction="row" spacing={0.75} alignItems="center">
+                      <Tooltip title={t('common:actions.search')}>
+                        <IconButton
+                          size="small"
+                          aria-label={t('common:actions.search')}
+                          onClick={() => setMobileSearchOpen(true)}
+                          sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}
+                        >
+                          <SearchIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Button
+                        size="small"
+                        variant={activeHierarchyFilterCount > 0 ? 'contained' : 'outlined'}
+                        color={activeHierarchyFilterCount > 0 ? 'success' : 'inherit'}
+                        startIcon={<TuneIcon fontSize="small" />}
+                        onClick={(event) => setCalendarFilterAnchorEl(event.currentTarget)}
+                        aria-expanded={isCalendarFilterPopoverOpen}
+                        aria-haspopup="dialog"
+                        aria-controls={isCalendarFilterPopoverOpen ? 'calendar-filters-popover' : undefined}
+                        sx={{ minHeight: 40, whiteSpace: 'nowrap' }}
+                      >
+                        {activeHierarchyFilterCount > 0
+                          ? t('ganttChart:treeFilters.filterButtonWithCount', { count: activeHierarchyFilterCount })
+                          : t('ganttChart:treeFilters.filterButton')}
+                      </Button>
+                    </Stack>
+                  )}
+                  {activeMobileFilterChips.length > 0 ? (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, maxWidth: '100%', overflow: 'hidden' }}>
+                      {activeMobileFilterChips.map((chip) => (
+                        <Chip
+                          key={chip.key}
+                          size="small"
+                          variant="outlined"
+                          label={chip.label}
+                          onDelete={chip.onDelete}
+                          sx={{ maxWidth: '100%', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                        />
+                      ))}
+                    </Box>
+                  ) : null}
+                  <Popover
+                    id="calendar-filters-popover"
+                    open={isCalendarFilterPopoverOpen}
+                    anchorEl={calendarFilterAnchorEl}
+                    onClose={() => setCalendarFilterAnchorEl(null)}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                    PaperProps={{ sx: { width: 'min(92vw, 360px)', p: 1.5 } }}
+                  >
+                    <Stack spacing={1.25}>
+                      <FormControl size="small" sx={{ minWidth: '100%' }}>
+                        <InputLabel id="calendar-location-filter-label">{t('ganttChart:treeFilters.locationLabel')}</InputLabel>
+                        <Select
+                          labelId="calendar-location-filter-label"
+                          value={occupancyLocationFilter === 'all' ? 'all' : String(occupancyLocationFilter)}
+                          label={t('ganttChart:treeFilters.locationLabel')}
+                          onChange={(event) => {
+                            const { value } = event.target;
+                            setOccupancyLocationFilter(value === 'all' ? 'all' : Number(value));
+                            setOccupancyFieldFilter('all');
+                          }}
+                        >
+                          <MenuItem value="all">{t('ganttChart:treeFilters.allLocations')}</MenuItem>
+                          {locations.filter((location) => location.id).map((location) => (
+                            <MenuItem key={location.id} value={String(location.id)}>{location.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControl size="small" sx={{ minWidth: '100%' }}>
+                        <InputLabel id="calendar-field-filter-label">{t('ganttChart:treeFilters.fieldLabel')}</InputLabel>
+                        <Select
+                          labelId="calendar-field-filter-label"
+                          value={occupancyFieldFilter === 'all' ? 'all' : String(occupancyFieldFilter)}
+                          label={t('ganttChart:treeFilters.fieldLabel')}
+                          onChange={(event) => {
+                            const { value } = event.target;
+                            setOccupancyFieldFilter(value === 'all' ? 'all' : Number(value));
+                          }}
+                          disabled={occupancyLocationFilter === 'all'}
+                        >
+                          <MenuItem value="all">{t('ganttChart:treeFilters.allFields')}</MenuItem>
+                          {occupancyFieldOptions.map((field) => (
+                            <MenuItem key={field.id} value={String(field.fieldId)}>{field.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControlLabel
+                        control={(
+                          <Checkbox
+                            size="small"
+                            checked={onlyOccupiedBeds}
+                            onChange={(event) => setOnlyOccupiedBeds(event.target.checked)}
+                          />
+                        )}
+                        label={t('ganttChart:treeFilters.onlyOccupiedBeds')}
+                      />
+                      <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => {
+                          resetOccupancyHierarchyFilters();
+                          setCalendarFilterAnchorEl(null);
+                        }}
+                        sx={{ alignSelf: 'flex-end', whiteSpace: 'nowrap' }}
+                      >
+                        {t('ganttChart:treeFilters.resetFilters')}
+                      </Button>
+                    </Stack>
+                  </Popover>
+                </Stack>
+              ) : (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1.5,
+                    alignItems: 'center',
+                  }}
+                >
+                  <TextField
                     size="small"
-                    checked={onlyOccupiedBeds}
-                    onChange={(event) => setOnlyOccupiedBeds(event.target.checked)}
+                    placeholder={t('ganttChart:treeFilters.searchPlaceholder')}
+                    value={occupancySearchText}
+                    onChange={(event) => setOccupancySearchText(event.target.value)}
+                    inputRef={searchInputRef}
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon fontSize="small" />
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                    sx={{ minWidth: 240, flex: '1 1 240px' }}
                   />
-                )}
-                label={t('ganttChart:treeFilters.onlyOccupiedBeds')}
-              />
+                  <Select
+                    size="small"
+                    value={occupancyLocationFilter === 'all' ? 'all' : String(occupancyLocationFilter)}
+                    onChange={(event) => {
+                      const { value } = event.target;
+                      setOccupancyLocationFilter(value === 'all' ? 'all' : Number(value));
+                      setOccupancyFieldFilter('all');
+                    }}
+                    sx={{ minWidth: 160 }}
+                  >
+                    <MenuItem value="all">{t('ganttChart:treeFilters.allLocations')}</MenuItem>
+                    {locations.filter((location) => location.id).map((location) => (
+                      <MenuItem key={location.id} value={String(location.id)}>{location.name}</MenuItem>
+                    ))}
+                  </Select>
+                  <Select
+                    size="small"
+                    value={occupancyFieldFilter === 'all' ? 'all' : String(occupancyFieldFilter)}
+                    onChange={(event) => {
+                      const { value } = event.target;
+                      setOccupancyFieldFilter(value === 'all' ? 'all' : Number(value));
+                    }}
+                    disabled={occupancyLocationFilter === 'all'}
+                    sx={{ minWidth: 160 }}
+                  >
+                    <MenuItem value="all">{t('ganttChart:treeFilters.allFields')}</MenuItem>
+                    {occupancyFieldOptions.map((field) => (
+                      <MenuItem key={field.id} value={String(field.fieldId)}>{field.name}</MenuItem>
+                    ))}
+                  </Select>
+                  <FormControlLabel
+                    control={(
+                      <Checkbox
+                        size="small"
+                        checked={onlyOccupiedBeds}
+                        onChange={(event) => setOnlyOccupiedBeds(event.target.checked)}
+                      />
+                    )}
+                    label={t('ganttChart:treeFilters.onlyOccupiedBeds')}
+                  />
+                </Box>
+              )}
             </Box>
           )}
           {calendarMode === 'seedlings' && (
             <Box
               data-testid="seedling-filters"
               sx={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 1.5,
-                alignItems: 'center',
-                mb: 1.5,
+                mb: { xs: 0.75, md: 1.5 },
               }}
             >
-              <TextField
-                size="small"
-                placeholder={t('ganttChart:treeFilters.searchPlaceholderSeedlings')}
-                value={seedlingSearchText}
-                onChange={(event) => setSeedlingSearchText(event.target.value)}
-                inputRef={searchInputRef}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
+              {useMobileFilterLayout ? (
+                <Stack spacing={0.75}>
+                  {mobileSearchOpen || activeSearchText ? (
+                    <Stack direction="row" spacing={0.75} alignItems="center">
+                      <TextField
+                        size="small"
+                        placeholder={t('ganttChart:treeFilters.searchPlaceholderSeedlings')}
+                        value={seedlingSearchText}
+                        onChange={(event) => setSeedlingSearchText(event.target.value)}
+                        inputRef={searchInputRef}
+                        slotProps={{
+                          input: {
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <SearchIcon fontSize="small" />
+                              </InputAdornment>
+                            ),
+                          },
+                        }}
+                        sx={{ flex: '1 1 auto', minWidth: 0 }}
+                      />
+                      <Tooltip title={t('ganttChart:treeFilters.clearSearch')}>
+                        <IconButton
+                          size="small"
+                          aria-label={t('ganttChart:treeFilters.clearSearch')}
+                          onClick={clearActiveSearch}
+                          sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  ) : (
+                    <Tooltip title={t('common:actions.search')}>
+                      <IconButton
+                        size="small"
+                        aria-label={t('common:actions.search')}
+                        onClick={() => setMobileSearchOpen(true)}
+                        sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}
+                      >
                         <SearchIcon fontSize="small" />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ minWidth: 240, flex: '1 1 240px' }}
-              />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {activeMobileFilterChips.length > 0 ? (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, maxWidth: '100%', overflow: 'hidden' }}>
+                      {activeMobileFilterChips.map((chip) => (
+                        <Chip
+                          key={chip.key}
+                          size="small"
+                          variant="outlined"
+                          label={chip.label}
+                          onDelete={chip.onDelete}
+                          sx={{ maxWidth: '100%', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
+                        />
+                      ))}
+                    </Box>
+                  ) : null}
+                </Stack>
+              ) : (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1.5,
+                    alignItems: 'center',
+                  }}
+                >
+                  <TextField
+                    size="small"
+                    placeholder={t('ganttChart:treeFilters.searchPlaceholderSeedlings')}
+                    value={seedlingSearchText}
+                    onChange={(event) => setSeedlingSearchText(event.target.value)}
+                    inputRef={searchInputRef}
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon fontSize="small" />
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                    sx={{ minWidth: 240, flex: '1 1 240px' }}
+                  />
+                </Box>
+              )}
             </Box>
           )}
           <Box
