@@ -20,7 +20,6 @@ import {
   Button,
   ButtonGroup,
   Checkbox,
-  Chip,
   Divider,
   FormControl,
   FormControlLabel,
@@ -1071,20 +1070,6 @@ function GanttChartPage() {
       )),
     [occupancyHierarchyNodes, occupancyLocationFilter],
   );
-  const selectedLocationName = useMemo(
-    () => (occupancyLocationFilter === 'all'
-      ? null
-      : locations.find((location) => location.id === occupancyLocationFilter)?.name ?? null),
-    [locations, occupancyLocationFilter],
-  );
-  const selectedFieldName = useMemo(
-    () => (occupancyFieldFilter === 'all'
-      ? null
-      : occupancyHierarchyNodes.find(
-        (node) => node.type === 'field' && node.fieldId === occupancyFieldFilter,
-      )?.name ?? null),
-    [occupancyFieldFilter, occupancyHierarchyNodes],
-  );
   const activeHierarchyFilterCount = [
     occupancyLocationFilter !== 'all',
     occupancyFieldFilter !== 'all',
@@ -1105,56 +1090,6 @@ function GanttChartPage() {
     }
     setMobileSearchOpen(false);
   }, [calendarMode]);
-  const activeMobileFilterChips = useMemo(
-    () => {
-      const chips: Array<{ key: string; label: string; onDelete: () => void }> = [];
-      if (activeSearchText) {
-        chips.push({
-          key: 'search',
-          label: t('ganttChart:treeFilters.searchChip', { query: activeSearchText }),
-          onDelete: clearActiveSearch,
-        });
-      }
-      if (calendarMode === 'occupancy') {
-        if (occupancyLocationFilter !== 'all') {
-          chips.push({
-            key: 'location',
-            label: selectedLocationName ?? t('ganttChart:treeFilters.selectedLocationFallback'),
-            onDelete: () => {
-              setOccupancyLocationFilter('all');
-              setOccupancyFieldFilter('all');
-            },
-          });
-        }
-        if (occupancyFieldFilter !== 'all') {
-          chips.push({
-            key: 'field',
-            label: selectedFieldName ?? t('ganttChart:treeFilters.selectedFieldFallback'),
-            onDelete: () => setOccupancyFieldFilter('all'),
-          });
-        }
-        if (onlyOccupiedBeds) {
-          chips.push({
-            key: 'only-occupied',
-            label: t('ganttChart:treeFilters.onlyOccupiedBeds'),
-            onDelete: () => setOnlyOccupiedBeds(false),
-          });
-        }
-      }
-      return chips;
-    },
-    [
-      activeSearchText,
-      calendarMode,
-      clearActiveSearch,
-      occupancyFieldFilter,
-      occupancyLocationFilter,
-      onlyOccupiedBeds,
-      selectedFieldName,
-      selectedLocationName,
-      t,
-    ],
-  );
 
   const occupancyTaskGroups = useMemo<GanttTaskGroup[]>(() => {
     // Structural filter: "only occupied beds" removes empty beds (and any
@@ -2129,11 +2064,11 @@ function GanttChartPage() {
             <Box
               data-testid="occupancy-tree-filters"
               sx={{
-                mb: { xs: 0.75, md: 1.5 },
+                mb: { xs: 0, md: 1.5 },
               }}
             >
               {useMobileFilterLayout ? (
-                <Stack spacing={0.75}>
+                <Stack spacing={0}>
                   {mobileSearchOpen || activeSearchText ? (
                     <Stack direction="row" spacing={0.75} alignItems="center">
                       <TextField
@@ -2165,14 +2100,21 @@ function GanttChartPage() {
                       </Tooltip>
                       <Button
                         size="small"
-                        variant={activeHierarchyFilterCount > 0 ? 'contained' : 'outlined'}
-                        color={activeHierarchyFilterCount > 0 ? 'success' : 'inherit'}
+                        variant="outlined"
+                        color="inherit"
                         startIcon={<TuneIcon fontSize="small" />}
                         onClick={(event) => setCalendarFilterAnchorEl(event.currentTarget)}
                         aria-expanded={isCalendarFilterPopoverOpen}
                         aria-haspopup="dialog"
                         aria-controls={isCalendarFilterPopoverOpen ? 'calendar-filters-popover' : undefined}
-                        sx={{ minHeight: 40, minWidth: 0, px: 1, whiteSpace: 'nowrap' }}
+                        sx={{
+                          minHeight: 40,
+                          minWidth: 0,
+                          px: 1,
+                          whiteSpace: 'nowrap',
+                          borderColor: activeHierarchyFilterCount > 0 ? 'text.secondary' : 'divider',
+                          bgcolor: activeHierarchyFilterCount > 0 ? 'action.selected' : 'transparent',
+                        }}
                       >
                         {activeHierarchyFilterCount > 0
                           ? t('ganttChart:treeFilters.filterButtonWithCount', { count: activeHierarchyFilterCount })
@@ -2193,14 +2135,19 @@ function GanttChartPage() {
                       </Tooltip>
                       <Button
                         size="small"
-                        variant={activeHierarchyFilterCount > 0 ? 'contained' : 'outlined'}
-                        color={activeHierarchyFilterCount > 0 ? 'success' : 'inherit'}
+                        variant="outlined"
+                        color="inherit"
                         startIcon={<TuneIcon fontSize="small" />}
                         onClick={(event) => setCalendarFilterAnchorEl(event.currentTarget)}
                         aria-expanded={isCalendarFilterPopoverOpen}
                         aria-haspopup="dialog"
                         aria-controls={isCalendarFilterPopoverOpen ? 'calendar-filters-popover' : undefined}
-                        sx={{ minHeight: 40, whiteSpace: 'nowrap' }}
+                        sx={{
+                          minHeight: 40,
+                          whiteSpace: 'nowrap',
+                          borderColor: activeHierarchyFilterCount > 0 ? 'text.secondary' : 'divider',
+                          bgcolor: activeHierarchyFilterCount > 0 ? 'action.selected' : 'transparent',
+                        }}
                       >
                         {activeHierarchyFilterCount > 0
                           ? t('ganttChart:treeFilters.filterButtonWithCount', { count: activeHierarchyFilterCount })
@@ -2208,20 +2155,6 @@ function GanttChartPage() {
                       </Button>
                     </Stack>
                   )}
-                  {activeMobileFilterChips.length > 0 ? (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, maxWidth: '100%', overflow: 'hidden' }}>
-                      {activeMobileFilterChips.map((chip) => (
-                        <Chip
-                          key={chip.key}
-                          size="small"
-                          variant="outlined"
-                          label={chip.label}
-                          onDelete={chip.onDelete}
-                          sx={{ maxWidth: '100%', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
-                        />
-                      ))}
-                    </Box>
-                  ) : null}
                   <Popover
                     id="calendar-filters-popover"
                     open={isCalendarFilterPopoverOpen}
@@ -2366,11 +2299,11 @@ function GanttChartPage() {
             <Box
               data-testid="seedling-filters"
               sx={{
-                mb: { xs: 0.75, md: 1.5 },
+                mb: { xs: 0, md: 1.5 },
               }}
             >
               {useMobileFilterLayout ? (
-                <Stack spacing={0.75}>
+                <Stack spacing={0}>
                   {mobileSearchOpen || activeSearchText ? (
                     <Stack direction="row" spacing={0.75} alignItems="center">
                       <TextField
@@ -2413,20 +2346,6 @@ function GanttChartPage() {
                       </IconButton>
                     </Tooltip>
                   )}
-                  {activeMobileFilterChips.length > 0 ? (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, maxWidth: '100%', overflow: 'hidden' }}>
-                      {activeMobileFilterChips.map((chip) => (
-                        <Chip
-                          key={chip.key}
-                          size="small"
-                          variant="outlined"
-                          label={chip.label}
-                          onDelete={chip.onDelete}
-                          sx={{ maxWidth: '100%', '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' } }}
-                        />
-                      ))}
-                    </Box>
-                  ) : null}
                 </Stack>
               ) : (
                 <Box
@@ -2461,6 +2380,7 @@ function GanttChartPage() {
           <Box
             className={`gantt-container-wrapper gantt-container-wrapper--${calendarMode}`}
             sx={{
+              mt: { xs: 0.75, md: 2 },
               border: '1px solid',
               borderColor: 'surface.surfaceSoftBorder',
               borderRadius: 2,

@@ -169,10 +169,7 @@
     "locationLabel": "Standort",
     "fieldLabel": "Parzelle",
     "resetFilters": "Filter zurücksetzen",
-    "clearSearch": "Suche löschen",
-    "searchChip": "Suche: {{query}}",
-    "selectedLocationFallback": "Standort",
-    "selectedFieldFallback": "Parzelle"
+    "clearSearch": "Suche löschen"
   },
   "contextMenu": {
     "openPlan": "Anbauplan öffnen",

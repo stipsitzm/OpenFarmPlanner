@@ -1399,7 +1399,7 @@ describe('GanttChartPage', () => {
         expect(screen.queryByPlaceholderText('Suche nach Kultur, Beet, Parzelle oder Standort…')).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Suchen' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Filter (1)' })).toBeInTheDocument();
-        expect(screen.getByText('Nur belegte Beete')).toBeInTheDocument();
+        expect(screen.queryByText('Nur belegte Beete')).not.toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
         fireEvent.change(await screen.findByPlaceholderText('Suche nach Kultur, Beet, Parzelle oder Standort…'), {
@@ -1407,11 +1407,13 @@ describe('GanttChartPage', () => {
         });
 
         await waitFor(() => {
-          expect(screen.getByText('Suche: Karotte')).toBeInTheDocument();
+          expect(screen.getByPlaceholderText('Suche nach Kultur, Beet, Parzelle oder Standort…')).toHaveValue('Karotte');
+          expect(screen.queryByText('Suche: Karotte')).not.toBeInTheDocument();
           expect(screen.queryByText('Tomatenbeet')).not.toBeInTheDocument();
         });
 
         fireEvent.click(screen.getByRole('button', { name: 'Filter (1)' }));
+        expect(await screen.findByText('Nur belegte Beete')).toBeInTheDocument();
         fireEvent.mouseDown(await screen.findByLabelText('Standort'));
         fireEvent.click(await screen.findByRole('option', { name: 'Pacht' }));
 
