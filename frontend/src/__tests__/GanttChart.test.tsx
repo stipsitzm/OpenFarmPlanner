@@ -719,6 +719,25 @@ describe('GanttChartPage', () => {
     }
   });
 
+  it('uses page scrolling instead of the virtualized Gantt viewport on mobile', async () => {
+    const restoreViewport = withMobileCalendarViewport();
+    try {
+      window.localStorage.setItem(GANTT_STATE_STORAGE_KEY, JSON.stringify({
+        rowScrollTop: 144,
+      }));
+
+      renderWithAuth();
+
+      const virtualViewport = await screen.findByTestId('gantt-virtual-viewport');
+      await waitFor(() => {
+        expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(220);
+      });
+      expect(virtualViewport.scrollTop).toBe(0);
+    } finally {
+      restoreViewport();
+    }
+  });
+
   it('renders the chart flush with the top of the viewport when a stale row-scroll offset exceeds the actual scrollable range', async () => {
     // Simulates a real browser: the stored offset (e.g. saved while a different
     // calendar mode/project had many more rows) exceeds what's actually

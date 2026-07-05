@@ -110,7 +110,7 @@ const GANTT_LEFT_COLUMN_MAX_WIDTH = 400;
 const GANTT_SIDEBAR_RESIZE_HANDLE_HITBOX_WIDTH = 12;
 const GANTT_SIDEBAR_RESIZE_KEYBOARD_STEP = 10;
 const GANTT_ROW_HEIGHT = 32;
-const GANTT_VIEWPORT_MAX_HEIGHT_SX = { xs: '70svh', sm: '72svh', lg: '76svh' } as const;
+const GANTT_VIEWPORT_MAX_HEIGHT_SX = { md: '72svh', lg: '76svh' } as const;
 // Above this many combined location+field+bed nodes, default to
 // locations-expanded/fields-collapsed instead of fully expanding the tree.
 const OCCUPANCY_TREE_AUTO_EXPAND_ALL_THRESHOLD = 30;
@@ -614,6 +614,7 @@ function GanttChartPage() {
   const activeGanttLeftColumnWidth = useMobileFilterLayout
     ? GANTT_LEFT_COLUMN_MOBILE_WIDTH
     : ganttLeftColumnWidth;
+  const useWindowedGanttRows = !useMobileFilterLayout;
   const activeGanttLeftColumnWidthRef = useRef(activeGanttLeftColumnWidth);
   const [editMode, setEditMode] = useState(false);
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
@@ -1553,16 +1554,24 @@ function GanttChartPage() {
     [activeGanttLeftColumnWidth, timelineViewMode],
   );
   const renderWindow = useMemo(
-    () => getGanttRenderWindow(
-      activeTaskGroups,
-      ganttScrollTop,
-      ganttViewportHeight,
-      getActiveGanttRowHeight,
-    ),
-    [activeTaskGroups, ganttScrollTop, ganttViewportHeight, getActiveGanttRowHeight],
+    () => (useWindowedGanttRows
+      ? getGanttRenderWindow(
+        activeTaskGroups,
+        ganttScrollTop,
+        ganttViewportHeight,
+        getActiveGanttRowHeight,
+      )
+      : {
+        groups: activeTaskGroups,
+        startIndex: 0,
+        endIndex: activeTaskGroups.length,
+        totalHeight: activeTaskGroups.reduce((total, group) => total + getActiveGanttRowHeight(group), 0),
+      }),
+    [activeTaskGroups, ganttScrollTop, ganttViewportHeight, getActiveGanttRowHeight, useWindowedGanttRows],
   );
   const renderedTaskGroups = renderWindow.groups;
-  const isGanttRenderWindowVirtualized = renderWindow.startIndex > 0 || renderWindow.endIndex < activeTaskGroups.length;
+  const isGanttRenderWindowVirtualized = useWindowedGanttRows
+    && (renderWindow.startIndex > 0 || renderWindow.endIndex < activeTaskGroups.length);
   const totalTimelineItems = useMemo(
     // For occupancy mode, count tasks across the full tree (every bed),
     // not just the currently visible/expanded rows — collapsing a field
@@ -1737,7 +1746,10 @@ function GanttChartPage() {
   useRegisterCommands('calendar-page', calendarCommands);
 
   useEffect(() => {
-    if (loading || !hasCalendarRequirements) {
+    if (loading || !hasCalendarRequirements || !useWindowedGanttRows) {
+      if (!useWindowedGanttRows) {
+        setGanttScrollTop(0);
+      }
       return;
     }
 
@@ -1757,7 +1769,7 @@ function GanttChartPage() {
     }
     setGanttScrollTop(appliedScrollTop);
     hasRestoredTimelineRef.current = false;
-  }, [activeProjectId, calendarMode, hasCalendarRequirements, loading, storedGanttState?.rowScrollTop]);
+  }, [activeProjectId, calendarMode, hasCalendarRequirements, loading, storedGanttState?.rowScrollTop, useWindowedGanttRows]);
 
   useEffect(() => {
     if (loading || !hasCalendarRequirements) {
@@ -2548,6 +2560,9 @@ function GanttChartPage() {
                 ref={ganttViewportRef}
                 data-testid="gantt-virtual-viewport"
                 onScroll={(event) => {
+                  if (!useWindowedGanttRows) {
+                    return;
+                  }
                   const nextScrollTop = event.currentTarget.scrollTop;
                   setGanttScrollTop(nextScrollTop);
                   storeGanttState(ganttStateStorageKey, {
@@ -2558,10 +2573,10 @@ function GanttChartPage() {
                 }}
                 sx={{
                   position: 'relative',
-                  maxHeight: GANTT_VIEWPORT_MAX_HEIGHT_SX,
-                  overflowY: 'auto',
+                  maxHeight: { xs: 'none', ...GANTT_VIEWPORT_MAX_HEIGHT_SX },
+                  overflowY: { xs: 'visible', md: 'auto' },
                   overflowX: 'hidden',
-                  overscrollBehavior: 'contain',
+                  overscrollBehavior: { xs: 'auto', md: 'contain' },
                 }}
               >
                 {isGanttRenderWindowVirtualized ? (
