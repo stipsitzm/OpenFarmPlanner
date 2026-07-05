@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type React from 'react';
+import { flushSync } from 'react-dom';
 import { GridRowModes } from '@mui/x-data-grid';
 import type { GridCellParams, GridRowId, GridRowModesModel, GridValidRowModel } from '@mui/x-data-grid';
 
@@ -92,7 +93,7 @@ export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
   }, []);
 
   const flushPendingValue = useCallback((pendingKey: string): void => {
-    const runFlush = (): void => {
+    const applyPendingValue = (): void => {
       const pendingValue = pendingValuesRef.current.get(pendingKey);
       const api = apiRef.current;
       if (!pendingValue || !api?.setEditCellValue) {
@@ -107,10 +108,11 @@ export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
       }));
     };
 
-    queueMicrotask(runFlush);
-    window.setTimeout(runFlush, 0);
+    applyPendingValue();
+    queueMicrotask(applyPendingValue);
+    window.setTimeout(applyPendingValue, 0);
     if (typeof window.requestAnimationFrame === 'function') {
-      window.requestAnimationFrame(runFlush);
+      window.requestAnimationFrame(applyPendingValue);
     }
   }, [apiRef]);
 
@@ -157,10 +159,12 @@ export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
     if (!pendingValue) {
       onBeforeEdit?.(params);
       apiRef.current?.setCellFocus?.(params.id, params.field);
-      setRowModesModel((oldModel) => ({
-        ...oldModel,
-        [params.id]: { mode: GridRowModes.Edit, fieldToFocus: params.field },
-      }));
+      flushSync(() => {
+        setRowModesModel((oldModel) => ({
+          ...oldModel,
+          [params.id]: { mode: GridRowModes.Edit, fieldToFocus: params.field },
+        }));
+      });
     }
 
     const previousValue = pendingValue?.value ?? '';
