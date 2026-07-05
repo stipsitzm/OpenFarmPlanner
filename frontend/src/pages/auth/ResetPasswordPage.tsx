@@ -1,8 +1,9 @@
-import { Alert, Box, Button, Container, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Container, InputAdornment, Stack, TextField, Typography } from '@mui/material';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
+import PasswordVisibilityToggle from '../../components/inputs/PasswordVisibilityToggle';
 import { useTranslation } from '../../i18n';
 
 export default function ResetPasswordPage() {
@@ -11,6 +12,8 @@ export default function ResetPasswordPage() {
   const { t } = useTranslation('auth');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,8 +38,50 @@ export default function ResetPasswordPage() {
         <Stack spacing={2}>
           {message ? <Alert severity="success">{message}</Alert> : null}
           {error ? <Alert severity="error">{error}</Alert> : null}
-          <TextField label={t('resetPassword.password')} type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          <TextField label={t('resetPassword.passwordConfirm')} type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} required />
+          <TextField
+            label={t('resetPassword.password')}
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <PasswordVisibilityToggle
+                      isVisible={showPassword}
+                      showLabel={t('resetPassword.showPassword')}
+                      hideLabel={t('resetPassword.hidePassword')}
+                      onToggle={() => setShowPassword((current) => !current)}
+                    />
+                  </InputAdornment>
+                ),
+              },
+              htmlInput: { autoComplete: 'new-password' },
+            }}
+          />
+          <TextField
+            label={t('resetPassword.passwordConfirm')}
+            type={showPasswordConfirm ? 'text' : 'password'}
+            value={passwordConfirm}
+            onChange={(e) => setPasswordConfirm(e.target.value)}
+            required
+            slotProps={{
+              input: {
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <PasswordVisibilityToggle
+                      isVisible={showPasswordConfirm}
+                      showLabel={t('resetPassword.showPassword')}
+                      hideLabel={t('resetPassword.hidePassword')}
+                      onToggle={() => setShowPasswordConfirm((current) => !current)}
+                    />
+                  </InputAdornment>
+                ),
+              },
+              htmlInput: { autoComplete: 'new-password' },
+            }}
+          />
           <Button type="submit" variant="contained">{t('resetPassword.submit')}</Button>
           <Button component={RouterLink} to="/login">{t('resetPassword.backToLogin')}</Button>
         </Stack>

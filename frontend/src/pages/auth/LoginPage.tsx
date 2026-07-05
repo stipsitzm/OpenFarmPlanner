@@ -1,6 +1,4 @@
-import { Alert, Box, Button, Container, IconButton, InputAdornment, Stack, TextField, Typography } from '@mui/material';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { Alert, Box, Button, Container, InputAdornment, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -8,6 +6,7 @@ import { projectAPI, type InvitationPublicStatus } from '../../api/api';
 import { useAuth } from '../../auth/useAuth';
 import { AuthApiError } from '../../auth/authApi';
 import { useTranslation } from '../../i18n';
+import PasswordVisibilityToggle from '../../components/inputs/PasswordVisibilityToggle';
 import { getNextFromSearch } from '../invitationAcceptance';
 
 export default function LoginPage() {
@@ -111,15 +110,12 @@ export default function LoginPage() {
               input: {
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      aria-label={t(showPassword ? 'auth:login.hidePassword' : 'auth:login.showPassword')}
-                      edge="end"
-                      tabIndex={-1}
-                      onClick={() => setShowPassword((current) => !current)}
-                      onMouseDown={(event) => event.preventDefault()}
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
+                    <PasswordVisibilityToggle
+                      isVisible={showPassword}
+                      showLabel={t('auth:login.showPassword')}
+                      hideLabel={t('auth:login.hidePassword')}
+                      onToggle={() => setShowPassword((current) => !current)}
+                    />
                   </InputAdornment>
                 ),
               },

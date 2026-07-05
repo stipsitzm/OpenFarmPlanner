@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import LoginPage from '../pages/auth/LoginPage';
 import { AuthApiError } from '../auth/authApi';
@@ -15,6 +16,17 @@ vi.mock('../auth/useAuth', () => ({
   }),
 }));
 
+vi.mock('../api/api', async () => {
+  const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
+  return {
+    ...actual,
+    projectAPI: {
+      ...actual.projectAPI,
+      getPendingInvitation: vi.fn(async () => ({ data: { code: 'no_pending_invitation' } })),
+    },
+  };
+});
+
 describe('LoginPage deletion flow', () => {
   it('shows restore option for account_pending_deletion', async () => {
     loginMock.mockRejectedValueOnce(new AuthApiError('pending', 'account_pending_deletion', new Date().toISOString()));
@@ -28,5 +40,30 @@ describe('LoginPage deletion flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
 
     expect(await screen.findByRole('button', { name: 'Konto wiederherstellen' })).toBeInTheDocument();
+  });
+
+  it('lets keyboard users toggle password visibility without moving focus', async () => {
+    const user = userEvent.setup();
+
+    render(<MemoryRouter><LoginPage /></MemoryRouter>);
+
+    const passwordInput = document.querySelector('input[type="password"]') as HTMLInputElement;
+    const toggleButton = screen.getByRole('button', { name: 'Passwort anzeigen' });
+
+    await user.tab();
+    await user.tab();
+    await user.tab();
+
+    expect(toggleButton).toHaveFocus();
+
+    await user.keyboard('{Enter}');
+    expect(passwordInput.type).toBe('text');
+    expect(toggleButton).toHaveFocus();
+    expect(toggleButton).toHaveAccessibleName('Passwort ausblenden');
+
+    await user.keyboard(' ');
+    expect(passwordInput.type).toBe('password');
+    expect(toggleButton).toHaveFocus();
+    expect(toggleButton).toHaveAccessibleName('Passwort anzeigen');
   });
 });
