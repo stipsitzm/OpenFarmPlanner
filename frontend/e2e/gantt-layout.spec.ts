@@ -224,6 +224,27 @@ async function expectResizeHandleStartsAtTimelineBody(page: Page): Promise<void>
   expect(Math.abs(bounds.handleBottom - bounds.bodyBottom)).toBeLessThanOrEqual(1);
 }
 
+async function expectResizeHandleIsVisuallySubtle(page: Page): Promise<void> {
+  const styles = await page.evaluate(() => {
+    const handle = document.querySelector<HTMLElement>('[role="separator"][aria-orientation="vertical"]');
+    const marker = document.querySelector<HTMLElement>('[data-testid="gantt-sidebar-resize-line"]');
+    if (!handle || !marker) {
+      throw new Error('Missing resize handle');
+    }
+    const computedStyle = window.getComputedStyle(handle);
+    const markerStyle = window.getComputedStyle(marker);
+    return {
+      backgroundColor: computedStyle.backgroundColor,
+      hitboxWidth: computedStyle.width,
+      markerWidth: markerStyle.width,
+    };
+  });
+
+  expect(styles.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  expect(Number.parseFloat(styles.hitboxWidth)).toBeGreaterThan(2);
+  expect(Number.parseFloat(styles.markerWidth)).toBeLessThanOrEqual(2);
+}
+
 async function expectMobilePageScrollsCalendar(page: Page, viewport: { width: number; height: number }): Promise<void> {
   await page.setViewportSize(viewport);
   await page.goto('/app/gantt-chart');
@@ -281,6 +302,7 @@ test.describe('Gantt calendar layout', () => {
     const handle = page.getByRole('separator', { name: 'Seitenleiste verbreitern oder verkleinern' });
     await expect(handle).toBeVisible();
     await expectResizeHandleStartsAtTimelineBody(page);
+    await expectResizeHandleIsVisuallySubtle(page);
 
     const handleBox = await handle.boundingBox();
     expect(handleBox).not.toBeNull();
@@ -314,6 +336,7 @@ test.describe('Gantt calendar layout', () => {
     const handle = page.getByRole('separator', { name: 'Seitenleiste verbreitern oder verkleinern' });
     await expect(handle).toBeVisible();
     await expectResizeHandleStartsAtTimelineBody(page);
+    await expectResizeHandleIsVisuallySubtle(page);
 
     const handleBox = await handle.boundingBox();
     expect(handleBox).not.toBeNull();

@@ -1209,7 +1209,7 @@ function GanttChartPage() {
       ),
     });
   }, [ganttStateStorageKey]);
-  const handleGanttSidebarResizeStart = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+  const handleGanttSidebarResizeStart = useCallback((event: React.PointerEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
 
@@ -1286,7 +1286,7 @@ function GanttChartPage() {
     window.addEventListener('pointercancel', finishResize, { passive: false, capture: true });
     target.addEventListener('lostpointercapture', finishResize, { passive: false });
   }, [activeGanttLeftColumnWidth, persistGanttLeftColumnWidth, useMobileFilterLayout]);
-  const handleGanttSidebarResizeKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
+  const handleGanttSidebarResizeKeyDown = useCallback((event: React.KeyboardEvent<HTMLElement>) => {
     let nextWidth: number | null = null;
     if (event.key === 'ArrowLeft') {
       nextWidth = activeGanttLeftColumnWidth - GANTT_SIDEBAR_RESIZE_KEYBOARD_STEP;
@@ -2735,9 +2735,9 @@ function GanttChartPage() {
               </Box>
               {ganttResizeHandleTop !== null ? (
                 <Box
-                  component="button"
-                  type="button"
+                  component="div"
                   role="separator"
+                  tabIndex={0}
                   aria-orientation="vertical"
                   aria-label={t('ganttChart:sidebar.resizeHandle')}
                   aria-valuemin={activeGanttLeftColumnMinWidth}
@@ -2767,20 +2767,8 @@ function GanttChartPage() {
                       bgcolor: 'transparent !important',
                       background: 'transparent !important',
                     },
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      bottom: 0,
-                      left: '50%',
-                      width: isResizingGanttSidebar ? 2 : 1,
-                      transform: 'translateX(-50%)',
-                      bgcolor: isResizingGanttSidebar ? 'text.secondary' : 'divider',
-                      opacity: isResizingGanttSidebar ? 1 : 0.7,
-                      transition: 'background-color 120ms ease, opacity 120ms ease, width 120ms ease',
-                    },
-                    '&:hover::before, &:focus-visible::before': {
-                      width: 2,
+                    '&:hover .GanttSidebarResizeHandle-line, &:focus-visible .GanttSidebarResizeHandle-line': {
+                      width: '2px',
                       bgcolor: 'text.secondary',
                       opacity: 1,
                     },
@@ -2790,7 +2778,24 @@ function GanttChartPage() {
                       outlineOffset: -2,
                     },
                   }}
-                />
+                >
+                  <Box
+                    className="GanttSidebarResizeHandle-line"
+                    data-testid="gantt-sidebar-resize-line"
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      bottom: 0,
+                      left: '50%',
+                      width: isResizingGanttSidebar ? '2px' : '1px',
+                      transform: 'translateX(-50%)',
+                      bgcolor: isResizingGanttSidebar ? 'text.secondary' : 'divider',
+                      opacity: isResizingGanttSidebar ? 1 : 0.7,
+                      pointerEvents: 'none',
+                      transition: 'background-color 120ms ease, opacity 120ms ease, width 120ms ease',
+                    }}
+                  />
+                </Box>
               ) : null}
             </Box>
           </Box>
