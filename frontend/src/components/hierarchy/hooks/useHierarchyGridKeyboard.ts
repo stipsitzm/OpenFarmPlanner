@@ -11,6 +11,7 @@ import {
   focusKeyboardNavigableCell,
   getKeyboardNavigationTarget,
 } from "../../data-grid/keyboardNavigation";
+import { useSpreadsheetEditStarter } from "../../data-grid/keyboardEditing";
 import type { HierarchyRow } from "../utils/types";
 
 type HierarchyKeyboardEvent = React.KeyboardEvent & {
@@ -26,6 +27,7 @@ interface HierarchyGridKeyboardApi {
   isCellEditable?: (params: GridCellParams<HierarchyRow>) => boolean;
   scrollToIndexes?: (indexes: { rowIndex?: number; colIndex?: number }) => void;
   setCellFocus?: (id: GridRowId, field: string) => void;
+  setEditCellValue?: (params: { id: GridRowId; field: string; value: unknown }) => Promise<boolean> | boolean | void;
 }
 
 interface UseHierarchyGridKeyboardParams {
@@ -73,14 +75,13 @@ const isRowEditing = (rowModesModel: GridRowModesModel, rowId: GridRowId): boole
 const getEditingRowId = (rowModesModel: GridRowModesModel): string | undefined =>
   Object.entries(rowModesModel).find(([, mode]) => mode.mode === GridRowModes.Edit)?.[0];
 
-const shouldSuppressPrintableViewEdit = (
+const shouldSuppressModifiedPrintableViewEdit = (
   event: HierarchyKeyboardEvent,
   rowModesModel: GridRowModesModel,
   rowId: GridRowId,
 ): boolean => (
   event.key.length === 1
-  && !event.ctrlKey
-  && !event.metaKey
+  && event.altKey
   && !isRowEditing(rowModesModel, rowId)
 );
 
@@ -102,6 +103,27 @@ export function useHierarchyGridKeyboard({
   setTreeActive,
   toggleExpand,
 }: UseHierarchyGridKeyboardParams): UseHierarchyGridKeyboardResult {
+  const spreadsheetEditStarter = useSpreadsheetEditStarter<HierarchyRow>({
+    apiRef: gridApiRef,
+    rowModesModel,
+    setRowModesModel,
+    isCellEditable: (params) => {
+      if (!params.isEditable) {
+        return false;
+      }
+      if (!params.row || !('type' in params.row)) {
+        return true;
+      }
+      return params.field !== "notes" && isCellFocusable(params.row, params.field);
+    },
+    onBeforeEdit: (params) => {
+      rememberFocusedField(params.field);
+      rememberRowSnapshot(params.id);
+      selectRow(params.id);
+      setTreeActive(true);
+    },
+  });
+
   const navigateCell = useCallback((
     params: GridCellParams<HierarchyRow>,
     event: HierarchyKeyboardEvent,
@@ -248,7 +270,15 @@ export function useHierarchyGridKeyboard({
       keyboardEvent.defaultMuiPrevented = true;
     }
 
-    if (shouldSuppressPrintableViewEdit(keyboardEvent, rowModesModel, params.id)) {
+    if (spreadsheetEditStarter.startEditFromF2(params, keyboardEvent)) {
+      return;
+    }
+
+    if (spreadsheetEditStarter.startEditFromPrintableKey(params, keyboardEvent)) {
+      return;
+    }
+
+    if (shouldSuppressModifiedPrintableViewEdit(keyboardEvent, rowModesModel, params.id)) {
       keyboardEvent.defaultMuiPrevented = true;
     }
 
@@ -275,6 +305,7 @@ export function useHierarchyGridKeyboard({
     rememberFocusedField,
     rowModesModel,
     rows,
+    spreadsheetEditStarter,
     toggleExpand,
   ]);
 

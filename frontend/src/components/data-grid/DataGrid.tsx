@@ -69,6 +69,7 @@ import {
   isInteractiveCellTarget,
   preventReadOnlyCellMouseFocus,
 } from './keyboardNavigation';
+import { useSpreadsheetEditStarter } from './keyboardEditing';
 import type {
   EditableDataGridClipboardColumn,
   EditableDataGridProps,
@@ -1109,18 +1110,23 @@ export function EditableDataGrid<T extends EditableRow>({
     }));
   }, [columns, selectedRowIds]);
 
+  const rememberRowSnapshotForCellEdit = useCallback((params: GridCellParams<T>): void => {
+    const rowKey = String(params.id);
+    if (rowSnapshotRef.current.has(rowKey)) {
+      return;
+    }
+    const row = rowsById.get(rowKey);
+    if (row) {
+      rowSnapshotRef.current.set(rowKey, row as T);
+    }
+  }, [rowsById]);
+
   const handleStartCellEditFromKeyboard = useCallback((params: GridCellParams<T>): void => {
     if (!params.isEditable || rowModesModel[params.id]?.mode === GridRowModes.Edit) {
       return;
     }
 
-    const rowKey = String(params.id);
-    if (!rowSnapshotRef.current.has(rowKey)) {
-      const row = rowsById.get(rowKey);
-      if (row) {
-        rowSnapshotRef.current.set(rowKey, row as T);
-      }
-    }
+    rememberRowSnapshotForCellEdit(params);
 
     const api = gridApiRef.current;
     if (!api) {
@@ -1132,7 +1138,15 @@ export function EditableDataGrid<T extends EditableRow>({
       ...oldModel,
       [params.id]: { mode: GridRowModes.Edit, fieldToFocus: params.field },
     }));
-  }, [gridApiRef, rowModesModel, rowsById]);
+  }, [gridApiRef, rememberRowSnapshotForCellEdit, rowModesModel]);
+
+  const spreadsheetEditStarter = useSpreadsheetEditStarter<T>({
+    apiRef: gridApiRef,
+    rowModesModel,
+    setRowModesModel,
+    onBeforeEdit: rememberRowSnapshotForCellEdit,
+    onReplaceValue: (params) => markRowDirty(String(params.id)),
+  });
 
   const getRowIdFromElement = (target: EventTarget | null): GridRowId | null => {
     if (!(target instanceof HTMLElement)) {
@@ -1972,6 +1986,14 @@ export function EditableDataGrid<T extends EditableRow>({
               event.preventDefault();
               event.defaultMuiPrevented = true;
               notesEditor.handleOpen(params.id, params.field);
+              return;
+            }
+
+            if (spreadsheetEditStarter.startEditFromF2(params, event)) {
+              return;
+            }
+
+            if (spreadsheetEditStarter.startEditFromPrintableKey(params, event)) {
               return;
             }
 

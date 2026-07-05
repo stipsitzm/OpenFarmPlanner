@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { GridRowModes } from '@mui/x-data-grid';
 import type {
@@ -85,6 +85,7 @@ const renderKeyboardHook = (rowModesModel: GridRowModesModel = {}) => {
   const rememberFocusedField = vi.fn();
   const rememberRowSnapshot = vi.fn();
   const selectRow = vi.fn();
+  const setEditCellValue = vi.fn().mockResolvedValue(true);
   const setRowModesModel = vi.fn();
   const setTreeActive = vi.fn();
   const toggleExpand = vi.fn();
@@ -102,6 +103,7 @@ const renderKeyboardHook = (rowModesModel: GridRowModesModel = {}) => {
       params.field === 'name' || params.field === 'length_m' || params.field === 'width_m',
     scrollToIndexes,
     setCellFocus: focusCell,
+    setEditCellValue,
   };
 
   const hook = renderHook(() =>
@@ -135,6 +137,7 @@ const renderKeyboardHook = (rowModesModel: GridRowModesModel = {}) => {
     rememberRowSnapshot,
     scrollToIndexes,
     selectRow,
+    setEditCellValue,
     setRowModesModel,
     setTreeActive,
     toggleExpand,
@@ -159,9 +162,38 @@ describe('useHierarchyGridKeyboard', () => {
     expect(selectRow).toHaveBeenCalledWith('field-1');
   });
 
-  it('suppresses printable keys in view mode without entering edit mode', () => {
-    const { result, setRowModesModel } = renderKeyboardHook();
+  it('starts edit mode from printable keys in view mode', async () => {
+    const {
+      result,
+      focusCell,
+      rememberRowSnapshot,
+      selectRow,
+      setEditCellValue,
+      setRowModesModel,
+      setTreeActive,
+    } = renderKeyboardHook();
     const event = makeKeyboardEvent('a');
+
+    act(() => {
+      result.current.handleCellKeyDown(makeCellParams('field-1', 'name'), event);
+    });
+
+    expect(event.defaultMuiPrevented).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(event.stopPropagation).toHaveBeenCalled();
+    expect(focusCell).toHaveBeenCalledWith('field-1', 'name');
+    expect(rememberRowSnapshot).toHaveBeenCalledWith('field-1');
+    expect(selectRow).toHaveBeenCalledWith('field-1');
+    expect(setTreeActive).toHaveBeenCalledWith(true);
+    expect(setRowModesModel).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(setEditCellValue).toHaveBeenCalledWith({ id: 'field-1', field: 'name', value: 'a' });
+    });
+  });
+
+  it('suppresses modified printable shortcuts in view mode without entering edit mode', () => {
+    const { result, setRowModesModel } = renderKeyboardHook();
+    const event = makeKeyboardEvent('T', { altKey: true });
 
     act(() => {
       result.current.handleCellKeyDown(makeCellParams('field-1', 'name'), event);

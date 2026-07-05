@@ -764,7 +764,7 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     expect(getSetCellFocusMock()).not.toHaveBeenCalledWith('field-1', 'name');
   });
 
-  it('pressing a printable key while a row is keyboard-focused does not start edit mode', async () => {
+  it('pressing a printable key while a row is keyboard-focused starts edit mode', async () => {
     renderHierarchy();
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
 
@@ -785,32 +785,18 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     // The DataGrid mock stores the onCellKeyDown prop so we can call it directly.
     const onCellKeyDown = getCapturedOnCellKeyDown();
     expect(onCellKeyDown).toBeDefined();
-
-    // Simulate the event object that MUI passes to onCellKeyDown for the letter 'a'.
-    const event = {
-      key: 'a',
-      ctrlKey: false,
-      metaKey: false,
-      altKey: false,
-      shiftKey: false,
-      defaultMuiPrevented: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
+    const fieldRow = {
+      id: 'field-1',
+      type: 'field',
+      name: 'Parzelle 1',
+      level: 0,
+      hasChildren: false,
+      isNew: false,
+      fieldId: 1,
+      location: 1,
     };
 
-    act(() => {
-      onCellKeyDown!(
-        { id: 'field-1', field: 'name', isEditable: true, row: {} },
-        event,
-      );
-    });
-
-    // The component must set defaultMuiPrevented so DataGrid does not start editing.
-    expect(event.defaultMuiPrevented).toBe(true);
-    // The row should remain in view mode (onCellKeyDown must not call setRowModesModel).
-    expect(screen.getByTestId('mode-field-1')).toHaveTextContent('view');
-
-    // Also verify that Alt+T (our navigation shortcut) is blocked.
+    // Verify that Alt+T (our navigation shortcut) is blocked.
     // MUI DataGrid v8's isPrintableKey() does not exclude altKey, so without our guard
     // pressing Alt+T while a cell has focus would start editing instead of navigating.
     const altTEvent = {
@@ -826,13 +812,38 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
 
     act(() => {
       onCellKeyDown!(
-        { id: 'field-1', field: 'name', isEditable: true, row: {} },
+        { id: 'field-1', field: 'name', isEditable: true, row: fieldRow },
         altTEvent,
       );
     });
 
     expect(altTEvent.defaultMuiPrevented).toBe(true);
     expect(screen.getByTestId('mode-field-1')).toHaveTextContent('view');
+
+    // Simulate the event object that MUI passes to onCellKeyDown for the letter 'a'.
+    const event = {
+      key: 'a',
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      shiftKey: false,
+      defaultMuiPrevented: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    };
+
+    act(() => {
+      onCellKeyDown!(
+        { id: 'field-1', field: 'name', isEditable: true, row: fieldRow },
+        event,
+      );
+    });
+
+    // The component owns the transition so MUI does not also start a separate edit flow.
+    expect(event.defaultMuiPrevented).toBe(true);
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(event.stopPropagation).toHaveBeenCalled();
+    expect(screen.getByTestId('mode-field-1')).toHaveTextContent('edit');
   });
 
   it('pressing spacebar on a bed row does not let MUI DataGrid jump focus to the first row', async () => {
