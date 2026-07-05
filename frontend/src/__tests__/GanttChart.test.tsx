@@ -186,6 +186,7 @@ vi.mock('../gantt-chart/src', () => ({
       showViewModeSelector: boolean;
     }) => ReactNode;
     viewMode?: string;
+    leftColumnWidth?: number;
     focusMode?: boolean;
     locale?: string;
     localeText?: { title?: string } & Record<string, unknown>;
@@ -659,6 +660,63 @@ describe('GanttChartPage', () => {
     expect(getTopbarAction('calendar-view-mode-seedlings')).toMatchObject({
       active: true,
     });
+  });
+
+  it('resizes the desktop Gantt sidebar and stores the selected width', async () => {
+    renderWithAuth();
+
+    const resizeHandle = await screen.findByRole('separator', {
+      name: 'Seitenleiste verbreitern oder verkleinern',
+    });
+    await waitFor(() => {
+      expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(240);
+    });
+
+    fireEvent.mouseDown(resizeHandle, { clientX: 240 });
+    fireEvent.mouseMove(window, { clientX: 310 });
+    fireEvent.mouseUp(window);
+
+    await waitFor(() => {
+      expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(310);
+    });
+    expect(JSON.parse(window.localStorage.getItem(GANTT_STATE_STORAGE_KEY) ?? '{}')).toMatchObject({
+      leftColumnWidth: 310,
+    });
+  });
+
+  it('restores the stored desktop Gantt sidebar width', async () => {
+    window.localStorage.setItem(GANTT_STATE_STORAGE_KEY, JSON.stringify({
+      leftColumnWidth: 360,
+    }));
+
+    renderWithAuth();
+
+    const resizeHandle = await screen.findByRole('separator', {
+      name: 'Seitenleiste verbreitern oder verkleinern',
+    });
+    await waitFor(() => {
+      expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(360);
+    });
+    expect(resizeHandle).toHaveAttribute('aria-valuenow', '360');
+  });
+
+  it('does not show the Gantt sidebar resize handle on mobile', async () => {
+    const restoreViewport = withMobileCalendarViewport();
+    try {
+      window.localStorage.setItem(GANTT_STATE_STORAGE_KEY, JSON.stringify({
+        leftColumnWidth: 360,
+      }));
+
+      renderWithAuth();
+
+      await screen.findByTestId('mock-gantt');
+      expect(screen.queryByRole('separator', {
+        name: 'Seitenleiste verbreitern oder verkleinern',
+      })).not.toBeInTheDocument();
+      expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(220);
+    } finally {
+      restoreViewport();
+    }
   });
 
   it('renders the chart flush with the top of the viewport when a stale row-scroll offset exceeds the actual scrollable range', async () => {

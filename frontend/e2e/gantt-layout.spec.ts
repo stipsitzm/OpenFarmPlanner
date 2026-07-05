@@ -152,6 +152,31 @@ async function expectCalendarLayout(page: Page, path: string): Promise<void> {
   expect(metrics.timelineOverflowStyleY).toBe('hidden');
 }
 
+async function readTaskListWidth(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const taskList = document.querySelector<HTMLElement>('.gantt-container-wrapper .rmg-task-list');
+    if (!taskList) {
+      throw new Error('Missing Gantt task list');
+    }
+    return taskList.getBoundingClientRect().width;
+  });
+}
+
+async function readStoredLeftColumnWidth(page: Page): Promise<number | null> {
+  return page.evaluate(() => {
+    const activeProjectId = window.localStorage.getItem('activeProjectId');
+    if (!activeProjectId) {
+      throw new Error('Missing active project id');
+    }
+    const rawState = window.localStorage.getItem(`openfarmplanner:gantt:${activeProjectId}:state`);
+    if (!rawState) {
+      return null;
+    }
+    const parsed = JSON.parse(rawState) as { leftColumnWidth?: unknown };
+    return typeof parsed.leftColumnWidth === 'number' ? parsed.leftColumnWidth : null;
+  });
+}
+
 test.describe('Gantt calendar layout', () => {
   test('keeps horizontal scrolling on the timeline and short calendars sized to content', async ({ page, request }) => {
     await loginWithFreshProject(page, request, 'gantt-layout-desktop');
@@ -169,6 +194,35 @@ test.describe('Gantt calendar layout', () => {
       await expectCalendarLayout(page, '/app/gantt-chart');
       await expectCalendarLayout(page, '/app/gantt-chart?view=seedlings');
     }
+  });
+
+  test('persists a resized desktop sidebar across reloads', async ({ page, request }) => {
+    await loginWithFreshProject(page, request, 'gantt-layout-sidebar-resize');
+    await createCalendarFixture(page);
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await expectCalendarLayout(page, '/app/gantt-chart');
+
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(240, 0);
+    const handle = page.getByRole('separator', { name: 'Seitenleiste verbreitern oder verkleinern' });
+    await expect(handle).toBeVisible();
+
+    const handleBox = await handle.boundingBox();
+    expect(handleBox).not.toBeNull();
+    if (!handleBox) {
+      throw new Error('Missing sidebar resize handle bounds');
+    }
+
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + 30);
+    await page.mouse.down();
+    await page.mouse.move(handleBox.x + handleBox.width / 2 + 90, handleBox.y + 30, { steps: 6 });
+    await page.mouse.up();
+
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(330, 0);
+    await expect.poll(() => readStoredLeftColumnWidth(page)).toBe(330);
+
+    await page.reload();
+    await expect(page.getByText('Layout Kultur').first()).toBeVisible({ timeout: 10_000 });
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(330, 0);
   });
 });
 

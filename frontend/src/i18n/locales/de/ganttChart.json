@@ -158,6 +158,9 @@
       "createPlan": "Anbauplan hinzufügen"
     }
   },
+  "sidebar": {
+    "resizeHandle": "Seitenleiste verbreitern oder verkleinern"
+  },
   "treeFilters": {
     "searchPlaceholder": "Suche nach Kultur, Beet, Parzelle oder Standort…",
     "searchPlaceholderSeedlings": "Suche nach Kultur…",
