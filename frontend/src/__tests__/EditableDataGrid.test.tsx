@@ -315,6 +315,21 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('view'));
   });
 
+  it('focuses an initial draft row created from navigation context', async () => {
+    render(
+      <EditableDataGrid
+        {...baseProps()}
+        initialRow={{ name: 'Vorgefüllter Entwurf' }}
+        showDeleteAction={false}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row--1')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('mode--1')).toHaveTextContent('edit'));
+    expect(screen.getByTestId('row--1')).toHaveAttribute('data-selected', 'true');
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('-1-name'));
+  });
+
   it('prevents delete when canceled and deletes when confirmed', async () => {
     const user = userEvent.setup();
     const props = baseProps();
