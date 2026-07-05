@@ -7,10 +7,12 @@
  * @returns The Gantt Chart page component
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useContext, useRef, useLayoutEffect } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CloseIcon from '@mui/icons-material/Close';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import TuneIcon from '@mui/icons-material/Tune';
 import { useTranslation } from '../i18n';
 import {
   Alert,
@@ -19,14 +21,21 @@ import {
   ButtonGroup,
   Checkbox,
   Divider,
+  FormControl,
   FormControlLabel,
+  IconButton,
   InputAdornment,
+  InputLabel,
   Menu,
   MenuItem,
+  Popover,
   Select,
+  Stack,
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import {
@@ -94,9 +103,14 @@ const CALENDAR_VIEW_STORAGE_KEY = 'openFarmPlanner.ganttChart.view';
 const CALENDAR_TIMELINE_VIEW_MODE_STORAGE_KEY = 'openFarmPlanner.ganttChart.timelineViewMode';
 const GANTT_STATE_STORAGE_PREFIX = 'openfarmplanner:gantt';
 const DEFAULT_TIMELINE_VIEW_MODE = ViewMode.MONTH;
-const GANTT_LEFT_COLUMN_WIDTH = 220;
+const GANTT_LEFT_COLUMN_MIN_WIDTH = 190;
+const GANTT_LEFT_COLUMN_DEFAULT_WIDTH = 240;
+const GANTT_LEFT_COLUMN_MOBILE_WIDTH = 220;
+const GANTT_LEFT_COLUMN_MAX_WIDTH = 400;
+const GANTT_SIDEBAR_RESIZE_HANDLE_HITBOX_WIDTH = 12;
+const GANTT_SIDEBAR_RESIZE_KEYBOARD_STEP = 10;
 const GANTT_ROW_HEIGHT = 32;
-const GANTT_VIEWPORT_MAX_HEIGHT_SX = { xs: '70svh', sm: '72svh', lg: '76svh' } as const;
+const GANTT_VIEWPORT_MAX_HEIGHT_SX = { md: '72svh', lg: '76svh' } as const;
 // Above this many combined location+field+bed nodes, default to
 // locations-expanded/fields-collapsed instead of fully expanding the tree.
 const OCCUPANCY_TREE_AUTO_EXPAND_ALL_THRESHOLD = 30;
@@ -127,12 +141,19 @@ const GANTT_UNIT_WIDTH_BY_VIEW_MODE: Record<ViewMode, number> = {
   [ViewMode.YEAR]: 200,
 };
 
-function getCalendarGanttRowHeight(group: GanttTaskGroup, viewMode: ViewMode): number {
+function clampGanttLeftColumnWidth(width: number): number {
+  return Math.min(
+    GANTT_LEFT_COLUMN_MAX_WIDTH,
+    Math.max(GANTT_LEFT_COLUMN_MIN_WIDTH, Math.round(width)),
+  );
+}
+
+function getCalendarGanttRowHeight(group: GanttTaskGroup, viewMode: ViewMode, leftColumnWidth: number): number {
   if (group.rowHeightOverride !== undefined) {
     return group.rowHeightOverride;
   }
 
-  const estimatedLabelHeight = estimateTaskGroupLabelHeight(group, GANTT_LEFT_COLUMN_WIDTH);
+  const estimatedLabelHeight = estimateTaskGroupLabelHeight(group, leftColumnWidth);
   const taskRows = CollisionService.detectOverlaps(group.tasks, viewMode);
   return Math.max(estimatedLabelHeight, taskRows.length * GANTT_ROW_HEIGHT + 12);
 }
@@ -150,6 +171,7 @@ interface StoredGanttState {
   timelineViewMode?: ViewMode;
   referenceDate?: string;
   rowScrollTop?: number;
+  leftColumnWidth?: number;
 }
 
 function getCalendarModeFromViewParam(viewParam: string | null): CalendarMode {
@@ -219,6 +241,9 @@ function getStoredGanttState(storageKey: string | null): StoredGanttState | null
       referenceDate: typeof parsed.referenceDate === 'string' ? parsed.referenceDate : undefined,
       rowScrollTop: typeof parsed.rowScrollTop === 'number' && Number.isFinite(parsed.rowScrollTop)
         ? parsed.rowScrollTop
+        : undefined,
+      leftColumnWidth: typeof parsed.leftColumnWidth === 'number' && Number.isFinite(parsed.leftColumnWidth)
+        ? clampGanttLeftColumnWidth(parsed.leftColumnWidth)
         : undefined,
     };
   } catch {
@@ -304,9 +329,16 @@ function getDatePosition(date: Date, viewMode: ViewMode, startDate: Date): numbe
   }
 }
 
-function getReferenceDateFromScroll(scrollLeft: number, containerWidth: number, viewMode: ViewMode, startDate: Date, endDate: Date): Date {
+function getReferenceDateFromScroll(
+  scrollLeft: number,
+  containerWidth: number,
+  viewMode: ViewMode,
+  startDate: Date,
+  endDate: Date,
+  leftColumnWidth: number,
+): Date {
   const unitWidth = getGanttUnitWidth(viewMode);
-  const timelineViewportWidth = Math.max(0, containerWidth - GANTT_LEFT_COLUMN_WIDTH);
+  const timelineViewportWidth = Math.max(0, containerWidth - leftColumnWidth);
   const centerPosition = Math.max(0, scrollLeft + timelineViewportWidth / 2);
   const start = new Date(startDate);
   start.setHours(0, 0, 0, 0);
@@ -335,9 +367,15 @@ function getReferenceDateFromScroll(scrollLeft: number, containerWidth: number, 
   return clampDate(nextDate, startDate, endDate);
 }
 
-function getTimelineScrollLeftForDate(date: Date, viewMode: ViewMode, startDate: Date, container: HTMLElement): number {
+function getTimelineScrollLeftForDate(
+  date: Date,
+  viewMode: ViewMode,
+  startDate: Date,
+  container: HTMLElement,
+  leftColumnWidth: number,
+): number {
   const position = getDatePosition(date, viewMode, startDate);
-  const timelineViewportWidth = Math.max(0, container.clientWidth - GANTT_LEFT_COLUMN_WIDTH);
+  const timelineViewportWidth = Math.max(0, container.clientWidth - leftColumnWidth);
   const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
   return Math.max(0, Math.min(maxScroll, position - timelineViewportWidth / 2));
 }
@@ -467,6 +505,8 @@ function dispatchSyntheticMouseEvent(
 
 function GanttChartPage() {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
+  const theme = useTheme();
+  const useMobileFilterLayout = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const authContext = useContext(AuthContext);
@@ -493,12 +533,27 @@ function GanttChartPage() {
   // Seedling (Anzucht) view: search-only, no hierarchy/location filters —
   // it's a flat, culture-grouped list, not tied to a specific bed/field.
   const [seedlingSearchText, setSeedlingSearchText] = useState('');
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [calendarFilterAnchorEl, setCalendarFilterAnchorEl] = useState<HTMLElement | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const focusSearch = useCallback(() => {
+    if (useMobileFilterLayout) {
+      setMobileSearchOpen(true);
+    }
     searchInputRef.current?.focus();
     searchInputRef.current?.select();
-  }, []);
+  }, [useMobileFilterLayout]);
+  useEffect(() => {
+    if (!mobileSearchOpen) {
+      return undefined;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [mobileSearchOpen]);
 
   const occupancyTreeStorageKey = activeProjectId
     ? `occupancyTree.${activeProjectId}`
@@ -515,6 +570,8 @@ function GanttChartPage() {
   const [ganttScrollTop, setGanttScrollTop] = useState(0);
   const [ganttViewportHeight, setGanttViewportHeight] = useState(640);
   const ganttViewportRef = useRef<HTMLDivElement | null>(null);
+  const [ganttResizeBoundaryNode, setGanttResizeBoundaryNode] = useState<HTMLDivElement | null>(null);
+  const ganttSidebarWidthFrameRef = useRef<number | null>(null);
   const hasRestoredTimelineRef = useRef(false);
   const latestReferenceDateRef = useRef<Date | null>(null);
   const currentYear = new Date().getFullYear();
@@ -530,6 +587,11 @@ function GanttChartPage() {
     () => getStoredGanttState(ganttStateStorageKey),
     [ganttStateStorageKey],
   );
+  const [ganttLeftColumnWidth, setGanttLeftColumnWidth] = useState(
+    storedGanttState?.leftColumnWidth ?? GANTT_LEFT_COLUMN_DEFAULT_WIDTH,
+  );
+  const [isResizingGanttSidebar, setIsResizingGanttSidebar] = useState(false);
+  const [ganttResizeHandleTop, setGanttResizeHandleTop] = useState<number | null>(null);
   const calendarViewStorageKey = useMemo(
     () => (canUseStoredCalendarView ? getCalendarViewStorageKey(activeProjectId) : null),
     [activeProjectId, canUseStoredCalendarView],
@@ -551,10 +613,32 @@ function GanttChartPage() {
   const [timelineViewMode, setTimelineViewMode] = useState<ViewMode>(() => (
     getStoredTimelineViewModeFromState(storedGanttState) ?? DEFAULT_TIMELINE_VIEW_MODE
   ));
+  const activeGanttLeftColumnWidth = useMobileFilterLayout
+    ? GANTT_LEFT_COLUMN_MOBILE_WIDTH
+    : ganttLeftColumnWidth;
+  const useWindowedGanttRows = !useMobileFilterLayout;
+  const activeGanttLeftColumnWidthRef = useRef(activeGanttLeftColumnWidth);
+  const handleGanttResizeBoundaryRef = useCallback((node: HTMLDivElement | null): void => {
+    setGanttResizeBoundaryNode(node);
+  }, []);
   const [editMode, setEditMode] = useState(false);
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
   const setTopbarContextActions = outletContext?.setTopbarContextActions;
   const setTopbarTitleActions = outletContext?.setTopbarTitleActions;
+
+  useEffect(() => {
+    setGanttLeftColumnWidth(storedGanttState?.leftColumnWidth ?? GANTT_LEFT_COLUMN_DEFAULT_WIDTH);
+  }, [ganttStateStorageKey, storedGanttState?.leftColumnWidth]);
+
+  useEffect(() => () => {
+    if (ganttSidebarWidthFrameRef.current !== null) {
+      window.cancelAnimationFrame(ganttSidebarWidthFrameRef.current);
+    }
+  }, []);
+
+  useEffect(() => {
+    activeGanttLeftColumnWidthRef.current = activeGanttLeftColumnWidth;
+  }, [activeGanttLeftColumnWidth]);
 
   useEffect(() => {
     const viewParam = searchParams.get('view');
@@ -618,7 +702,14 @@ function GanttChartPage() {
   ) => {
     const scrollContainer = ganttViewportRef.current?.querySelector<HTMLElement>('.rmg-container') ?? null;
     const currentReferenceDate = scrollContainer
-      ? getReferenceDateFromScroll(scrollContainer.scrollLeft, scrollContainer.clientWidth, timelineViewMode, startDate, endDate)
+      ? getReferenceDateFromScroll(
+        scrollContainer.scrollLeft,
+        scrollContainer.clientWidth,
+        timelineViewMode,
+        startDate,
+        endDate,
+        activeGanttLeftColumnWidth,
+      )
       : latestReferenceDateRef.current;
     setTimelineViewMode(nextViewMode);
     if (timelineViewModeStorageKey) {
@@ -630,7 +721,7 @@ function GanttChartPage() {
     });
     hasRestoredTimelineRef.current = false;
     applyViewModeChange(nextViewMode);
-  }, [endDate, ganttStateStorageKey, startDate, storedGanttState, timelineViewMode, timelineViewModeStorageKey]);
+  }, [activeGanttLeftColumnWidth, endDate, ganttStateStorageKey, startDate, storedGanttState, timelineViewMode, timelineViewModeStorageKey]);
 
   const getCurrentTimelineReferenceDate = useCallback((): Date => {
     const scrollContainer = ganttViewportRef.current?.querySelector<HTMLElement>('.rmg-container') ?? null;
@@ -641,12 +732,13 @@ function GanttChartPage() {
         timelineViewMode,
         startDate,
         endDate,
+        activeGanttLeftColumnWidth,
       );
     }
 
     return latestReferenceDateRef.current
       ?? getInitialTimelineReferenceDate(getStoredGanttState(ganttStateStorageKey), startDate, endDate);
-  }, [endDate, ganttStateStorageKey, startDate, timelineViewMode]);
+  }, [activeGanttLeftColumnWidth, endDate, ganttStateStorageKey, startDate, timelineViewMode]);
 
   const scrollToTimelineReferenceDate = useCallback((date: Date): void => {
     const referenceDate = clampDate(date, startDate, endDate);
@@ -662,8 +754,14 @@ function GanttChartPage() {
       return;
     }
 
-    scrollContainer.scrollLeft = getTimelineScrollLeftForDate(referenceDate, timelineViewMode, startDate, scrollContainer);
-  }, [calendarMode, endDate, ganttStateStorageKey, startDate, timelineViewMode]);
+    scrollContainer.scrollLeft = getTimelineScrollLeftForDate(
+      referenceDate,
+      timelineViewMode,
+      startDate,
+      scrollContainer,
+      activeGanttLeftColumnWidth,
+    );
+  }, [activeGanttLeftColumnWidth, calendarMode, endDate, ganttStateStorageKey, startDate, timelineViewMode]);
 
   const handleShortcutTimelineViewModeChange = useCallback((nextViewMode: ViewMode): void => {
     const referenceDate = getCurrentTimelineReferenceDate();
@@ -1044,6 +1142,105 @@ function GanttChartPage() {
       )),
     [occupancyHierarchyNodes, occupancyLocationFilter],
   );
+  const activeHierarchyFilterCount = [
+    occupancyLocationFilter !== 'all',
+    occupancyFieldFilter !== 'all',
+    onlyOccupiedBeds,
+  ].filter(Boolean).length;
+  const activeSearchText = calendarMode === 'occupancy' ? occupancySearchText.trim() : seedlingSearchText.trim();
+  const isCalendarFilterPopoverOpen = Boolean(calendarFilterAnchorEl);
+  const resetOccupancyHierarchyFilters = useCallback(() => {
+    setOccupancyLocationFilter('all');
+    setOccupancyFieldFilter('all');
+    setOnlyOccupiedBeds(false);
+  }, []);
+  const clearActiveSearch = useCallback(() => {
+    if (calendarMode === 'occupancy') {
+      setOccupancySearchText('');
+    } else {
+      setSeedlingSearchText('');
+    }
+    setMobileSearchOpen(false);
+  }, [calendarMode]);
+  const persistGanttLeftColumnWidth = useCallback((width: number) => {
+    storeGanttState(ganttStateStorageKey, {
+      leftColumnWidth: clampGanttLeftColumnWidth(width),
+    });
+  }, [ganttStateStorageKey]);
+  const handleGanttSidebarResizeStart = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    if (useMobileFilterLayout) {
+      return;
+    }
+
+    event.preventDefault();
+    const startClientX = event.clientX;
+    const startWidth = ganttLeftColumnWidth;
+    let pendingWidth = startWidth;
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+
+    const applyPendingWidth = (): void => {
+      ganttSidebarWidthFrameRef.current = null;
+      setGanttLeftColumnWidth(pendingWidth);
+    };
+
+    const queueWidthUpdate = (width: number): void => {
+      pendingWidth = clampGanttLeftColumnWidth(width);
+      if (ganttSidebarWidthFrameRef.current === null) {
+        ganttSidebarWidthFrameRef.current = window.requestAnimationFrame(applyPendingWidth);
+      }
+    };
+
+    const finishResize = (): void => {
+      if (ganttSidebarWidthFrameRef.current !== null) {
+        window.cancelAnimationFrame(ganttSidebarWidthFrameRef.current);
+        ganttSidebarWidthFrameRef.current = null;
+      }
+      setGanttLeftColumnWidth(pendingWidth);
+      persistGanttLeftColumnWidth(pendingWidth);
+      setIsResizingGanttSidebar(false);
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', finishResize);
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent): void => {
+      moveEvent.preventDefault();
+      queueWidthUpdate(startWidth + moveEvent.clientX - startClientX);
+    };
+
+    setIsResizingGanttSidebar(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', finishResize);
+  }, [ganttLeftColumnWidth, persistGanttLeftColumnWidth, useMobileFilterLayout]);
+  const handleGanttSidebarResizeKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (useMobileFilterLayout) {
+      return;
+    }
+
+    let nextWidth: number | null = null;
+    if (event.key === 'ArrowLeft') {
+      nextWidth = ganttLeftColumnWidth - GANTT_SIDEBAR_RESIZE_KEYBOARD_STEP;
+    } else if (event.key === 'ArrowRight') {
+      nextWidth = ganttLeftColumnWidth + GANTT_SIDEBAR_RESIZE_KEYBOARD_STEP;
+    } else if (event.key === 'Home') {
+      nextWidth = GANTT_LEFT_COLUMN_MIN_WIDTH;
+    } else if (event.key === 'End') {
+      nextWidth = GANTT_LEFT_COLUMN_MAX_WIDTH;
+    }
+
+    if (nextWidth === null) {
+      return;
+    }
+
+    event.preventDefault();
+    const clampedWidth = clampGanttLeftColumnWidth(nextWidth);
+    setGanttLeftColumnWidth(clampedWidth);
+    persistGanttLeftColumnWidth(clampedWidth);
+  }, [ganttLeftColumnWidth, persistGanttLeftColumnWidth, useMobileFilterLayout]);
 
   const occupancyTaskGroups = useMemo<GanttTaskGroup[]>(() => {
     // Structural filter: "only occupied beds" removes empty beds (and any
@@ -1358,20 +1555,91 @@ function GanttChartPage() {
 
   const activeTaskGroups = calendarMode === 'occupancy' ? occupancyTaskGroups : seedlingTaskGroups;
   const getActiveGanttRowHeight = useCallback(
-    (group: GanttTaskGroup): number => getCalendarGanttRowHeight(group, timelineViewMode),
-    [timelineViewMode],
+    (group: GanttTaskGroup): number => getCalendarGanttRowHeight(group, timelineViewMode, activeGanttLeftColumnWidth),
+    [activeGanttLeftColumnWidth, timelineViewMode],
   );
   const renderWindow = useMemo(
-    () => getGanttRenderWindow(
-      activeTaskGroups,
-      ganttScrollTop,
-      ganttViewportHeight,
-      getActiveGanttRowHeight,
-    ),
-    [activeTaskGroups, ganttScrollTop, ganttViewportHeight, getActiveGanttRowHeight],
+    () => (useWindowedGanttRows
+      ? getGanttRenderWindow(
+        activeTaskGroups,
+        ganttScrollTop,
+        ganttViewportHeight,
+        getActiveGanttRowHeight,
+      )
+      : {
+        groups: activeTaskGroups,
+        startIndex: 0,
+        endIndex: activeTaskGroups.length,
+        totalHeight: activeTaskGroups.reduce((total, group) => total + getActiveGanttRowHeight(group), 0),
+      }),
+    [activeTaskGroups, ganttScrollTop, ganttViewportHeight, getActiveGanttRowHeight, useWindowedGanttRows],
   );
   const renderedTaskGroups = renderWindow.groups;
-  const isGanttRenderWindowVirtualized = renderWindow.startIndex > 0 || renderWindow.endIndex < activeTaskGroups.length;
+  const isGanttRenderWindowVirtualized = useWindowedGanttRows
+    && (renderWindow.startIndex > 0 || renderWindow.endIndex < activeTaskGroups.length);
+
+  useLayoutEffect(() => {
+    if (useMobileFilterLayout) {
+      setGanttResizeHandleTop(null);
+      return undefined;
+    }
+
+    const boundary = ganttResizeBoundaryNode;
+    if (!boundary) {
+      return undefined;
+    }
+
+    let animationFrameId: number | null = null;
+    const measureHandleTop = (): void => {
+      animationFrameId = null;
+      const ganttBody = boundary.querySelector<HTMLElement>('.rmg-container');
+      if (!ganttBody) {
+        setGanttResizeHandleTop(null);
+        return;
+      }
+      const boundaryRect = boundary.getBoundingClientRect();
+      const bodyRect = ganttBody.getBoundingClientRect();
+      setGanttResizeHandleTop(Math.max(0, Math.round(bodyRect.top - boundaryRect.top)));
+    };
+    const queueMeasure = (): void => {
+      if (animationFrameId === null) {
+        animationFrameId = window.requestAnimationFrame(measureHandleTop);
+      }
+    };
+
+    measureHandleTop();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', queueMeasure);
+      return () => {
+        window.removeEventListener('resize', queueMeasure);
+        if (animationFrameId !== null) {
+          window.cancelAnimationFrame(animationFrameId);
+        }
+      };
+    }
+
+    const observer = new ResizeObserver(queueMeasure);
+    observer.observe(boundary);
+    const ganttBody = boundary.querySelector<HTMLElement>('.rmg-container');
+    if (ganttBody) {
+      observer.observe(ganttBody);
+    }
+
+    return () => {
+      observer.disconnect();
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [
+    calendarMode,
+    ganttResizeBoundaryNode,
+    renderedTaskGroups.length,
+    timelineViewMode,
+    useMobileFilterLayout,
+  ]);
+
   const totalTimelineItems = useMemo(
     // For occupancy mode, count tasks across the full tree (every bed),
     // not just the currently visible/expanded rows — collapsing a field
@@ -1546,7 +1814,10 @@ function GanttChartPage() {
   useRegisterCommands('calendar-page', calendarCommands);
 
   useEffect(() => {
-    if (loading || !hasCalendarRequirements) {
+    if (loading || !hasCalendarRequirements || !useWindowedGanttRows) {
+      if (!useWindowedGanttRows) {
+        setGanttScrollTop(0);
+      }
       return;
     }
 
@@ -1566,7 +1837,7 @@ function GanttChartPage() {
     }
     setGanttScrollTop(appliedScrollTop);
     hasRestoredTimelineRef.current = false;
-  }, [activeProjectId, calendarMode, hasCalendarRequirements, loading, storedGanttState?.rowScrollTop]);
+  }, [activeProjectId, calendarMode, hasCalendarRequirements, loading, storedGanttState?.rowScrollTop, useWindowedGanttRows]);
 
   useEffect(() => {
     if (loading || !hasCalendarRequirements) {
@@ -1594,7 +1865,13 @@ function GanttChartPage() {
           startDate,
           endDate,
         );
-        const nextScrollLeft = getTimelineScrollLeftForDate(referenceDate, timelineViewMode, startDate, scrollContainer);
+        const nextScrollLeft = getTimelineScrollLeftForDate(
+          referenceDate,
+          timelineViewMode,
+          startDate,
+          scrollContainer,
+          activeGanttLeftColumnWidthRef.current,
+        );
         const previousScrollBehavior = scrollContainer.style.scrollBehavior;
         scrollContainer.style.scrollBehavior = 'auto';
         scrollContainer.scrollLeft = nextScrollLeft;
@@ -1658,6 +1935,7 @@ function GanttChartPage() {
         timelineViewMode,
         startDate,
         endDate,
+        activeGanttLeftColumnWidth,
       );
       latestReferenceDateRef.current = referenceDate;
       storeGanttState(ganttStateStorageKey, {
@@ -1669,7 +1947,7 @@ function GanttChartPage() {
 
     scrollContainer.addEventListener('scroll', handleTimelineScroll, { passive: true });
     return () => scrollContainer.removeEventListener('scroll', handleTimelineScroll);
-  }, [calendarMode, endDate, ganttStateStorageKey, hasCalendarRequirements, loading, startDate, timelineViewMode]);
+  }, [activeGanttLeftColumnWidth, calendarMode, endDate, ganttStateStorageKey, hasCalendarRequirements, loading, startDate, timelineViewMode]);
 
   useEffect(() => {
     if (loading || !hasCalendarRequirements || calendarMode !== 'occupancy' || !editMode) {
@@ -1918,7 +2196,7 @@ function GanttChartPage() {
         locale={resolvedLocale}
         localeText={ganttLocaleText}
         viewMode={timelineViewMode}
-        leftColumnWidth={GANTT_LEFT_COLUMN_WIDTH}
+        leftColumnWidth={activeGanttLeftColumnWidth}
         rowHeight={GANTT_ROW_HEIGHT}
         startDate={startDate}
         endDate={endDate}
@@ -2018,105 +2296,323 @@ function GanttChartPage() {
             <Box
               data-testid="occupancy-tree-filters"
               sx={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 1.5,
-                alignItems: 'center',
-                mb: 1.5,
+                mb: { xs: 0, md: 1.5 },
               }}
             >
-              <TextField
-                size="small"
-                placeholder={t('ganttChart:treeFilters.searchPlaceholder')}
-                value={occupancySearchText}
-                onChange={(event) => setOccupancySearchText(event.target.value)}
-                inputRef={searchInputRef}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon fontSize="small" />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ minWidth: 240, flex: '1 1 240px' }}
-              />
-              <Select
-                size="small"
-                value={occupancyLocationFilter === 'all' ? 'all' : String(occupancyLocationFilter)}
-                onChange={(event) => {
-                  const { value } = event.target;
-                  setOccupancyLocationFilter(value === 'all' ? 'all' : Number(value));
-                  setOccupancyFieldFilter('all');
-                }}
-                sx={{ minWidth: 160 }}
-              >
-                <MenuItem value="all">{t('ganttChart:treeFilters.allLocations')}</MenuItem>
-                {locations.filter((location) => location.id).map((location) => (
-                  <MenuItem key={location.id} value={String(location.id)}>{location.name}</MenuItem>
-                ))}
-              </Select>
-              <Select
-                size="small"
-                value={occupancyFieldFilter === 'all' ? 'all' : String(occupancyFieldFilter)}
-                onChange={(event) => {
-                  const { value } = event.target;
-                  setOccupancyFieldFilter(value === 'all' ? 'all' : Number(value));
-                }}
-                disabled={occupancyLocationFilter === 'all'}
-                sx={{ minWidth: 160 }}
-              >
-                <MenuItem value="all">{t('ganttChart:treeFilters.allFields')}</MenuItem>
-                {occupancyFieldOptions.map((field) => (
-                  <MenuItem key={field.id} value={String(field.fieldId)}>{field.name}</MenuItem>
-                ))}
-              </Select>
-              <FormControlLabel
-                control={(
-                  <Checkbox
+              {useMobileFilterLayout ? (
+                <Stack spacing={0}>
+                  {mobileSearchOpen || activeSearchText ? (
+                    <Stack direction="row" spacing={0.75} alignItems="center">
+                      <TextField
+                        size="small"
+                        placeholder={t('ganttChart:treeFilters.searchPlaceholder')}
+                        value={occupancySearchText}
+                        onChange={(event) => setOccupancySearchText(event.target.value)}
+                        inputRef={searchInputRef}
+                        slotProps={{
+                          input: {
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <SearchIcon fontSize="small" />
+                              </InputAdornment>
+                            ),
+                          },
+                        }}
+                        sx={{ flex: '1 1 auto', minWidth: 0 }}
+                      />
+                      <Tooltip title={t('ganttChart:treeFilters.clearSearch')}>
+                        <IconButton
+                          size="small"
+                          aria-label={t('ganttChart:treeFilters.clearSearch')}
+                          onClick={clearActiveSearch}
+                          sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="inherit"
+                        startIcon={<TuneIcon fontSize="small" />}
+                        onClick={(event) => setCalendarFilterAnchorEl(event.currentTarget)}
+                        aria-expanded={isCalendarFilterPopoverOpen}
+                        aria-haspopup="dialog"
+                        aria-controls={isCalendarFilterPopoverOpen ? 'calendar-filters-popover' : undefined}
+                        sx={{
+                          minHeight: 40,
+                          minWidth: 0,
+                          px: 1,
+                          whiteSpace: 'nowrap',
+                          borderColor: activeHierarchyFilterCount > 0 ? 'text.secondary' : 'divider',
+                          bgcolor: activeHierarchyFilterCount > 0 ? 'action.selected' : 'transparent',
+                        }}
+                      >
+                        {activeHierarchyFilterCount > 0
+                          ? t('ganttChart:treeFilters.filterButtonWithCount', { count: activeHierarchyFilterCount })
+                          : t('ganttChart:treeFilters.filterButton')}
+                      </Button>
+                    </Stack>
+                  ) : (
+                    <Stack direction="row" spacing={0.75} alignItems="center">
+                      <Tooltip title={t('common:actions.search')}>
+                        <IconButton
+                          size="small"
+                          aria-label={t('common:actions.search')}
+                          onClick={() => setMobileSearchOpen(true)}
+                          sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}
+                        >
+                          <SearchIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="inherit"
+                        startIcon={<TuneIcon fontSize="small" />}
+                        onClick={(event) => setCalendarFilterAnchorEl(event.currentTarget)}
+                        aria-expanded={isCalendarFilterPopoverOpen}
+                        aria-haspopup="dialog"
+                        aria-controls={isCalendarFilterPopoverOpen ? 'calendar-filters-popover' : undefined}
+                        sx={{
+                          minHeight: 40,
+                          whiteSpace: 'nowrap',
+                          borderColor: activeHierarchyFilterCount > 0 ? 'text.secondary' : 'divider',
+                          bgcolor: activeHierarchyFilterCount > 0 ? 'action.selected' : 'transparent',
+                        }}
+                      >
+                        {activeHierarchyFilterCount > 0
+                          ? t('ganttChart:treeFilters.filterButtonWithCount', { count: activeHierarchyFilterCount })
+                          : t('ganttChart:treeFilters.filterButton')}
+                      </Button>
+                    </Stack>
+                  )}
+                  <Popover
+                    id="calendar-filters-popover"
+                    open={isCalendarFilterPopoverOpen}
+                    anchorEl={calendarFilterAnchorEl}
+                    onClose={() => setCalendarFilterAnchorEl(null)}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                    PaperProps={{ sx: { width: 'min(92vw, 360px)', p: 1.5 } }}
+                  >
+                    <Stack spacing={1.25}>
+                      <FormControl size="small" sx={{ minWidth: '100%' }}>
+                        <InputLabel id="calendar-location-filter-label">{t('ganttChart:treeFilters.locationLabel')}</InputLabel>
+                        <Select
+                          labelId="calendar-location-filter-label"
+                          value={occupancyLocationFilter === 'all' ? 'all' : String(occupancyLocationFilter)}
+                          label={t('ganttChart:treeFilters.locationLabel')}
+                          onChange={(event) => {
+                            const { value } = event.target;
+                            setOccupancyLocationFilter(value === 'all' ? 'all' : Number(value));
+                            setOccupancyFieldFilter('all');
+                          }}
+                        >
+                          <MenuItem value="all">{t('ganttChart:treeFilters.allLocations')}</MenuItem>
+                          {locations.filter((location) => location.id).map((location) => (
+                            <MenuItem key={location.id} value={String(location.id)}>{location.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControl size="small" sx={{ minWidth: '100%' }}>
+                        <InputLabel id="calendar-field-filter-label">{t('ganttChart:treeFilters.fieldLabel')}</InputLabel>
+                        <Select
+                          labelId="calendar-field-filter-label"
+                          value={occupancyFieldFilter === 'all' ? 'all' : String(occupancyFieldFilter)}
+                          label={t('ganttChart:treeFilters.fieldLabel')}
+                          onChange={(event) => {
+                            const { value } = event.target;
+                            setOccupancyFieldFilter(value === 'all' ? 'all' : Number(value));
+                          }}
+                          disabled={occupancyLocationFilter === 'all'}
+                        >
+                          <MenuItem value="all">{t('ganttChart:treeFilters.allFields')}</MenuItem>
+                          {occupancyFieldOptions.map((field) => (
+                            <MenuItem key={field.id} value={String(field.fieldId)}>{field.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControlLabel
+                        control={(
+                          <Checkbox
+                            size="small"
+                            checked={onlyOccupiedBeds}
+                            onChange={(event) => setOnlyOccupiedBeds(event.target.checked)}
+                          />
+                        )}
+                        label={t('ganttChart:treeFilters.onlyOccupiedBeds')}
+                      />
+                      <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => {
+                          resetOccupancyHierarchyFilters();
+                          setCalendarFilterAnchorEl(null);
+                        }}
+                        sx={{ alignSelf: 'flex-end', whiteSpace: 'nowrap' }}
+                      >
+                        {t('ganttChart:treeFilters.resetFilters')}
+                      </Button>
+                    </Stack>
+                  </Popover>
+                </Stack>
+              ) : (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1.5,
+                    alignItems: 'center',
+                  }}
+                >
+                  <TextField
                     size="small"
-                    checked={onlyOccupiedBeds}
-                    onChange={(event) => setOnlyOccupiedBeds(event.target.checked)}
+                    placeholder={t('ganttChart:treeFilters.searchPlaceholder')}
+                    value={occupancySearchText}
+                    onChange={(event) => setOccupancySearchText(event.target.value)}
+                    inputRef={searchInputRef}
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon fontSize="small" />
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                    sx={{ minWidth: 240, flex: '1 1 240px' }}
                   />
-                )}
-                label={t('ganttChart:treeFilters.onlyOccupiedBeds')}
-              />
+                  <Select
+                    size="small"
+                    value={occupancyLocationFilter === 'all' ? 'all' : String(occupancyLocationFilter)}
+                    onChange={(event) => {
+                      const { value } = event.target;
+                      setOccupancyLocationFilter(value === 'all' ? 'all' : Number(value));
+                      setOccupancyFieldFilter('all');
+                    }}
+                    sx={{ minWidth: 160 }}
+                  >
+                    <MenuItem value="all">{t('ganttChart:treeFilters.allLocations')}</MenuItem>
+                    {locations.filter((location) => location.id).map((location) => (
+                      <MenuItem key={location.id} value={String(location.id)}>{location.name}</MenuItem>
+                    ))}
+                  </Select>
+                  <Select
+                    size="small"
+                    value={occupancyFieldFilter === 'all' ? 'all' : String(occupancyFieldFilter)}
+                    onChange={(event) => {
+                      const { value } = event.target;
+                      setOccupancyFieldFilter(value === 'all' ? 'all' : Number(value));
+                    }}
+                    disabled={occupancyLocationFilter === 'all'}
+                    sx={{ minWidth: 160 }}
+                  >
+                    <MenuItem value="all">{t('ganttChart:treeFilters.allFields')}</MenuItem>
+                    {occupancyFieldOptions.map((field) => (
+                      <MenuItem key={field.id} value={String(field.fieldId)}>{field.name}</MenuItem>
+                    ))}
+                  </Select>
+                  <FormControlLabel
+                    control={(
+                      <Checkbox
+                        size="small"
+                        checked={onlyOccupiedBeds}
+                        onChange={(event) => setOnlyOccupiedBeds(event.target.checked)}
+                      />
+                    )}
+                    label={t('ganttChart:treeFilters.onlyOccupiedBeds')}
+                  />
+                </Box>
+              )}
             </Box>
           )}
           {calendarMode === 'seedlings' && (
             <Box
               data-testid="seedling-filters"
               sx={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 1.5,
-                alignItems: 'center',
-                mb: 1.5,
+                mb: { xs: 0, md: 1.5 },
               }}
             >
-              <TextField
-                size="small"
-                placeholder={t('ganttChart:treeFilters.searchPlaceholderSeedlings')}
-                value={seedlingSearchText}
-                onChange={(event) => setSeedlingSearchText(event.target.value)}
-                inputRef={searchInputRef}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <InputAdornment position="start">
+              {useMobileFilterLayout ? (
+                <Stack spacing={0}>
+                  {mobileSearchOpen || activeSearchText ? (
+                    <Stack direction="row" spacing={0.75} alignItems="center">
+                      <TextField
+                        size="small"
+                        placeholder={t('ganttChart:treeFilters.searchPlaceholderSeedlings')}
+                        value={seedlingSearchText}
+                        onChange={(event) => setSeedlingSearchText(event.target.value)}
+                        inputRef={searchInputRef}
+                        slotProps={{
+                          input: {
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <SearchIcon fontSize="small" />
+                              </InputAdornment>
+                            ),
+                          },
+                        }}
+                        sx={{ flex: '1 1 auto', minWidth: 0 }}
+                      />
+                      <Tooltip title={t('ganttChart:treeFilters.clearSearch')}>
+                        <IconButton
+                          size="small"
+                          aria-label={t('ganttChart:treeFilters.clearSearch')}
+                          onClick={clearActiveSearch}
+                          sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  ) : (
+                    <Tooltip title={t('common:actions.search')}>
+                      <IconButton
+                        size="small"
+                        aria-label={t('common:actions.search')}
+                        onClick={() => setMobileSearchOpen(true)}
+                        sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}
+                      >
                         <SearchIcon fontSize="small" />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
-                sx={{ minWidth: 240, flex: '1 1 240px' }}
-              />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
+              ) : (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1.5,
+                    alignItems: 'center',
+                  }}
+                >
+                  <TextField
+                    size="small"
+                    placeholder={t('ganttChart:treeFilters.searchPlaceholderSeedlings')}
+                    value={seedlingSearchText}
+                    onChange={(event) => setSeedlingSearchText(event.target.value)}
+                    inputRef={searchInputRef}
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <SearchIcon fontSize="small" />
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                    sx={{ minWidth: 240, flex: '1 1 240px' }}
+                  />
+                </Box>
+              )}
             </Box>
           )}
           <Box
             className={`gantt-container-wrapper gantt-container-wrapper--${calendarMode}`}
             sx={{
+              mt: { xs: 0.75, md: 2 },
               border: '1px solid',
               borderColor: 'surface.surfaceSoftBorder',
               borderRadius: 2,
@@ -2124,39 +2620,100 @@ function GanttChartPage() {
             }}
           >
             <Box
-              ref={ganttViewportRef}
-              data-testid="gantt-virtual-viewport"
-              onScroll={(event) => {
-                const nextScrollTop = event.currentTarget.scrollTop;
-                setGanttScrollTop(nextScrollTop);
-                storeGanttState(ganttStateStorageKey, {
-                  calendarMode,
-                  timelineViewMode,
-                  rowScrollTop: nextScrollTop,
-                });
-              }}
+              ref={handleGanttResizeBoundaryRef}
               sx={{
                 position: 'relative',
-                maxHeight: GANTT_VIEWPORT_MAX_HEIGHT_SX,
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                overscrollBehavior: 'contain',
               }}
             >
-              {isGanttRenderWindowVirtualized ? (
-                <Box sx={{ height: renderWindow.totalHeight, position: 'relative' }}>
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: ganttScrollTop,
-                      left: 0,
-                      right: 0,
-                    }}
-                  >
-                    {calendarGanttChart}
+              <Box
+                ref={ganttViewportRef}
+                data-testid="gantt-virtual-viewport"
+                onScroll={(event) => {
+                  if (!useWindowedGanttRows) {
+                    return;
+                  }
+                  const nextScrollTop = event.currentTarget.scrollTop;
+                  setGanttScrollTop(nextScrollTop);
+                  storeGanttState(ganttStateStorageKey, {
+                    calendarMode,
+                    timelineViewMode,
+                    rowScrollTop: nextScrollTop,
+                  });
+                }}
+                sx={{
+                  position: 'relative',
+                  maxHeight: { xs: 'none', ...GANTT_VIEWPORT_MAX_HEIGHT_SX },
+                  overflowY: { xs: 'visible', md: 'auto' },
+                  overflowX: 'hidden',
+                  overscrollBehavior: { xs: 'auto', md: 'contain' },
+                }}
+              >
+                {isGanttRenderWindowVirtualized ? (
+                  <Box sx={{ height: renderWindow.totalHeight, position: 'relative' }}>
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: ganttScrollTop,
+                        left: 0,
+                        right: 0,
+                      }}
+                    >
+                      {calendarGanttChart}
+                    </Box>
                   </Box>
-                </Box>
-              ) : calendarGanttChart}
+                ) : calendarGanttChart}
+              </Box>
+              {!useMobileFilterLayout && ganttResizeHandleTop !== null ? (
+                <Box
+                  component="button"
+                  type="button"
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label={t('ganttChart:sidebar.resizeHandle')}
+                  aria-valuemin={GANTT_LEFT_COLUMN_MIN_WIDTH}
+                  aria-valuemax={GANTT_LEFT_COLUMN_MAX_WIDTH}
+                  aria-valuenow={ganttLeftColumnWidth}
+                  onMouseDown={handleGanttSidebarResizeStart}
+                  onKeyDown={handleGanttSidebarResizeKeyDown}
+                  sx={{
+                    position: 'absolute',
+                    top: `${ganttResizeHandleTop}px`,
+                    bottom: 0,
+                    left: `${activeGanttLeftColumnWidth - GANTT_SIDEBAR_RESIZE_HANDLE_HITBOX_WIDTH / 2}px`,
+                    zIndex: 360,
+                    width: GANTT_SIDEBAR_RESIZE_HANDLE_HITBOX_WIDTH,
+                    p: 0,
+                    m: 0,
+                    border: 0,
+                    borderRadius: 0,
+                    bgcolor: 'transparent',
+                    cursor: 'col-resize',
+                    touchAction: 'none',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      bottom: 0,
+                      left: '50%',
+                      width: isResizingGanttSidebar ? 2 : 1,
+                      transform: 'translateX(-50%)',
+                      bgcolor: isResizingGanttSidebar ? 'text.secondary' : 'divider',
+                      opacity: isResizingGanttSidebar ? 1 : 0.7,
+                      transition: 'background-color 120ms ease, opacity 120ms ease, width 120ms ease',
+                    },
+                    '&:hover::before, &:focus-visible::before': {
+                      width: 2,
+                      bgcolor: 'text.secondary',
+                      opacity: 1,
+                    },
+                    '&:focus-visible': {
+                      outline: '2px solid',
+                      outlineColor: 'primary.main',
+                      outlineOffset: -2,
+                    },
+                  }}
+                />
+              ) : null}
             </Box>
           </Box>
           </PageSurface>

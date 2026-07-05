@@ -158,12 +158,21 @@
       "createPlan": "Anbauplan hinzufügen"
     }
   },
+  "sidebar": {
+    "resizeHandle": "Seitenleiste verbreitern oder verkleinern"
+  },
   "treeFilters": {
     "searchPlaceholder": "Suche nach Kultur, Beet, Parzelle oder Standort…",
     "searchPlaceholderSeedlings": "Suche nach Kultur…",
     "allLocations": "Alle Standorte",
     "allFields": "Alle Parzellen",
-    "onlyOccupiedBeds": "Nur belegte Beete"
+    "onlyOccupiedBeds": "Nur belegte Beete",
+    "filterButton": "Filter",
+    "filterButtonWithCount": "Filter ({{count}})",
+    "locationLabel": "Standort",
+    "fieldLabel": "Parzelle",
+    "resetFilters": "Filter zurücksetzen",
+    "clearSearch": "Suche löschen"
   },
   "contextMenu": {
     "openPlan": "Anbauplan öffnen",

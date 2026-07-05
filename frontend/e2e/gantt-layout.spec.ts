@@ -12,6 +12,7 @@ type LayoutMetrics = {
   viewportBottomGap: number;
   viewportHeight: number;
   viewportOverflowY: number;
+  pageOverflowY: number;
   wrapperOverflowStyleX: string;
   timelineOverflowStyleX: string;
   timelineOverflowStyleY: string;
@@ -36,7 +37,7 @@ async function loginWithFreshProject(page: Page, request: APIRequestContext, sce
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem('activeProjectId'))).toBeTruthy();
 }
 
-async function createCalendarFixture(page: Page): Promise<void> {
+async function createCalendarFixture(page: Page, options: { bedCount?: number } = {}): Promise<void> {
   const activeProjectId = await page.evaluate(() => window.localStorage.getItem('activeProjectId'));
   expect(activeProjectId).toBeTruthy();
   const projectId = Number(activeProjectId);
@@ -73,13 +74,6 @@ async function createCalendarFixture(page: Page): Promise<void> {
 
   const location = await api<{ id: number }>('/locations/', { name: 'Layout Testhof' });
   const field = await api<{ id: number }>('/fields/', { name: 'Layout Testfeld', location: location.id });
-  const bed = await api<{ id: number }>('/beds/', {
-    name: 'Layout Testbeet',
-    field: field.id,
-    length_m: 10,
-    width_m: 1,
-    area_sqm: 10,
-  });
   const culture = await api<{ id: number }>('/cultures/', {
     name: 'Layout Kultur',
     propagation_duration_days: 21,
@@ -87,14 +81,24 @@ async function createCalendarFixture(page: Page): Promise<void> {
     cultivation_types: ['pre_cultivation'],
     plants_per_m2: 4,
   });
-  await api('/planting-plans/', {
-    bed: bed.id,
-    culture: culture.id,
-    cultivation_type: 'pre_cultivation',
-    planting_date: '2026-04-01',
-    harvest_date: '2026-05-01',
-    area_usage_sqm: 2,
-  });
+  const bedCount = options.bedCount ?? 1;
+  for (let index = 0; index < bedCount; index += 1) {
+    const bed = await api<{ id: number }>('/beds/', {
+      name: index === 0 ? 'Layout Testbeet' : `Layout Testbeet ${index + 1}`,
+      field: field.id,
+      length_m: 10,
+      width_m: 1,
+      area_sqm: 10,
+    });
+    await api('/planting-plans/', {
+      bed: bed.id,
+      culture: culture.id,
+      cultivation_type: 'pre_cultivation',
+      planting_date: '2026-04-01',
+      harvest_date: '2026-05-01',
+      area_usage_sqm: 2,
+    });
+  }
 }
 
 async function readLayoutMetrics(page: Page): Promise<LayoutMetrics> {
@@ -126,6 +130,7 @@ async function readLayoutMetrics(page: Page): Promise<LayoutMetrics> {
       viewportBottomGap: viewportRect.bottom - lastRowBottom,
       viewportHeight: viewportRect.height,
       viewportOverflowY: viewport.scrollHeight - viewport.clientHeight,
+      pageOverflowY: document.documentElement.scrollHeight - window.innerHeight,
       wrapperOverflowStyleX: getComputedStyle(wrapper).overflowX,
       timelineOverflowStyleX: timelineStyle.overflowX,
       timelineOverflowStyleY: timelineStyle.overflowY,
@@ -152,6 +157,83 @@ async function expectCalendarLayout(page: Page, path: string): Promise<void> {
   expect(metrics.timelineOverflowStyleY).toBe('hidden');
 }
 
+async function readTaskListWidth(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const taskList = document.querySelector<HTMLElement>('.gantt-container-wrapper .rmg-task-list');
+    if (!taskList) {
+      throw new Error('Missing Gantt task list');
+    }
+    return taskList.getBoundingClientRect().width;
+  });
+}
+
+async function readStoredLeftColumnWidth(page: Page): Promise<number | null> {
+  return page.evaluate(() => {
+    const activeProjectId = window.localStorage.getItem('activeProjectId');
+    if (!activeProjectId) {
+      throw new Error('Missing active project id');
+    }
+    const rawState = window.localStorage.getItem(`openfarmplanner:gantt:${activeProjectId}:state`);
+    if (!rawState) {
+      return null;
+    }
+    const parsed = JSON.parse(rawState) as { leftColumnWidth?: unknown };
+    return typeof parsed.leftColumnWidth === 'number' ? parsed.leftColumnWidth : null;
+  });
+}
+
+async function expectResizeHandleStartsAtTimelineBody(page: Page): Promise<void> {
+  const bounds = await page.evaluate(() => {
+    const handle = document.querySelector<HTMLElement>('[role="separator"][aria-orientation="vertical"]');
+    const body = document.querySelector<HTMLElement>('.gantt-container-wrapper .rmg-container');
+    const chart = document.querySelector<HTMLElement>('.gantt-container-wrapper .rmg-gantt-chart');
+    if (!handle || !body || !chart) {
+      throw new Error('Missing resize handle or Gantt body');
+    }
+    const handleRect = handle.getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
+    const chartRect = chart.getBoundingClientRect();
+    return {
+      handleTop: handleRect.top,
+      handleBottom: handleRect.bottom,
+      bodyTop: bodyRect.top,
+      bodyBottom: bodyRect.bottom,
+      chartTop: chartRect.top,
+    };
+  });
+
+  expect(bounds.handleTop).toBeGreaterThan(bounds.chartTop + 8);
+  expect(Math.abs(bounds.handleTop - bounds.bodyTop)).toBeLessThanOrEqual(1);
+  expect(Math.abs(bounds.handleBottom - bounds.bodyBottom)).toBeLessThanOrEqual(1);
+}
+
+async function expectMobilePageScrollsCalendar(page: Page, viewport: { width: number; height: number }): Promise<void> {
+  await page.setViewportSize(viewport);
+  await page.goto('/app/gantt-chart');
+  await expect(page.getByText('Layout Kultur').first()).toBeVisible({ timeout: 10_000 });
+
+  const metrics = await readLayoutMetrics(page);
+  expect(metrics.documentOverflowX).toBeLessThanOrEqual(1);
+  expect(metrics.bodyOverflowX).toBeLessThanOrEqual(1);
+  expect(metrics.wrapperOverflowX).toBeLessThanOrEqual(1);
+  expect(metrics.timelineOverflowX).toBeGreaterThan(0);
+  expect(metrics.viewportOverflowY).toBeLessThanOrEqual(1);
+  expect(metrics.pageOverflowY).toBeGreaterThan(80);
+  expect(metrics.timelineOverflowStyleX).toBe('auto');
+  expect(metrics.timelineOverflowStyleY).toBe('hidden');
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const filters = page.getByTestId('occupancy-tree-filters');
+  const initialTop = await filters.evaluate((element) => element.getBoundingClientRect().top);
+  await page.mouse.wheel(0, 220);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(80);
+  const scrolledTop = await filters.evaluate((element) => element.getBoundingClientRect().top);
+  expect(scrolledTop).toBeLessThan(initialTop - 80);
+  if (viewport.width > viewport.height) {
+    expect(scrolledTop).toBeLessThan(0);
+  }
+}
+
 test.describe('Gantt calendar layout', () => {
   test('keeps horizontal scrolling on the timeline and short calendars sized to content', async ({ page, request }) => {
     await loginWithFreshProject(page, request, 'gantt-layout-desktop');
@@ -170,6 +252,37 @@ test.describe('Gantt calendar layout', () => {
       await expectCalendarLayout(page, '/app/gantt-chart?view=seedlings');
     }
   });
+
+  test('persists a resized desktop sidebar across reloads', async ({ page, request }) => {
+    await loginWithFreshProject(page, request, 'gantt-layout-sidebar-resize');
+    await createCalendarFixture(page);
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await expectCalendarLayout(page, '/app/gantt-chart');
+
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(240, 0);
+    const handle = page.getByRole('separator', { name: 'Seitenleiste verbreitern oder verkleinern' });
+    await expect(handle).toBeVisible();
+    await expectResizeHandleStartsAtTimelineBody(page);
+
+    const handleBox = await handle.boundingBox();
+    expect(handleBox).not.toBeNull();
+    if (!handleBox) {
+      throw new Error('Missing sidebar resize handle bounds');
+    }
+
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + 30);
+    await page.mouse.down();
+    await page.mouse.move(handleBox.x + handleBox.width / 2 + 90, handleBox.y + 30, { steps: 6 });
+    await page.mouse.up();
+
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(330, 0);
+    await expect.poll(() => readStoredLeftColumnWidth(page)).toBe(330);
+
+    await page.reload();
+    await expect(page.getByText('Layout Kultur').first()).toBeVisible({ timeout: 10_000 });
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(330, 0);
+    await expectResizeHandleStartsAtTimelineBody(page);
+  });
 });
 
 test.describe('Gantt calendar layout on touch devices', () => {
@@ -182,5 +295,23 @@ test.describe('Gantt calendar layout on touch devices', () => {
 
     const metrics = await readLayoutMetrics(page);
     expect(metrics.timelineScrollbarWidth).toBe('none');
+  });
+});
+
+test.describe('Gantt calendar mobile page scrolling', () => {
+  test.use({ isMobile: true, hasTouch: true });
+
+  test('uses the page as the vertical scroller in portrait and landscape', async ({ page, request }) => {
+    await loginWithFreshProject(page, request, 'gantt-layout-mobile-page-scroll');
+    await createCalendarFixture(page, { bedCount: 16 });
+
+    for (const viewport of [
+      { width: 320, height: 568 },
+      { width: 568, height: 320 },
+      { width: 844, height: 390 },
+      { width: 768, height: 900 },
+    ]) {
+      await expectMobilePageScrollsCalendar(page, viewport);
+    }
   });
 });

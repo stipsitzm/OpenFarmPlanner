@@ -83,6 +83,31 @@ const renderWithAuth = (): ReturnType<typeof render> => render(
   </MemoryRouter>,
 );
 
+const withMobileCalendarViewport = (): (() => void) => {
+  const originalMatchMedia = window.matchMedia;
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes('max-width:899.95px'),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+  return () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: originalMatchMedia,
+    });
+  };
+};
+
 vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
   return {
@@ -161,6 +186,7 @@ vi.mock('../gantt-chart/src', () => ({
       showViewModeSelector: boolean;
     }) => ReactNode;
     viewMode?: string;
+    leftColumnWidth?: number;
     focusMode?: boolean;
     locale?: string;
     localeText?: { title?: string } & Record<string, unknown>;
@@ -634,6 +660,113 @@ describe('GanttChartPage', () => {
     expect(getTopbarAction('calendar-view-mode-seedlings')).toMatchObject({
       active: true,
     });
+  });
+
+  it('resizes the desktop Gantt sidebar and stores the selected width', async () => {
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-01',
+            harvest_date: '2026-05-01',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    renderWithAuth();
+
+    const resizeHandle = await screen.findByRole('separator', {
+      name: 'Seitenleiste verbreitern oder verkleinern',
+    });
+    await waitFor(() => {
+      expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(240);
+    });
+
+    fireEvent.mouseDown(resizeHandle, { clientX: 240 });
+    fireEvent.mouseMove(window, { clientX: 310 });
+    fireEvent.mouseUp(window);
+
+    await waitFor(() => {
+      expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(310);
+    });
+    expect(JSON.parse(window.localStorage.getItem(GANTT_STATE_STORAGE_KEY) ?? '{}')).toMatchObject({
+      leftColumnWidth: 310,
+    });
+  });
+
+  it('restores the stored desktop Gantt sidebar width', async () => {
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-01',
+            harvest_date: '2026-05-01',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+    window.localStorage.setItem(GANTT_STATE_STORAGE_KEY, JSON.stringify({
+      leftColumnWidth: 360,
+    }));
+
+    renderWithAuth();
+
+    const resizeHandle = await screen.findByRole('separator', {
+      name: 'Seitenleiste verbreitern oder verkleinern',
+    });
+    await waitFor(() => {
+      expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(360);
+    });
+    expect(resizeHandle).toHaveAttribute('aria-valuenow', '360');
+  });
+
+  it('does not show the Gantt sidebar resize handle on mobile', async () => {
+    const restoreViewport = withMobileCalendarViewport();
+    try {
+      window.localStorage.setItem(GANTT_STATE_STORAGE_KEY, JSON.stringify({
+        leftColumnWidth: 360,
+      }));
+
+      renderWithAuth();
+
+      await screen.findByTestId('mock-gantt');
+      expect(screen.queryByRole('separator', {
+        name: 'Seitenleiste verbreitern oder verkleinern',
+      })).not.toBeInTheDocument();
+      expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(220);
+    } finally {
+      restoreViewport();
+    }
+  });
+
+  it('uses page scrolling instead of the virtualized Gantt viewport on mobile', async () => {
+    const restoreViewport = withMobileCalendarViewport();
+    try {
+      window.localStorage.setItem(GANTT_STATE_STORAGE_KEY, JSON.stringify({
+        rowScrollTop: 144,
+      }));
+
+      renderWithAuth();
+
+      const virtualViewport = await screen.findByTestId('gantt-virtual-viewport');
+      await waitFor(() => {
+        expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(220);
+      });
+      expect(virtualViewport.scrollTop).toBe(0);
+    } finally {
+      restoreViewport();
+    }
   });
 
   it('renders the chart flush with the top of the viewport when a stale row-scroll offset exceeds the actual scrollable range', async () => {
@@ -1362,6 +1495,43 @@ describe('GanttChartPage', () => {
       await waitFor(() => {
         expect(screen.getByText('Leerbeet')).toBeInTheDocument();
       });
+    });
+
+    it('uses compact search and filter controls on mobile', async () => {
+      const restoreViewport = withMobileCalendarViewport();
+      try {
+        setUpMultiLocationFixture();
+        renderWithAuth();
+
+        await screen.findByText('Karottenbeet');
+        expect(screen.queryByPlaceholderText('Suche nach Kultur, Beet, Parzelle oder Standort…')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Suchen' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Filter (1)' })).toBeInTheDocument();
+        expect(screen.queryByText('Nur belegte Beete')).not.toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Suchen' }));
+        fireEvent.change(await screen.findByPlaceholderText('Suche nach Kultur, Beet, Parzelle oder Standort…'), {
+          target: { value: 'Karotte' },
+        });
+
+        await waitFor(() => {
+          expect(screen.getByPlaceholderText('Suche nach Kultur, Beet, Parzelle oder Standort…')).toHaveValue('Karotte');
+          expect(screen.queryByText('Suche: Karotte')).not.toBeInTheDocument();
+          expect(screen.queryByText('Tomatenbeet')).not.toBeInTheDocument();
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Filter (1)' }));
+        expect(await screen.findByText('Nur belegte Beete')).toBeInTheDocument();
+        fireEvent.mouseDown(await screen.findByLabelText('Standort'));
+        fireEvent.click(await screen.findByRole('option', { name: 'Pacht' }));
+
+        await waitFor(() => {
+          expect(screen.getAllByText('Pacht').length).toBeGreaterThanOrEqual(2);
+          expect(screen.getByText('Filter (2)')).toBeInTheDocument();
+        });
+      } finally {
+        restoreViewport();
+      }
     });
   });
 
