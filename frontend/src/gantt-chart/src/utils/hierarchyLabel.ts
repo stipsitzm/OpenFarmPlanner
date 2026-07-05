@@ -105,7 +105,7 @@ export function getHierarchyLevels(taskGroup: TaskGroup): string[] | null {
 }
 
 export function normalizeLeftColumnWidth(leftColumnWidth: number): number {
-  return Math.max(120, Math.floor(leftColumnWidth));
+  return Math.max(96, Math.floor(leftColumnWidth));
 }
 
 /**

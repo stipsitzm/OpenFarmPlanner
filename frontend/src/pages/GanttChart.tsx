@@ -103,11 +103,14 @@ const CALENDAR_VIEW_STORAGE_KEY = 'openFarmPlanner.ganttChart.view';
 const CALENDAR_TIMELINE_VIEW_MODE_STORAGE_KEY = 'openFarmPlanner.ganttChart.timelineViewMode';
 const GANTT_STATE_STORAGE_PREFIX = 'openfarmplanner:gantt';
 const DEFAULT_TIMELINE_VIEW_MODE = ViewMode.MONTH;
-const GANTT_LEFT_COLUMN_MIN_WIDTH = 190;
-const GANTT_LEFT_COLUMN_DEFAULT_WIDTH = 240;
-const GANTT_LEFT_COLUMN_MOBILE_WIDTH = 220;
-const GANTT_LEFT_COLUMN_MAX_WIDTH = 400;
-const GANTT_SIDEBAR_RESIZE_HANDLE_HITBOX_WIDTH = 12;
+const GANTT_LEFT_COLUMN_DESKTOP_MIN_WIDTH = 190;
+const GANTT_LEFT_COLUMN_DESKTOP_DEFAULT_WIDTH = 240;
+const GANTT_LEFT_COLUMN_DESKTOP_MAX_WIDTH = 400;
+const GANTT_LEFT_COLUMN_MOBILE_MIN_WIDTH = 104;
+const GANTT_LEFT_COLUMN_MOBILE_DEFAULT_WIDTH = 132;
+const GANTT_LEFT_COLUMN_MOBILE_MAX_WIDTH = 216;
+const GANTT_SIDEBAR_RESIZE_HANDLE_DESKTOP_HITBOX_WIDTH = 12;
+const GANTT_SIDEBAR_RESIZE_HANDLE_MOBILE_HITBOX_WIDTH = 24;
 const GANTT_SIDEBAR_RESIZE_KEYBOARD_STEP = 10;
 const GANTT_ROW_HEIGHT = 32;
 const GANTT_VIEWPORT_MAX_HEIGHT_SX = { md: '72svh', lg: '76svh' } as const;
@@ -141,10 +144,12 @@ const GANTT_UNIT_WIDTH_BY_VIEW_MODE: Record<ViewMode, number> = {
   [ViewMode.YEAR]: 200,
 };
 
-function clampGanttLeftColumnWidth(width: number): number {
+function clampGanttLeftColumnWidth(width: number, useMobileLimits = false): number {
+  const minWidth = useMobileLimits ? GANTT_LEFT_COLUMN_MOBILE_MIN_WIDTH : GANTT_LEFT_COLUMN_DESKTOP_MIN_WIDTH;
+  const maxWidth = useMobileLimits ? GANTT_LEFT_COLUMN_MOBILE_MAX_WIDTH : GANTT_LEFT_COLUMN_DESKTOP_MAX_WIDTH;
   return Math.min(
-    GANTT_LEFT_COLUMN_MAX_WIDTH,
-    Math.max(GANTT_LEFT_COLUMN_MIN_WIDTH, Math.round(width)),
+    maxWidth,
+    Math.max(minWidth, Math.round(width)),
   );
 }
 
@@ -172,6 +177,8 @@ interface StoredGanttState {
   referenceDate?: string;
   rowScrollTop?: number;
   leftColumnWidth?: number;
+  leftColumnWidthDesktop?: number;
+  leftColumnWidthMobile?: number;
 }
 
 function getCalendarModeFromViewParam(viewParam: string | null): CalendarMode {
@@ -244,6 +251,12 @@ function getStoredGanttState(storageKey: string | null): StoredGanttState | null
         : undefined,
       leftColumnWidth: typeof parsed.leftColumnWidth === 'number' && Number.isFinite(parsed.leftColumnWidth)
         ? clampGanttLeftColumnWidth(parsed.leftColumnWidth)
+        : undefined,
+      leftColumnWidthDesktop: typeof parsed.leftColumnWidthDesktop === 'number' && Number.isFinite(parsed.leftColumnWidthDesktop)
+        ? clampGanttLeftColumnWidth(parsed.leftColumnWidthDesktop)
+        : undefined,
+      leftColumnWidthMobile: typeof parsed.leftColumnWidthMobile === 'number' && Number.isFinite(parsed.leftColumnWidthMobile)
+        ? clampGanttLeftColumnWidth(parsed.leftColumnWidthMobile, true)
         : undefined,
     };
   } catch {
@@ -587,8 +600,13 @@ function GanttChartPage() {
     () => getStoredGanttState(ganttStateStorageKey),
     [ganttStateStorageKey],
   );
-  const [ganttLeftColumnWidth, setGanttLeftColumnWidth] = useState(
-    storedGanttState?.leftColumnWidth ?? GANTT_LEFT_COLUMN_DEFAULT_WIDTH,
+  const [ganttLeftColumnWidthDesktop, setGanttLeftColumnWidthDesktop] = useState(
+    storedGanttState?.leftColumnWidthDesktop
+      ?? storedGanttState?.leftColumnWidth
+      ?? GANTT_LEFT_COLUMN_DESKTOP_DEFAULT_WIDTH,
+  );
+  const [ganttLeftColumnWidthMobile, setGanttLeftColumnWidthMobile] = useState(
+    storedGanttState?.leftColumnWidthMobile ?? GANTT_LEFT_COLUMN_MOBILE_DEFAULT_WIDTH,
   );
   const [isResizingGanttSidebar, setIsResizingGanttSidebar] = useState(false);
   const [ganttResizeHandleTop, setGanttResizeHandleTop] = useState<number | null>(null);
@@ -614,8 +632,17 @@ function GanttChartPage() {
     getStoredTimelineViewModeFromState(storedGanttState) ?? DEFAULT_TIMELINE_VIEW_MODE
   ));
   const activeGanttLeftColumnWidth = useMobileFilterLayout
-    ? GANTT_LEFT_COLUMN_MOBILE_WIDTH
-    : ganttLeftColumnWidth;
+    ? ganttLeftColumnWidthMobile
+    : ganttLeftColumnWidthDesktop;
+  const activeGanttLeftColumnMinWidth = useMobileFilterLayout
+    ? GANTT_LEFT_COLUMN_MOBILE_MIN_WIDTH
+    : GANTT_LEFT_COLUMN_DESKTOP_MIN_WIDTH;
+  const activeGanttLeftColumnMaxWidth = useMobileFilterLayout
+    ? GANTT_LEFT_COLUMN_MOBILE_MAX_WIDTH
+    : GANTT_LEFT_COLUMN_DESKTOP_MAX_WIDTH;
+  const ganttSidebarResizeHandleHitboxWidth = useMobileFilterLayout
+    ? GANTT_SIDEBAR_RESIZE_HANDLE_MOBILE_HITBOX_WIDTH
+    : GANTT_SIDEBAR_RESIZE_HANDLE_DESKTOP_HITBOX_WIDTH;
   const useWindowedGanttRows = !useMobileFilterLayout;
   const activeGanttLeftColumnWidthRef = useRef(activeGanttLeftColumnWidth);
   const handleGanttResizeBoundaryRef = useCallback((node: HTMLDivElement | null): void => {
@@ -627,8 +654,20 @@ function GanttChartPage() {
   const setTopbarTitleActions = outletContext?.setTopbarTitleActions;
 
   useEffect(() => {
-    setGanttLeftColumnWidth(storedGanttState?.leftColumnWidth ?? GANTT_LEFT_COLUMN_DEFAULT_WIDTH);
-  }, [ganttStateStorageKey, storedGanttState?.leftColumnWidth]);
+    setGanttLeftColumnWidthDesktop(
+      storedGanttState?.leftColumnWidthDesktop
+        ?? storedGanttState?.leftColumnWidth
+        ?? GANTT_LEFT_COLUMN_DESKTOP_DEFAULT_WIDTH,
+    );
+    setGanttLeftColumnWidthMobile(
+      storedGanttState?.leftColumnWidthMobile ?? GANTT_LEFT_COLUMN_MOBILE_DEFAULT_WIDTH,
+    );
+  }, [
+    ganttStateStorageKey,
+    storedGanttState?.leftColumnWidth,
+    storedGanttState?.leftColumnWidthDesktop,
+    storedGanttState?.leftColumnWidthMobile,
+  ]);
 
   useEffect(() => () => {
     if (ganttSidebarWidthFrameRef.current !== null) {
@@ -1162,74 +1201,101 @@ function GanttChartPage() {
     }
     setMobileSearchOpen(false);
   }, [calendarMode]);
-  const persistGanttLeftColumnWidth = useCallback((width: number) => {
+  const persistGanttLeftColumnWidth = useCallback((width: number, useMobileLimits: boolean) => {
     storeGanttState(ganttStateStorageKey, {
-      leftColumnWidth: clampGanttLeftColumnWidth(width),
+      [useMobileLimits ? 'leftColumnWidthMobile' : 'leftColumnWidthDesktop']: clampGanttLeftColumnWidth(
+        width,
+        useMobileLimits,
+      ),
     });
   }, [ganttStateStorageKey]);
-  const handleGanttSidebarResizeStart = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-    if (useMobileFilterLayout) {
-      return;
+  const handleGanttSidebarResizeStart = useCallback((event: React.PointerEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const target = event.currentTarget;
+    if (target.setPointerCapture) {
+      target.setPointerCapture(event.pointerId);
     }
 
-    event.preventDefault();
+    const useMobileLimits = useMobileFilterLayout;
     const startClientX = event.clientX;
-    const startWidth = ganttLeftColumnWidth;
+    const startWidth = activeGanttLeftColumnWidth;
     let pendingWidth = startWidth;
     const previousCursor = document.body.style.cursor;
     const previousUserSelect = document.body.style.userSelect;
+    const previousTouchAction = document.body.style.touchAction;
+    let isFinished = false;
+
+    const setActiveWidth = (width: number): void => {
+      if (useMobileLimits) {
+        setGanttLeftColumnWidthMobile(width);
+      } else {
+        setGanttLeftColumnWidthDesktop(width);
+      }
+    };
 
     const applyPendingWidth = (): void => {
       ganttSidebarWidthFrameRef.current = null;
-      setGanttLeftColumnWidth(pendingWidth);
+      setActiveWidth(pendingWidth);
     };
 
     const queueWidthUpdate = (width: number): void => {
-      pendingWidth = clampGanttLeftColumnWidth(width);
+      pendingWidth = clampGanttLeftColumnWidth(width, useMobileLimits);
       if (ganttSidebarWidthFrameRef.current === null) {
         ganttSidebarWidthFrameRef.current = window.requestAnimationFrame(applyPendingWidth);
       }
     };
 
-    const finishResize = (): void => {
+    const finishResize = (finishEvent?: Event): void => {
+      if (isFinished) {
+        return;
+      }
+      isFinished = true;
+      finishEvent?.preventDefault();
       if (ganttSidebarWidthFrameRef.current !== null) {
         window.cancelAnimationFrame(ganttSidebarWidthFrameRef.current);
         ganttSidebarWidthFrameRef.current = null;
       }
-      setGanttLeftColumnWidth(pendingWidth);
-      persistGanttLeftColumnWidth(pendingWidth);
+      setActiveWidth(pendingWidth);
+      persistGanttLeftColumnWidth(pendingWidth, useMobileLimits);
       setIsResizingGanttSidebar(false);
       document.body.style.cursor = previousCursor;
       document.body.style.userSelect = previousUserSelect;
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', finishResize);
+      document.body.style.touchAction = previousTouchAction;
+      if (target.releasePointerCapture && target.hasPointerCapture?.(event.pointerId)) {
+        target.releasePointerCapture(event.pointerId);
+      }
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', finishResize, { capture: true });
+      window.removeEventListener('pointercancel', finishResize, { capture: true });
+      target.removeEventListener('lostpointercapture', finishResize);
     };
 
-    const handleMouseMove = (moveEvent: MouseEvent): void => {
+    const handlePointerMove = (moveEvent: PointerEvent): void => {
       moveEvent.preventDefault();
       queueWidthUpdate(startWidth + moveEvent.clientX - startClientX);
     };
 
     setIsResizingGanttSidebar(true);
-    document.body.style.cursor = 'col-resize';
+    document.body.style.cursor = useMobileLimits ? previousCursor : 'col-resize';
     document.body.style.userSelect = 'none';
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', finishResize);
-  }, [ganttLeftColumnWidth, persistGanttLeftColumnWidth, useMobileFilterLayout]);
-  const handleGanttSidebarResizeKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (useMobileFilterLayout) {
-      return;
-    }
-
+    document.body.style.touchAction = 'none';
+    window.addEventListener('pointermove', handlePointerMove, { passive: false });
+    window.addEventListener('pointerup', finishResize, { passive: false, capture: true });
+    window.addEventListener('pointercancel', finishResize, { passive: false, capture: true });
+    target.addEventListener('lostpointercapture', finishResize, { passive: false });
+  }, [activeGanttLeftColumnWidth, persistGanttLeftColumnWidth, useMobileFilterLayout]);
+  const handleGanttSidebarResizeKeyDown = useCallback((event: React.KeyboardEvent<HTMLElement>) => {
     let nextWidth: number | null = null;
     if (event.key === 'ArrowLeft') {
-      nextWidth = ganttLeftColumnWidth - GANTT_SIDEBAR_RESIZE_KEYBOARD_STEP;
+      nextWidth = activeGanttLeftColumnWidth - GANTT_SIDEBAR_RESIZE_KEYBOARD_STEP;
     } else if (event.key === 'ArrowRight') {
-      nextWidth = ganttLeftColumnWidth + GANTT_SIDEBAR_RESIZE_KEYBOARD_STEP;
+      nextWidth = activeGanttLeftColumnWidth + GANTT_SIDEBAR_RESIZE_KEYBOARD_STEP;
     } else if (event.key === 'Home') {
-      nextWidth = GANTT_LEFT_COLUMN_MIN_WIDTH;
+      nextWidth = activeGanttLeftColumnMinWidth;
     } else if (event.key === 'End') {
-      nextWidth = GANTT_LEFT_COLUMN_MAX_WIDTH;
+      nextWidth = activeGanttLeftColumnMaxWidth;
     }
 
     if (nextWidth === null) {
@@ -1237,10 +1303,20 @@ function GanttChartPage() {
     }
 
     event.preventDefault();
-    const clampedWidth = clampGanttLeftColumnWidth(nextWidth);
-    setGanttLeftColumnWidth(clampedWidth);
-    persistGanttLeftColumnWidth(clampedWidth);
-  }, [ganttLeftColumnWidth, persistGanttLeftColumnWidth, useMobileFilterLayout]);
+    const clampedWidth = clampGanttLeftColumnWidth(nextWidth, useMobileFilterLayout);
+    if (useMobileFilterLayout) {
+      setGanttLeftColumnWidthMobile(clampedWidth);
+    } else {
+      setGanttLeftColumnWidthDesktop(clampedWidth);
+    }
+    persistGanttLeftColumnWidth(clampedWidth, useMobileFilterLayout);
+  }, [
+    activeGanttLeftColumnMaxWidth,
+    activeGanttLeftColumnMinWidth,
+    activeGanttLeftColumnWidth,
+    persistGanttLeftColumnWidth,
+    useMobileFilterLayout,
+  ]);
 
   const occupancyTaskGroups = useMemo<GanttTaskGroup[]>(() => {
     // Structural filter: "only occupied beds" removes empty beds (and any
@@ -1579,11 +1655,6 @@ function GanttChartPage() {
     && (renderWindow.startIndex > 0 || renderWindow.endIndex < activeTaskGroups.length);
 
   useLayoutEffect(() => {
-    if (useMobileFilterLayout) {
-      setGanttResizeHandleTop(null);
-      return undefined;
-    }
-
     const boundary = ganttResizeBoundaryNode;
     if (!boundary) {
       return undefined;
@@ -1637,7 +1708,6 @@ function GanttChartPage() {
     ganttResizeBoundaryNode,
     renderedTaskGroups.length,
     timelineViewMode,
-    useMobileFilterLayout,
   ]);
 
   const totalTimelineItems = useMemo(
@@ -2663,46 +2733,42 @@ function GanttChartPage() {
                   </Box>
                 ) : calendarGanttChart}
               </Box>
-              {!useMobileFilterLayout && ganttResizeHandleTop !== null ? (
+              {ganttResizeHandleTop !== null ? (
                 <Box
-                  component="button"
-                  type="button"
+                  component="div"
                   role="separator"
+                  tabIndex={0}
                   aria-orientation="vertical"
                   aria-label={t('ganttChart:sidebar.resizeHandle')}
-                  aria-valuemin={GANTT_LEFT_COLUMN_MIN_WIDTH}
-                  aria-valuemax={GANTT_LEFT_COLUMN_MAX_WIDTH}
-                  aria-valuenow={ganttLeftColumnWidth}
-                  onMouseDown={handleGanttSidebarResizeStart}
+                  aria-valuemin={activeGanttLeftColumnMinWidth}
+                  aria-valuemax={activeGanttLeftColumnMaxWidth}
+                  aria-valuenow={activeGanttLeftColumnWidth}
+                  onPointerDown={handleGanttSidebarResizeStart}
                   onKeyDown={handleGanttSidebarResizeKeyDown}
                   sx={{
                     position: 'absolute',
                     top: `${ganttResizeHandleTop}px`,
                     bottom: 0,
-                    left: `${activeGanttLeftColumnWidth - GANTT_SIDEBAR_RESIZE_HANDLE_HITBOX_WIDTH / 2}px`,
+                    left: `${activeGanttLeftColumnWidth - ganttSidebarResizeHandleHitboxWidth / 2}px`,
                     zIndex: 360,
-                    width: GANTT_SIDEBAR_RESIZE_HANDLE_HITBOX_WIDTH,
+                    width: ganttSidebarResizeHandleHitboxWidth,
+                    appearance: 'none',
                     p: 0,
                     m: 0,
                     border: 0,
                     borderRadius: 0,
-                    bgcolor: 'transparent',
-                    cursor: 'col-resize',
+                    bgcolor: 'transparent !important',
+                    background: 'transparent !important',
+                    boxShadow: 'none',
+                    cursor: { xs: 'default', md: 'col-resize' },
                     touchAction: 'none',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      bottom: 0,
-                      left: '50%',
-                      width: isResizingGanttSidebar ? 2 : 1,
-                      transform: 'translateX(-50%)',
-                      bgcolor: isResizingGanttSidebar ? 'text.secondary' : 'divider',
-                      opacity: isResizingGanttSidebar ? 1 : 0.7,
-                      transition: 'background-color 120ms ease, opacity 120ms ease, width 120ms ease',
+                    WebkitTapHighlightColor: 'transparent',
+                    '&:hover, &:active': {
+                      bgcolor: 'transparent !important',
+                      background: 'transparent !important',
                     },
-                    '&:hover::before, &:focus-visible::before': {
-                      width: 2,
+                    '&:hover .GanttSidebarResizeHandle-line, &:focus-visible .GanttSidebarResizeHandle-line': {
+                      width: '2px',
                       bgcolor: 'text.secondary',
                       opacity: 1,
                     },
@@ -2712,7 +2778,24 @@ function GanttChartPage() {
                       outlineOffset: -2,
                     },
                   }}
-                />
+                >
+                  <Box
+                    className="GanttSidebarResizeHandle-line"
+                    data-testid="gantt-sidebar-resize-line"
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      bottom: 0,
+                      left: '50%',
+                      width: isResizingGanttSidebar ? '2px' : '1px',
+                      transform: 'translateX(-50%)',
+                      bgcolor: isResizingGanttSidebar ? 'text.secondary' : 'divider',
+                      opacity: isResizingGanttSidebar ? 1 : 0.7,
+                      pointerEvents: 'none',
+                      transition: 'background-color 120ms ease, opacity 120ms ease, width 120ms ease',
+                    }}
+                  />
+                </Box>
               ) : null}
             </Box>
           </Box>

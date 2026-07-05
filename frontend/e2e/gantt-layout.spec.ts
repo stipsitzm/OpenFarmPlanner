@@ -19,6 +19,24 @@ type LayoutMetrics = {
   timelineScrollbarWidth: string;
 };
 
+function trackConsoleErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() !== 'error') {
+      return;
+    }
+    const text = message.text();
+    if (text.includes('Failed to load resource')) {
+      return;
+    }
+    errors.push(`console.error: ${text}`);
+  });
+  page.on('pageerror', (error) => {
+    errors.push(`pageerror: ${error.message}`);
+  });
+  return errors;
+}
+
 async function loginWithFreshProject(page: Page, request: APIRequestContext, scenarioPrefix: string): Promise<void> {
   const scenario = `${scenarioPrefix}-${Date.now()}`;
   const setupResponse = await request.post(`${apiBase}/__e2e__/invite-flow/`, {
@@ -167,7 +185,7 @@ async function readTaskListWidth(page: Page): Promise<number> {
   });
 }
 
-async function readStoredLeftColumnWidth(page: Page): Promise<number | null> {
+async function readStoredLeftColumnWidth(page: Page, storageField: 'leftColumnWidthDesktop' | 'leftColumnWidthMobile'): Promise<number | null> {
   return page.evaluate(() => {
     const activeProjectId = window.localStorage.getItem('activeProjectId');
     if (!activeProjectId) {
@@ -177,9 +195,8 @@ async function readStoredLeftColumnWidth(page: Page): Promise<number | null> {
     if (!rawState) {
       return null;
     }
-    const parsed = JSON.parse(rawState) as { leftColumnWidth?: unknown };
-    return typeof parsed.leftColumnWidth === 'number' ? parsed.leftColumnWidth : null;
-  });
+    return JSON.parse(rawState) as Record<string, unknown>;
+  }).then((parsed) => (typeof parsed[storageField] === 'number' ? parsed[storageField] : null));
 }
 
 async function expectResizeHandleStartsAtTimelineBody(page: Page): Promise<void> {
@@ -205,6 +222,27 @@ async function expectResizeHandleStartsAtTimelineBody(page: Page): Promise<void>
   expect(bounds.handleTop).toBeGreaterThan(bounds.chartTop + 8);
   expect(Math.abs(bounds.handleTop - bounds.bodyTop)).toBeLessThanOrEqual(1);
   expect(Math.abs(bounds.handleBottom - bounds.bodyBottom)).toBeLessThanOrEqual(1);
+}
+
+async function expectResizeHandleIsVisuallySubtle(page: Page): Promise<void> {
+  const styles = await page.evaluate(() => {
+    const handle = document.querySelector<HTMLElement>('[role="separator"][aria-orientation="vertical"]');
+    const marker = document.querySelector<HTMLElement>('[data-testid="gantt-sidebar-resize-line"]');
+    if (!handle || !marker) {
+      throw new Error('Missing resize handle');
+    }
+    const computedStyle = window.getComputedStyle(handle);
+    const markerStyle = window.getComputedStyle(marker);
+    return {
+      backgroundColor: computedStyle.backgroundColor,
+      hitboxWidth: computedStyle.width,
+      markerWidth: markerStyle.width,
+    };
+  });
+
+  expect(styles.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  expect(Number.parseFloat(styles.hitboxWidth)).toBeGreaterThan(2);
+  expect(Number.parseFloat(styles.markerWidth)).toBeLessThanOrEqual(2);
 }
 
 async function expectMobilePageScrollsCalendar(page: Page, viewport: { width: number; height: number }): Promise<void> {
@@ -254,6 +292,7 @@ test.describe('Gantt calendar layout', () => {
   });
 
   test('persists a resized desktop sidebar across reloads', async ({ page, request }) => {
+    const consoleErrors = trackConsoleErrors(page);
     await loginWithFreshProject(page, request, 'gantt-layout-sidebar-resize');
     await createCalendarFixture(page);
     await page.setViewportSize({ width: 1024, height: 900 });
@@ -263,6 +302,7 @@ test.describe('Gantt calendar layout', () => {
     const handle = page.getByRole('separator', { name: 'Seitenleiste verbreitern oder verkleinern' });
     await expect(handle).toBeVisible();
     await expectResizeHandleStartsAtTimelineBody(page);
+    await expectResizeHandleIsVisuallySubtle(page);
 
     const handleBox = await handle.boundingBox();
     expect(handleBox).not.toBeNull();
@@ -276,12 +316,53 @@ test.describe('Gantt calendar layout', () => {
     await page.mouse.up();
 
     await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(330, 0);
-    await expect.poll(() => readStoredLeftColumnWidth(page)).toBe(330);
+    await expect.poll(() => readStoredLeftColumnWidth(page, 'leftColumnWidthDesktop')).toBe(330);
 
     await page.reload();
     await expect(page.getByText('Layout Kultur').first()).toBeVisible({ timeout: 10_000 });
     await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(330, 0);
     await expectResizeHandleStartsAtTimelineBody(page);
+    expect(consoleErrors).toEqual([]);
+  });
+
+  test('persists a resized mobile sidebar independently from desktop', async ({ page, request }) => {
+    const consoleErrors = trackConsoleErrors(page);
+    await loginWithFreshProject(page, request, 'gantt-layout-mobile-sidebar-resize');
+    await createCalendarFixture(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectCalendarLayout(page, '/app/gantt-chart');
+
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(132, 0);
+    const handle = page.getByRole('separator', { name: 'Seitenleiste verbreitern oder verkleinern' });
+    await expect(handle).toBeVisible();
+    await expectResizeHandleStartsAtTimelineBody(page);
+    await expectResizeHandleIsVisuallySubtle(page);
+
+    const handleBox = await handle.boundingBox();
+    expect(handleBox).not.toBeNull();
+    if (!handleBox) {
+      throw new Error('Missing mobile sidebar resize handle bounds');
+    }
+
+    const dragY = handleBox.y + 48;
+    await page.mouse.move(handleBox.x + handleBox.width / 2, dragY);
+    await page.mouse.down();
+    await page.mouse.move(handleBox.x + handleBox.width / 2 - 28, dragY, { steps: 4 });
+    await page.mouse.up();
+
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(104, 0);
+    await expect.poll(() => readStoredLeftColumnWidth(page, 'leftColumnWidthMobile')).toBe(104);
+    await expect.poll(() => readStoredLeftColumnWidth(page, 'leftColumnWidthDesktop')).toBe(null);
+
+    await page.reload();
+    await expect(page.getByText('Layout Kultur').first()).toBeVisible({ timeout: 10_000 });
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(104, 0);
+
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await page.goto('/app/gantt-chart');
+    await expect(page.getByText('Layout Kultur').first()).toBeVisible({ timeout: 10_000 });
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(240, 0);
+    expect(consoleErrors).toEqual([]);
   });
 });
 
@@ -289,12 +370,14 @@ test.describe('Gantt calendar layout on touch devices', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
   test('hides the mobile timeline scrollbar while keeping touch scrolling available', async ({ page, request }) => {
+    const consoleErrors = trackConsoleErrors(page);
     await loginWithFreshProject(page, request, 'gantt-layout-mobile-touch');
     await createCalendarFixture(page);
     await expectCalendarLayout(page, '/app/gantt-chart');
 
     const metrics = await readLayoutMetrics(page);
     expect(metrics.timelineScrollbarWidth).toBe('none');
+    expect(consoleErrors).toEqual([]);
   });
 });
 
@@ -302,6 +385,7 @@ test.describe('Gantt calendar mobile page scrolling', () => {
   test.use({ isMobile: true, hasTouch: true });
 
   test('uses the page as the vertical scroller in portrait and landscape', async ({ page, request }) => {
+    const consoleErrors = trackConsoleErrors(page);
     await loginWithFreshProject(page, request, 'gantt-layout-mobile-page-scroll');
     await createCalendarFixture(page, { bedCount: 16 });
 
@@ -313,5 +397,6 @@ test.describe('Gantt calendar mobile page scrolling', () => {
     ]) {
       await expectMobilePageScrollsCalendar(page, viewport);
     }
+    expect(consoleErrors).toEqual([]);
   });
 });
