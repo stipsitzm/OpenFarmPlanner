@@ -4,6 +4,8 @@ export const GANTT_ESTIMATED_ROW_HEIGHT = 72;
 export const GANTT_OVERSCAN_ROWS = 5;
 export const GANTT_MAX_RENDERED_TASKS = 500;
 
+type GanttRowHeightGetter = (group: GanttTaskGroup, index: number) => number;
+
 export interface GanttRenderWindow {
   groups: GanttTaskGroup[];
   startIndex: number;
@@ -15,6 +17,7 @@ export function getGanttRenderWindow(
   taskGroups: GanttTaskGroup[],
   scrollTop: number,
   viewportHeight: number,
+  getRowHeight?: GanttRowHeightGetter,
 ): GanttRenderWindow {
   if (taskGroups.length === 0) {
     return {
@@ -25,17 +28,40 @@ export function getGanttRenderWindow(
     };
   }
 
-  const firstVisibleIndex = Math.floor(
-    Math.max(0, scrollTop) / GANTT_ESTIMATED_ROW_HEIGHT,
-  );
-  const visibleRowCount = Math.max(
-    1,
-    Math.ceil(Math.max(1, viewportHeight) / GANTT_ESTIMATED_ROW_HEIGHT),
-  );
+  const rowHeights = taskGroups.map((group, index) => {
+    const rowHeight = getRowHeight?.(group, index) ?? GANTT_ESTIMATED_ROW_HEIGHT;
+    return Number.isFinite(rowHeight) && rowHeight > 0
+      ? rowHeight
+      : GANTT_ESTIMATED_ROW_HEIGHT;
+  });
+  const rowOffsets: number[] = [];
+  let totalHeight = 0;
+  rowHeights.forEach((rowHeight) => {
+    rowOffsets.push(totalHeight);
+    totalHeight += rowHeight;
+  });
+
+  const normalizedScrollTop = Math.max(0, scrollTop);
+  const viewportBottom = normalizedScrollTop + Math.max(1, viewportHeight);
+  let firstVisibleIndex = rowOffsets.findIndex((offset, index) => (
+    offset + rowHeights[index] > normalizedScrollTop
+  ));
+  if (firstVisibleIndex === -1) {
+    firstVisibleIndex = taskGroups.length - 1;
+  }
+
+  let firstHiddenAfterViewport = firstVisibleIndex + 1;
+  while (
+    firstHiddenAfterViewport < taskGroups.length
+    && rowOffsets[firstHiddenAfterViewport] < viewportBottom
+  ) {
+    firstHiddenAfterViewport += 1;
+  }
+
   const startIndex = Math.max(0, firstVisibleIndex - GANTT_OVERSCAN_ROWS);
   const targetEndIndex = Math.min(
     taskGroups.length,
-    firstVisibleIndex + visibleRowCount + GANTT_OVERSCAN_ROWS,
+    firstHiddenAfterViewport + GANTT_OVERSCAN_ROWS,
   );
 
   const groups: GanttTaskGroup[] = [];
@@ -67,6 +93,6 @@ export function getGanttRenderWindow(
     groups,
     startIndex,
     endIndex,
-    totalHeight: taskGroups.length * GANTT_ESTIMATED_ROW_HEIGHT,
+    totalHeight,
   };
 }

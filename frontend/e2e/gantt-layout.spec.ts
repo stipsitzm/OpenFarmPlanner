@@ -1,0 +1,186 @@
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+
+const backendPort = process.env.BACKEND_PORT ?? '8000';
+const e2eToken = process.env.E2E_TEST_TOKEN || 'openfarmplanner-e2e-token';
+const apiBase = `http://127.0.0.1:${backendPort}/api`;
+
+type LayoutMetrics = {
+  bodyOverflowX: number;
+  documentOverflowX: number;
+  wrapperOverflowX: number;
+  timelineOverflowX: number;
+  viewportBottomGap: number;
+  viewportHeight: number;
+  viewportOverflowY: number;
+  wrapperOverflowStyleX: string;
+  timelineOverflowStyleX: string;
+  timelineOverflowStyleY: string;
+  timelineScrollbarWidth: string;
+};
+
+async function loginWithFreshProject(page: Page, request: APIRequestContext, scenarioPrefix: string): Promise<void> {
+  const scenario = `${scenarioPrefix}-${Date.now()}`;
+  const setupResponse = await request.post(`${apiBase}/__e2e__/invite-flow/`, {
+    headers: { 'X-E2E-Token': e2eToken },
+    data: { action: 'setup', scenario_id: scenario, invitation_state: 'pending' },
+  });
+  const setupText = await setupResponse.text();
+  expect(setupResponse.ok(), `fixture setup -> ${setupResponse.status()}: ${setupText}`).toBeTruthy();
+  const setup = JSON.parse(setupText) as { admin: { email: string; password: string } };
+
+  await page.goto('/login');
+  await page.getByLabel('E-Mail').fill(setup.admin.email);
+  await page.locator('input[type="password"]').fill(setup.admin.password);
+  await page.getByRole('button', { name: 'Anmelden' }).click();
+  await expect(page).toHaveURL(/\/app\//, { timeout: 10_000 });
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem('activeProjectId'))).toBeTruthy();
+}
+
+async function createCalendarFixture(page: Page): Promise<void> {
+  const activeProjectId = await page.evaluate(() => window.localStorage.getItem('activeProjectId'));
+  expect(activeProjectId).toBeTruthy();
+  const projectId = Number(activeProjectId);
+  const csrfToken = await page.evaluate(() =>
+    document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] ?? '');
+
+  const api = async <T,>(path: string, data: Record<string, unknown>): Promise<T> => {
+    const result = await page.evaluate(async ({ requestPath, requestData, requestProjectId, requestCsrfToken }) => {
+      const response = await fetch(`/api${requestPath}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'X-CSRFToken': requestCsrfToken,
+          'Content-Type': 'application/json',
+          'X-Project-Id': String(requestProjectId),
+        },
+        body: JSON.stringify({ ...requestData, project: requestProjectId }),
+      });
+      const text = await response.text();
+      return {
+        ok: response.ok,
+        status: response.status,
+        text,
+      };
+    }, {
+      requestPath: path,
+      requestData: data,
+      requestProjectId: projectId,
+      requestCsrfToken: csrfToken,
+    });
+    expect(result.ok, `${path} -> ${result.status}: ${result.text}`).toBeTruthy();
+    return JSON.parse(result.text) as T;
+  };
+
+  const location = await api<{ id: number }>('/locations/', { name: 'Layout Testhof' });
+  const field = await api<{ id: number }>('/fields/', { name: 'Layout Testfeld', location: location.id });
+  const bed = await api<{ id: number }>('/beds/', {
+    name: 'Layout Testbeet',
+    field: field.id,
+    length_m: 10,
+    width_m: 1,
+    area_sqm: 10,
+  });
+  const culture = await api<{ id: number }>('/cultures/', {
+    name: 'Layout Kultur',
+    propagation_duration_days: 21,
+    cultivation_type: 'pre_cultivation',
+    cultivation_types: ['pre_cultivation'],
+    plants_per_m2: 4,
+  });
+  await api('/planting-plans/', {
+    bed: bed.id,
+    culture: culture.id,
+    cultivation_type: 'pre_cultivation',
+    planting_date: '2026-04-01',
+    harvest_date: '2026-05-01',
+    area_usage_sqm: 2,
+  });
+}
+
+async function readLayoutMetrics(page: Page): Promise<LayoutMetrics> {
+  await expect(page.locator('.gantt-container-wrapper .rmg-container')).toBeVisible({ timeout: 10_000 });
+
+  return page.evaluate(() => {
+    const wrapper = document.querySelector<HTMLElement>('.gantt-container-wrapper');
+    const viewport = document.querySelector<HTMLElement>('[data-testid="gantt-virtual-viewport"]');
+    const timeline = document.querySelector<HTMLElement>('.gantt-container-wrapper .rmg-container');
+    if (!wrapper || !viewport || !timeline) {
+      throw new Error('Missing Gantt layout elements');
+    }
+
+    const rowElements = [
+      ...wrapper.querySelectorAll<HTMLElement>('[data-rmg-component="task-group"]'),
+      ...wrapper.querySelectorAll<HTMLElement>('[data-rmg-component="task-row"]'),
+    ];
+    const lastRowBottom = rowElements.length > 0
+      ? Math.max(...rowElements.map((element) => element.getBoundingClientRect().bottom))
+      : viewport.getBoundingClientRect().top;
+    const viewportRect = viewport.getBoundingClientRect();
+    const timelineStyle = getComputedStyle(timeline);
+
+    return {
+      bodyOverflowX: document.body.scrollWidth - window.innerWidth,
+      documentOverflowX: document.documentElement.scrollWidth - window.innerWidth,
+      wrapperOverflowX: wrapper.scrollWidth - wrapper.clientWidth,
+      timelineOverflowX: timeline.scrollWidth - timeline.clientWidth,
+      viewportBottomGap: viewportRect.bottom - lastRowBottom,
+      viewportHeight: viewportRect.height,
+      viewportOverflowY: viewport.scrollHeight - viewport.clientHeight,
+      wrapperOverflowStyleX: getComputedStyle(wrapper).overflowX,
+      timelineOverflowStyleX: timelineStyle.overflowX,
+      timelineOverflowStyleY: timelineStyle.overflowY,
+      timelineScrollbarWidth: timelineStyle.scrollbarWidth,
+    };
+  });
+}
+
+async function expectCalendarLayout(page: Page, path: string): Promise<void> {
+  await page.goto(path);
+  await expect(page.getByText(/Feldplanung|Anzuchtplanung/)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText('Layout Kultur').first()).toBeVisible({ timeout: 10_000 });
+
+  const metrics = await readLayoutMetrics(page);
+  expect(metrics.documentOverflowX).toBeLessThanOrEqual(1);
+  expect(metrics.bodyOverflowX).toBeLessThanOrEqual(1);
+  expect(metrics.wrapperOverflowX).toBeLessThanOrEqual(1);
+  expect(metrics.timelineOverflowX).toBeGreaterThan(0);
+  expect(metrics.viewportBottomGap).toBeLessThan(96);
+  expect(metrics.viewportHeight).toBeLessThan(360);
+  expect(metrics.viewportOverflowY).toBeLessThanOrEqual(1);
+  expect(metrics.wrapperOverflowStyleX).toBe('hidden');
+  expect(metrics.timelineOverflowStyleX).toBe('auto');
+  expect(metrics.timelineOverflowStyleY).toBe('hidden');
+}
+
+test.describe('Gantt calendar layout', () => {
+  test('keeps horizontal scrolling on the timeline and short calendars sized to content', async ({ page, request }) => {
+    await loginWithFreshProject(page, request, 'gantt-layout-desktop');
+    await createCalendarFixture(page);
+
+    for (const viewport of [
+      { width: 390, height: 844 },
+      { width: 600, height: 900 },
+      { width: 768, height: 900 },
+      { width: 1024, height: 900 },
+      { width: 1440, height: 900 },
+      { width: 1920, height: 1080 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await expectCalendarLayout(page, '/app/gantt-chart');
+      await expectCalendarLayout(page, '/app/gantt-chart?view=seedlings');
+    }
+  });
+});
+
+test.describe('Gantt calendar layout on touch devices', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test('hides the mobile timeline scrollbar while keeping touch scrolling available', async ({ page, request }) => {
+    await loginWithFreshProject(page, request, 'gantt-layout-mobile-touch');
+    await createCalendarFixture(page);
+    await expectCalendarLayout(page, '/app/gantt-chart');
+
+    const metrics = await readLayoutMetrics(page);
+    expect(metrics.timelineScrollbarWidth).toBe('none');
+  });
+});
