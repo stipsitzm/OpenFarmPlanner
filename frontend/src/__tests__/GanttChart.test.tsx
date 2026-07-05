@@ -663,6 +663,22 @@ describe('GanttChartPage', () => {
   });
 
   it('resizes the desktop Gantt sidebar and stores the selected width', async () => {
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-01',
+            harvest_date: '2026-05-01',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
     renderWithAuth();
 
     const resizeHandle = await screen.findByRole('separator', {
@@ -685,6 +701,21 @@ describe('GanttChartPage', () => {
   });
 
   it('restores the stored desktop Gantt sidebar width', async () => {
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-01',
+            harvest_date: '2026-05-01',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
     window.localStorage.setItem(GANTT_STATE_STORAGE_KEY, JSON.stringify({
       leftColumnWidth: 360,
     }));

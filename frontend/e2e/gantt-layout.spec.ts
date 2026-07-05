@@ -182,6 +182,31 @@ async function readStoredLeftColumnWidth(page: Page): Promise<number | null> {
   });
 }
 
+async function expectResizeHandleStartsAtTimelineBody(page: Page): Promise<void> {
+  const bounds = await page.evaluate(() => {
+    const handle = document.querySelector<HTMLElement>('[role="separator"][aria-orientation="vertical"]');
+    const body = document.querySelector<HTMLElement>('.gantt-container-wrapper .rmg-container');
+    const chart = document.querySelector<HTMLElement>('.gantt-container-wrapper .rmg-gantt-chart');
+    if (!handle || !body || !chart) {
+      throw new Error('Missing resize handle or Gantt body');
+    }
+    const handleRect = handle.getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
+    const chartRect = chart.getBoundingClientRect();
+    return {
+      handleTop: handleRect.top,
+      handleBottom: handleRect.bottom,
+      bodyTop: bodyRect.top,
+      bodyBottom: bodyRect.bottom,
+      chartTop: chartRect.top,
+    };
+  });
+
+  expect(bounds.handleTop).toBeGreaterThan(bounds.chartTop + 8);
+  expect(Math.abs(bounds.handleTop - bounds.bodyTop)).toBeLessThanOrEqual(1);
+  expect(Math.abs(bounds.handleBottom - bounds.bodyBottom)).toBeLessThanOrEqual(1);
+}
+
 async function expectMobilePageScrollsCalendar(page: Page, viewport: { width: number; height: number }): Promise<void> {
   await page.setViewportSize(viewport);
   await page.goto('/app/gantt-chart');
@@ -237,6 +262,7 @@ test.describe('Gantt calendar layout', () => {
     await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(240, 0);
     const handle = page.getByRole('separator', { name: 'Seitenleiste verbreitern oder verkleinern' });
     await expect(handle).toBeVisible();
+    await expectResizeHandleStartsAtTimelineBody(page);
 
     const handleBox = await handle.boundingBox();
     expect(handleBox).not.toBeNull();
@@ -255,6 +281,7 @@ test.describe('Gantt calendar layout', () => {
     await page.reload();
     await expect(page.getByText('Layout Kultur').first()).toBeVisible({ timeout: 10_000 });
     await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(330, 0);
+    await expectResizeHandleStartsAtTimelineBody(page);
   });
 });
 

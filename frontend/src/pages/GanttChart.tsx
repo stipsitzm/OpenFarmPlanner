@@ -7,7 +7,7 @@
  * @returns The Gantt Chart page component
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useContext, useRef, useLayoutEffect } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CloseIcon from '@mui/icons-material/Close';
@@ -570,6 +570,7 @@ function GanttChartPage() {
   const [ganttScrollTop, setGanttScrollTop] = useState(0);
   const [ganttViewportHeight, setGanttViewportHeight] = useState(640);
   const ganttViewportRef = useRef<HTMLDivElement | null>(null);
+  const [ganttResizeBoundaryNode, setGanttResizeBoundaryNode] = useState<HTMLDivElement | null>(null);
   const ganttSidebarWidthFrameRef = useRef<number | null>(null);
   const hasRestoredTimelineRef = useRef(false);
   const latestReferenceDateRef = useRef<Date | null>(null);
@@ -590,6 +591,7 @@ function GanttChartPage() {
     storedGanttState?.leftColumnWidth ?? GANTT_LEFT_COLUMN_DEFAULT_WIDTH,
   );
   const [isResizingGanttSidebar, setIsResizingGanttSidebar] = useState(false);
+  const [ganttResizeHandleTop, setGanttResizeHandleTop] = useState<number | null>(null);
   const calendarViewStorageKey = useMemo(
     () => (canUseStoredCalendarView ? getCalendarViewStorageKey(activeProjectId) : null),
     [activeProjectId, canUseStoredCalendarView],
@@ -616,6 +618,9 @@ function GanttChartPage() {
     : ganttLeftColumnWidth;
   const useWindowedGanttRows = !useMobileFilterLayout;
   const activeGanttLeftColumnWidthRef = useRef(activeGanttLeftColumnWidth);
+  const handleGanttResizeBoundaryRef = useCallback((node: HTMLDivElement | null): void => {
+    setGanttResizeBoundaryNode(node);
+  }, []);
   const [editMode, setEditMode] = useState(false);
   const outletContext = useOutletContext<RootLayoutOutletContext | null>();
   const setTopbarContextActions = outletContext?.setTopbarContextActions;
@@ -1572,6 +1577,69 @@ function GanttChartPage() {
   const renderedTaskGroups = renderWindow.groups;
   const isGanttRenderWindowVirtualized = useWindowedGanttRows
     && (renderWindow.startIndex > 0 || renderWindow.endIndex < activeTaskGroups.length);
+
+  useLayoutEffect(() => {
+    if (useMobileFilterLayout) {
+      setGanttResizeHandleTop(null);
+      return undefined;
+    }
+
+    const boundary = ganttResizeBoundaryNode;
+    if (!boundary) {
+      return undefined;
+    }
+
+    let animationFrameId: number | null = null;
+    const measureHandleTop = (): void => {
+      animationFrameId = null;
+      const ganttBody = boundary.querySelector<HTMLElement>('.rmg-container');
+      if (!ganttBody) {
+        setGanttResizeHandleTop(null);
+        return;
+      }
+      const boundaryRect = boundary.getBoundingClientRect();
+      const bodyRect = ganttBody.getBoundingClientRect();
+      setGanttResizeHandleTop(Math.max(0, Math.round(bodyRect.top - boundaryRect.top)));
+    };
+    const queueMeasure = (): void => {
+      if (animationFrameId === null) {
+        animationFrameId = window.requestAnimationFrame(measureHandleTop);
+      }
+    };
+
+    measureHandleTop();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', queueMeasure);
+      return () => {
+        window.removeEventListener('resize', queueMeasure);
+        if (animationFrameId !== null) {
+          window.cancelAnimationFrame(animationFrameId);
+        }
+      };
+    }
+
+    const observer = new ResizeObserver(queueMeasure);
+    observer.observe(boundary);
+    const ganttBody = boundary.querySelector<HTMLElement>('.rmg-container');
+    if (ganttBody) {
+      observer.observe(ganttBody);
+    }
+
+    return () => {
+      observer.disconnect();
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [
+    calendarMode,
+    ganttResizeBoundaryNode,
+    renderedTaskGroups.length,
+    timelineViewMode,
+    useMobileFilterLayout,
+  ]);
+
   const totalTimelineItems = useMemo(
     // For occupancy mode, count tasks across the full tree (every bed),
     // not just the currently visible/expanded rows — collapsing a field
@@ -2552,6 +2620,7 @@ function GanttChartPage() {
             }}
           >
             <Box
+              ref={handleGanttResizeBoundaryRef}
               sx={{
                 position: 'relative',
               }}
@@ -2594,7 +2663,7 @@ function GanttChartPage() {
                   </Box>
                 ) : calendarGanttChart}
               </Box>
-              {!useMobileFilterLayout ? (
+              {!useMobileFilterLayout && ganttResizeHandleTop !== null ? (
                 <Box
                   component="button"
                   type="button"
@@ -2608,7 +2677,7 @@ function GanttChartPage() {
                   onKeyDown={handleGanttSidebarResizeKeyDown}
                   sx={{
                     position: 'absolute',
-                    top: 0,
+                    top: `${ganttResizeHandleTop}px`,
                     bottom: 0,
                     left: `${activeGanttLeftColumnWidth - GANTT_SIDEBAR_RESIZE_HANDLE_HITBOX_WIDTH / 2}px`,
                     zIndex: 360,
