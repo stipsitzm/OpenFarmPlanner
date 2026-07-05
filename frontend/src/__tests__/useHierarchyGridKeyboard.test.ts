@@ -191,6 +191,20 @@ describe('useHierarchyGridKeyboard', () => {
     });
   });
 
+  it('keeps fast typed numeric keys together when starting edit mode', async () => {
+    const { result, setEditCellValue } = renderKeyboardHook();
+
+    act(() => {
+      result.current.handleCellKeyDown(makeCellParams('field-1', 'length_m'), makeKeyboardEvent('1'));
+      result.current.handleCellKeyDown(makeCellParams('field-1', 'length_m'), makeKeyboardEvent('2'));
+      result.current.handleCellKeyDown(makeCellParams('field-1', 'length_m'), makeKeyboardEvent('3'));
+    });
+
+    await waitFor(() => {
+      expect(setEditCellValue).toHaveBeenCalledWith({ id: 'field-1', field: 'length_m', value: '123' });
+    });
+  });
+
   it('suppresses modified printable shortcuts in view mode without entering edit mode', () => {
     const { result, setRowModesModel } = renderKeyboardHook();
     const event = makeKeyboardEvent('T', { altKey: true });

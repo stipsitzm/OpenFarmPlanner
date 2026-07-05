@@ -59,9 +59,17 @@ vi.mock('@mui/x-data-grid', async () => {
     pageSizeOptions,
   }: unknown) => {
     const [, forceFocusRender] = React.useState(0);
+    const [editValues, setEditValues] = React.useState<Record<string, unknown>>({});
 
     if (apiRef?.current) {
       apiRef.current.state = apiRef.current.state ?? { focus: { cell: null } };
+      apiRef.current.setEditCellValue = (params: { id: string | number; field: string; value: unknown }) => {
+        setEditValues((currentValues) => ({
+          ...currentValues,
+          [`${String(params.id)}-${params.field}`]: params.value,
+        }));
+        return mockSetEditCellValue(params);
+      };
       apiRef.current.getVisibleColumns = () => columns;
       apiRef.current.getAllRowIds = () => rows.map((row: TestGridRow) => row.id);
       apiRef.current.getRowWithUpdatedValues = (id: string | number) =>
@@ -109,6 +117,10 @@ vi.mock('@mui/x-data-grid', async () => {
           >
             <span data-testid={`mode-${row.id}`}>{rowModesModel?.[row.id]?.mode ?? GridRowModes.View}</span>
             {columns.map((col: GridColDef) => {
+              const isEditingCell =
+                rowModesModel?.[row.id]?.mode === GridRowModes.Edit &&
+                rowModesModel?.[row.id]?.fieldToFocus === col.field;
+              const editValueKey = `${String(row.id)}-${col.field}`;
               if (typeof col.getActions === 'function') {
                 return (
                   <div key={`${row.id}-${col.field}`}>
@@ -133,6 +145,14 @@ vi.mock('@mui/x-data-grid', async () => {
                       data-min-width={col.minWidth ?? ''}
                     />
                   )}
+                  {isEditingCell ? (
+                    <input
+                      aria-label={`Editor ${row.id}-${col.field}`}
+                      data-testid={`edit-input-${row.id}-${col.field}`}
+                      readOnly
+                      value={String(editValues[editValueKey] ?? row[col.field as keyof TestGridRow] ?? '')}
+                    />
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => {
@@ -399,6 +419,7 @@ describe('EditableDataGrid', () => {
     await waitFor(() => {
       expect(mockSetEditCellValue).toHaveBeenCalledWith({ id: 1, field: 'area_sqm', value: '5' });
     });
+    await waitFor(() => expect(screen.getByTestId('edit-input-1-area_sqm')).toHaveValue('5'));
     expect(mockSetCellFocus).toHaveBeenCalledWith(1, 'area_sqm');
   });
 
@@ -406,12 +427,13 @@ describe('EditableDataGrid', () => {
     render(<EditableDataGrid {...baseProps()} showDeleteAction={false} />);
 
     const cell = await screen.findByRole('button', { name: 'Zelle 1-name' });
-    fireEvent.keyDown(cell, { key: 'T' });
+    fireEvent.keyDown(cell, { key: 'A' });
 
     await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
     await waitFor(() => {
-      expect(mockSetEditCellValue).toHaveBeenCalledWith({ id: 1, field: 'name', value: 'T' });
+      expect(mockSetEditCellValue).toHaveBeenCalledWith({ id: 1, field: 'name', value: 'A' });
     });
+    await waitFor(() => expect(screen.getByTestId('edit-input-1-name')).toHaveValue('A'));
   });
 
   it('keeps multiple fast typed characters when starting edit mode', async () => {
@@ -426,6 +448,7 @@ describe('EditableDataGrid', () => {
     await waitFor(() => {
       expect(mockSetEditCellValue).toHaveBeenCalledWith({ id: 1, field: 'area_sqm', value: '123' });
     });
+    await waitFor(() => expect(screen.getByTestId('edit-input-1-area_sqm')).toHaveValue('123'));
   });
 
   it('starts editing with F2 without replacing the existing value', async () => {
@@ -437,6 +460,18 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
     expect(mockSetEditCellValue).not.toHaveBeenCalled();
     expect(mockSetCellFocus).toHaveBeenCalledWith(1, 'name');
+    expect(screen.getByTestId('edit-input-1-name')).toHaveValue('Beet A');
+  });
+
+  it('starts editing from a click without replacing the existing value', async () => {
+    render(<EditableDataGrid {...baseProps()} showDeleteAction={false} />);
+
+    const cell = await screen.findByRole('button', { name: 'Zelle 1-name' });
+    fireEvent.click(cell);
+
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+    expect(mockSetEditCellValue).not.toHaveBeenCalled();
+    expect(screen.getByTestId('edit-input-1-name')).toHaveValue('Beet A');
   });
 
   it('does not start editing for browser shortcut keys', async () => {
