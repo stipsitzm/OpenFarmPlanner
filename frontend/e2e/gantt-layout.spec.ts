@@ -167,7 +167,7 @@ async function readTaskListWidth(page: Page): Promise<number> {
   });
 }
 
-async function readStoredLeftColumnWidth(page: Page): Promise<number | null> {
+async function readStoredLeftColumnWidth(page: Page, storageField: 'leftColumnWidthDesktop' | 'leftColumnWidthMobile'): Promise<number | null> {
   return page.evaluate(() => {
     const activeProjectId = window.localStorage.getItem('activeProjectId');
     if (!activeProjectId) {
@@ -177,9 +177,8 @@ async function readStoredLeftColumnWidth(page: Page): Promise<number | null> {
     if (!rawState) {
       return null;
     }
-    const parsed = JSON.parse(rawState) as { leftColumnWidth?: unknown };
-    return typeof parsed.leftColumnWidth === 'number' ? parsed.leftColumnWidth : null;
-  });
+    return JSON.parse(rawState) as Record<string, unknown>;
+  }).then((parsed) => (typeof parsed[storageField] === 'number' ? parsed[storageField] : null));
 }
 
 async function expectResizeHandleStartsAtTimelineBody(page: Page): Promise<void> {
@@ -276,12 +275,49 @@ test.describe('Gantt calendar layout', () => {
     await page.mouse.up();
 
     await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(330, 0);
-    await expect.poll(() => readStoredLeftColumnWidth(page)).toBe(330);
+    await expect.poll(() => readStoredLeftColumnWidth(page, 'leftColumnWidthDesktop')).toBe(330);
 
     await page.reload();
     await expect(page.getByText('Layout Kultur').first()).toBeVisible({ timeout: 10_000 });
     await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(330, 0);
     await expectResizeHandleStartsAtTimelineBody(page);
+  });
+
+  test('persists a resized mobile sidebar independently from desktop', async ({ page, request }) => {
+    await loginWithFreshProject(page, request, 'gantt-layout-mobile-sidebar-resize');
+    await createCalendarFixture(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectCalendarLayout(page, '/app/gantt-chart');
+
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(132, 0);
+    const handle = page.getByRole('separator', { name: 'Seitenleiste verbreitern oder verkleinern' });
+    await expect(handle).toBeVisible();
+    await expectResizeHandleStartsAtTimelineBody(page);
+
+    const handleBox = await handle.boundingBox();
+    expect(handleBox).not.toBeNull();
+    if (!handleBox) {
+      throw new Error('Missing mobile sidebar resize handle bounds');
+    }
+
+    const dragY = handleBox.y + 48;
+    await page.mouse.move(handleBox.x + handleBox.width / 2, dragY);
+    await page.mouse.down();
+    await page.mouse.move(handleBox.x + handleBox.width / 2 - 28, dragY, { steps: 4 });
+    await page.mouse.up();
+
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(104, 0);
+    await expect.poll(() => readStoredLeftColumnWidth(page, 'leftColumnWidthMobile')).toBe(104);
+    await expect.poll(() => readStoredLeftColumnWidth(page, 'leftColumnWidthDesktop')).toBe(null);
+
+    await page.reload();
+    await expect(page.getByText('Layout Kultur').first()).toBeVisible({ timeout: 10_000 });
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(104, 0);
+
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await page.goto('/app/gantt-chart');
+    await expect(page.getByText('Layout Kultur').first()).toBeVisible({ timeout: 10_000 });
+    await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(240, 0);
   });
 });
 

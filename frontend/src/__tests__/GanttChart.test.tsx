@@ -688,15 +688,15 @@ describe('GanttChartPage', () => {
       expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(240);
     });
 
-    fireEvent.mouseDown(resizeHandle, { clientX: 240 });
-    fireEvent.mouseMove(window, { clientX: 310 });
-    fireEvent.mouseUp(window);
+    fireEvent.pointerDown(resizeHandle, { clientX: 240, pointerId: 1 });
+    fireEvent.pointerMove(window, { clientX: 310, pointerId: 1 });
+    fireEvent.pointerUp(window, { pointerId: 1 });
 
     await waitFor(() => {
       expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(310);
     });
     expect(JSON.parse(window.localStorage.getItem(GANTT_STATE_STORAGE_KEY) ?? '{}')).toMatchObject({
-      leftColumnWidth: 310,
+      leftColumnWidthDesktop: 310,
     });
   });
 
@@ -731,20 +731,33 @@ describe('GanttChartPage', () => {
     expect(resizeHandle).toHaveAttribute('aria-valuenow', '360');
   });
 
-  it('does not show the Gantt sidebar resize handle on mobile', async () => {
+  it('resizes the mobile Gantt sidebar separately from the desktop width', async () => {
     const restoreViewport = withMobileCalendarViewport();
     try {
       window.localStorage.setItem(GANTT_STATE_STORAGE_KEY, JSON.stringify({
-        leftColumnWidth: 360,
+        leftColumnWidthDesktop: 360,
       }));
 
       renderWithAuth();
 
-      await screen.findByTestId('mock-gantt');
-      expect(screen.queryByRole('separator', {
+      const resizeHandle = await screen.findByRole('separator', {
         name: 'Seitenleiste verbreitern oder verkleinern',
-      })).not.toBeInTheDocument();
-      expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(220);
+      });
+      await waitFor(() => {
+        expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(132);
+      });
+
+      fireEvent.pointerDown(resizeHandle, { clientX: 132, pointerId: 2, pointerType: 'touch' });
+      fireEvent.pointerMove(window, { clientX: 104, pointerId: 2, pointerType: 'touch' });
+      fireEvent.pointerUp(window, { pointerId: 2, pointerType: 'touch' });
+
+      await waitFor(() => {
+        expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(104);
+      });
+      expect(JSON.parse(window.localStorage.getItem(GANTT_STATE_STORAGE_KEY) ?? '{}')).toMatchObject({
+        leftColumnWidthDesktop: 360,
+        leftColumnWidthMobile: 104,
+      });
     } finally {
       restoreViewport();
     }
@@ -761,7 +774,7 @@ describe('GanttChartPage', () => {
 
       const virtualViewport = await screen.findByTestId('gantt-virtual-viewport');
       await waitFor(() => {
-        expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(220);
+        expect(mocks.ganttProps.mock.calls.at(-1)?.[0]?.leftColumnWidth).toBe(132);
       });
       expect(virtualViewport.scrollTop).toBe(0);
     } finally {
