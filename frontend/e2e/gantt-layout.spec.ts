@@ -19,6 +19,24 @@ type LayoutMetrics = {
   timelineScrollbarWidth: string;
 };
 
+function trackConsoleErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() !== 'error') {
+      return;
+    }
+    const text = message.text();
+    if (text.includes('Failed to load resource')) {
+      return;
+    }
+    errors.push(`console.error: ${text}`);
+  });
+  page.on('pageerror', (error) => {
+    errors.push(`pageerror: ${error.message}`);
+  });
+  return errors;
+}
+
 async function loginWithFreshProject(page: Page, request: APIRequestContext, scenarioPrefix: string): Promise<void> {
   const scenario = `${scenarioPrefix}-${Date.now()}`;
   const setupResponse = await request.post(`${apiBase}/__e2e__/invite-flow/`, {
@@ -253,6 +271,7 @@ test.describe('Gantt calendar layout', () => {
   });
 
   test('persists a resized desktop sidebar across reloads', async ({ page, request }) => {
+    const consoleErrors = trackConsoleErrors(page);
     await loginWithFreshProject(page, request, 'gantt-layout-sidebar-resize');
     await createCalendarFixture(page);
     await page.setViewportSize({ width: 1024, height: 900 });
@@ -281,9 +300,11 @@ test.describe('Gantt calendar layout', () => {
     await expect(page.getByText('Layout Kultur').first()).toBeVisible({ timeout: 10_000 });
     await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(330, 0);
     await expectResizeHandleStartsAtTimelineBody(page);
+    expect(consoleErrors).toEqual([]);
   });
 
   test('persists a resized mobile sidebar independently from desktop', async ({ page, request }) => {
+    const consoleErrors = trackConsoleErrors(page);
     await loginWithFreshProject(page, request, 'gantt-layout-mobile-sidebar-resize');
     await createCalendarFixture(page);
     await page.setViewportSize({ width: 390, height: 844 });
@@ -318,6 +339,7 @@ test.describe('Gantt calendar layout', () => {
     await page.goto('/app/gantt-chart');
     await expect(page.getByText('Layout Kultur').first()).toBeVisible({ timeout: 10_000 });
     await expect.poll(() => readTaskListWidth(page)).toBeCloseTo(240, 0);
+    expect(consoleErrors).toEqual([]);
   });
 });
 
@@ -325,12 +347,14 @@ test.describe('Gantt calendar layout on touch devices', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
   test('hides the mobile timeline scrollbar while keeping touch scrolling available', async ({ page, request }) => {
+    const consoleErrors = trackConsoleErrors(page);
     await loginWithFreshProject(page, request, 'gantt-layout-mobile-touch');
     await createCalendarFixture(page);
     await expectCalendarLayout(page, '/app/gantt-chart');
 
     const metrics = await readLayoutMetrics(page);
     expect(metrics.timelineScrollbarWidth).toBe('none');
+    expect(consoleErrors).toEqual([]);
   });
 });
 
@@ -338,6 +362,7 @@ test.describe('Gantt calendar mobile page scrolling', () => {
   test.use({ isMobile: true, hasTouch: true });
 
   test('uses the page as the vertical scroller in portrait and landscape', async ({ page, request }) => {
+    const consoleErrors = trackConsoleErrors(page);
     await loginWithFreshProject(page, request, 'gantt-layout-mobile-page-scroll');
     await createCalendarFixture(page, { bedCount: 16 });
 
@@ -349,5 +374,6 @@ test.describe('Gantt calendar mobile page scrolling', () => {
     ]) {
       await expectMobilePageScrollsCalendar(page, viewport);
     }
+    expect(consoleErrors).toEqual([]);
   });
 });

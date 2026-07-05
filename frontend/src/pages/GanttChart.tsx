@@ -110,7 +110,7 @@ const GANTT_LEFT_COLUMN_MOBILE_MIN_WIDTH = 104;
 const GANTT_LEFT_COLUMN_MOBILE_DEFAULT_WIDTH = 132;
 const GANTT_LEFT_COLUMN_MOBILE_MAX_WIDTH = 216;
 const GANTT_SIDEBAR_RESIZE_HANDLE_DESKTOP_HITBOX_WIDTH = 12;
-const GANTT_SIDEBAR_RESIZE_HANDLE_MOBILE_HITBOX_WIDTH = 28;
+const GANTT_SIDEBAR_RESIZE_HANDLE_MOBILE_HITBOX_WIDTH = 24;
 const GANTT_SIDEBAR_RESIZE_KEYBOARD_STEP = 10;
 const GANTT_ROW_HEIGHT = 32;
 const GANTT_VIEWPORT_MAX_HEIGHT_SX = { md: '72svh', lg: '76svh' } as const;
@@ -2752,14 +2752,21 @@ function GanttChartPage() {
                     left: `${activeGanttLeftColumnWidth - ganttSidebarResizeHandleHitboxWidth / 2}px`,
                     zIndex: 360,
                     width: ganttSidebarResizeHandleHitboxWidth,
+                    appearance: 'none',
                     p: 0,
                     m: 0,
                     border: 0,
                     borderRadius: 0,
-                    bgcolor: 'transparent',
+                    bgcolor: 'transparent !important',
+                    background: 'transparent !important',
+                    boxShadow: 'none',
                     cursor: { xs: 'default', md: 'col-resize' },
                     touchAction: 'none',
                     WebkitTapHighlightColor: 'transparent',
+                    '&:hover, &:active': {
+                      bgcolor: 'transparent !important',
+                      background: 'transparent !important',
+                    },
                     '&::before': {
                       content: '""',
                       position: 'absolute',
