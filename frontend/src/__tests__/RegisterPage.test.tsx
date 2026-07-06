@@ -5,23 +5,24 @@ import { MemoryRouter } from 'react-router-dom';
 import RegisterPage from '../pages/auth/RegisterPage';
 
 const logoutMock = vi.fn(async () => undefined);
+let authUser: unknown = {
+  id: 1,
+  email: 'test@example.com',
+  display_name: 'Test',
+  display_label: 'test@example.com',
+  is_active: true,
+  default_project_id: 1,
+  last_project_id: 1,
+  resolved_project_id: 1,
+  needs_project_selection: false,
+  memberships: [],
+  account_pending_deletion: false,
+  scheduled_deletion_at: null,
+};
 
 vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({
-    user: {
-      id: 1,
-      email: 'test@example.com',
-      display_name: 'Test',
-      display_label: 'test@example.com',
-      is_active: true,
-      default_project_id: 1,
-      last_project_id: 1,
-      resolved_project_id: 1,
-      needs_project_selection: false,
-      memberships: [],
-      account_pending_deletion: false,
-      scheduled_deletion_at: null,
-    },
+    user: authUser,
     register: vi.fn(),
     resendActivation: vi.fn(),
     logout: logoutMock,
@@ -52,7 +53,7 @@ vi.mock('../i18n', () => ({
         'auth:register.resendActivation': 'Aktivierungs-E-Mail erneut senden',
         'auth:register.hasAccount': 'Bereits ein Konto? Anmelden',
         'auth:register.showPassword': 'Passwort anzeigen',
-        'auth:register.hidePassword': 'Passwort verbergen',
+        'auth:register.hidePassword': 'Passwort ausblenden',
       };
       return map[key] ?? key;
     },
@@ -62,9 +63,25 @@ vi.mock('../i18n', () => ({
 describe('RegisterPage', () => {
   beforeEach(() => {
     logoutMock.mockClear();
+    authUser = {
+      id: 1,
+      email: 'test@example.com',
+      display_name: 'Test',
+      display_label: 'test@example.com',
+      is_active: true,
+      default_project_id: 1,
+      last_project_id: 1,
+      resolved_project_id: 1,
+      needs_project_selection: false,
+      memberships: [],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+    };
   });
 
   it('password toggle buttons use translated German aria-labels (BUG-M02 regression guard)', () => {
+    authUser = null;
+
     render(
       <MemoryRouter initialEntries={['/register']}>
         <RegisterPage />
@@ -80,6 +97,8 @@ describe('RegisterPage', () => {
   });
 
   it('password fields carry autocomplete="new-password" (BUG-L02 regression guard)', () => {
+    authUser = null;
+
     render(
       <MemoryRouter initialEntries={['/register']}>
         <RegisterPage />
@@ -93,6 +112,37 @@ describe('RegisterPage', () => {
     passwordInputs.forEach((input) => {
       expect(input).toHaveAttribute('autocomplete', 'new-password');
     });
+  });
+
+  it('keeps password visibility toggles keyboard accessible', async () => {
+    authUser = null;
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>,
+    );
+
+    const passwordInput = document.querySelector('input[type="password"]') as HTMLInputElement;
+    const toggleButton = screen.getAllByRole('button', { name: 'Passwort anzeigen' })[0];
+
+    await user.tab();
+    await user.tab();
+    await user.tab();
+    await user.tab();
+
+    expect(toggleButton).toHaveFocus();
+
+    await user.keyboard('{Enter}');
+    expect(passwordInput.type).toBe('text');
+    expect(toggleButton).toHaveFocus();
+    expect(toggleButton).toHaveAccessibleName('Passwort ausblenden');
+
+    await user.keyboard(' ');
+    expect(passwordInput.type).toBe('password');
+    expect(toggleButton).toHaveFocus();
+    expect(toggleButton).toHaveAccessibleName('Passwort anzeigen');
   });
 
   it('shows logged-in info banner and account-switch actions instead of redirecting', async () => {

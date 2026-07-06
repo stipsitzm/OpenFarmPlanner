@@ -1,11 +1,10 @@
-import { Alert, Box, Button, Container, IconButton, InputAdornment, Stack, TextField, Typography } from '@mui/material';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import { Alert, Box, Button, Container, InputAdornment, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { projectAPI, type InvitationPublicStatus } from '../../api/api';
 import { useAuth } from '../../auth/useAuth';
+import PasswordVisibilityToggle from '../../components/inputs/PasswordVisibilityToggle';
 import { useTranslation } from '../../i18n';
 import { getNextFromSearch, getTokenFromNextPath, storeInvitationRedirect } from '../invitationAcceptance';
 
@@ -142,15 +141,13 @@ export default function RegisterPage() {
               input: {
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      aria-label={t(showPassword ? 'auth:register.hidePassword' : 'auth:register.showPassword')}
-                      edge="end"
-                      tabIndex={-1}
-                      onClick={() => setShowPassword((current) => !current)}
-                      onMouseDown={(event) => event.preventDefault()}
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
+                    <PasswordVisibilityToggle
+                      isVisible={showPassword}
+                      showLabel={t('auth:register.showPassword')}
+                      hideLabel={t('auth:register.hidePassword')}
+                      onToggle={() => setShowPassword((current) => !current)}
+                      disabled={isLoggedIn}
+                    />
                   </InputAdornment>
                 ),
               },
@@ -168,15 +165,13 @@ export default function RegisterPage() {
               input: {
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      aria-label={t(showPasswordConfirm ? 'auth:register.hidePassword' : 'auth:register.showPassword')}
-                      edge="end"
-                      tabIndex={-1}
-                      onClick={() => setShowPasswordConfirm((current) => !current)}
-                      onMouseDown={(event) => event.preventDefault()}
-                    >
-                      {showPasswordConfirm ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
+                    <PasswordVisibilityToggle
+                      isVisible={showPasswordConfirm}
+                      showLabel={t('auth:register.showPassword')}
+                      hideLabel={t('auth:register.hidePassword')}
+                      onToggle={() => setShowPasswordConfirm((current) => !current)}
+                      disabled={isLoggedIn}
+                    />
                   </InputAdornment>
                 ),
               },
