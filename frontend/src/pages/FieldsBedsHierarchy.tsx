@@ -237,6 +237,10 @@ function FieldsBedsHierarchy({
   const isTouchLikePointer = useMediaQuery("(pointer: coarse)");
   const isMobileViewport = useMediaQuery("(max-width:900px)");
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
+  const rowModesModelRef = useRef(rowModesModel);
+  useLayoutEffect(() => {
+    rowModesModelRef.current = rowModesModel;
+  }, [rowModesModel]);
   const [draftValidationWarning, setDraftValidationWarning] = useState("");
   const hasInitiallyExpandedRef = useRef(false);
   const handledCreateFieldRequestRef = useRef(0);
@@ -844,11 +848,18 @@ function FieldsBedsHierarchy({
       queuePostEditFocus(getPostEnterSaveFocusTarget(newRow.id), preferredField, newRow.id);
 
       const savedRow = await processRowUpdate(newRow);
-      preFocusEditCell(newRow.id);
-      setRowModesModel((previousModel) => ({
-        ...previousModel,
-        [newRow.id]: { mode: GridRowModes.View, ignoreModifications: true },
-      }));
+      // MUI's own onRowModesModelChange usually flips this row to View (and our
+      // rowModesModel layout effect already restores focus onto the queued target)
+      // well before this async save resolves. Only re-anchor and re-apply View mode
+      // here if that hasn't happened yet — otherwise this would yank focus back onto
+      // the just-saved row for an instant, causing a visible focus flash/flicker.
+      if (rowModesModelRef.current[newRow.id]?.mode === GridRowModes.Edit) {
+        preFocusEditCell(newRow.id);
+        setRowModesModel((previousModel) => ({
+          ...previousModel,
+          [newRow.id]: { mode: GridRowModes.View, ignoreModifications: true },
+        }));
+      }
       window.setTimeout(() => {
         applyOrReapplyPostEditFocus(newRow.id);
       }, 0);

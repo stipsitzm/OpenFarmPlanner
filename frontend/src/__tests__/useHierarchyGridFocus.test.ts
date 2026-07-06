@@ -49,7 +49,7 @@ interface HookProps {
 
 const renderFocusHook = (initialProps: HookProps) => {
   const setCellFocus = vi.fn();
-  const setSelectedRowId = vi.fn();
+  const selectRow = vi.fn();
   const gridApiRef = { current: { setCellFocus } };
 
   const hookResult = renderHook(
@@ -58,14 +58,14 @@ const renderFocusHook = (initialProps: HookProps) => {
         gridApiRef,
         rowModesModel,
         rows: ROWS,
+        selectRow,
         selectedRowId,
-        setSelectedRowId,
         treeActive,
       }),
     { initialProps },
   );
 
-  return { ...hookResult, setCellFocus, setSelectedRowId };
+  return { ...hookResult, setCellFocus, selectRow };
 };
 
 const renderFocusHookWithRows = (
@@ -73,7 +73,7 @@ const renderFocusHookWithRows = (
   rows: HierarchyRow[],
 ) => {
   const setCellFocus = vi.fn();
-  const setSelectedRowId = vi.fn();
+  const selectRow = vi.fn();
   const gridApiRef = { current: { setCellFocus } };
 
   const hookResult = renderHook(
@@ -82,28 +82,28 @@ const renderFocusHookWithRows = (
         gridApiRef,
         rowModesModel,
         rows,
+        selectRow,
         selectedRowId,
-        setSelectedRowId,
         treeActive,
       }),
     { initialProps },
   );
 
-  return { ...hookResult, setCellFocus, setSelectedRowId };
+  return { ...hookResult, setCellFocus, selectRow };
 };
 
 describe('useHierarchyGridFocus', () => {
   it('focuses the edited row on Edit→View transition, not the stale selectedRowId', () => {
     // Reproduce the bug: user arrow-navigated to field-2 (only ref updated),
     // so selectedRowId state is still field-1 from the last click.
-    const { rerender, setCellFocus, setSelectedRowId } = renderFocusHook({
+    const { rerender, setCellFocus, selectRow } = renderFocusHook({
       rowModesModel: { 'field-2': { mode: GridRowModes.Edit } },
       selectedRowId: 'field-1', // stale — last clicked row
       treeActive: true,
     });
 
     setCellFocus.mockClear();
-    setSelectedRowId.mockClear();
+    selectRow.mockClear();
 
     // Simulate save: row exits edit mode while selectedRowId state is still stale.
     act(() => {
@@ -120,7 +120,7 @@ describe('useHierarchyGridFocus', () => {
     expect(callsToField1).toHaveLength(0);
 
     // State must be synced so subsequent arrow navigation starts from field-2.
-    expect(setSelectedRowId).toHaveBeenCalledWith('field-2');
+    expect(selectRow).toHaveBeenCalledWith('field-2');
   });
 
   it('focuses selectedRowId when no editing row is identifiable in prevModel', () => {
@@ -198,7 +198,7 @@ describe('useHierarchyGridFocus', () => {
   it('preFocusEditCell calls getCellElement().focus() for the remembered field', () => {
     const mockElement = { focus: vi.fn() };
     const getCellElement = vi.fn().mockReturnValue(mockElement);
-    const setSelectedRowId = vi.fn();
+    const selectRow = vi.fn();
     const gridApiRef = { current: { setCellFocus: vi.fn(), getCellElement } };
 
     const { result } = renderHook(() =>
@@ -206,8 +206,8 @@ describe('useHierarchyGridFocus', () => {
         gridApiRef,
         rowModesModel: {},
         rows: ROWS,
+        selectRow,
         selectedRowId: 'field-1',
-        setSelectedRowId,
         treeActive: true,
       }),
     );
@@ -220,16 +220,16 @@ describe('useHierarchyGridFocus', () => {
   });
 
   it('syncs selectedRowId state after focusing the edited row', () => {
-    // After Edit→View, setSelectedRowId must be called so that subsequent
+    // After Edit→View, selectRow must be called so that subsequent
     // arrow navigation and useLayoutEffect([selectedRowId]) start from the
     // correct row.
-    const { rerender, setSelectedRowId } = renderFocusHook({
+    const { rerender, selectRow } = renderFocusHook({
       rowModesModel: { 'field-3': { mode: GridRowModes.Edit } },
       selectedRowId: 'field-1',
       treeActive: true,
     });
 
-    setSelectedRowId.mockClear();
+    selectRow.mockClear();
 
     act(() => {
       rerender({
@@ -239,11 +239,11 @@ describe('useHierarchyGridFocus', () => {
       });
     });
 
-    expect(setSelectedRowId).toHaveBeenCalledWith('field-3');
+    expect(selectRow).toHaveBeenCalledWith('field-3');
   });
 
   it('restores focus with the numeric bed row id after Edit→View', () => {
-    const { rerender, setCellFocus, setSelectedRowId } = renderFocusHookWithRows(
+    const { rerender, setCellFocus, selectRow } = renderFocusHookWithRows(
       {
         rowModesModel: { 2: { mode: GridRowModes.Edit } },
         selectedRowId: 'field-1',
@@ -253,7 +253,7 @@ describe('useHierarchyGridFocus', () => {
     );
 
     setCellFocus.mockClear();
-    setSelectedRowId.mockClear();
+    selectRow.mockClear();
 
     act(() => {
       rerender({
@@ -265,6 +265,6 @@ describe('useHierarchyGridFocus', () => {
 
     expect(setCellFocus).toHaveBeenCalledWith(2, 'name');
     expect(setCellFocus).not.toHaveBeenCalledWith('2', 'name');
-    expect(setSelectedRowId).toHaveBeenCalledWith(2);
+    expect(selectRow).toHaveBeenCalledWith(2);
   });
 });
