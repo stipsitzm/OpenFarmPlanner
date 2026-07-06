@@ -68,13 +68,11 @@ async function readMainOutline(page: Page): Promise<OutlineSnapshot> {
 }
 
 test.describe('layout focus regions', () => {
-  test.beforeEach(async ({ page, request }, testInfo) => {
+  test('does not show a main-content focus line after clicking empty space', async ({ page, request }, testInfo) => {
+    const errors = trackConsoleErrors(page);
     await loginWithFreshProject(page, request, `focus-region-outline-${testInfo.workerIndex}`);
-  });
 
-  for (const route of routes) {
-    test(`does not show a main-content focus line after clicking empty space on ${route.key}`, async ({ page }) => {
-      const errors = trackConsoleErrors(page);
+    for (const route of routes) {
       await page.goto(route.path);
       await waitForPageStable(page, route.ready);
 
@@ -94,7 +92,8 @@ test.describe('layout focus regions', () => {
         focusRegionVisible: null,
         outlineStyle: 'none',
       });
-      expect(errors).toEqual([]);
-    });
-  }
+    }
+
+    expect(errors).toEqual([]);
+  });
 });
