@@ -261,6 +261,48 @@ describe('EditableDataGrid', () => {
     addButtonLabel: 'Neu',
   });
 
+  const basePropsWithRows = (rows: TestGridRow[]) => {
+    const props = baseProps(() => null);
+    vi.spyOn(props.api, 'list').mockResolvedValue({ data: { results: rows } });
+    vi.spyOn(props.api, 'update').mockImplementation(async (id, data) => ({
+      data: createGridRow({ ...(data as Partial<TestGridRow>), id: Number(id) }),
+    }));
+    return props;
+  };
+
+  const renderGridWithKeyboardRows = () => {
+    const props = basePropsWithRows([
+      createGridRow({ id: 1, name: 'Blumen 1', area_sqm: 11 }),
+      createGridRow({ id: 2, name: 'Kartoffeln', area_sqm: 12 }),
+      createGridRow({ id: 3, name: 'Kürbis', area_sqm: 13 }),
+      createGridRow({ id: 4, name: 'Melone', area_sqm: 14 }),
+    ]);
+    render(<EditableDataGrid {...props} showDeleteAction={false} />);
+    return props;
+  };
+
+  const editSecondRowAndSaveWithEnter = async () => {
+    renderGridWithKeyboardRows();
+    const editedCell = await screen.findByRole('button', { name: 'Zelle 2-name' });
+    fireEvent.click(editedCell);
+    await waitFor(() => expect(screen.getByTestId('mode-2')).toHaveTextContent('edit'));
+    fireEvent.click(screen.getByRole('button', { name: 'Eingabe per Return 2' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('mode-2')).toHaveTextContent('view');
+      expect(screen.getByTestId('focused-cell')).toHaveTextContent('3-name');
+    });
+  };
+
+  const pressCellKey = (rowId: number, field: string, key: string, options: { shiftKey?: boolean } = {}) => {
+    fireEvent.keyDown(screen.getByRole('button', { name: `Zelle ${rowId}-${field}` }), {
+      key,
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: options.shiftKey ?? false,
+    });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockSetEditCellValue.mockResolvedValue(true);
@@ -751,6 +793,91 @@ describe('EditableDataGrid', () => {
       expect(mockSetCellFocus).toHaveBeenCalledWith(2, 'name');
       expect(screen.getByTestId('focused-cell')).toHaveTextContent('2-name');
     });
+  });
+
+  it('keeps internal focus synchronized after Enter save so ArrowUp moves to the edited row', async () => {
+    await editSecondRowAndSaveWithEnter();
+
+    pressCellKey(3, 'name', 'ArrowUp');
+
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('2-name'));
+  });
+
+  it('keeps internal focus synchronized after Enter save so ArrowDown moves immediately to the following row', async () => {
+    await editSecondRowAndSaveWithEnter();
+
+    pressCellKey(3, 'name', 'ArrowDown');
+
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('4-name'));
+  });
+
+  it('keeps internal focus synchronized after Enter save so Tab starts from the visible cell', async () => {
+    await editSecondRowAndSaveWithEnter();
+
+    pressCellKey(3, 'name', 'Tab');
+
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('3-area_sqm'));
+  });
+
+  it('keeps internal focus synchronized after Enter save so Shift+Tab starts from the visible cell', async () => {
+    await editSecondRowAndSaveWithEnter();
+
+    pressCellKey(3, 'name', 'Tab', { shiftKey: true });
+
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('2-area_sqm'));
+  });
+
+  it('keeps keyboard navigation anchored after Escape cancels an edit', async () => {
+    renderGridWithKeyboardRows();
+    fireEvent.click(await screen.findByRole('button', { name: 'Zelle 2-name' }));
+    await waitFor(() => expect(screen.getByTestId('mode-2')).toHaveTextContent('edit'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'ESC 2' }));
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('2-name'));
+
+    pressCellKey(2, 'name', 'ArrowUp');
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('1-name'));
+
+    pressCellKey(1, 'name', 'ArrowDown');
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('2-name'));
+  });
+
+  it('keeps keyboard navigation anchored after a mouse-selected cell returns to view mode', async () => {
+    renderGridWithKeyboardRows();
+    fireEvent.click(await screen.findByRole('button', { name: 'Zelle 3-name' }));
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('3-name'));
+    fireEvent.click(screen.getByRole('button', { name: 'ESC 3' }));
+    await waitFor(() => expect(screen.getByTestId('mode-3')).toHaveTextContent('view'));
+
+    pressCellKey(3, 'name', 'ArrowUp');
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('2-name'));
+
+    pressCellKey(2, 'name', 'ArrowDown');
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('3-name'));
+  });
+
+  it('keeps focus on the first row when Enter saves it and ArrowUp is pressed', async () => {
+    renderGridWithKeyboardRows();
+    fireEvent.click(await screen.findByRole('button', { name: 'Zelle 1-name' }));
+    await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Eingabe per Return 1' }));
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('2-name'));
+
+    pressCellKey(2, 'name', 'ArrowUp');
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('1-name'));
+  });
+
+  it('keeps focus on the last row when Enter saves it without a following row', async () => {
+    renderGridWithKeyboardRows();
+    fireEvent.click(await screen.findByRole('button', { name: 'Zelle 4-name' }));
+    await waitFor(() => expect(screen.getByTestId('mode-4')).toHaveTextContent('edit'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Eingabe per Return 4' }));
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('4-name'));
+
+    pressCellKey(4, 'name', 'ArrowDown');
+    await waitFor(() => expect(screen.getByTestId('focused-cell')).toHaveTextContent('4-name'));
   });
 
   it('shows required-field validation when explicitly saving an incomplete new row', async () => {
