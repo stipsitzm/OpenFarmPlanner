@@ -228,21 +228,82 @@ async function expectResizeHandleIsVisuallySubtle(page: Page): Promise<void> {
   const styles = await page.evaluate(() => {
     const handle = document.querySelector<HTMLElement>('[role="separator"][aria-orientation="vertical"]');
     const marker = document.querySelector<HTMLElement>('[data-testid="gantt-sidebar-resize-line"]');
-    if (!handle || !marker) {
+    const grip = document.querySelector<HTMLElement>('[data-testid="gantt-sidebar-resize-grip"]');
+    if (!handle || !marker || !grip) {
       throw new Error('Missing resize handle');
     }
     const computedStyle = window.getComputedStyle(handle);
     const markerStyle = window.getComputedStyle(marker);
+    const gripStyle = window.getComputedStyle(grip);
     return {
       backgroundColor: computedStyle.backgroundColor,
       hitboxWidth: computedStyle.width,
       markerWidth: markerStyle.width,
+      gripOpacity: gripStyle.opacity,
     };
   });
 
   expect(styles.backgroundColor).toBe('rgba(0, 0, 0, 0)');
   expect(Number.parseFloat(styles.hitboxWidth)).toBeGreaterThan(2);
   expect(Number.parseFloat(styles.markerWidth)).toBeLessThanOrEqual(2);
+  expect(Number.parseFloat(styles.gripOpacity)).toBe(0);
+}
+
+async function expectDesktopResizeHandleHoverIsVisible(page: Page): Promise<void> {
+  const handle = page.getByRole('separator', { name: 'Seitenleiste verbreitern oder verkleinern' });
+  await handle.hover();
+
+  await expect.poll(() => page.evaluate(() => {
+    const handleElement = document.querySelector<HTMLElement>('[role="separator"][aria-orientation="vertical"]');
+    const marker = document.querySelector<HTMLElement>('[data-testid="gantt-sidebar-resize-line"]');
+    const grip = document.querySelector<HTMLElement>('[data-testid="gantt-sidebar-resize-grip"]');
+    if (!handleElement || !marker || !grip) {
+      throw new Error('Missing resize handle');
+    }
+    const handleStyle = window.getComputedStyle(handleElement);
+    const markerStyle = window.getComputedStyle(marker);
+    const gripStyle = window.getComputedStyle(grip);
+    return {
+      cursor: handleStyle.cursor,
+      backgroundColor: handleStyle.backgroundColor,
+      markerWidth: Number.parseFloat(markerStyle.width),
+      markerOpacity: Number.parseFloat(markerStyle.opacity),
+      gripOpacity: Number.parseFloat(gripStyle.opacity),
+    };
+  })).toMatchObject({
+    cursor: 'col-resize',
+    backgroundColor: 'rgba(0, 0, 0, 0)',
+    markerWidth: 2,
+    markerOpacity: 1,
+    gripOpacity: 1,
+  });
+}
+
+async function expectResizeHandleDraggingIsVisible(page: Page): Promise<void> {
+  await expect.poll(() => page.evaluate(() => {
+    const handle = document.querySelector<HTMLElement>('[role="separator"][aria-orientation="vertical"]');
+    const marker = document.querySelector<HTMLElement>('[data-testid="gantt-sidebar-resize-line"]');
+    const grip = document.querySelector<HTMLElement>('[data-testid="gantt-sidebar-resize-grip"]');
+    if (!handle || !marker || !grip) {
+      throw new Error('Missing resize handle');
+    }
+    const handleStyle = window.getComputedStyle(handle);
+    const markerStyle = window.getComputedStyle(marker);
+    const gripStyle = window.getComputedStyle(grip);
+    return {
+      isResizing: handle.dataset.resizing === 'true',
+      backgroundColor: handleStyle.backgroundColor,
+      markerWidth: Number.parseFloat(markerStyle.width),
+      markerOpacity: Number.parseFloat(markerStyle.opacity),
+      gripOpacity: Number.parseFloat(gripStyle.opacity),
+    };
+  })).toMatchObject({
+    isResizing: true,
+    backgroundColor: 'rgba(0, 0, 0, 0)',
+    markerWidth: 2,
+    markerOpacity: 1,
+    gripOpacity: 1,
+  });
 }
 
 async function expectMobilePageScrollsCalendar(page: Page, viewport: { width: number; height: number }): Promise<void> {
@@ -303,6 +364,7 @@ test.describe('Gantt calendar layout', () => {
     await expect(handle).toBeVisible();
     await expectResizeHandleStartsAtTimelineBody(page);
     await expectResizeHandleIsVisuallySubtle(page);
+    await expectDesktopResizeHandleHoverIsVisible(page);
 
     const handleBox = await handle.boundingBox();
     expect(handleBox).not.toBeNull();
@@ -312,6 +374,7 @@ test.describe('Gantt calendar layout', () => {
 
     await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + 30);
     await page.mouse.down();
+    await expectResizeHandleDraggingIsVisible(page);
     await page.mouse.move(handleBox.x + handleBox.width / 2 + 90, handleBox.y + 30, { steps: 6 });
     await page.mouse.up();
 
