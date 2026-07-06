@@ -153,6 +153,25 @@ describe("FocusManager", () => {
     expect(event).toBe(true);
     expect(second).not.toHaveFocus();
   });
+
+  it("only marks a fallback region focus as visible for focus-manager navigation", () => {
+    render(
+      <FocusManagerProvider>
+        <Region id="empty" order={0} buttonCount={0} />
+      </FocusManagerProvider>,
+    );
+
+    const region = screen.getByTestId("region-empty");
+    expect(region).toHaveClass("ofp-focus-region");
+    expect(region).not.toHaveAttribute("data-ofp-focus-region-visible");
+
+    fireEvent.keyDown(window, { key: "F6" });
+    expect(region).toHaveFocus();
+    expect(region).toHaveAttribute("data-ofp-focus-region-visible", "true");
+
+    fireEvent.pointerDown(region);
+    expect(region).not.toHaveAttribute("data-ofp-focus-region-visible");
+  });
 });
 
 function RegionWithShortcut({ id, order }: { id: string; order: number }) {
