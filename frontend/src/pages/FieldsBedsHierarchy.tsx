@@ -237,6 +237,10 @@ function FieldsBedsHierarchy({
   const isTouchLikePointer = useMediaQuery("(pointer: coarse)");
   const isMobileViewport = useMediaQuery("(max-width:900px)");
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
+  const rowModesModelRef = useRef(rowModesModel);
+  useLayoutEffect(() => {
+    rowModesModelRef.current = rowModesModel;
+  }, [rowModesModel]);
   const [draftValidationWarning, setDraftValidationWarning] = useState("");
   const hasInitiallyExpandedRef = useRef(false);
   const handledCreateFieldRequestRef = useRef(0);
@@ -686,15 +690,37 @@ function FieldsBedsHierarchy({
     return focusableFields.includes(preferredField) ? preferredField : focusableFields[0] ?? null;
   }, []);
 
-  const { focusRow, preFocusEditCell, rememberFocusedField } = useHierarchyGridFocus({
+  const {
+    applyOrReapplyPostEditFocus,
+    focusRow,
+    preFocusEditCell,
+    queuePostEditFocus,
+    rememberFocusedField,
+  } = useHierarchyGridFocus({
     getFocusableField: getHierarchyFocusableField,
     gridApiRef,
     rowModesModel,
     rows,
+    selectRow,
     selectedRowId,
-    setSelectedRowId,
     treeActive,
   });
+
+  const getPostEnterSaveFocusTarget = useCallback((rowId: GridRowId): GridRowId => {
+    const currentIndex = rows.findIndex((row) => String(row.id) === String(rowId));
+    if (currentIndex < 0) {
+      return rowId;
+    }
+
+    for (let index = currentIndex + 1; index < rows.length; index += 1) {
+      const nextRow = rows[index];
+      if (getHierarchyFocusableField(nextRow.id, "name")) {
+        return nextRow.id;
+      }
+    }
+
+    return rowId;
+  }, [getHierarchyFocusableField, rows]);
 
   const handleHierarchyRowEditStop = useCallback<GridEventListener<"rowEditStop">>((params, event): void => {
     if (params.reason === GridRowEditStopReasons.escapeKeyDown) {
@@ -708,9 +734,12 @@ function FieldsBedsHierarchy({
       params.reason === GridRowEditStopReasons.tabKeyDown ||
       params.reason === GridRowEditStopReasons.shiftTabKeyDown
     ) {
+      if (params.reason === GridRowEditStopReasons.enterKeyDown) {
+        queuePostEditFocus(getPostEnterSaveFocusTarget(params.id), undefined, params.id);
+      }
       preFocusEditCell(params.id);
     }
-  }, [discardRowEdit, preFocusEditCell]);
+  }, [discardRowEdit, getPostEnterSaveFocusTarget, preFocusEditCell, queuePostEditFocus]);
 
   const activateFirstRowForKeyboard = useCallback((rowId: GridRowId): void => {
     selectedRowIdRef.current = rowId;
@@ -809,15 +838,41 @@ function FieldsBedsHierarchy({
 
   const handleHierarchyProcessRowUpdate = useCallback(
     async (newRow: HierarchyRow): Promise<HierarchyRow> => {
+      const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      const preferredField = activeElement
+        ?.closest('[role="gridcell"]')
+        ?.getAttribute("data-field") ?? undefined;
+      if (preferredField) {
+        rememberFocusedField(preferredField);
+      }
+      queuePostEditFocus(getPostEnterSaveFocusTarget(newRow.id), preferredField, newRow.id);
+
       const savedRow = await processRowUpdate(newRow);
-      preFocusEditCell(newRow.id);
-      setRowModesModel((previousModel) => ({
-        ...previousModel,
-        [newRow.id]: { mode: GridRowModes.View, ignoreModifications: true },
-      }));
+      // MUI's own onRowModesModelChange usually flips this row to View (and our
+      // rowModesModel layout effect already restores focus onto the queued target)
+      // well before this async save resolves. Only re-anchor and re-apply View mode
+      // here if that hasn't happened yet — otherwise this would yank focus back onto
+      // the just-saved row for an instant, causing a visible focus flash/flicker.
+      if (rowModesModelRef.current[newRow.id]?.mode === GridRowModes.Edit) {
+        preFocusEditCell(newRow.id);
+        setRowModesModel((previousModel) => ({
+          ...previousModel,
+          [newRow.id]: { mode: GridRowModes.View, ignoreModifications: true },
+        }));
+      }
+      window.setTimeout(() => {
+        applyOrReapplyPostEditFocus(newRow.id);
+      }, 0);
       return savedRow;
     },
-    [preFocusEditCell, processRowUpdate],
+    [
+      applyOrReapplyPostEditFocus,
+      getPostEnterSaveFocusTarget,
+      preFocusEditCell,
+      processRowUpdate,
+      queuePostEditFocus,
+      rememberFocusedField,
+    ],
   );
 
   const handleReadOnlyHierarchyCellMouseDown = useCallback((event: React.MouseEvent<HTMLElement>): void => {

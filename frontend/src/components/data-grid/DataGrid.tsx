@@ -986,6 +986,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const saveEditedRowAndFocusTarget = useCallback(async (
     current: { id: GridRowId; field: string },
     target: { id: GridRowId; field: string },
+    options: { startTargetEdit?: boolean } = {},
   ): Promise<void> => {
     const preparedRow = await prepareRowForSave(current.id);
     if (!preparedRow) {
@@ -1002,7 +1003,7 @@ export function EditableDataGrid<T extends EditableRow>({
           : prevRows,
       );
       focusKeyboardNavigableCell(target.id, target.field, {
-        startEdit: !notesFieldNames.includes(target.field),
+        startEdit: options.startTargetEdit ?? !notesFieldNames.includes(target.field),
       });
     } catch (error) {
       handleProcessRowUpdateError(error);
@@ -1013,6 +1014,29 @@ export function EditableDataGrid<T extends EditableRow>({
     notesFieldNames,
     prepareRowForSave,
     processRowUpdate,
+  ]);
+
+  const saveEditedRowAndFocusNextVerticalCell = useCallback((
+    current: { id: GridRowId; field: string },
+  ): void => {
+    const target = getVerticalKeyboardNavigationTarget<T>({
+      api: gridApiRef.current,
+      columns,
+      current,
+      direction: 1,
+      isActionCell: isActionCellKeyboardNavigable,
+      rows: rowsForGrid,
+    }) ?? current;
+
+    void saveEditedRowAndFocusTarget(current, target, {
+      startTargetEdit: false,
+    });
+  }, [
+    columns,
+    gridApiRef,
+    isActionCellKeyboardNavigable,
+    rowsForGrid,
+    saveEditedRowAndFocusTarget,
   ]);
 
   const handleGridEditNavigation = useCallback((event: KeyboardEvent): void => {
@@ -2033,7 +2057,7 @@ export function EditableDataGrid<T extends EditableRow>({
               event.defaultMuiPrevented = true;
               if (isEnterSaveInputTarget(event.target)) {
                 event.preventDefault();
-                void handleSaveRow(params.id);
+                saveEditedRowAndFocusNextVerticalCell({ id: params.id, field: params.field });
               }
               return;
             }

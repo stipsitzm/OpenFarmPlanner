@@ -688,10 +688,14 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
       expect(screen.getByTestId('mode-field-1')).toHaveTextContent('view'),
     );
 
-    // ArrowDown must navigate to field-2, NOT scroll the page.
-    await pressArrowDown();
     await waitFor(() =>
       expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-focused', 'true'),
+    );
+
+    // ArrowDown must navigate from the post-save focus to field-3, NOT scroll the page.
+    await pressArrowDown();
+    await waitFor(() =>
+      expect(screen.getByTestId('row-field-3')).toHaveAttribute('data-focused', 'true'),
     );
     expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'false');
   });
@@ -701,8 +705,8 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     // which caused the browser to drop focus to the first focusable element (first row).
     // The fix changed the focus-restoration effect from useEffect (async, after paint) to
     // useLayoutEffect (synchronous, before paint) so the correct row is focused before the
-    // browser ever paints.  Here we verify setCellFocus is called with the edited row, not
-    // with the first row, immediately after the save completes.
+    // browser ever paints. Here we verify setCellFocus never targets the first row, and
+    // ends on the post-save focus row.
     renderHierarchy();
     await waitFor(() => expect(screen.getByTestId('row-field-2')).toBeInTheDocument());
 
@@ -734,10 +738,11 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
       expect(screen.getByTestId('mode-field-2')).toHaveTextContent('view'),
     );
 
-    // Every setCellFocus call after the save must target field-2, never field-1.
+    // The save must never flash to field-1, and should settle on field-3.
     const calls = getSetCellFocusMock().mock.calls;
     expect(calls.length).toBeGreaterThan(0);
-    expect(calls.every(([id]: [unknown]) => id === 'field-2')).toBe(true);
+    expect(calls.every(([id]: [unknown]) => id !== 'field-1')).toBe(true);
+    expect(calls.at(-1)?.[0]).toBe('field-3');
   });
 
   it('anchors focus on the edited cell before MUI stops row editing with Enter', async () => {
@@ -762,6 +767,110 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     expect(event.defaultMuiPrevented).toBe(false);
     expect(getEditCellFocusMock()).toHaveBeenCalledWith({ preventScroll: true });
     expect(getSetCellFocusMock()).not.toHaveBeenCalledWith('field-1', 'name');
+  });
+
+  it('keeps hierarchy focus synchronized after Enter saves a collapsed row', async () => {
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-field-3')).toBeInTheDocument());
+
+    await act(async () => { fireEvent.click(screen.getByTestId('select-field-2-name')); });
+    expect(screen.getByTestId('mode-field-2')).toHaveTextContent('edit');
+
+    const onRowEditStop = getCapturedOnRowEditStop();
+    const processRowUpdate = getCapturedProcessRowUpdate();
+    expect(onRowEditStop).toBeDefined();
+    expect(processRowUpdate).toBeDefined();
+    fieldUpdateMock.mockResolvedValue({ data: { id: 2, name: 'Parzelle 2', location: 1, area_sqm: 20 } });
+
+    act(() => {
+      onRowEditStop!(
+        { id: 'field-2', reason: 'enterKeyDown' },
+        { defaultMuiPrevented: false },
+      );
+    });
+    await act(async () => {
+      await processRowUpdate!({
+        id: 'field-2',
+        type: 'field',
+        name: 'Parzelle 2',
+        fieldId: 2,
+        locationId: 1,
+        area_sqm: 20,
+        level: 1,
+        parentId: 'location-1',
+        hasChildren: false,
+      });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('row-field-3')).toHaveAttribute('data-focused', 'true'),
+    );
+
+    await pressArrowUp();
+    await waitFor(() =>
+      expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-focused', 'true'),
+    );
+    expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'false');
+  });
+
+  it('keeps hierarchy focus synchronized after Enter saves an expanded parent row', async () => {
+    fieldListMock.mockResolvedValue({
+      data: {
+        results: [
+          { id: 1, name: 'Parzelle 1', location: 1, area_sqm: 10 },
+          { id: 2, name: 'Parzelle 2', location: 1, area_sqm: 20 },
+        ],
+      },
+    });
+    bedListMock.mockResolvedValue({
+      data: {
+        results: [
+          { id: 101, name: 'Beet 1', field: 1, area_sqm: 5 },
+          { id: 102, name: 'Beet 2', field: 1, area_sqm: 5 },
+        ],
+      },
+    });
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-101')).toBeInTheDocument());
+
+    await act(async () => { fireEvent.click(screen.getByTestId('select-field-1-name')); });
+    expect(screen.getByTestId('mode-field-1')).toHaveTextContent('edit');
+
+    const onRowEditStop = getCapturedOnRowEditStop();
+    const processRowUpdate = getCapturedProcessRowUpdate();
+    expect(onRowEditStop).toBeDefined();
+    expect(processRowUpdate).toBeDefined();
+    fieldUpdateMock.mockResolvedValue({ data: { id: 1, name: 'Parzelle 1', location: 1, area_sqm: 10 } });
+
+    act(() => {
+      onRowEditStop!(
+        { id: 'field-1', reason: 'enterKeyDown' },
+        { defaultMuiPrevented: false },
+      );
+    });
+    await act(async () => {
+      await processRowUpdate!({
+        id: 'field-1',
+        type: 'field',
+        name: 'Parzelle 1',
+        fieldId: 1,
+        locationId: 1,
+        area_sqm: 10,
+        level: 1,
+        parentId: 'location-1',
+        hasChildren: true,
+      });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('row-101')).toHaveAttribute('data-focused', 'true'),
+    );
+
+    await pressArrowUp();
+    await waitFor(() =>
+      expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'true'),
+    );
+    expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-focused', 'false');
   });
 
   it('pressing a printable key while a row is keyboard-focused starts edit mode', async () => {
