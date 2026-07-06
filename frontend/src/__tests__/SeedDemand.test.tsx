@@ -823,4 +823,125 @@ describe('SeedDemandPage', () => {
 
     expect(screen.getAllByRole('row')).toHaveLength(3);
   });
+
+  it('shows a plain dash without a link in the packages column when no supplier is configured', async () => {
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 7,
+            culture_name: 'Mangold',
+            supplier: '',
+            selected_supplier_id: null,
+            supplier_options: [],
+            required_amount_value: 4,
+            required_amount_unit: 'g',
+            total_grams: 4,
+            package_suggestion: null,
+            warning: 'Keine Lieferantendaten vorhanden.',
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <FocusManagerProvider><CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider></FocusManagerProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Mangold')).toBeInTheDocument();
+    });
+    const row = screen.getByText('Mangold').closest('tr');
+    expect(row).not.toBeNull();
+    const cells = (row as HTMLTableRowElement).querySelectorAll('td');
+    const packagesCell = cells[cells.length - 1];
+    expect(packagesCell.textContent).toBe('—');
+    expect(packagesCell.querySelector('a')).toBeNull();
+  });
+
+  it('shows a not-configured link in the packages column when the supplier has no packaging sizes', async () => {
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 8,
+            culture_name: 'Radieschen',
+            supplier: 'Reinsaat',
+            supplier_options: [{ supplier_id: 10, supplier_name: 'Reinsaat' }],
+            selected_supplier_id: 10,
+            required_amount_value: 30,
+            required_amount_unit: 'g',
+            total_grams: 30,
+            seed_packages: [],
+            package_suggestion: null,
+            warning: null,
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <FocusManagerProvider><CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider></FocusManagerProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /seedDemand.noPackagesAvailable/ })).toBeInTheDocument();
+    });
+    expect(screen.getByRole('link', { name: /seedDemand.noPackagesAvailable/ })).toHaveAttribute(
+      'href',
+      '/app/cultures?cultureId=8&action=edit',
+    );
+  });
+
+  it('shows a distinctly styled calculation error when supplier and packaging data exist but no suggestion could be computed', async () => {
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 9,
+            culture_name: 'Pastinake',
+            supplier: 'Reinsaat',
+            supplier_options: [{ supplier_id: 10, supplier_name: 'Reinsaat' }],
+            selected_supplier_id: 10,
+            required_amount_value: 30,
+            required_amount_unit: 'g',
+            total_grams: 30,
+            seed_packages: [{ size_value: 25, size_unit: 'g' }],
+            package_suggestion: null,
+            warning: 'Inconsistent data.',
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <FocusManagerProvider><CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider></FocusManagerProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/seedDemand.noPackageCalculationPossible/)).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('link', { name: /seedDemand.noPackageCalculationPossible/ })).not.toBeInTheDocument();
+  });
 });

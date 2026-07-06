@@ -17,10 +17,13 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, seedDemandAPI } from '../api/api';
 import type { SeedDemand } from '../api/types';
 import { useTranslation } from '../i18n';
@@ -51,14 +54,32 @@ const formatRequiredSeedAmount = (value: number): string => (
   formatSeedAmount(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 );
 
-const formatPackageSelection = (row: SeedDemand, t: (key: string) => string): string => {
-  if (!row.package_suggestion || row.package_suggestion.selection.length === 0) {
-    return t('seedDemand.noPackagesAvailable');
-  }
+type Translator = (key: string, options?: Record<string, unknown>) => string;
 
-  return row.package_suggestion.selection
+const formatPackageSelection = (row: SeedDemand, t: Translator): string => (
+  (row.package_suggestion?.selection ?? [])
     .map((item) => `${formatSeedAmount(item.size_value)} ${formatUnit(item.size_unit, t)}${item.count > 1 ? ` × ${item.count}` : ''}`)
-    .join(' + ');
+    .join(' + ')
+);
+
+type PackageCellState = 'computed' | 'chooseSupplier' | 'notConfigured' | 'calculationError';
+
+const getPackageCellState = (row: SeedDemand): PackageCellState => {
+  const supplierOptions = row.supplier_options ?? [];
+  const hasSelectedSupplier = supplierOptions.length === 1
+    || (row.selected_supplier_id !== null && row.selected_supplier_id !== undefined);
+  const hasSuggestion = (row.package_suggestion?.selection ?? []).length > 0;
+
+  if (hasSuggestion) {
+    return 'computed';
+  }
+  if (supplierOptions.length === 0 || !hasSelectedSupplier) {
+    return 'chooseSupplier';
+  }
+  if ((row.seed_packages ?? []).length === 0) {
+    return 'notConfigured';
+  }
+  return 'calculationError';
 };
 
 export default function SeedDemandPage() {
@@ -216,11 +237,69 @@ export default function SeedDemandPage() {
     return `${formatRequiredSeedAmount(row.required_amount_value)} ${formatUnit('g', t)}`;
   }, [t]);
 
-  const getPackageLabel = useCallback((row: SeedDemand): string => (
-    (row.supplier_options ?? []).length > 0
-      ? formatPackageSelection(row, t)
-      : t('seedDemand.noPackageCalculationPossible')
-  ), [t]);
+  const getPackageLabel = useCallback((row: SeedDemand): string => {
+    switch (getPackageCellState(row)) {
+      case 'computed':
+        return formatPackageSelection(row, t);
+      case 'chooseSupplier':
+        return '—';
+      case 'notConfigured':
+        return t('seedDemand.noPackagesAvailable');
+      case 'calculationError':
+      default:
+        return t('seedDemand.noPackageCalculationPossible');
+    }
+  }, [t]);
+
+  const renderPackageCell = useCallback((row: SeedDemand) => {
+    const editHref = `/app/cultures?cultureId=${row.culture_id}&action=edit`;
+    const state = getPackageCellState(row);
+
+    switch (state) {
+      case 'computed':
+        return <Typography variant="body2">{formatPackageSelection(row, t)}</Typography>;
+      case 'chooseSupplier': {
+        const tooltipKey = (row.supplier_options ?? []).length === 0
+          ? 'seedDemand.noSupplierConfiguredTooltip'
+          : 'seedDemand.supplierNotSelectedTooltip';
+        return (
+          <Tooltip title={t(tooltipKey)} describeChild>
+            <Typography variant="body2" color="text.secondary">—</Typography>
+          </Tooltip>
+        );
+      }
+      case 'notConfigured':
+        return (
+          <Tooltip title={t('seedDemand.noPackagesAvailableTooltip')} describeChild>
+            <Link
+              component={RouterLink}
+              to={editHref}
+              underline="hover"
+              variant="body2"
+              color="textSecondary"
+              sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+            >
+              <Inventory2OutlinedIcon fontSize="inherit" />
+              {t('seedDemand.noPackagesAvailable')}
+            </Link>
+          </Tooltip>
+        );
+      case 'calculationError':
+      default:
+        return (
+          <Tooltip title={t('seedDemand.noPackageCalculationPossibleTooltip')} describeChild>
+            <Typography
+              variant="body2"
+              color="warning.main"
+              sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+            >
+              <WarningAmberOutlinedIcon fontSize="inherit" />
+              {t('seedDemand.noPackageCalculationPossible')}
+            </Typography>
+          </Tooltip>
+        );
+    }
+  }, [t]);
 
   const getRowClipboardValues = useCallback((row: SeedDemand): string[] => [
     getCultureLabel(row),
@@ -405,7 +484,6 @@ export default function SeedDemandPage() {
               {rows.map((row) => {
                 const supplierOptions = row.supplier_options ?? [];
                 const supplierCount = supplierOptions.length;
-                const packageInfo = getPackageLabel(row);
                 const supplierOptionValues = new Set(supplierOptions.map((option) => String(option.supplier_id)));
                 const selectedSupplierValue = row.selected_supplier_id !== null && row.selected_supplier_id !== undefined
                   ? String(row.selected_supplier_id)
@@ -517,7 +595,7 @@ export default function SeedDemandPage() {
                     <TableCell align="right">
                       {getRequiredAmountLabel(row)}
                     </TableCell>
-                    <TableCell>{packageInfo}</TableCell>
+                    <TableCell>{renderPackageCell(row)}</TableCell>
                   </TableRow>
                 );
               })}
