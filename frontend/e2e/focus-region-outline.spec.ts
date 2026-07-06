@@ -96,4 +96,44 @@ test.describe('layout focus regions', () => {
 
     expect(errors).toEqual([]);
   });
+
+  test('does not show a main-content focus line after a client-side route change', async ({ page, request }, testInfo) => {
+    // Regression test: unlike the scenario above (which reloads via page.goto
+    // for every route), the sidebar's <Link>-based navigation swaps the page
+    // content without remounting the shared <main> region. If the previously
+    // focused descendant unmounts as part of that swap, the browser can
+    // implicitly move DOM focus back onto the (still mounted) <main>
+    // container itself, which is exactly the case the CSS override in
+    // theme.ts's MuiCssBaseline needs to suppress.
+    const errors = trackConsoleErrors(page);
+    await loginWithFreshProject(page, request, `focus-region-outline-nav-${testInfo.workerIndex}`);
+
+    const first = routes[0];
+    const second = routes[1];
+
+    await page.goto(first.path);
+    await waitForPageStable(page, first.ready);
+
+    const main = page.locator('main');
+    await expect(main).toBeVisible();
+    const box = await main.boundingBox();
+    expect(box).toBeTruthy();
+    await main.click({
+      position: {
+        x: Math.max(1, Math.floor((box?.width ?? 2) - 2)),
+        y: Math.max(1, Math.floor((box?.height ?? 2) - 2)),
+      },
+    });
+
+    await page.locator(`a[href="${second.path}"]`).first().click();
+    await waitForPageStable(page, second.ready);
+
+    await expect.poll(() => readMainOutline(page)).toMatchObject({
+      boxShadow: 'none',
+      focusRegionVisible: null,
+      outlineStyle: 'none',
+    });
+
+    expect(errors).toEqual([]);
+  });
 });

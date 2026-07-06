@@ -173,7 +173,15 @@ const theme = createTheme({
         // Focus regions (see src/focus/FocusManager.tsx) may be focused
         // programmatically as F6 fallback targets. Only show the region ring
         // when FocusManager explicitly marks that case; pointer focus on
-        // layout containers must remain invisible.
+        // layout containers must remain invisible. The browser's own
+        // focus-visible heuristic still matches these containers on a plain
+        // mouse click (they're non-interactive divs) and, worse, when a
+        // route change unmounts the previously focused descendant and focus
+        // implicitly lands back on the container — neither case goes through
+        // FocusManager, so the baseline rule above must be overridden here.
+        '.ofp-focus-region:focus-visible': {
+          outline: 'none',
+        },
         '.ofp-focus-region[data-ofp-focus-region-visible="true"]:focus': {
           outline: `2px solid ${theme.palette.primary.main}`,
           outlineOffset: 2,
