@@ -1291,12 +1291,10 @@ export function EditableDataGrid<T extends EditableRow>({
     if (!api) return;
     const targetId = selectedRowIds[0] ?? api.getAllRowIds()[0];
     if (targetId == null) return;
-    setSelectedRowIds([targetId]);
     scrollAndFocusRow(api, targetId);
   }, [
     gridApiRef,
     selectedRowIds,
-    setSelectedRowIds,
   ]);
 
   const handleStartRowEdit = useCallback((rowId: GridRowId, field?: string): void => {
