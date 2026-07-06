@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { GridRowModes } from '@mui/x-data-grid';
-import type { GridApiCommunity } from '@mui/x-data-grid';
-import type { GridColDef, GridRowId, GridRowModesModel } from '@mui/x-data-grid';
+import type { GridApi, GridColDef, GridRowId, GridRowModesModel } from '@mui/x-data-grid';
 import type { Dispatch, MutableRefObject, RefObject, SetStateAction } from 'react';
 import type { EditableRow } from '../types';
 
@@ -35,7 +34,7 @@ function scrollAndFocusRow(api: ScrollFocusGridApi, rowId: GridRowId, options: {
 }
 
 interface UseDataGridRowCommandsParams<T extends EditableRow> {
-  gridApiRef: RefObject<GridApiCommunity | null>;
+  gridApiRef: RefObject<GridApi | null>;
   rowsById: Map<string, T>;
   columns: GridColDef[];
   selectedRowIds: GridRowId[];
