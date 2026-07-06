@@ -5,7 +5,6 @@ import {
   Box,
   CircularProgress,
   FormControl,
-  LinearProgress,
   Link,
   ListItemIcon,
   ListItemText,
@@ -167,12 +166,6 @@ export default function SeedDemandPage() {
     return null;
   }, [firstMissingSetupStep, getTranslatedSetupActions, hasSeedData, t]);
 
-  const packageProgress = useMemo(() => {
-    const total = rows.length;
-    const configured = rows.filter((row) => (row.seed_packages ?? []).length > 0).length;
-    return { configured, total };
-  }, [rows]);
-
   const loadRows = async () => {
     setIsLoading(true);
     setError(null);
@@ -249,7 +242,7 @@ export default function SeedDemandPage() {
       case 'computed':
         return formatPackageSelection(row, t);
       case 'chooseSupplier':
-        return t('seedDemand.chooseSupplierAction');
+        return '—';
       case 'notConfigured':
         return t('seedDemand.noPackagesAvailable');
       case 'calculationError':
@@ -265,14 +258,16 @@ export default function SeedDemandPage() {
     switch (state) {
       case 'computed':
         return <Typography variant="body2">{formatPackageSelection(row, t)}</Typography>;
-      case 'chooseSupplier':
+      case 'chooseSupplier': {
+        const tooltipKey = (row.supplier_options ?? []).length === 0
+          ? 'seedDemand.noSupplierConfiguredTooltip'
+          : 'seedDemand.supplierNotSelectedTooltip';
         return (
-          <Tooltip title={t('seedDemand.chooseSupplierActionTooltip')} describeChild>
-            <Link component={RouterLink} to={editHref} underline="hover" variant="body2">
-              {t('seedDemand.chooseSupplierAction')}
-            </Link>
+          <Tooltip title={t(tooltipKey)} describeChild>
+            <Typography variant="body2" color="text.secondary">—</Typography>
           </Tooltip>
         );
+      }
       case 'notConfigured':
         return (
           <Tooltip title={t('seedDemand.noPackagesAvailableTooltip')} describeChild>
@@ -460,19 +455,6 @@ export default function SeedDemandPage() {
             actions={missingRequirement?.actions ?? []}
           />
         )}
-
-        {!isLoading && !error && canCalculateSeedDemand && packageProgress.total > 0 && packageProgress.configured < packageProgress.total ? (
-          <Box sx={{ mb: 1.25 }}>
-            <Typography variant="caption" color="text.secondary">
-              {t('seedDemand.packageProgress', { configured: packageProgress.configured, total: packageProgress.total })}
-            </Typography>
-            <LinearProgress
-              variant="determinate"
-              value={(packageProgress.configured / packageProgress.total) * 100}
-              sx={{ mt: 0.5, height: 4, borderRadius: 2 }}
-            />
-          </Box>
-        ) : null}
 
         {!isLoading && !error && canCalculateSeedDemand && showContextMenuHint ? (
           <ContextMenuHint

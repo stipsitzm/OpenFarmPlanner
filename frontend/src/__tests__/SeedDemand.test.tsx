@@ -824,7 +824,7 @@ describe('SeedDemandPage', () => {
     expect(screen.getAllByRole('row')).toHaveLength(3);
   });
 
-  it('shows a choose-supplier link in the packages column when no supplier is configured', async () => {
+  it('shows a plain dash without a link in the packages column when no supplier is configured', async () => {
     listMock.mockResolvedValue({
       data: {
         count: 1,
@@ -856,12 +856,14 @@ describe('SeedDemandPage', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'seedDemand.chooseSupplierAction' })).toBeInTheDocument();
+      expect(screen.getByText('Mangold')).toBeInTheDocument();
     });
-    expect(screen.getByRole('link', { name: 'seedDemand.chooseSupplierAction' })).toHaveAttribute(
-      'href',
-      '/app/cultures?cultureId=7&action=edit',
-    );
+    const row = screen.getByText('Mangold').closest('tr');
+    expect(row).not.toBeNull();
+    const cells = (row as HTMLTableRowElement).querySelectorAll('td');
+    const packagesCell = cells[cells.length - 1];
+    expect(packagesCell.textContent).toBe('—');
+    expect(packagesCell.querySelector('a')).toBeNull();
   });
 
   it('shows a not-configured link in the packages column when the supplier has no packaging sizes', async () => {
@@ -941,58 +943,5 @@ describe('SeedDemandPage', () => {
       expect(screen.getByText(/seedDemand.noPackageCalculationPossible/)).toBeInTheDocument();
     });
     expect(screen.queryByRole('link', { name: /seedDemand.noPackageCalculationPossible/ })).not.toBeInTheDocument();
-  });
-
-  it('shows a package configuration progress indicator above the table', async () => {
-    listMock.mockResolvedValue({
-      data: {
-        count: 2,
-        next: null,
-        previous: null,
-        results: [
-          {
-            culture_id: 12,
-            culture_name: 'Karotte',
-            supplier_options: [{ supplier_id: 1, supplier_name: 'Supplier A' }],
-            selected_supplier_id: 1,
-            required_amount_value: 20,
-            required_amount_unit: 'g',
-            total_grams: 20,
-            seed_packages: [{ size_value: 25, size_unit: 'g' }],
-            package_suggestion: {
-              selection: [{ size_value: 25, size_unit: 'g', count: 1 }],
-              total_amount: 25,
-              overage: 5,
-              pack_count: 1,
-            },
-            warning: null,
-          },
-          {
-            culture_id: 13,
-            culture_name: 'Salat',
-            supplier_options: [{ supplier_id: 2, supplier_name: 'Supplier B' }],
-            selected_supplier_id: 2,
-            required_amount_value: 10,
-            required_amount_unit: 'g',
-            total_grams: 10,
-            seed_packages: [],
-            package_suggestion: null,
-            warning: null,
-          },
-        ],
-      },
-    });
-
-    render(
-      <MemoryRouter>
-        <FocusManagerProvider><CommandProvider>
-          <SeedDemandPage />
-        </CommandProvider></FocusManagerProvider>
-      </MemoryRouter>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText('seedDemand.packageProgress')).toBeInTheDocument();
-    });
   });
 });
