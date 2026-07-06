@@ -20,6 +20,9 @@ function focusRegionElement(region: FocusRegionInfo): void {
     return;
   }
   const target = getFirstFocusable(container) ?? container;
+  if (target === container) {
+    container.dataset.ofpFocusRegionVisible = 'true';
+  }
   target.focus();
 }
 

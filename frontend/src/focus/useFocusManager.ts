@@ -34,14 +34,28 @@ export function useFocusRegion(
   useEffect(() => {
     const container = containerRef.current;
     // Regions need to be focusable as a fallback landing target (e.g. one
-    // with no focusable descendants yet), and get a consistent visible
-    // focus ring — see the `.ofp-focus-region:focus` rule in theme.ts.
+    // with no focusable descendants yet). The visible region focus marker is
+    // opt-in and only applied by FocusManager when it focuses the container.
     if (container && !container.hasAttribute('tabindex')) {
       container.tabIndex = -1;
     }
     container?.classList.add('ofp-focus-region');
 
-    return registerRegion({ id: regionId, label, order, containerRef });
+    const clearVisibleFocusMarker = (): void => {
+      if (container) {
+        delete container.dataset.ofpFocusRegionVisible;
+      }
+    };
+    container?.addEventListener('blur', clearVisibleFocusMarker);
+    container?.addEventListener('pointerdown', clearVisibleFocusMarker);
+
+    const unregisterRegion = registerRegion({ id: regionId, label, order, containerRef });
+    return () => {
+      clearVisibleFocusMarker();
+      container?.removeEventListener('blur', clearVisibleFocusMarker);
+      container?.removeEventListener('pointerdown', clearVisibleFocusMarker);
+      unregisterRegion();
+    };
     // containerRef is a stable ref object; re-registering on every render
     // would thrash the region map for no benefit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
