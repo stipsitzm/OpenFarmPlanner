@@ -11,6 +11,7 @@ import React, { useState, useEffect, useMemo, useCallback, useContext, useRef, u
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CloseIcon from '@mui/icons-material/Close';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useTranslation } from '../i18n';
@@ -2743,6 +2744,7 @@ function GanttChartPage() {
                   aria-valuemin={activeGanttLeftColumnMinWidth}
                   aria-valuemax={activeGanttLeftColumnMaxWidth}
                   aria-valuenow={activeGanttLeftColumnWidth}
+                  data-resizing={isResizingGanttSidebar ? 'true' : undefined}
                   onPointerDown={handleGanttSidebarResizeStart}
                   onKeyDown={handleGanttSidebarResizeKeyDown}
                   sx={{
@@ -2763,13 +2765,16 @@ function GanttChartPage() {
                     cursor: { xs: 'default', md: 'col-resize' },
                     touchAction: 'none',
                     WebkitTapHighlightColor: 'transparent',
-                    '&:hover, &:active': {
+                    '&, &:hover, &:active, &[data-resizing="true"]': {
                       bgcolor: 'transparent !important',
                       background: 'transparent !important',
                     },
-                    '&:hover .GanttSidebarResizeHandle-line, &:focus-visible .GanttSidebarResizeHandle-line': {
+                    '&:hover .GanttSidebarResizeHandle-line, &:focus-visible .GanttSidebarResizeHandle-line, &[data-resizing="true"] .GanttSidebarResizeHandle-line': {
                       width: '2px',
                       bgcolor: 'text.secondary',
+                      opacity: 1,
+                    },
+                    '&:hover .GanttSidebarResizeHandle-grip, &:focus-visible .GanttSidebarResizeHandle-grip, &[data-resizing="true"] .GanttSidebarResizeHandle-grip': {
                       opacity: 1,
                     },
                     '&:focus-visible': {
@@ -2795,6 +2800,28 @@ function GanttChartPage() {
                       transition: 'background-color 120ms ease, opacity 120ms ease, width 120ms ease',
                     }}
                   />
+                  <Box
+                    className="GanttSidebarResizeHandle-grip"
+                    data-testid="gantt-sidebar-resize-grip"
+                    aria-hidden="true"
+                    sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      display: { xs: 'none', md: 'flex' },
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 16,
+                      height: 24,
+                      transform: 'translate(-50%, -50%)',
+                      color: 'text.secondary',
+                      opacity: isResizingGanttSidebar ? 1 : 0,
+                      pointerEvents: 'none',
+                      transition: 'opacity 120ms ease',
+                    }}
+                  >
+                    <DragIndicatorIcon sx={{ fontSize: 16 }} />
+                  </Box>
                 </Box>
               ) : null}
             </Box>
