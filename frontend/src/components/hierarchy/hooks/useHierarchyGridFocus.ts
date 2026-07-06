@@ -15,16 +15,17 @@ interface UseHierarchyGridFocusParams {
   };
   rowModesModel: GridRowModesModel;
   rows: GridRowsProp<HierarchyRow>;
+  selectRow: (rowId: GridRowId) => void;
   selectedRowId: string | number | null;
-  setSelectedRowId: (rowId: string | number) => void;
   treeActive: boolean;
 }
 
 interface UseHierarchyGridFocusResult {
+  applyOrReapplyPostEditFocus: (sourceRowId: GridRowId) => void;
   focusRow: (rowId: GridRowId, preferredField?: string) => void;
   /** Call immediately before setRowModesModel(View) to prevent a browser focus-fixup flash. */
   preFocusEditCell: (rowId: GridRowId) => void;
-  queuePostEditFocus: (rowId: GridRowId, preferredField?: string) => void;
+  queuePostEditFocus: (rowId: GridRowId, preferredField?: string, sourceRowId?: GridRowId) => void;
   rememberFocusedField: (field: string) => void;
 }
 
@@ -72,14 +73,16 @@ export function useHierarchyGridFocus({
   gridApiRef,
   rowModesModel,
   rows,
+  selectRow,
   selectedRowId,
-  setSelectedRowId,
   treeActive,
 }: UseHierarchyGridFocusParams): UseHierarchyGridFocusResult {
   const focusedFieldRef = useRef(DEFAULT_FOCUS_FIELD);
-  const postEditFocusTargetRef = useRef<{ rowId: GridRowId; preferredField?: string } | null>(null);
+  const postEditFocusTargetRef = useRef<{ rowId: GridRowId; preferredField?: string; sourceRowId?: GridRowId } | null>(null);
+  const lastPostEditFocusTargetRef = useRef<{ rowId: GridRowId; preferredField?: string; sourceRowId?: GridRowId } | null>(null);
   const prevRowModesModelRef = useRef<GridRowModesModel>({});
   const prevRowsRef = useRef(rows);
+  const skipStaleSelectedFocusRef = useRef(false);
 
   const rememberFocusedField = useCallback((field: string): void => {
     focusedFieldRef.current = field || DEFAULT_FOCUS_FIELD;
@@ -90,6 +93,7 @@ export function useHierarchyGridFocus({
     const focusField = getFocusableField?.(rowId, preferredField ?? focusedFieldRef.current) ?? DEFAULT_FOCUS_FIELD;
     focusedFieldRef.current = focusField;
     api?.setCellFocus?.(rowId, focusField);
+    api?.getCellElement?.(rowId, focusField)?.focus({ preventScroll: true });
   }, [getFocusableField, gridApiRef]);
 
   // Pre-focus the stable cell container div before switching the row back to View mode.
@@ -102,8 +106,8 @@ export function useHierarchyGridFocus({
     gridApiRef.current?.getCellElement?.(rowId, focusedFieldRef.current)?.focus({ preventScroll: true });
   }, [gridApiRef]);
 
-  const queuePostEditFocus = useCallback((rowId: GridRowId, preferredField?: string): void => {
-    postEditFocusTargetRef.current = { rowId, preferredField };
+  const queuePostEditFocus = useCallback((rowId: GridRowId, preferredField?: string, sourceRowId?: GridRowId): void => {
+    postEditFocusTargetRef.current = { rowId, preferredField, sourceRowId };
   }, []);
 
   const focusSelectedCell = useCallback((): void => {
@@ -111,6 +115,41 @@ export function useHierarchyGridFocus({
       focusRow(selectedRowId);
     }
   }, [focusRow, selectedRowId]);
+
+  const applyFocusTarget = useCallback((target: { rowId: GridRowId; preferredField?: string; sourceRowId?: GridRowId }): void => {
+    focusRow(target.rowId, target.preferredField);
+    selectRow(target.rowId);
+    lastPostEditFocusTargetRef.current = target;
+    skipStaleSelectedFocusRef.current = true;
+  }, [focusRow, selectRow]);
+
+  const applyPostEditFocus = useCallback((fallbackRowId?: GridRowId): void => {
+    const queuedTarget = postEditFocusTargetRef.current;
+    postEditFocusTargetRef.current = null;
+    const targetRowId = queuedTarget?.rowId ?? fallbackRowId;
+    if (targetRowId != null) {
+      applyFocusTarget({
+        rowId: targetRowId,
+        preferredField: queuedTarget?.preferredField,
+        sourceRowId: queuedTarget?.sourceRowId ?? fallbackRowId,
+      });
+    } else {
+      focusSelectedCell();
+    }
+  }, [applyFocusTarget, focusSelectedCell]);
+
+  const applyOrReapplyPostEditFocus = useCallback((sourceRowId: GridRowId): void => {
+    const queuedTarget = postEditFocusTargetRef.current;
+    if (queuedTarget) {
+      applyPostEditFocus(sourceRowId);
+      return;
+    }
+
+    const lastTarget = lastPostEditFocusTargetRef.current;
+    if (lastTarget && String(lastTarget.sourceRowId) === String(sourceRowId)) {
+      applyFocusTarget(lastTarget);
+    }
+  }, [applyFocusTarget, applyPostEditFocus]);
 
   // useLayoutEffect (not useEffect) fires synchronously before the browser paints,
   // so focus is always corrected within the same commit — no visible flash.
@@ -128,20 +167,16 @@ export function useHierarchyGridFocus({
       return;
     }
 
-    const queuedTarget = postEditFocusTargetRef.current;
-    postEditFocusTargetRef.current = null;
     const editingRowId = getEditingRowId(prevModel, rows);
-    const targetRowId = queuedTarget?.rowId ?? editingRowId;
-    if (targetRowId != null) {
-      focusRow(targetRowId, queuedTarget?.preferredField);
-      setSelectedRowId(targetRowId);
-    } else {
-      focusSelectedCell();
-    }
-  }, [focusRow, focusSelectedCell, rowModesModel, rows, setSelectedRowId]);
+    applyPostEditFocus(editingRowId ?? undefined);
+  }, [applyPostEditFocus, rowModesModel, rows]);
 
   useLayoutEffect(() => {
     if (treeActive) {
+      if (skipStaleSelectedFocusRef.current) {
+        skipStaleSelectedFocusRef.current = false;
+        return;
+      }
       focusSelectedCell();
     }
   }, [focusSelectedCell, selectedRowId, treeActive]);
@@ -159,11 +194,12 @@ export function useHierarchyGridFocus({
 
     const fallbackRow = findFallbackVisibleRow(previousRows, rows, selectedRowId);
     if (fallbackRow) {
-      setSelectedRowId(fallbackRow.id);
+      selectRow(fallbackRow.id);
     }
-  }, [rows, selectedRowId, setSelectedRowId, treeActive]);
+  }, [rows, selectedRowId, selectRow, treeActive]);
 
   return {
+    applyOrReapplyPostEditFocus,
     focusRow,
     preFocusEditCell,
     queuePostEditFocus,
