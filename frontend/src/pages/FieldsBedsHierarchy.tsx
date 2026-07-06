@@ -686,7 +686,7 @@ function FieldsBedsHierarchy({
     return focusableFields.includes(preferredField) ? preferredField : focusableFields[0] ?? null;
   }, []);
 
-  const { focusRow, preFocusEditCell, rememberFocusedField } = useHierarchyGridFocus({
+  const { focusRow, preFocusEditCell, queuePostEditFocus, rememberFocusedField } = useHierarchyGridFocus({
     getFocusableField: getHierarchyFocusableField,
     gridApiRef,
     rowModesModel,
@@ -695,6 +695,22 @@ function FieldsBedsHierarchy({
     setSelectedRowId,
     treeActive,
   });
+
+  const getPostEnterSaveFocusTarget = useCallback((rowId: GridRowId): GridRowId => {
+    const currentIndex = rows.findIndex((row) => String(row.id) === String(rowId));
+    if (currentIndex < 0) {
+      return rowId;
+    }
+
+    for (let index = currentIndex + 1; index < rows.length; index += 1) {
+      const nextRow = rows[index];
+      if (getHierarchyFocusableField(nextRow.id, "name")) {
+        return nextRow.id;
+      }
+    }
+
+    return rowId;
+  }, [getHierarchyFocusableField, rows]);
 
   const handleHierarchyRowEditStop = useCallback<GridEventListener<"rowEditStop">>((params, event): void => {
     if (params.reason === GridRowEditStopReasons.escapeKeyDown) {
@@ -708,9 +724,12 @@ function FieldsBedsHierarchy({
       params.reason === GridRowEditStopReasons.tabKeyDown ||
       params.reason === GridRowEditStopReasons.shiftTabKeyDown
     ) {
+      if (params.reason === GridRowEditStopReasons.enterKeyDown) {
+        queuePostEditFocus(getPostEnterSaveFocusTarget(params.id));
+      }
       preFocusEditCell(params.id);
     }
-  }, [discardRowEdit, preFocusEditCell]);
+  }, [discardRowEdit, getPostEnterSaveFocusTarget, preFocusEditCell, queuePostEditFocus]);
 
   const activateFirstRowForKeyboard = useCallback((rowId: GridRowId): void => {
     selectedRowIdRef.current = rowId;

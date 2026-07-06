@@ -24,6 +24,7 @@ interface UseHierarchyGridFocusResult {
   focusRow: (rowId: GridRowId, preferredField?: string) => void;
   /** Call immediately before setRowModesModel(View) to prevent a browser focus-fixup flash. */
   preFocusEditCell: (rowId: GridRowId) => void;
+  queuePostEditFocus: (rowId: GridRowId, preferredField?: string) => void;
   rememberFocusedField: (field: string) => void;
 }
 
@@ -76,6 +77,7 @@ export function useHierarchyGridFocus({
   treeActive,
 }: UseHierarchyGridFocusParams): UseHierarchyGridFocusResult {
   const focusedFieldRef = useRef(DEFAULT_FOCUS_FIELD);
+  const postEditFocusTargetRef = useRef<{ rowId: GridRowId; preferredField?: string } | null>(null);
   const prevRowModesModelRef = useRef<GridRowModesModel>({});
   const prevRowsRef = useRef(rows);
 
@@ -100,6 +102,10 @@ export function useHierarchyGridFocus({
     gridApiRef.current?.getCellElement?.(rowId, focusedFieldRef.current)?.focus({ preventScroll: true });
   }, [gridApiRef]);
 
+  const queuePostEditFocus = useCallback((rowId: GridRowId, preferredField?: string): void => {
+    postEditFocusTargetRef.current = { rowId, preferredField };
+  }, []);
+
   const focusSelectedCell = useCallback((): void => {
     if (selectedRowId != null) {
       focusRow(selectedRowId);
@@ -122,14 +128,17 @@ export function useHierarchyGridFocus({
       return;
     }
 
+    const queuedTarget = postEditFocusTargetRef.current;
+    postEditFocusTargetRef.current = null;
     const editingRowId = getEditingRowId(prevModel, rows);
-    if (editingRowId != null) {
-      focusRow(editingRowId);
-      setSelectedRowId(editingRowId);
+    const targetRowId = queuedTarget?.rowId ?? editingRowId;
+    if (targetRowId != null) {
+      focusRow(targetRowId, queuedTarget?.preferredField);
+      setSelectedRowId(targetRowId);
     } else {
       focusSelectedCell();
     }
-  }, [focusRow, focusSelectedCell, rowModesModel, setSelectedRowId]);
+  }, [focusRow, focusSelectedCell, rowModesModel, rows, setSelectedRowId]);
 
   useLayoutEffect(() => {
     if (treeActive) {
@@ -157,6 +166,7 @@ export function useHierarchyGridFocus({
   return {
     focusRow,
     preFocusEditCell,
+    queuePostEditFocus,
     rememberFocusedField,
   };
 }

@@ -764,6 +764,110 @@ describe('FieldsBedsHierarchy keyboard navigation', () => {
     expect(getSetCellFocusMock()).not.toHaveBeenCalledWith('field-1', 'name');
   });
 
+  it('keeps hierarchy focus synchronized after Enter saves a collapsed row', async () => {
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-field-3')).toBeInTheDocument());
+
+    await act(async () => { fireEvent.click(screen.getByTestId('select-field-2-name')); });
+    expect(screen.getByTestId('mode-field-2')).toHaveTextContent('edit');
+
+    const onRowEditStop = getCapturedOnRowEditStop();
+    const processRowUpdate = getCapturedProcessRowUpdate();
+    expect(onRowEditStop).toBeDefined();
+    expect(processRowUpdate).toBeDefined();
+    fieldUpdateMock.mockResolvedValue({ data: { id: 2, name: 'Parzelle 2', location: 1, area_sqm: 20 } });
+
+    act(() => {
+      onRowEditStop!(
+        { id: 'field-2', reason: 'enterKeyDown' },
+        { defaultMuiPrevented: false },
+      );
+    });
+    await act(async () => {
+      await processRowUpdate!({
+        id: 'field-2',
+        type: 'field',
+        name: 'Parzelle 2',
+        fieldId: 2,
+        locationId: 1,
+        area_sqm: 20,
+        level: 1,
+        parentId: 'location-1',
+        hasChildren: false,
+      });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('row-field-3')).toHaveAttribute('data-focused', 'true'),
+    );
+
+    await pressArrowUp();
+    await waitFor(() =>
+      expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-focused', 'true'),
+    );
+    expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'false');
+  });
+
+  it('keeps hierarchy focus synchronized after Enter saves an expanded parent row', async () => {
+    fieldListMock.mockResolvedValue({
+      data: {
+        results: [
+          { id: 1, name: 'Parzelle 1', location: 1, area_sqm: 10 },
+          { id: 2, name: 'Parzelle 2', location: 1, area_sqm: 20 },
+        ],
+      },
+    });
+    bedListMock.mockResolvedValue({
+      data: {
+        results: [
+          { id: 101, name: 'Beet 1', field: 1, area_sqm: 5 },
+          { id: 102, name: 'Beet 2', field: 1, area_sqm: 5 },
+        ],
+      },
+    });
+    renderHierarchy();
+    await waitFor(() => expect(screen.getByTestId('row-101')).toBeInTheDocument());
+
+    await act(async () => { fireEvent.click(screen.getByTestId('select-field-1-name')); });
+    expect(screen.getByTestId('mode-field-1')).toHaveTextContent('edit');
+
+    const onRowEditStop = getCapturedOnRowEditStop();
+    const processRowUpdate = getCapturedProcessRowUpdate();
+    expect(onRowEditStop).toBeDefined();
+    expect(processRowUpdate).toBeDefined();
+    fieldUpdateMock.mockResolvedValue({ data: { id: 1, name: 'Parzelle 1', location: 1, area_sqm: 10 } });
+
+    act(() => {
+      onRowEditStop!(
+        { id: 'field-1', reason: 'enterKeyDown' },
+        { defaultMuiPrevented: false },
+      );
+    });
+    await act(async () => {
+      await processRowUpdate!({
+        id: 'field-1',
+        type: 'field',
+        name: 'Parzelle 1',
+        fieldId: 1,
+        locationId: 1,
+        area_sqm: 10,
+        level: 1,
+        parentId: 'location-1',
+        hasChildren: true,
+      });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId('row-101')).toHaveAttribute('data-focused', 'true'),
+    );
+
+    await pressArrowUp();
+    await waitFor(() =>
+      expect(screen.getByTestId('row-field-1')).toHaveAttribute('data-focused', 'true'),
+    );
+    expect(screen.getByTestId('row-field-2')).toHaveAttribute('data-focused', 'false');
+  });
+
   it('pressing a printable key while a row is keyboard-focused starts edit mode', async () => {
     renderHierarchy();
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
