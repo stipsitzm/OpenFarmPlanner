@@ -22,4 +22,19 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getAllByText(/OpenAI/).length).toBeGreaterThan(0);
     expect(screen.getByText(/derzeit nicht möglich/)).toBeInTheDocument();
   });
+
+  it('states that public attribution uses a username, never the email address', () => {
+    render(<PrivacyPolicyPage />);
+
+    expect(screen.getByText(/öffentlicher Benutzername angezeigt/)).toBeInTheDocument();
+    expect(screen.getByText(/E-Mail-Adresse wird niemals angezeigt/)).toBeInTheDocument();
+    expect(screen.getByText(/nicht Ihre E-Mail-Adresse/)).toBeInTheDocument();
+  });
+
+  it('mentions a general, forward-looking note on future collaboration without describing features that do not exist yet', () => {
+    render(<PrivacyPolicyPage />);
+
+    expect(screen.getByText(/kollaborativ weiterentwickelt werden/)).toBeInTheDocument();
+    expect(screen.getByText(/nicht über persönliche Kontaktdaten anderer Nutzer/)).toBeInTheDocument();
+  });
 });

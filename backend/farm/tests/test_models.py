@@ -3,7 +3,11 @@ from datetime import date, timedelta
 from django.test import TestCase
 from django.utils import timezone
 
-from farm.models import Bed, Culture, Field, Location, PlantingPlan, Project, Supplier, Task, is_supplier_domain
+from django.contrib.auth import get_user_model
+
+from farm.models import Bed, Culture, Field, Location, PlantingPlan, Project, PublicCulture, Supplier, Task, is_supplier_domain
+
+User = get_user_model()
 
 class SupplierModelTest(TestCase):
     def setUp(self):
@@ -528,6 +532,39 @@ class TaskModelTest(TestCase):
         )
         self.assertEqual(str(task), "Water plants (pending)")
         self.assertEqual(task.status, "pending")
+
+
+class PublicCultureAttributionTest(TestCase):
+    """created_by_label must never surface an email address (privacy-sensitive)."""
+
+    def test_label_is_the_username_even_when_a_full_name_is_set(self):
+        user = User.objects.create_user(
+            username='market_gardener_ab12cd34',
+            email='real.person@example.com',
+            first_name='Real',
+            last_name='Person',
+        )
+        culture = PublicCulture.objects.create(name='Lettuce', created_by=user)
+
+        self.assertEqual(culture.created_by_label, 'market_gardener_ab12cd34')
+        self.assertNotIn('@', culture.created_by_label)
+        self.assertNotIn('Real', culture.created_by_label)
+
+    def test_label_is_empty_when_no_creator_is_set(self):
+        culture = PublicCulture.objects.create(name='Carrot', created_by=None)
+
+        self.assertEqual(culture.created_by_label, '')
+
+    def test_label_survives_account_anonymization(self):
+        """An anonymized user (first/last name and email cleared, username kept)
+        should still resolve to a non-empty, non-email label."""
+        user = User.objects.create_user(username='former_user_11223344', email='deleted-user-1@deleted.local')
+        user.first_name = ''
+        user.last_name = ''
+        user.save(update_fields=['first_name', 'last_name'])
+        culture = PublicCulture.objects.create(name='Kale', created_by=user)
+
+        self.assertEqual(culture.created_by_label, 'former_user_11223344')
 
 
 class CultureNormalizedFieldsTest(TestCase):

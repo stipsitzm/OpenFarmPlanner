@@ -93,10 +93,11 @@
           "content": "OpenFarmPlanner bietet die Möglichkeit, einzelne Kultur-Datensätze (z. B. Anbauinformationen zu einer Gemüsesorte) aus einem privaten Projekt in eine öffentliche Kulturbibliothek zu veröffentlichen. Diese Bibliothek kann von allen angemeldeten Nutzern eingesehen und importiert werden.\n\nBitte beachten Sie dabei Folgendes:",
           "bullets": {
             "publicContent": "Veröffentlicht werden ausschließlich die landwirtschaftlichen Anbaudaten der Kultur (z. B. Name, Sorte, Wachstums- und Erntedauer, Pflanzabstände, Saatgutmenge, Lieferantenname). Notizen aus dem privaten Projekt werden nicht automatisch mitveröffentlicht.",
-            "attribution": "Zu jedem veröffentlichten Eintrag wird sichtbar angezeigt, wer ihn beigetragen hat – angezeigt wird Ihr hinterlegter Name, ersatzweise Ihr Benutzername oder Ihre E-Mail-Adresse.",
+            "attribution": "Als Urheber eines veröffentlichten Eintrags wird ein öffentlicher Benutzername angezeigt (künftig soll dieser durch einen frei wählbaren Anzeigenamen ersetzbar sein). Ihre E-Mail-Adresse wird niemals angezeigt und ist kein Bestandteil öffentlicher Einträge – sie dient ausschließlich der Kontoverwaltung und der Kommunikation mit Ihnen (z. B. Kontoaktivierung, Passwort-Rücksetzung, Projekt-Einladungen).",
             "noReview": "Die Veröffentlichung erfolgt unmittelbar durch Sie selbst; es findet aktuell keine inhaltliche Prüfung oder Freigabe durch uns statt.",
             "persistence": "Ein veröffentlichter Eintrag bleibt auch dann in der öffentlichen Bibliothek bestehen, wenn Sie die ursprüngliche Kultur in Ihrem privaten Projekt später ändern oder löschen.",
-            "removal": "Eine eigenständige Löschung oder Zurückziehung eines bereits veröffentlichten Eintrags ist über die Anwendung derzeit nicht möglich. Wenn Sie einen Eintrag entfernt haben möchten, kontaktieren Sie uns bitte unter info@openfarmplanner.org."
+            "removal": "Eine eigenständige Löschung oder Zurückziehung eines bereits veröffentlichten Eintrags ist über die Anwendung derzeit nicht möglich. Wenn Sie einen Eintrag entfernt haben möchten, kontaktieren Sie uns bitte unter info@openfarmplanner.org.",
+            "futureOutlook": "Langfristig soll die Kulturbibliothek kollaborativ weiterentwickelt werden. Rückmeldungen zu Einträgen sollen künftig über Funktionen innerhalb der Anwendung erfolgen – etwa Kommentare, Bewertungen oder Versionshistorien – und nicht über persönliche Kontaktdaten anderer Nutzer."
           },
           "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO (Einwilligung durch aktive Veröffentlichung) bzw. Art. 6 Abs. 1 lit. f DSGVO (Betrieb der Bibliotheksfunktion)"
         },
@@ -139,7 +140,7 @@
         },
         "dataSharing": {
           "title": "Weitergabe von Daten",
-          "content": "Grundsätzlich werden Ihre Daten nicht an Dritte weitergegeben, außer wenn dies zur Vertragserfüllung notwendig ist oder wenn eine gesetzliche Verpflichtung besteht. Zwei Ausnahmen ergeben sich aus optionalen Funktionen der Anwendung:\n\n– Wenn Sie eine Kultur in die öffentliche Kulturbibliothek veröffentlichen, wird Ihr Name (bzw. Benutzername oder E-Mail-Adresse) dort für alle angemeldeten Nutzer sichtbar (siehe Abschnitt „Öffentliche Kulturbibliothek“).\n– Wenn Sie die KI-gestützte Datenanreicherung für eine Kultur nutzen, werden landwirtschaftliche Stammdaten dieser Kultur an OpenAI (USA) übermittelt (siehe Abschnitt „KI-gestützte Datenanreicherung“)."
+          "content": "Grundsätzlich werden Ihre Daten nicht an Dritte weitergegeben, außer wenn dies zur Vertragserfüllung notwendig ist oder wenn eine gesetzliche Verpflichtung besteht. Zwei Ausnahmen ergeben sich aus optionalen Funktionen der Anwendung:\n\n– Wenn Sie eine Kultur in die öffentliche Kulturbibliothek veröffentlichen, wird dort Ihr öffentlicher Benutzername (nicht Ihre E-Mail-Adresse) für alle angemeldeten Nutzer sichtbar (siehe Abschnitt „Öffentliche Kulturbibliothek“).\n– Wenn Sie die KI-gestützte Datenanreicherung für eine Kultur nutzen, werden landwirtschaftliche Stammdaten dieser Kultur an OpenAI (USA) übermittelt (siehe Abschnitt „KI-gestützte Datenanreicherung“)."
         },
         "storageDuration": {
           "title": "Speicherdauer",

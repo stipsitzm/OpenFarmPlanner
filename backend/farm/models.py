@@ -1290,6 +1290,25 @@ class PublicCulture(TimestampedModel):
             self.published_at = timezone.now()
         super().save(*args, **kwargs)
 
+    @property
+    def created_by_label(self) -> str:
+        """Public attribution shown to every user for this entry.
+
+        Must never surface the account email address or the (private,
+        optional) registration name — only the account's platform username,
+        which is an opaque identifier distinct from the email address it was
+        originally derived from at registration (see
+        accounts.serializers.build_username_from_email: a random suffix is
+        appended and the domain is dropped, so it cannot be used to contact
+        the user directly).
+
+        TODO(privacy): once a dedicated, user-configurable public display
+        name exists, prefer it here over the username.
+        """
+        if not self.created_by:
+            return ''
+        return self.created_by.username
+
     def __str__(self) -> str:
         return f"{self.name} ({self.variety})" if self.variety else self.name
 
