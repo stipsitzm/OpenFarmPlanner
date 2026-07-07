@@ -96,6 +96,26 @@ class AccountDeletionRequest(models.Model):
         return f'Account deletion state for {identifier}'
 
 
+class TermsAcceptance(models.Model):
+    """Records that a user accepted the Terms of Service at registration.
+
+    Kept separate from the (Django built-in) user model so acceptance can be
+    tracked per version without a custom user model migration.
+    """
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='terms_acceptance',
+    )
+    terms_version = models.CharField(max_length=32)
+    accepted_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        identifier = getattr(self.user, 'email', '') or getattr(self.user, 'username', '')
+        return f'Terms acceptance for {identifier} (v{self.terms_version})'
+
+
 class AccountEmailChangeRequest(models.Model):
     """Stores pending email-change requests that require token confirmation."""
 

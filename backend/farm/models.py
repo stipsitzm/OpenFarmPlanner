@@ -1233,8 +1233,9 @@ class PublicCulture(TimestampedModel):
     immediate and self-service with no review/moderation step. If a
     moderation workflow is ever introduced, this is also where a license/
     contribution-terms acceptance step for public submissions should live
-    (separate from the general Nutzungsbedingungen/ToS, which don't exist yet
-    either).
+    (separate from the general Nutzungsbedingungen/ToS at
+    frontend/src/pages/public/TermsOfServicePage.tsx, whose "publicLibrary"
+    section covers publishing in general terms only).
     """
 
     STATUS_PUBLISHED = 'published'

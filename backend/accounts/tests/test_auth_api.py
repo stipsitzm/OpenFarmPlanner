@@ -15,7 +15,8 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.models import AccountDeletionRequest, AccountEmailChangeRequest, PendingActivation
+from accounts.models import AccountDeletionRequest, AccountEmailChangeRequest, PendingActivation, TermsAcceptance
+from accounts.serializers import TERMS_OF_SERVICE_VERSION
 
 User = get_user_model()
 
@@ -39,6 +40,7 @@ class AuthApiTest(APITestCase):
                 'display_name': 'New User',
                 'password': 'new-safe-password-123',
                 'password_confirm': 'new-safe-password-123',
+                'terms_accepted': True,
             },
             format='json',
         )
@@ -57,6 +59,8 @@ class AuthApiTest(APITestCase):
         self.assertIn('/activate?uid=', activation_email_body)
         self.assertIn('&token=', activation_email_body)
         self.assertNotIn('&amp;token=', activation_email_body)
+        terms_acceptance = TermsAcceptance.objects.get(user=created)
+        self.assertEqual(terms_acceptance.terms_version, TERMS_OF_SERVICE_VERSION)
 
         duplicate = self.client.post(
             '/openfarmplanner/api/auth/register/',
@@ -64,6 +68,7 @@ class AuthApiTest(APITestCase):
                 'email': 'new@example.com',
                 'password': 'new-safe-password-123',
                 'password_confirm': 'new-safe-password-123',
+                'terms_accepted': True,
             },
             format='json',
         )
@@ -77,6 +82,7 @@ class AuthApiTest(APITestCase):
                 'email': 'mail-fail@example.com',
                 'password': 'new-safe-password-123',
                 'password_confirm': 'new-safe-password-123',
+                'terms_accepted': True,
             },
             format='json',
         )
@@ -96,6 +102,7 @@ class AuthApiTest(APITestCase):
                 'email': 'mail-link@example.com',
                 'password': 'new-safe-password-123',
                 'password_confirm': 'new-safe-password-123',
+                'terms_accepted': True,
             },
             format='json',
         )
@@ -133,6 +140,22 @@ class AuthApiTest(APITestCase):
         self.assertIn('email', response.data)
         self.assertIn('password', response.data)
         self.assertIn('password_confirm', response.data)
+        self.assertIn('terms_accepted', response.data)
+
+    def test_registration_requires_terms_acceptance(self) -> None:
+        response = self.client.post(
+            '/openfarmplanner/api/auth/register/',
+            {
+                'email': 'no-terms@example.com',
+                'password': 'new-safe-password-123',
+                'password_confirm': 'new-safe-password-123',
+                'terms_accepted': False,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('terms_accepted', response.data)
+        self.assertFalse(User.objects.filter(email='no-terms@example.com').exists())
 
     def test_registration_rejects_password_confirmation_mismatch(self) -> None:
         response = self.client.post(
@@ -141,6 +164,7 @@ class AuthApiTest(APITestCase):
                 'email': 'mismatch@example.com',
                 'password': 'new-safe-password-123',
                 'password_confirm': 'different-password-123',
+                'terms_accepted': True,
             },
             format='json',
         )
@@ -165,6 +189,7 @@ class AuthApiTest(APITestCase):
                 'display_name': 'Pending User',
                 'password': self.password,
                 'password_confirm': self.password,
+                'terms_accepted': True,
             },
             format='json',
         )
@@ -202,6 +227,7 @@ class AuthApiTest(APITestCase):
                 'email': 'expired-activation@example.com',
                 'password': self.password,
                 'password_confirm': self.password,
+                'terms_accepted': True,
             },
             format='json',
         )
@@ -224,6 +250,7 @@ class AuthApiTest(APITestCase):
                 'email': 'one-time-token@example.com',
                 'password': self.password,
                 'password_confirm': self.password,
+                'terms_accepted': True,
             },
             format='json',
         )
@@ -495,6 +522,7 @@ class AuthApiTest(APITestCase):
                 'email': 'console-message@example.com',
                 'password': 'new-safe-password-123',
                 'password_confirm': 'new-safe-password-123',
+                'terms_accepted': True,
             },
             format='json',
         )

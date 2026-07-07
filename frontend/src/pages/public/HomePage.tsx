@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
+import LegalLinks from '../../components/legal/LegalLinks';
 
 /**
  * Public landing page with refined spacing and modern visual hierarchy.
@@ -156,14 +157,7 @@ export default function HomePage() {
             alignItems={{ xs: 'flex-start', sm: 'center' }}
             justifyContent="space-between"
           >
-            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
-              <Link component={RouterLink} to="/impressum" underline="hover" color="text.secondary" sx={{ fontSize: '0.92rem' }}>
-                {t('footer.imprint')}
-              </Link>
-              <Link component={RouterLink} to="/datenschutz" underline="hover" color="text.secondary" sx={{ fontSize: '0.92rem' }}>
-                {t('footer.privacy')}
-              </Link>
-            </Stack>
+            <LegalLinks />
             <Link href={`mailto:${t('footer.contactEmail')}`} underline="hover" color="text.secondary" sx={{ fontSize: '0.92rem' }}>
               {t('footer.contactLabel', { email: t('footer.contactEmail') })}
             </Link>

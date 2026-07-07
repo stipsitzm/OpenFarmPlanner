@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import RegisterPage from '../pages/auth/RegisterPage';
 
 const logoutMock = vi.fn(async () => undefined);
+const registerMock = vi.fn(async () => 'Registrierung erfolgreich.');
 let authUser: unknown = {
   id: 1,
   email: 'test@example.com',
@@ -23,7 +24,7 @@ let authUser: unknown = {
 vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({
     user: authUser,
-    register: vi.fn(),
+    register: registerMock,
     resendActivation: vi.fn(),
     logout: logoutMock,
   }),
@@ -54,6 +55,13 @@ vi.mock('../i18n', () => ({
         'auth:register.hasAccount': 'Bereits ein Konto? Anmelden',
         'auth:register.showPassword': 'Passwort anzeigen',
         'auth:register.hidePassword': 'Passwort ausblenden',
+        'auth:register.termsCheckboxPrefix': 'Ich habe die ',
+        'auth:register.termsCheckboxLinkLabel': 'Nutzungsbedingungen',
+        'auth:register.termsCheckboxSuffix': ' gelesen und akzeptiere sie.',
+        'auth:register.termsRequired': 'Bitte akzeptiere die Nutzungsbedingungen, um fortzufahren.',
+        'auth:register.privacyNoticePrefix': 'Deine personenbezogenen Daten werden gemäß unserer ',
+        'auth:register.privacyNoticeLinkLabel': 'Datenschutzerklärung',
+        'auth:register.privacyNoticeSuffix': ' verarbeitet.',
       };
       return map[key] ?? key;
     },
@@ -63,6 +71,7 @@ vi.mock('../i18n', () => ({
 describe('RegisterPage', () => {
   beforeEach(() => {
     logoutMock.mockClear();
+    registerMock.mockClear();
     authUser = {
       id: 1,
       email: 'test@example.com',
@@ -160,5 +169,47 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: 'Abmelden & neuen Account erstellen' }));
 
     expect(logoutMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks submission and shows an error when the terms checkbox is not checked', async () => {
+    authUser = null;
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText(/E-Mail/i), 'new@example.com');
+    const passwordInputs = screen.getAllByLabelText(/^Passwort/i).filter((el) => el.tagName === 'INPUT');
+    await user.type(passwordInputs[0], 'new-safe-password-123');
+    await user.type(passwordInputs[1], 'new-safe-password-123');
+
+    await user.click(screen.getByRole('button', { name: 'Konto erstellen' }));
+
+    expect(await screen.findByText('Bitte akzeptiere die Nutzungsbedingungen, um fortzufahren.')).toBeInTheDocument();
+    expect(registerMock).not.toHaveBeenCalled();
+  });
+
+  it('submits registration with termsAccepted=true once the checkbox is checked', async () => {
+    authUser = null;
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText(/E-Mail/i), 'new@example.com');
+    const passwordInputs = screen.getAllByLabelText(/^Passwort/i).filter((el) => el.tagName === 'INPUT');
+    await user.type(passwordInputs[0], 'new-safe-password-123');
+    await user.type(passwordInputs[1], 'new-safe-password-123');
+    await user.click(screen.getByRole('checkbox'));
+
+    await user.click(screen.getByRole('button', { name: 'Konto erstellen' }));
+
+    expect(registerMock).toHaveBeenCalledWith('new@example.com', 'new-safe-password-123', 'new-safe-password-123', '', true);
   });
 });

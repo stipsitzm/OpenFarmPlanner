@@ -1,10 +1,11 @@
-import { Alert, Box, Button, Container, InputAdornment, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, Container, FormControlLabel, InputAdornment, Link, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { projectAPI, type InvitationPublicStatus } from '../../api/api';
 import { useAuth } from '../../auth/useAuth';
 import PasswordVisibilityToggle from '../../components/inputs/PasswordVisibilityToggle';
+import LegalLinks from '../../components/legal/LegalLinks';
 import { useTranslation } from '../../i18n';
 import { getNextFromSearch, getTokenFromNextPath, storeInvitationRedirect } from '../invitationAcceptance';
 
@@ -17,6 +18,7 @@ export default function RegisterPage() {
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -60,13 +62,17 @@ export default function RegisterPage() {
       setError(t('auth:register.passwordMismatch'));
       return;
     }
+    if (!termsAccepted) {
+      setError(t('auth:register.termsRequired'));
+      return;
+    }
 
     setSubmitting(true);
     try {
       if (nextPath) {
         storeInvitationRedirect(nextPath, getTokenFromNextPath(nextPath));
       }
-      const message = await register(email.trim().toLowerCase(), password, passwordConfirm, displayName.trim());
+      const message = await register(email.trim().toLowerCase(), password, passwordConfirm, displayName.trim(), termsAccepted);
       setSuccess(pendingInvitation ? t('projectInvitations:registerSuccessWithInvitation', { detail: message }) : message);
       setRegistrationSucceeded(true);
     } catch (err) {
@@ -178,11 +184,38 @@ export default function RegisterPage() {
               htmlInput: { autoComplete: 'new-password' },
             }}
           />
+          <FormControlLabel
+            control={(
+              <Checkbox
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                disabled={isLoggedIn}
+                required
+              />
+            )}
+            label={(
+              <Typography variant="body2">
+                {t('auth:register.termsCheckboxPrefix')}
+                <Link component={RouterLink} to="/nutzungsbedingungen" target="_blank" rel="noopener">
+                  {t('auth:register.termsCheckboxLinkLabel')}
+                </Link>
+                {t('auth:register.termsCheckboxSuffix')}
+              </Typography>
+            )}
+          />
+          <Typography variant="body2" color="text.secondary">
+            {t('auth:register.privacyNoticePrefix')}
+            <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener">
+              {t('auth:register.privacyNoticeLinkLabel')}
+            </Link>
+            {t('auth:register.privacyNoticeSuffix')}
+          </Typography>
           <Button type="submit" variant="contained" disabled={submitting || isLoggedIn}>{submitting ? t('auth:register.submitting') : t('auth:register.submit')}</Button>
           <Button type="button" onClick={() => void handleResend()} disabled={!email || isLoggedIn || !registrationSucceeded}>{t('auth:register.resendActivation')}</Button>
           <Button type="button" component={RouterLink} to={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'} state={location.state}>{t('auth:register.hasAccount')}</Button>
         </Stack>
       </Box>
+      <LegalLinks sx={{ mt: 4, justifyContent: 'center' }} />
     </Container>
   );
 }

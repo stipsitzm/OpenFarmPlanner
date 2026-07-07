@@ -248,6 +248,21 @@ function Cultures() {
     showSnackbar,
   });
 
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
+
+  const handleRequestPublishCulture = useCallback(() => {
+    if (isUpdatingOwnPublicCulture) {
+      void handlePublishCurrentCulture();
+      return;
+    }
+    setPublishConfirmOpen(true);
+  }, [handlePublishCurrentCulture, isUpdatingOwnPublicCulture]);
+
+  const handlePublishConfirm = useCallback(() => {
+    setPublishConfirmOpen(false);
+    void handlePublishCurrentCulture();
+  }, [handlePublishCurrentCulture]);
+
   const handleAiMenuClose = () => {
     setAiMenuAnchor(null);
   };
@@ -603,9 +618,7 @@ function Cultures() {
           onEditCulture={handleEdit}
           onCreatePlan={handleCreatePlantingPlan}
           onOpenHistory={handleOpenHistory}
-          onPublishCulture={() => {
-            void handlePublishCurrentCulture();
-          }}
+          onPublishCulture={handleRequestPublishCulture}
           onDeleteCulture={handleDelete}
           canCreatePlan={canCreatePlantingPlan}
           isPublishingCulture={Boolean(selectedCulture && publishingCultureId === selectedCulture.id)}
@@ -734,6 +747,49 @@ function Cultures() {
           </Button>
           <Button color="error" variant="contained" onClick={handleDeleteConfirm}>
             {t('buttons.delete')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={publishConfirmOpen}
+        onClose={() => setPublishConfirmOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          {t('library.publishConfirm.title')}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Stack spacing={1.5}>
+            <Typography color="text.secondary">
+              {t('library.publishConfirm.intro', { name: selectedCulture?.name ?? '' })}
+            </Typography>
+            <Box component="ul" sx={{ mt: 0, mb: 0, pl: 3, color: 'text.secondary' }}>
+              <li>{t('library.publishConfirm.published')}</li>
+              <li>{t('library.publishConfirm.neverPublished')}</li>
+              <li>{t('library.publishConfirm.attribution')}</li>
+              <li>{t('library.publishConfirm.persistence')}</li>
+            </Box>
+            <Typography variant="body2" color="text.secondary">
+              {t('library.publishConfirm.linkPrefix')}
+              <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener">
+                {t('library.publishConfirm.privacyLinkLabel')}
+              </Link>
+              {t('library.publishConfirm.linkMiddle')}
+              <Link component={RouterLink} to="/nutzungsbedingungen" target="_blank" rel="noopener">
+                {t('library.publishConfirm.termsLinkLabel')}
+              </Link>
+              {t('library.publishConfirm.linkSuffix')}
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+          <Button variant="outlined" onClick={() => setPublishConfirmOpen(false)}>
+            {t('common:actions.cancel')}
+          </Button>
+          <Button variant="contained" onClick={handlePublishConfirm}>
+            {t('library.publishConfirm.confirmButton')}
           </Button>
         </DialogActions>
       </Dialog>

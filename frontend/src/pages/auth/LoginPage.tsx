@@ -7,6 +7,7 @@ import { useAuth } from '../../auth/useAuth';
 import { AuthApiError } from '../../auth/authApi';
 import { useTranslation } from '../../i18n';
 import PasswordVisibilityToggle from '../../components/inputs/PasswordVisibilityToggle';
+import LegalLinks from '../../components/legal/LegalLinks';
 import { getNextFromSearch } from '../invitationAcceptance';
 
 export default function LoginPage() {
@@ -131,6 +132,7 @@ export default function LoginPage() {
           <Button component={RouterLink} to="/forgot-password" state={{ email }}>{t('auth:login.forgotPassword')}</Button>
         </Stack>
       </Box>
+      <LegalLinks sx={{ mt: 4, justifyContent: 'center' }} />
     </Container>
   );
 }

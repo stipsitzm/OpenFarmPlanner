@@ -12,6 +12,7 @@ export interface AuthContextValue {
     password: string,
     passwordConfirm: string,
     displayName?: string,
+    termsAccepted?: boolean,
   ) => Promise<string>;
   activate: (uid: string, token: string) => Promise<void>;
   resendActivation: (email: string) => Promise<string>;

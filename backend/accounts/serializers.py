@@ -14,13 +14,17 @@ from rest_framework import serializers
 
 from farm.models import ProjectMembership
 from farm.project_context import resolve_project_for_user
-from .models import AccountDeletionRequest
+from .models import AccountDeletionRequest, TermsAcceptance
 
 User = get_user_model()
 _username_validator = UnicodeUsernameValidator()
 _password_field_kwargs = {'write_only': True}
 if getattr(settings, 'DJANGO_ENV', 'production') != 'development':
     _password_field_kwargs['min_length'] = 8
+
+# Bump when the Terms of Service text changes materially. Kept in sync with
+# the "Stand" date in frontend/src/i18n/locales/de/home.json (legal.terms.version).
+TERMS_OF_SERVICE_VERSION = '2026-07-07'
 
 
 def _de(message: str) -> str:
@@ -143,12 +147,18 @@ class RegisterSerializer(serializers.Serializer):
     display_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     password = serializers.CharField(**_password_field_kwargs)
     password_confirm = serializers.CharField(**_password_field_kwargs)
+    terms_accepted = serializers.BooleanField()
 
     def validate_email(self, value: str) -> str:
         normalized = normalize_email_lower(value)
         if User.objects.filter(email__iexact=normalized).exists():
             raise serializers.ValidationError(_de(_('An account with this email already exists.')))
         return normalized
+
+    def validate_terms_accepted(self, value: bool) -> bool:
+        if not value:
+            raise serializers.ValidationError(_de(_('You must accept the terms of service to register.')))
+        return value
 
     def validate(self, attrs: dict[str, str]) -> dict[str, str]:
         if attrs['password'] != attrs['password_confirm']:
@@ -158,13 +168,15 @@ class RegisterSerializer(serializers.Serializer):
 
     def create(self, validated_data: dict[str, str]) -> User:
         display_name = validated_data.get('display_name', '').strip()
-        return User.objects.create_user(
+        user = User.objects.create_user(
             username=build_username_from_email(validated_data['email']),
             email=validated_data['email'],
             password=validated_data['password'],
             first_name=display_name,
             is_active=False,
         )
+        TermsAcceptance.objects.create(user=user, terms_version=TERMS_OF_SERVICE_VERSION)
+        return user
 
 
 class ActivateSerializer(serializers.Serializer):

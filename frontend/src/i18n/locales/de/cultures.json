@@ -523,6 +523,20 @@
     "loadError": "Die Kulturbibliothek konnte nicht geladen werden.",
     "versionLabel": "Version",
     "createdByLabel": "Von",
+    "publishConfirm": {
+      "title": "Kultur veröffentlichen?",
+      "intro": "„{{name}}“ wird in die öffentliche Kulturbibliothek veröffentlicht und ist danach für alle angemeldeten Nutzer sichtbar und importierbar.",
+      "published": "Veröffentlicht werden die Anbaudaten der Kultur, z. B. Name, Sorte, Wachstums- und Erntedauer, Pflanzabstände, Saatgutmenge und Lieferant.",
+      "neverPublished": "Ihre E-Mail-Adresse sowie private Notizen mit Fotos aus Ihrem Projekt werden niemals mitveröffentlicht.",
+      "attribution": "Als Urheber wird ausschließlich Ihr öffentlicher Benutzername angezeigt.",
+      "persistence": "Der veröffentlichte Eintrag bleibt Teil der öffentlichen Kulturbibliothek bestehen, auch wenn Sie diese Kultur später in Ihrem Projekt ändern oder löschen.",
+      "linkPrefix": "Details dazu finden Sie in der ",
+      "privacyLinkLabel": "Datenschutzerklärung",
+      "linkMiddle": " und den ",
+      "termsLinkLabel": "Nutzungsbedingungen",
+      "linkSuffix": ".",
+      "confirmButton": "Veröffentlichen"
+    },
     "filters": {
       "variety": "Sorte",
       "supplier": "Saatgutlieferant",

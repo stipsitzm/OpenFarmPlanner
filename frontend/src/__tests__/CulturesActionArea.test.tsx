@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { ReactElement } from 'react';
 import type { AxiosError } from 'axios';
@@ -214,10 +214,34 @@ describe('Cultures action area', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
 
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Veröffentlichen' }));
+
     await waitFor(() => {
       expect(publishPublicMock).toHaveBeenCalledWith(1);
       expect(screen.getByText('Diese Kultur ist bereits öffentlich vorhanden: Tomate (Roma)')).toBeInTheDocument();
     });
+  });
+
+  it('shows a confirmation dialog before the first publish, explaining what gets published', async () => {
+    renderCultures();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Veröffentlichen' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Kultur veröffentlichen?')).toBeInTheDocument();
+    expect(publishPublicMock).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Abbrechen' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(publishPublicMock).not.toHaveBeenCalled();
   });
 
   it('does not attempt to render public-library entries without a trigger', async () => {
