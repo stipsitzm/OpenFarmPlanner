@@ -6,6 +6,12 @@
   "intro": "OpenFarmPlanner besteht aus mehreren Seiten, die zusammenarbeiten:",
   "sections": [
     {
+      "title": "Übersicht",
+      "points": [
+        "Hier siehst du anstehende Termine für Aussaat, Pflanzung, Anzucht und Ernte auf einen Blick."
+      ]
+    },
+    {
       "title": "Anbauflächen",
       "points": [
         "Hier legst du Parzellen und Beete an. Bei Bedarf kannst du zusätzliche Standorte verwenden."
@@ -14,13 +20,13 @@
     {
       "title": "Kulturen",
       "points": [
-        "Hier trägst du deine Kulturdaten ein."
+        "Hier trägst du deine Kulturdaten ein oder greifst auf die öffentliche Kulturbibliothek zurück."
       ]
     },
     {
       "title": "Anbaupläne",
       "points": [
-        "Hier planst du, welche Kultur auf welchem Beet angebaut wird."
+        "Hier planst du, welche Kultur wann auf welchem Beet angebaut wird."
       ]
     },
     {
@@ -30,9 +36,21 @@
       ]
     },
     {
+      "title": "Ertragsübersicht",
+      "points": [
+        "Hier siehst du die aus deinen Anbauplänen erwarteten Erntemengen."
+      ]
+    },
+    {
       "title": "Saatgutbedarf",
       "points": [
         "Daraus wird berechnet, wie viel Saatgut du brauchst."
+      ]
+    },
+    {
+      "title": "Lieferanten",
+      "points": [
+        "Hier verwaltest du deine Lieferanten und kulturspezifische Bezugsquellen."
       ]
     }
   ],
