@@ -630,8 +630,8 @@ function RootLayout() {
     [topbarContextActions],
   );
   const isFieldsBedsGraphicalViewActive = useMemo(
-    () => topbarContextActions.some((action) => action.id === 'fields-view-mode-graphical' && action.active),
-    [topbarContextActions],
+    () => topbarTitleActions.some((action) => action.id === 'fields-view-mode-graphical' && action.active),
+    [topbarTitleActions],
   );
   const genericTopbarContextActions = useMemo(
     () => (isCulturesPage ? [] : topbarContextActions.filter((action) => action.id !== 'fields-global-add-field')),
