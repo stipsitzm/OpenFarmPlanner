@@ -830,10 +830,9 @@ function RootLayout() {
     if (location.pathname.startsWith('/app/dashboard')) return { pageKey: 'dashboard' as const, label: t('pageHelp.dashboard') };
     if (location.pathname.startsWith('/app/locations')) return { pageKey: 'locations' as const, label: t('pageHelp.locations') };
     if (location.pathname.startsWith('/app/fields-beds')) {
-      return {
-        pageKey: (isFieldsBedsGraphicalViewActive ? 'graphical' : 'areas') as const,
-        label: t('pageHelp.areas'),
-      };
+      return isFieldsBedsGraphicalViewActive
+        ? { pageKey: 'graphical' as const, label: t('pageHelp.areas') }
+        : { pageKey: 'areas' as const, label: t('pageHelp.areas') };
     }
     if (location.pathname.startsWith('/app/cultures')) return { pageKey: 'cultures' as const, label: t('pageHelp.cultures') };
     if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { pageKey: 'plantingPlans' as const, label: t('pageHelp.plantingPlans') };
