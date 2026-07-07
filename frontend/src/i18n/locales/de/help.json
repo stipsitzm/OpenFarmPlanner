@@ -50,7 +50,7 @@
     {
       "title": "Lieferanten",
       "points": [
-        "Hier verwaltest du deine Lieferanten und kulturspezifische Bezugsquellen."
+        "Hier trägst du deine Lieferanten ein, um sie bei Kulturen zu hinterlegen."
       ]
     }
   ],
@@ -201,7 +201,7 @@
     },
     "graphical": {
       "title": "Hilfe: Anbauflächen – Grafische Ansicht",
-      "intro": "Hier siehst du Parzellen und Beete räumlich angeordnet. Wenn mehrere Standorte vorhanden sind, zeigt die grafische Ansicht auch die Standortstruktur.",
+      "intro": "Hier siehst du Parzellen und Beete räumlich angeordnet.",
       "sections": [
         {
           "title": "Bedienung",
