@@ -23,6 +23,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from config.frontend_urls import build_public_frontend_url
 
+from .consent import record_acceptance
 from .models import AccountDeletionRequest, AccountEmailChangeRequest, PendingActivation
 from .serializers import (
     AccountEmailChangeConfirmSerializer,
@@ -32,6 +33,7 @@ from .serializers import (
     AccountProfileSerializer,
     AccountRestoreSerializer,
     ActivateSerializer,
+    ConsentAcceptSerializer,
     LoginSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
@@ -332,6 +334,16 @@ class MeView(APIView):
     def get(self, request: Request) -> Response:
         if not request.user.is_authenticated:
             return Response({'detail': _de(_('Authentication credentials were not provided.'))}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response(UserSerializer(request.user).data)
+
+
+class ConsentAcceptView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request: Request) -> Response:
+        serializer = ConsentAcceptSerializer(data=request.data)
+        _validate_serializer_in_german(serializer)
+        record_acceptance(request.user, serializer.validated_data['document'])
         return Response(UserSerializer(request.user).data)
 
 

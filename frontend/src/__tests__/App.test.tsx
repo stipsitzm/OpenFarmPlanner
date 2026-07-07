@@ -120,6 +120,7 @@ describe('App', () => {
       memberships: [],
       account_pending_deletion: false,
       scheduled_deletion_at: null,
+      pending_consents: [],
     };
     authState.activeProjectId = null;
     window.history.pushState({}, '', '/app/anbauplaene');
@@ -149,6 +150,7 @@ describe('App', () => {
       memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
       account_pending_deletion: false,
       scheduled_deletion_at: null,
+      pending_consents: [],
     };
     authState.activeProjectId = 1;
     window.history.pushState({}, '', '/app/locations');
@@ -173,6 +175,7 @@ describe('App', () => {
       memberships: [],
       account_pending_deletion: false,
       scheduled_deletion_at: null,
+      pending_consents: [],
     };
     window.history.pushState({}, '', '/app');
 
@@ -198,6 +201,7 @@ describe('App', () => {
       memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
       account_pending_deletion: false,
       scheduled_deletion_at: null,
+      pending_consents: [],
     };
     authState.activeProjectId = 1;
     window.history.pushState({}, '', '/app/anbauplaene');
@@ -225,6 +229,7 @@ describe('App', () => {
       memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
       account_pending_deletion: false,
       scheduled_deletion_at: null,
+      pending_consents: [],
     };
     authState.activeProjectId = 1;
     window.history.pushState({}, '', '/app/anbauplaene');
@@ -250,6 +255,7 @@ describe('App', () => {
       memberships: [],
       account_pending_deletion: false,
       scheduled_deletion_at: null,
+      pending_consents: [],
     };
     authState.activeProjectId = null;
     window.history.pushState({}, '', '/app/fields-beds');
@@ -275,6 +281,7 @@ describe('App', () => {
       memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
       account_pending_deletion: false,
       scheduled_deletion_at: null,
+      pending_consents: [],
     };
     authState.activeProjectId = 1;
     window.history.pushState({}, '', '/app/dashboard');
@@ -312,6 +319,7 @@ describe('App', () => {
       memberships: [],
       account_pending_deletion: false,
       scheduled_deletion_at: null,
+      pending_consents: [],
     };
     authState.activeProjectId = null;
     window.history.pushState({}, '', '/app/cultures');
@@ -336,6 +344,7 @@ describe('App', () => {
       memberships: [],
       account_pending_deletion: false,
       scheduled_deletion_at: null,
+      pending_consents: [],
     };
     authState.activeProjectId = null;
     window.history.pushState({}, '', '/app/suppliers?create=1');
@@ -361,6 +370,7 @@ describe('App', () => {
       memberships: [],
       account_pending_deletion: false,
       scheduled_deletion_at: null,
+      pending_consents: [],
     };
     authState.activeProjectId = null;
 
@@ -421,6 +431,7 @@ describe('App', () => {
       memberships: [],
       account_pending_deletion: false,
       scheduled_deletion_at: null,
+      pending_consents: [],
     };
     authState.activeProjectId = null;
     window.history.pushState({}, '', '/app/this-does-not-exist');

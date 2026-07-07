@@ -14,17 +14,14 @@ from rest_framework import serializers
 
 from farm.models import ProjectMembership
 from farm.project_context import resolve_project_for_user
-from .models import AccountDeletionRequest, TermsAcceptance
+from .consent import get_pending_consent_documents, record_acceptance
+from .models import AccountDeletionRequest, DocumentConsent
 
 User = get_user_model()
 _username_validator = UnicodeUsernameValidator()
 _password_field_kwargs = {'write_only': True}
 if getattr(settings, 'DJANGO_ENV', 'production') != 'development':
     _password_field_kwargs['min_length'] = 8
-
-# Bump when the Terms of Service text changes materially. Kept in sync with
-# the "Stand" date in frontend/src/i18n/locales/de/home.json (legal.terms.version).
-TERMS_OF_SERVICE_VERSION = '2026-07-07'
 
 
 def _de(message: str) -> str:
@@ -67,6 +64,7 @@ class UserSerializer(serializers.ModelSerializer):
     needs_project_selection = serializers.SerializerMethodField()
     account_pending_deletion = serializers.SerializerMethodField()
     scheduled_deletion_at = serializers.SerializerMethodField()
+    pending_consents = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -83,6 +81,7 @@ class UserSerializer(serializers.ModelSerializer):
             'needs_project_selection',
             'account_pending_deletion',
             'scheduled_deletion_at',
+            'pending_consents',
         )
         read_only_fields = fields
 
@@ -141,24 +140,32 @@ class UserSerializer(serializers.ModelSerializer):
             return None
         return deletion.scheduled_deletion_at.isoformat()
 
+    def get_pending_consents(self, obj: User) -> list[str]:
+        return get_pending_consent_documents(obj)
+
+
+class ConsentAcceptSerializer(serializers.Serializer):
+    document = serializers.ChoiceField(choices=DocumentConsent.DOCUMENT_CHOICES)
+
 
 class RegisterSerializer(serializers.Serializer):
+    """Registration has no separate terms-acceptance field: creating an account
+
+    itself constitutes acceptance of the current Terms of Service (see
+    `create()`), matching the implicit-consent pattern used by platforms like
+    GitHub or Wikipedia rather than a dedicated checkbox.
+    """
+
     email = serializers.EmailField()
     display_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     password = serializers.CharField(**_password_field_kwargs)
     password_confirm = serializers.CharField(**_password_field_kwargs)
-    terms_accepted = serializers.BooleanField()
 
     def validate_email(self, value: str) -> str:
         normalized = normalize_email_lower(value)
         if User.objects.filter(email__iexact=normalized).exists():
             raise serializers.ValidationError(_de(_('An account with this email already exists.')))
         return normalized
-
-    def validate_terms_accepted(self, value: bool) -> bool:
-        if not value:
-            raise serializers.ValidationError(_de(_('You must accept the terms of service to register.')))
-        return value
 
     def validate(self, attrs: dict[str, str]) -> dict[str, str]:
         if attrs['password'] != attrs['password_confirm']:
@@ -175,7 +182,7 @@ class RegisterSerializer(serializers.Serializer):
             first_name=display_name,
             is_active=False,
         )
-        TermsAcceptance.objects.create(user=user, terms_version=TERMS_OF_SERVICE_VERSION)
+        record_acceptance(user, DocumentConsent.DOCUMENT_TERMS)
         return user
 
 

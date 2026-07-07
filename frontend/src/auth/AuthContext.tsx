@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  acceptConsent as acceptConsentRequest,
   activate as activateRequest,
   getMe,
   login as loginRequest,
@@ -119,15 +120,19 @@ export function AuthProvider({
         await logoutRequest();
         clearAuthenticatedUser();
       },
-      register: async (email, password, passwordConfirm, displayName = "", termsAccepted = false) => {
+      register: async (email, password, passwordConfirm, displayName = "") => {
         const response = await registerRequest(
           email,
           password,
           passwordConfirm,
           displayName,
-          termsAccepted,
         );
         return response.detail;
+      },
+      acceptConsent: async (document) => {
+        const me = await acceptConsentRequest(document);
+        applyAuthenticatedUser(me);
+        return me;
       },
       activate: async (uid, token) => {
         const me = await activateRequest(uid, token);

@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from './useAuth';
+import ConsentGate from './ConsentGate';
 import { useTranslation } from '../i18n';
 
 export default function ProtectedRoute() {
@@ -13,6 +14,10 @@ export default function ProtectedRoute() {
 
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  if (user.pending_consents.length > 0) {
+    return <ConsentGate />;
   }
 
   return <Outlet />;

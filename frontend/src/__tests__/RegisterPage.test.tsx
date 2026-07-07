@@ -55,13 +55,11 @@ vi.mock('../i18n', () => ({
         'auth:register.hasAccount': 'Bereits ein Konto? Anmelden',
         'auth:register.showPassword': 'Passwort anzeigen',
         'auth:register.hidePassword': 'Passwort ausblenden',
-        'auth:register.termsCheckboxPrefix': 'Ich habe die ',
-        'auth:register.termsCheckboxLinkLabel': 'Nutzungsbedingungen',
-        'auth:register.termsCheckboxSuffix': ' gelesen und akzeptiere sie.',
-        'auth:register.termsRequired': 'Bitte akzeptiere die Nutzungsbedingungen, um fortzufahren.',
-        'auth:register.privacyNoticePrefix': 'Mit der Registrierung werden deine personenbezogenen Daten gemäß unserer ',
-        'auth:register.privacyNoticeLinkLabel': 'Datenschutzerklärung',
-        'auth:register.privacyNoticeSuffix': ' verarbeitet.',
+        'auth:register.termsNoticePrefix': 'Mit dem Erstellen eines Kontos stimmen Sie den ',
+        'auth:register.termsNoticeTermsLinkLabel': 'Nutzungsbedingungen',
+        'auth:register.termsNoticeMiddle': ' zu. Informationen zur Verarbeitung Ihrer personenbezogenen Daten finden Sie in der ',
+        'auth:register.termsNoticePrivacyLinkLabel': 'Datenschutzerklärung',
+        'auth:register.termsNoticeSuffix': '.',
       };
       return map[key] ?? key;
     },
@@ -171,7 +169,7 @@ describe('RegisterPage', () => {
     expect(logoutMock).toHaveBeenCalledTimes(1);
   });
 
-  it('blocks submission and shows an error when the terms checkbox is not checked', async () => {
+  it('has no terms-acceptance checkbox and submits registration without one', async () => {
     authUser = null;
     const user = userEvent.setup();
 
@@ -181,6 +179,8 @@ describe('RegisterPage', () => {
       </MemoryRouter>,
     );
 
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+
     await user.type(screen.getByLabelText(/E-Mail/i), 'new@example.com');
     const passwordInputs = screen.getAllByLabelText(/^Passwort/i).filter((el) => el.tagName === 'INPUT');
     await user.type(passwordInputs[0], 'new-safe-password-123');
@@ -188,13 +188,11 @@ describe('RegisterPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Konto erstellen' }));
 
-    expect(await screen.findByText('Bitte akzeptiere die Nutzungsbedingungen, um fortzufahren.')).toBeInTheDocument();
-    expect(registerMock).not.toHaveBeenCalled();
+    expect(registerMock).toHaveBeenCalledWith('new@example.com', 'new-safe-password-123', 'new-safe-password-123', '');
   });
 
-  it('submits registration with termsAccepted=true once the checkbox is checked', async () => {
+  it('shows an implicit-consent notice linking to the terms and the privacy policy', () => {
     authUser = null;
-    const user = userEvent.setup();
 
     render(
       <MemoryRouter initialEntries={['/register']}>
@@ -202,15 +200,8 @@ describe('RegisterPage', () => {
       </MemoryRouter>,
     );
 
-    await user.type(screen.getByLabelText(/E-Mail/i), 'new@example.com');
-    const passwordInputs = screen.getAllByLabelText(/^Passwort/i).filter((el) => el.tagName === 'INPUT');
-    await user.type(passwordInputs[0], 'new-safe-password-123');
-    await user.type(passwordInputs[1], 'new-safe-password-123');
-    await user.click(screen.getByRole('checkbox'));
-
-    await user.click(screen.getByRole('button', { name: 'Konto erstellen' }));
-
-    expect(registerMock).toHaveBeenCalledWith('new@example.com', 'new-safe-password-123', 'new-safe-password-123', '', true);
+    expect(screen.getByRole('link', { name: 'Nutzungsbedingungen' })).toHaveAttribute('href', '/nutzungsbedingungen');
+    expect(screen.getByRole('link', { name: 'Datenschutzerklärung' })).toHaveAttribute('href', '/datenschutz');
   });
 
   it('hides the resend-activation-email action until a registration has succeeded', async () => {
@@ -229,7 +220,6 @@ describe('RegisterPage', () => {
     const passwordInputs = screen.getAllByLabelText(/^Passwort/i).filter((el) => el.tagName === 'INPUT');
     await user.type(passwordInputs[0], 'new-safe-password-123');
     await user.type(passwordInputs[1], 'new-safe-password-123');
-    await user.click(screen.getByRole('checkbox'));
     await user.click(screen.getByRole('button', { name: 'Konto erstellen' }));
 
     expect(await screen.findByRole('button', { name: 'Aktivierungs-E-Mail erneut senden' })).toBeInTheDocument();

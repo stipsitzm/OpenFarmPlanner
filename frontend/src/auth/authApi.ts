@@ -39,7 +39,7 @@ const authFieldLabelFallbacks: Record<string, string> = {
   uid: 'Benutzerkennung',
   token: 'Token',
   display_name: 'Anzeigename',
-  terms_accepted: 'Nutzungsbedingungen',
+  document: 'Dokument',
   detail: 'Fehler',
   non_field_errors: 'Fehler',
 };
@@ -187,7 +187,6 @@ export async function register(
   password: string,
   passwordConfirm: string,
   displayName = '',
-  termsAccepted = false,
 ): Promise<{ detail: string }> {
   await ensureCsrfCookie();
   return request<{ detail: string }>('/auth/register/', {
@@ -198,8 +197,16 @@ export async function register(
       password,
       password_confirm: passwordConfirm,
       display_name: displayName,
-      terms_accepted: termsAccepted,
     }),
+  });
+}
+
+export async function acceptConsent(document: string): Promise<AuthUser> {
+  await ensureCsrfCookie();
+  return request<AuthUser>('/auth/consent/accept/', {
+    method: 'POST',
+    headers: csrfHeader(),
+    body: JSON.stringify({ document }),
   });
 }
 

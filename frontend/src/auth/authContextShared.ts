@@ -12,8 +12,8 @@ export interface AuthContextValue {
     password: string,
     passwordConfirm: string,
     displayName?: string,
-    termsAccepted?: boolean,
   ) => Promise<string>;
+  acceptConsent: (document: string) => Promise<AuthUser>;
   activate: (uid: string, token: string) => Promise<void>;
   resendActivation: (email: string) => Promise<string>;
   requestPasswordReset: (email: string) => Promise<string>;
