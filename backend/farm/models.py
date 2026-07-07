@@ -1220,6 +1220,21 @@ class PublicCulture(TimestampedModel):
     API (under discussion as of 2026-07). Keep this model, its serializer, and
     PublicCultureViewSet loosely coupled from farm-project-scoped models/logic
     (Culture, EntityRevision, etc.) so such an extraction stays feasible.
+
+    TODO(privacy): there is currently no unpublish/delete path for an entry a
+    user has published here (PublicCultureViewSet is read-only; publishing
+    only ever creates/updates a row, see services/public_cultures.py). GDPR
+    erasure requests for a public-library entry currently have to be handled
+    manually (see the "Öffentliche Kulturbibliothek" section of the privacy
+    policy). Add a genuine unpublish/delete action before this model is
+    extracted into a separate service.
+
+    TODO(privacy): STATUS_CHOICES only has STATUS_PUBLISHED — publishing is
+    immediate and self-service with no review/moderation step. If a
+    moderation workflow is ever introduced, this is also where a license/
+    contribution-terms acceptance step for public submissions should live
+    (separate from the general Nutzungsbedingungen/ToS, which don't exist yet
+    either).
     """
 
     STATUS_PUBLISHED = 'published'

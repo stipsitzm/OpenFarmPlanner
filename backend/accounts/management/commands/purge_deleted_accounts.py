@@ -41,6 +41,14 @@ class Command(BaseCommand):
                 user.last_name = ''
                 user.is_active = False
                 user.set_unusable_password()
+                # TODO: `username` is intentionally left untouched here, but
+                # PublicCulture.get_created_by_label() falls back to it when
+                # first/last name are blank — so a deleted user's username can
+                # keep showing up as the public-library attribution on their
+                # published cultures indefinitely. Decide whether to also
+                # anonymize `username` (breaks any remaining unique lookups by
+                # username) or to null out `created_by`/store a frozen display
+                # name on PublicCulture at publish time instead.
                 user.save(update_fields=['email', 'first_name', 'last_name', 'is_active', 'password'])
 
             deletion.deleted_at = now

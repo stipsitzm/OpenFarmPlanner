@@ -42,7 +42,7 @@
     },
     "privacy": {
       "title": "Datenschutzerklärung",
-      "version": "Stand: März 2026",
+      "version": "Stand: Juli 2026",
       "sections": {
         "controller": {
           "title": "Verantwortlicher",
@@ -70,21 +70,40 @@
           "bullets": {
             "emailAddress": "E-Mail-Adresse",
             "nameOptional": "Name (optional)",
-            "encryptedPassword": "Passwort (verschlüsselt gespeichert)"
+            "encryptedPassword": "Passwort (sicher gehasht gespeichert – für uns im Klartext nicht einsehbar)"
           },
           "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung)"
         },
         "projectData": {
           "title": "Projektdaten und Anwendungsdaten",
-          "content": "Innerhalb der Anwendung können Nutzer folgende Daten speichern:",
+          "content": "Innerhalb der Anwendung können Nutzer folgende Daten speichern. Diese Daten sind grundsätzlich nur für Sie und die Mitglieder Ihres Projekts sichtbar:",
           "bullets": {
             "projectData": "Projektdaten",
             "cultureData": "Kulturdaten",
             "cultivationPlanning": "Anbauplanung",
             "fieldData": "Flächendaten",
-            "tasks": "Aufgaben"
+            "tasks": "Aufgaben",
+            "noteAttachments": "Notizen sowie optional dazu hochgeladene Fotos (z. B. zu Anbauplänen)",
+            "versionHistory": "Änderungsverlauf (Versionshistorie) inklusive des Namens der Person, die eine Änderung vorgenommen hat"
           },
           "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO"
+        },
+        "publicLibrary": {
+          "title": "Öffentliche Kulturbibliothek",
+          "content": "OpenFarmPlanner bietet die Möglichkeit, einzelne Kultur-Datensätze (z. B. Anbauinformationen zu einer Gemüsesorte) aus einem privaten Projekt in eine öffentliche Kulturbibliothek zu veröffentlichen. Diese Bibliothek kann von allen angemeldeten Nutzern eingesehen und importiert werden.\n\nBitte beachten Sie dabei Folgendes:",
+          "bullets": {
+            "publicContent": "Veröffentlicht werden ausschließlich die landwirtschaftlichen Anbaudaten der Kultur (z. B. Name, Sorte, Wachstums- und Erntedauer, Pflanzabstände, Saatgutmenge, Lieferantenname). Notizen aus dem privaten Projekt werden nicht automatisch mitveröffentlicht.",
+            "attribution": "Zu jedem veröffentlichten Eintrag wird sichtbar angezeigt, wer ihn beigetragen hat – angezeigt wird Ihr hinterlegter Name, ersatzweise Ihr Benutzername oder Ihre E-Mail-Adresse.",
+            "noReview": "Die Veröffentlichung erfolgt unmittelbar durch Sie selbst; es findet aktuell keine inhaltliche Prüfung oder Freigabe durch uns statt.",
+            "persistence": "Ein veröffentlichter Eintrag bleibt auch dann in der öffentlichen Bibliothek bestehen, wenn Sie die ursprüngliche Kultur in Ihrem privaten Projekt später ändern oder löschen.",
+            "removal": "Eine eigenständige Löschung oder Zurückziehung eines bereits veröffentlichten Eintrags ist über die Anwendung derzeit nicht möglich. Wenn Sie einen Eintrag entfernt haben möchten, kontaktieren Sie uns bitte unter info@openfarmplanner.org."
+          },
+          "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO (Einwilligung durch aktive Veröffentlichung) bzw. Art. 6 Abs. 1 lit. f DSGVO (Betrieb der Bibliotheksfunktion)"
+        },
+        "aiEnrichment": {
+          "title": "KI-gestützte Datenanreicherung für Kulturen",
+          "content": "Auf Wunsch können Nutzer für eine Kultur eine automatische Datenanreicherung anstoßen. Dabei werden landwirtschaftliche Stammdaten der Kultur (z. B. Name, Sorte, Wachstumsdauer, Erntemethode, Ertrag, Pflanzabstände, Saatgutmenge, Lieferantenname) an einen externen KI-Dienstleister (OpenAI, USA) übermittelt, der ergänzende Anbauinformationen recherchiert und vorschlägt.\n\nDiese Funktion wird nur aktiv, wenn Sie sie für eine Kultur ausdrücklich auslösen. Freitextfelder wie eigene Notizen sind für diese Funktion nicht vorgesehen; bitte tragen Sie dort dennoch vorsorglich keine personenbezogenen Daten Dritter ein, da wir eine versehentliche Übernahme von Freitext in zukünftige Anfragen nicht vollständig ausschließen können.",
+          "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO (Einwilligung durch aktives Auslösen der Funktion)"
         },
         "emailCommunication": {
           "title": "E-Mail-Kommunikation",
@@ -110,8 +129,8 @@
           "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO"
         },
         "cookies": {
-          "title": "Cookies",
-          "content": "OpenFarmPlanner verwendet technisch notwendige Cookies, um die Funktionalität der Anwendung sicherzustellen.",
+          "title": "Cookies und lokaler Speicher",
+          "content": "OpenFarmPlanner verwendet technisch notwendige Cookies, um die Funktionalität der Anwendung sicherzustellen. Darüber hinaus speichert die Anwendung einzelne, rein technische Einstellungen (z. B. Ansichtsoptionen, zuletzt gewähltes Projekt, Sortierung von Tabellen) im lokalen Speicher Ihres Browsers (Local Storage/Session Storage). Diese Daten verlassen Ihr Gerät nicht und enthalten keine Zugangsdaten.",
           "bullets": {
             "sessionCookies": "Session-Cookies für die Login-Funktion",
             "securityCookies": "Sicherheits-Cookies (CSRF-Schutz)"
@@ -120,11 +139,11 @@
         },
         "dataSharing": {
           "title": "Weitergabe von Daten",
-          "content": "Ihre Daten werden nicht an Dritte weitergegeben, außer wenn dies zur Vertragserfüllung notwendig ist oder wenn eine gesetzliche Verpflichtung besteht."
+          "content": "Grundsätzlich werden Ihre Daten nicht an Dritte weitergegeben, außer wenn dies zur Vertragserfüllung notwendig ist oder wenn eine gesetzliche Verpflichtung besteht. Zwei Ausnahmen ergeben sich aus optionalen Funktionen der Anwendung:\n\n– Wenn Sie eine Kultur in die öffentliche Kulturbibliothek veröffentlichen, wird Ihr Name (bzw. Benutzername oder E-Mail-Adresse) dort für alle angemeldeten Nutzer sichtbar (siehe Abschnitt „Öffentliche Kulturbibliothek“).\n– Wenn Sie die KI-gestützte Datenanreicherung für eine Kultur nutzen, werden landwirtschaftliche Stammdaten dieser Kultur an OpenAI (USA) übermittelt (siehe Abschnitt „KI-gestützte Datenanreicherung“)."
         },
         "storageDuration": {
           "title": "Speicherdauer",
-          "content": "Ihre Daten werden gespeichert, solange Ihr Benutzerkonto besteht. Sie können Ihr Konto jederzeit löschen lassen."
+          "content": "Ihre Kontodaten werden gespeichert, solange Ihr Benutzerkonto besteht. Wenn Sie Ihr Konto löschen lassen, wird es zunächst für 14 Tage als „zur Löschung vorgemerkt“ geführt; in diesem Zeitraum können Sie die Löschung rückgängig machen. Nach Ablauf dieser Frist werden Ihre Kontodaten anonymisiert (E-Mail-Adresse und Name werden entfernt, das Konto wird deaktiviert).\n\nProjektdaten, Anbaupläne und der zugehörige Änderungsverlauf bleiben – sofern das Projekt weiterbesteht und nicht separat gelöscht wird – auch nach der Anonymisierung Ihres Kontos im Rahmen des jeweiligen Projekts bestehen, ebenso bereits von Ihnen veröffentlichte Einträge in der öffentlichen Kulturbibliothek (siehe Abschnitt „Öffentliche Kulturbibliothek“)."
         },
         "rights": {
           "title": "Ihre Rechte",
