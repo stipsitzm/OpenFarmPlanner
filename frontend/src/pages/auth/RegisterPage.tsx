@@ -184,38 +184,42 @@ export default function RegisterPage() {
               htmlInput: { autoComplete: 'new-password' },
             }}
           />
-          <FormControlLabel
-            control={(
-              <Checkbox
-                checked={termsAccepted}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
-                disabled={isLoggedIn}
-                required
-              />
-            )}
-            label={(
-              <Typography variant="body2">
-                {t('auth:register.termsCheckboxPrefix')}
-                <Link component={RouterLink} to="/nutzungsbedingungen" target="_blank" rel="noopener">
-                  {t('auth:register.termsCheckboxLinkLabel')}
-                </Link>
-                {t('auth:register.termsCheckboxSuffix')}
-              </Typography>
-            )}
-          />
-          <Typography variant="body2" color="text.secondary">
-            {t('auth:register.privacyNoticePrefix')}
-            <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener">
-              {t('auth:register.privacyNoticeLinkLabel')}
-            </Link>
-            {t('auth:register.privacyNoticeSuffix')}
-          </Typography>
+          <Stack spacing={0.5}>
+            <FormControlLabel
+              control={(
+                <Checkbox
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  disabled={isLoggedIn}
+                  slotProps={{ input: { 'aria-required': true } }}
+                />
+              )}
+              label={(
+                <Typography variant="body2">
+                  {t('auth:register.termsCheckboxPrefix')}
+                  <Link component={RouterLink} to="/nutzungsbedingungen" target="_blank" rel="noopener">
+                    {t('auth:register.termsCheckboxLinkLabel')}
+                  </Link>
+                  {t('auth:register.termsCheckboxSuffix')}
+                </Typography>
+              )}
+            />
+            <Typography variant="caption" color="text.secondary">
+              {t('auth:register.privacyNoticePrefix')}
+              <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener">
+                {t('auth:register.privacyNoticeLinkLabel')}
+              </Link>
+              {t('auth:register.privacyNoticeSuffix')}
+            </Typography>
+          </Stack>
           <Button type="submit" variant="contained" disabled={submitting || isLoggedIn}>{submitting ? t('auth:register.submitting') : t('auth:register.submit')}</Button>
-          <Button type="button" onClick={() => void handleResend()} disabled={!email || isLoggedIn || !registrationSucceeded}>{t('auth:register.resendActivation')}</Button>
+          {registrationSucceeded && !isLoggedIn ? (
+            <Button type="button" onClick={() => void handleResend()}>{t('auth:register.resendActivation')}</Button>
+          ) : null}
           <Button type="button" component={RouterLink} to={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'} state={location.state}>{t('auth:register.hasAccount')}</Button>
         </Stack>
       </Box>
-      <LegalLinks sx={{ mt: 4, justifyContent: 'center' }} />
+      <LegalLinks dense sx={{ mt: 4, justifyContent: 'center' }} />
     </Container>
   );
 }

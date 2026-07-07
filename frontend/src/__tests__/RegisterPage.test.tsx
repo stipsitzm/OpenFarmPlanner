@@ -59,7 +59,7 @@ vi.mock('../i18n', () => ({
         'auth:register.termsCheckboxLinkLabel': 'Nutzungsbedingungen',
         'auth:register.termsCheckboxSuffix': ' gelesen und akzeptiere sie.',
         'auth:register.termsRequired': 'Bitte akzeptiere die Nutzungsbedingungen, um fortzufahren.',
-        'auth:register.privacyNoticePrefix': 'Deine personenbezogenen Daten werden gemäß unserer ',
+        'auth:register.privacyNoticePrefix': 'Mit der Registrierung werden deine personenbezogenen Daten gemäß unserer ',
         'auth:register.privacyNoticeLinkLabel': 'Datenschutzerklärung',
         'auth:register.privacyNoticeSuffix': ' verarbeitet.',
       };
@@ -211,5 +211,27 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: 'Konto erstellen' }));
 
     expect(registerMock).toHaveBeenCalledWith('new@example.com', 'new-safe-password-123', 'new-safe-password-123', '', true);
+  });
+
+  it('hides the resend-activation-email action until a registration has succeeded', async () => {
+    authUser = null;
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/register']}>
+        <RegisterPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Aktivierungs-E-Mail erneut senden' })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/E-Mail/i), 'new@example.com');
+    const passwordInputs = screen.getAllByLabelText(/^Passwort/i).filter((el) => el.tagName === 'INPUT');
+    await user.type(passwordInputs[0], 'new-safe-password-123');
+    await user.type(passwordInputs[1], 'new-safe-password-123');
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Konto erstellen' }));
+
+    expect(await screen.findByRole('button', { name: 'Aktivierungs-E-Mail erneut senden' })).toBeInTheDocument();
   });
 });
