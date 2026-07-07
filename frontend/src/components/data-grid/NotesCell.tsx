@@ -102,13 +102,22 @@ export function NotesCell({
 
   if (compactIndicator) {
     return (
-      <Tooltip title={hasValue || hasAttachments ? compactTooltip : '—'} arrow>
+      <Tooltip
+        title={compactTooltip}
+        arrow
+        disableHoverListener={!hasValue && !hasAttachments}
+        disableFocusListener={!hasValue && !hasAttachments}
+        disableTouchListener={!hasValue && !hasAttachments}
+      >
         <Box
           ref={compactTriggerRef}
           role="button"
           tabIndex={hasFocus ? 0 : -1}
           aria-label={compactAriaLabel}
-          onClick={onOpen}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
@@ -126,6 +135,10 @@ export function NotesCell({
             gap: 0.25,
             whiteSpace: 'nowrap',
             cursor: 'pointer',
+            outline: 'none',
+            '&:focus, &:focus-visible': {
+              outline: 'none',
+            },
           }}
         >
           {hasValue ? <NotesIcon fontSize="small" color="action" /> : null}
