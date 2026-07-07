@@ -1,5 +1,5 @@
 import type { MutableRefObject, ReactNode } from 'react';
-import type { GridColDef, GridRowId, GridSortModel } from '@mui/x-data-grid';
+import type { GridColDef, GridColumnVisibilityModel, GridRowId, GridSortModel } from '@mui/x-data-grid';
 
 export interface EditableRow {
   id: number;
@@ -103,4 +103,33 @@ export interface EditableDataGridProps<T extends EditableRow> {
   surfaceSizing?: 'contentFit' | 'fullWorkspace' | 'compact';
   paginationPageSizeOptions?: number[];
   initialPageSize?: number;
+  /**
+   * User's manually-saved visibility model. Pass `columnVisibilityModel` from
+   * `useColumnVisibility`. Only used when `columnVisibilityAutofit` is false.
+   */
+  columnVisibilityModel?: GridColumnVisibilityModel;
+  /**
+   * Called when the user explicitly changes columns via the built-in menu.
+   * Pass `setManualColumnVisibility` from `useColumnVisibility`.
+   * This automatically disables Autofit in the hook.
+   */
+  onColumnVisibilityModelChange?: (model: GridColumnVisibilityModel) => void;
+  /** When true, renders the column-visibility toggle button above the grid. */
+  showColumnVisibilityButton?: boolean;
+  /**
+   * Column fields to auto-hide in priority order (index 0 = first to hide)
+   * when the table width exceeds the container. Requires `columnVisibilityAutofit`.
+   */
+  autoHideColumnPriority?: string[];
+  /**
+   * Pass `autofitEnabled` from `useColumnVisibility`.
+   * When true the grid auto-hides/shows optional columns to fit the container.
+   * When false the `columnVisibilityModel` is used as-is.
+   */
+  columnVisibilityAutofit?: boolean;
+  /**
+   * Called when the user toggles the Autofit checkbox.
+   * Pass `setAutofitEnabled` from `useColumnVisibility`.
+   */
+  onColumnVisibilityAutofitChange?: (enabled: boolean) => void;
 }

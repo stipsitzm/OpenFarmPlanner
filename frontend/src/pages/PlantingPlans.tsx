@@ -98,6 +98,7 @@ import {
 } from "../commands/useCommandContext";
 import type { CommandSpec } from "../commands/types";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
+import { useColumnVisibility } from "../hooks/useColumnVisibility";
 import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction, getProjectSetupActions } from "./requirementFlow";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
@@ -467,6 +468,9 @@ function PlantingPlans() {
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const { autofitEnabled, columnVisibilityModel, setManualColumnVisibility, setAutofitEnabled } = useColumnVisibility({
+    tableKey: "plantingPlans",
+  });
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -2215,6 +2219,12 @@ function PlantingPlans() {
           tableKey="plantingPlans"
           defaultSortModel={[{ field: "planting_date", sort: "asc" }]}
           persistSortInUrl={true}
+          columnVisibilityModel={columnVisibilityModel}
+          onColumnVisibilityModelChange={setManualColumnVisibility}
+          columnVisibilityAutofit={autofitEnabled}
+          onColumnVisibilityAutofitChange={setAutofitEnabled}
+          autoHideColumnPriority={["harvest_date", "harvest_end_date"]}
+          showColumnVisibilityButton={!isMobile}
             notes={{
               fields: [
                 {
