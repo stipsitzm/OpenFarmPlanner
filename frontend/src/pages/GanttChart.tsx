@@ -1905,7 +1905,12 @@ function GanttChartPage() {
       return;
     }
 
-    const storedRowScrollTop = storedGanttState?.rowScrollTop;
+    // Read the persisted offset fresh instead of relying on the `storedGanttState`
+    // memo (captured once per storage key): every scroll tick writes the latest
+    // offset to storage via `storeGanttState`, but that memo never re-reads it, so
+    // reusing it here reapplied a stale (often 0) offset on every calendarMode/loading
+    // change, snapping the view back to the top mid-session.
+    const storedRowScrollTop = getStoredGanttState(ganttStateStorageKey)?.rowScrollTop;
     const requestedScrollTop = typeof storedRowScrollTop === 'number' && Number.isFinite(storedRowScrollTop)
       ? Math.max(0, storedRowScrollTop)
       : 0;
@@ -1921,7 +1926,7 @@ function GanttChartPage() {
     }
     setGanttScrollTop(appliedScrollTop);
     hasRestoredTimelineRef.current = false;
-  }, [activeProjectId, calendarMode, hasCalendarRequirements, loading, storedGanttState?.rowScrollTop, useWindowedGanttRows]);
+  }, [activeProjectId, calendarMode, ganttStateStorageKey, hasCalendarRequirements, loading, useWindowedGanttRows]);
 
   useEffect(() => {
     if (loading || !hasCalendarRequirements) {
