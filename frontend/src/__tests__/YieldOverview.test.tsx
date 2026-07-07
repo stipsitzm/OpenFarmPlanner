@@ -440,4 +440,78 @@ describe("YieldOverviewPage", () => {
       expect(mocks.yieldList).toHaveBeenLastCalledWith(previousYear);
     });
   });
+
+  describe("legend", () => {
+    const buildWeek = (id: number, cultures: { culture_id: number; culture_name: string; yield: number }[]) => ({
+      iso_week: `2026-W${String(id).padStart(2, "0")}`,
+      week_start: `2026-03-${String(id).padStart(2, "0")}`,
+      cultures: cultures.map((culture) => ({ ...culture, color: "#16a34a" })),
+    });
+
+    it("orders the legend by total visible yield (descending), not alphabetically", async () => {
+      mocks.yieldList.mockResolvedValue({
+        data: [
+          buildWeek(2, [
+            { culture_id: 1, culture_name: "Aprikose", yield: 0.5 },
+            { culture_id: 2, culture_name: "Zucchini", yield: 5 },
+            { culture_id: 3, culture_name: "Möhre", yield: 2 },
+          ]),
+        ],
+      });
+
+      render(
+        <FocusManagerProvider><MemoryRouter>
+          <YieldOverviewPage />
+        </MemoryRouter></FocusManagerProvider>,
+      );
+
+      await screen.findByRole("heading", { name: "Ertragsverteilung" });
+      const legendNames = screen.getAllByText(/^(Aprikose|Zucchini|Möhre)$/).map((el) => el.textContent);
+      expect(legendNames).toEqual(["Zucchini", "Möhre", "Aprikose"]);
+    });
+
+    it("shows the full legend without a toggle for 12 or fewer cultures", async () => {
+      const cultures = Array.from({ length: 12 }, (_, index) => ({
+        culture_id: index + 1,
+        culture_name: `Kultur ${index + 1}`,
+        yield: 12 - index,
+      }));
+      mocks.yieldList.mockResolvedValue({ data: [buildWeek(2, cultures)] });
+
+      render(
+        <FocusManagerProvider><MemoryRouter>
+          <YieldOverviewPage />
+        </MemoryRouter></FocusManagerProvider>,
+      );
+
+      await screen.findByRole("heading", { name: "Ertragsverteilung" });
+      expect(screen.getByText("Kultur 1")).toBeInTheDocument();
+      expect(screen.getByText("Kultur 12")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Mehr anzeigen|Kulturen anzeigen/ })).not.toBeInTheDocument();
+    });
+
+    it("collapses the legend behind a count button once there are more than 30 cultures", async () => {
+      const cultures = Array.from({ length: 45 }, (_, index) => ({
+        culture_id: index + 1,
+        culture_name: `Kultur ${index + 1}`,
+        yield: 45 - index,
+      }));
+      mocks.yieldList.mockResolvedValue({ data: [buildWeek(2, cultures)] });
+
+      render(
+        <FocusManagerProvider><MemoryRouter>
+          <YieldOverviewPage />
+        </MemoryRouter></FocusManagerProvider>,
+      );
+
+      await screen.findByRole("heading", { name: "Ertragsverteilung" });
+      expect(screen.queryByText("Kultur 1")).not.toBeInTheDocument();
+      const showAllButton = screen.getByRole("button", { name: "Kulturen anzeigen (45)" });
+
+      fireEvent.click(showAllButton);
+
+      expect(await screen.findByText("Kultur 1")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Weniger anzeigen" })).toBeInTheDocument();
+    });
+  });
 });

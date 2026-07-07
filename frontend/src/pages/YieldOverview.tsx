@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
   Divider,
@@ -203,14 +204,24 @@ function useYieldChartData(
             return months;
           }, new Map<string, YieldChartColumn>()).values()];
 
-    const visibleCultureIds = new Set(
-      chartData.flatMap((column) =>
-        column.cultures.map((culture) => culture.culture_id),
-      ),
-    );
-    const chartCultures = availableCultures.filter((culture) =>
-      visibleCultureIds.has(culture.id),
-    );
+    // The legend orders cultures by their total yield in the currently
+    // visible data (descending) rather than alphabetically, so the most
+    // relevant cultures always appear first — this also determines which
+    // ones are shown first once the legend is collapsed to a subset.
+    const totalYieldByCultureId = new Map<number, number>();
+    chartData.forEach((column) => {
+      column.cultures.forEach((culture) => {
+        totalYieldByCultureId.set(
+          culture.culture_id,
+          (totalYieldByCultureId.get(culture.culture_id) ?? 0) + culture.yield,
+        );
+      });
+    });
+    const chartCultures = availableCultures
+      .filter((culture) => totalYieldByCultureId.has(culture.id))
+      .sort((left, right) => (
+        (totalYieldByCultureId.get(right.id) ?? 0) - (totalYieldByCultureId.get(left.id) ?? 0)
+      ));
 
     return {
       chartData,
@@ -223,6 +234,164 @@ function useYieldChartData(
     };
   }, [locale, period, selectedCultureId, weeklyYield]);
 }
+
+interface YieldSegmentPayload {
+  cultureId: number;
+  cultureName: string;
+  periodLabel: string;
+  yieldValue: number;
+}
+
+interface YieldChartSegmentProps {
+  segmentKey: string;
+  columnIndex: number;
+  cultureIndex: number;
+  cultureId: number;
+  cultureName: string;
+  color: string;
+  yieldValue: number;
+  periodLabel: string;
+  heightPercent: number;
+  isTabbable: boolean;
+  isHovered: boolean;
+  isKeyboardTooltipOpen: boolean;
+  isTooltipSuppressed: boolean;
+  isPressed: boolean;
+  tooltipPeriodLabel: string;
+  tooltipYieldLabel: string;
+  actionsLabel: string;
+  onFocusSegment: (segmentKey: string) => void;
+  onHoverStart: (segmentKey: string) => void;
+  onHoverEnd: (segmentKey: string) => void;
+  onKeyDownSegment: (
+    event: React.KeyboardEvent,
+    columnIndex: number,
+    cultureIndex: number,
+    payload: YieldSegmentPayload,
+  ) => void;
+  onContextMenuOpen: (event: React.MouseEvent | React.TouchEvent, payload: YieldSegmentPayload) => void;
+  onTouchStartSegment: (event: React.TouchEvent, payload: YieldSegmentPayload, segmentKey: string) => void;
+  onTouchEndSegment: () => void;
+  registerElement: (segmentKey: string, element: HTMLElement | null) => void;
+}
+
+/**
+ * A single stacked-bar segment (one culture within one period's column).
+ * Memoized so that hovering/focusing one segment only re-renders that
+ * segment (and whichever one it's replacing) instead of every segment in
+ * the chart — with many cultures/periods that's the difference between a
+ * handful of re-renders and thousands on every mouse move. Every prop here
+ * must therefore stay a primitive or a referentially stable callback (see
+ * the parent's useCallback hooks) for the memo comparison to actually skip
+ * unrelated segments.
+ */
+const YieldChartSegment = memo(function YieldChartSegment({
+  segmentKey,
+  columnIndex,
+  cultureIndex,
+  cultureId,
+  cultureName,
+  color,
+  yieldValue,
+  periodLabel,
+  heightPercent,
+  isTabbable,
+  isHovered,
+  isKeyboardTooltipOpen,
+  isTooltipSuppressed,
+  isPressed,
+  tooltipPeriodLabel,
+  tooltipYieldLabel,
+  actionsLabel,
+  onFocusSegment,
+  onHoverStart,
+  onHoverEnd,
+  onKeyDownSegment,
+  onContextMenuOpen,
+  onTouchStartSegment,
+  onTouchEndSegment,
+  registerElement,
+}: YieldChartSegmentProps) {
+  const payload: YieldSegmentPayload = { cultureId, cultureName, periodLabel, yieldValue };
+
+  return (
+    <Tooltip
+      // Always an explicit boolean (never `undefined`) — driven by hover and
+      // the keyboard (Space) toggle. Force-closed while a context menu is
+      // open, since the pointer may still technically be hovering the
+      // segment underneath it.
+      open={!isTooltipSuppressed && (isHovered || isKeyboardTooltipOpen)}
+      slotProps={{
+        tooltip: {
+          sx: {
+            bgcolor: "background.paper",
+            color: "text.primary",
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: 1,
+            boxShadow: 3,
+            p: 1,
+            minWidth: "12rem",
+            maxWidth: 320,
+          },
+        },
+      }}
+      title={
+        <Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+            {cultureName}
+          </Typography>
+          <Box sx={{ display: "grid", gridTemplateColumns: "auto 1fr", columnGap: 1, rowGap: 0.25 }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+              {tooltipPeriodLabel}:
+            </Typography>
+            <Typography variant="caption">{periodLabel}</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+              {tooltipYieldLabel}:
+            </Typography>
+            <Typography variant="caption">{yieldValue.toFixed(2)} kg</Typography>
+          </Box>
+        </Box>
+      }
+    >
+      <Box
+        ref={(element: HTMLElement | null) => registerElement(segmentKey, element)}
+        data-testid={`yield-bar-${segmentKey}`}
+        data-rmg-component="yield-segment"
+        role="button"
+        tabIndex={isTabbable ? 0 : -1}
+        aria-label={`${cultureName}, ${periodLabel}, ${yieldValue.toFixed(2)} kg`}
+        onFocus={() => onFocusSegment(segmentKey)}
+        onKeyDown={(event) => onKeyDownSegment(event, columnIndex, cultureIndex, payload)}
+        onMouseEnter={() => onHoverStart(segmentKey)}
+        onMouseLeave={() => onHoverEnd(segmentKey)}
+        data-long-pressing={isPressed ? "true" : undefined}
+        onContextMenu={(event) => onContextMenuOpen(event, payload)}
+        onTouchStart={(event) => onTouchStartSegment(event, payload, segmentKey)}
+        onTouchEnd={onTouchEndSegment}
+        onTouchMove={onTouchEndSegment}
+        sx={{
+          position: "relative",
+          width: "100%",
+          height: `${heightPercent}%`,
+          minHeight: yieldValue > 0 ? "2px" : 0,
+          backgroundColor: color,
+          filter: isPressed ? "brightness(0.9)" : undefined,
+          transition: "filter 0.15s ease",
+          ...contextMenuIndicatorHostSx,
+        }}
+      >
+        <ContextMenuIndicator
+          label={actionsLabel}
+          tabIndex={-1}
+          onClick={(event) => onContextMenuOpen(event, payload)}
+          withBackdrop
+          sx={{ position: "absolute", top: -2, right: -2 }}
+        />
+      </Box>
+    </Tooltip>
+  );
+});
 
 interface YieldDistributionChartProps {
   weeklyYield: YieldCalendarWeek[];
@@ -255,6 +424,16 @@ function YieldDistributionChart({
   // so hover has to be tracked explicitly here to keep the tooltip always
   // controlled by a real boolean, letting the keyboard (Space) toggle work.
   const [hoveredSegmentKey, setHoveredSegmentKey] = useState<string | null>(null);
+  const handleHoverEnd = useCallback((key: string) => {
+    setHoveredSegmentKey((current) => (current === key ? null : current));
+  }, []);
+  const registerSegmentElement = useCallback((key: string, element: HTMLElement | null) => {
+    if (element) segmentElementsRef.current.set(key, element);
+    else segmentElementsRef.current.delete(key);
+  }, []);
+  const tooltipPeriodLabel = t("chart.tooltipPeriod");
+  const tooltipYieldLabel = t("chart.tooltipYield");
+  const actionsLabel = t("common:actions.actions");
 
   const [contextMenuState, setContextMenuState] = useState<{
     cultureId: number;
@@ -443,6 +622,17 @@ function YieldDistributionChart({
     return () => resizeObserver.disconnect();
   }, []);
 
+  // Adaptive legend: fully visible for a handful of cultures, capped to two
+  // lines with a toggle for a moderate amount, and collapsed behind a count
+  // button entirely once there are enough to overwhelm the header. Cultures
+  // are pre-sorted by visible yield (see useYieldChartData), so whichever
+  // subset is shown first is always the most relevant one.
+  const [isLegendExpanded, setIsLegendExpanded] = useState(false);
+  const legendCultureCount = chartCultures.length;
+  const isLegendCollapsedByDefault = legendCultureCount > 30;
+  const isLegendLineLimited = legendCultureCount > 12 && legendCultureCount <= 30;
+  const showLegendItems = !isLegendCollapsedByDefault || isLegendExpanded;
+
   return (
     <>
     <Card
@@ -459,23 +649,55 @@ function YieldDistributionChart({
         <Typography variant="h5" component="h2" sx={{ fontWeight: 700 }}>
           {t("chart.title")}
         </Typography>
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, my: 2 }}>
-          {chartCultures.map((culture) => (
+        <Box sx={{ my: 2 }}>
+          {showLegendItems ? (
             <Box
-              key={culture.id}
-              sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 1.5,
+                ...(isLegendLineLimited && !isLegendExpanded
+                  ? { maxHeight: 64, overflow: "hidden" }
+                  : {}),
+              }}
             >
-              <Box
-                sx={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: "2px",
-                  backgroundColor: culture.color,
-                }}
-              />
-              <Typography variant="body2">{culture.name}</Typography>
+              {chartCultures.map((culture) => (
+                <Box
+                  key={culture.id}
+                  sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
+                >
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: "2px",
+                      backgroundColor: culture.color,
+                    }}
+                  />
+                  <Typography variant="body2">{culture.name}</Typography>
+                </Box>
+              ))}
             </Box>
-          ))}
+          ) : null}
+          {isLegendCollapsedByDefault ? (
+            <Button
+              size="small"
+              onClick={() => setIsLegendExpanded((value) => !value)}
+              sx={{ textTransform: "none", mt: showLegendItems ? 1 : 0 }}
+            >
+              {isLegendExpanded
+                ? t("legend.collapse")
+                : t("legend.showAll", { count: legendCultureCount })}
+            </Button>
+          ) : isLegendLineLimited ? (
+            <Button
+              size="small"
+              onClick={() => setIsLegendExpanded((value) => !value)}
+              sx={{ textTransform: "none", mt: 0.5 }}
+            >
+              {isLegendExpanded ? t("legend.collapse") : t("legend.expand")}
+            </Button>
+          ) : null}
         </Box>
 
         <Box
@@ -552,96 +774,36 @@ function YieldDistributionChart({
                   >
                     {column.cultures.map((culture, cultureIndex) => {
                       const periodLabel = `${column.primaryLabel} ${column.secondaryLabel}`;
-                      const segmentPayload = {
-                        cultureId: culture.culture_id,
-                        cultureName: culture.culture_name,
-                        periodLabel,
-                        yieldValue: culture.yield,
-                      };
                       const segmentKey = getSegmentKey(column.id, culture.culture_id);
                       return (
-                        <Tooltip
-                          key={`${column.id}-${culture.culture_id}`}
-                          // Always an explicit boolean (never `undefined`) —
-                          // driven by hover and the keyboard (Space) toggle.
-                          // Force-closed while a context menu is open, since
-                          // the pointer may still technically be hovering
-                          // the segment underneath it.
-                          open={!contextMenuState && (hoveredSegmentKey === segmentKey || keyboardTooltipKey === segmentKey)}
-                          slotProps={{
-                            tooltip: {
-                              sx: {
-                                bgcolor: "background.paper",
-                                color: "text.primary",
-                                border: "1px solid",
-                                borderColor: "divider",
-                                borderRadius: 1,
-                                boxShadow: 3,
-                                p: 1,
-                                minWidth: "12rem",
-                                maxWidth: 320,
-                              },
-                            },
-                          }}
-                          title={
-                            <Box>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                                {culture.culture_name}
-                              </Typography>
-                              <Box sx={{ display: "grid", gridTemplateColumns: "auto 1fr", columnGap: 1, rowGap: 0.25 }}>
-                                <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
-                                  {t("chart.tooltipPeriod")}:
-                                </Typography>
-                                <Typography variant="caption">{periodLabel}</Typography>
-                                <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
-                                  {t("chart.tooltipYield")}:
-                                </Typography>
-                                <Typography variant="caption">{culture.yield.toFixed(2)} kg</Typography>
-                              </Box>
-                            </Box>
-                          }
-                        >
-                          <Box
-                            ref={(element: HTMLElement | null) => {
-                              if (element) segmentElementsRef.current.set(segmentKey, element);
-                              else segmentElementsRef.current.delete(segmentKey);
-                            }}
-                            data-testid={`yield-bar-${column.id}-${culture.culture_id}`}
-                            data-rmg-component="yield-segment"
-                            role="button"
-                            tabIndex={segmentKey === activeSegmentKey ? 0 : -1}
-                            aria-label={`${culture.culture_name}, ${periodLabel}, ${culture.yield.toFixed(2)} kg`}
-                            onFocus={() => setFocusedSegmentKey(segmentKey)}
-                            onKeyDown={(event) => handleSegmentKeyDown(event, columnIndex, cultureIndex, segmentPayload)}
-                            onMouseEnter={() => setHoveredSegmentKey(segmentKey)}
-                            onMouseLeave={() => setHoveredSegmentKey((current) => (current === segmentKey ? null : current))}
-                            data-long-pressing={pressedSegmentKey === `${column.id}-${culture.culture_id}` && isLongPressing ? "true" : undefined}
-                            onContextMenu={(event) => openContextMenu(event, segmentPayload)}
-                            onTouchStart={(event) => handleSegmentTouchStart(event, segmentPayload, `${column.id}-${culture.culture_id}`)}
-                            onTouchEnd={clearSegmentLongPress}
-                            onTouchMove={clearSegmentLongPress}
-                            sx={{
-                              position: "relative",
-                              width: "100%",
-                              height: `${maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}%`,
-                              minHeight: culture.yield > 0 ? "2px" : 0,
-                              backgroundColor: culture.color,
-                              filter: pressedSegmentKey === `${column.id}-${culture.culture_id}` && isLongPressing
-                                ? "brightness(0.9)"
-                                : undefined,
-                              transition: "filter 0.15s ease",
-                              ...contextMenuIndicatorHostSx,
-                            }}
-                          >
-                            <ContextMenuIndicator
-                              label={t('common:actions.actions')}
-                              tabIndex={-1}
-                              onClick={(event) => openContextMenu(event, segmentPayload)}
-                              withBackdrop
-                              sx={{ position: "absolute", top: -2, right: -2 }}
-                            />
-                          </Box>
-                        </Tooltip>
+                        <YieldChartSegment
+                          key={segmentKey}
+                          segmentKey={segmentKey}
+                          columnIndex={columnIndex}
+                          cultureIndex={cultureIndex}
+                          cultureId={culture.culture_id}
+                          cultureName={culture.culture_name}
+                          color={culture.color}
+                          yieldValue={culture.yield}
+                          periodLabel={periodLabel}
+                          heightPercent={maxTotalYield > 0 ? (culture.yield / maxTotalYield) * 100 : 0}
+                          isTabbable={segmentKey === activeSegmentKey}
+                          isHovered={hoveredSegmentKey === segmentKey}
+                          isKeyboardTooltipOpen={keyboardTooltipKey === segmentKey}
+                          isTooltipSuppressed={contextMenuState !== null}
+                          isPressed={pressedSegmentKey === segmentKey && isLongPressing}
+                          tooltipPeriodLabel={tooltipPeriodLabel}
+                          tooltipYieldLabel={tooltipYieldLabel}
+                          actionsLabel={actionsLabel}
+                          onFocusSegment={setFocusedSegmentKey}
+                          onHoverStart={setHoveredSegmentKey}
+                          onHoverEnd={handleHoverEnd}
+                          onKeyDownSegment={handleSegmentKeyDown}
+                          onContextMenuOpen={openContextMenu}
+                          onTouchStartSegment={handleSegmentTouchStart}
+                          onTouchEndSegment={clearSegmentLongPress}
+                          registerElement={registerSegmentElement}
+                        />
                       );
                     })}
                   </Box>
