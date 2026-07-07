@@ -1,5 +1,4 @@
-import { Box, Container, Link, Stack, Typography } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Box, Container, Stack, Typography } from '@mui/material';
 import { useTranslation } from '../../i18n';
 
 const termsSections = [
@@ -31,12 +30,6 @@ export default function TermsOfServicePage() {
         <Typography variant="h3" component="h1">
           {t('legal.terms.title')}
         </Typography>
-
-        <Typography color="text.secondary">{t('legal.terms.intro')}</Typography>
-
-        <Link component={RouterLink} to="/datenschutz" underline="hover">
-          {t('legal.privacy.title')}
-        </Link>
 
         {termsSections.map((sectionKey, index) => {
           const bulletKeys = termsSectionBulletKeys[sectionKey];

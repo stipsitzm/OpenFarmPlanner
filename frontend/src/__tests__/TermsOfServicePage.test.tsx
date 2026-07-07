@@ -23,19 +23,36 @@ describe('TermsOfServicePage', () => {
     }
   });
 
-  it('links to the privacy policy and back again from the privacy policy', async () => {
+  it('begins directly with section 1, without a preceding intro paragraph', () => {
     renderTermsOfServicePage();
 
-    expect(screen.getByRole('link', { name: 'Datenschutzerklärung' })).toHaveAttribute('href', '/datenschutz');
+    expect(screen.queryByText(/bewusst schlank gehalten/)).not.toBeInTheDocument();
+    const sectionHeadings = screen.getAllByRole('heading', { level: 6 });
+    expect(sectionHeadings[0].textContent).toMatch(/^1\./);
   });
 
-  it('covers liability, addressing availability, user content, and agricultural-data disclaimers', () => {
+  it('mentions the privacy policy from within the scope section instead of a standalone link', () => {
+    renderTermsOfServicePage();
+
+    expect(screen.getByText(/Verarbeitung personenbezogener Daten.*Datenschutzerklärung/)).toBeInTheDocument();
+  });
+
+  it('covers liability in plain language, without citing specific paragraphs or statutes', () => {
     renderTermsOfServicePage();
 
     expect(screen.getByRole('heading', { name: /Haftung/ })).toBeInTheDocument();
-    expect(screen.getByText(/grober Fahrlässigkeit/)).toBeInTheDocument();
-    expect(screen.getByText(/§ 6 Abs\. 1 Z 9 Konsumentenschutzgesetz/)).toBeInTheDocument();
-    expect(screen.getByText(/keine agronomische oder pflanzenschutzrechtliche Beratung/)).toBeInTheDocument();
+    expect(screen.getByText(/nicht garantieren/)).toBeInTheDocument();
+    expect(screen.getByText(/verantwortlich, nicht OpenFarmPlanner/)).toBeInTheDocument();
+    expect(screen.getByText(/ersetzen keine fachliche Beratung/)).toBeInTheDocument();
+    expect(screen.getByText(/Soweit gesetzlich zulässig, ist unsere Haftung beschränkt/)).toBeInTheDocument();
+    expect(screen.queryByText(/Konsumentenschutzgesetz/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Produkthaftungsgesetz/)).not.toBeInTheDocument();
+  });
+
+  it('no longer mentions being free of charge', () => {
+    renderTermsOfServicePage();
+
+    expect(screen.queryByText(/derzeit kostenlos/)).not.toBeInTheDocument();
   });
 
   it('mentions the AGPLv3 open-source license', () => {
