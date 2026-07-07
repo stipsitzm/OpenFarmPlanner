@@ -549,7 +549,7 @@ describe('GanttChartPage', () => {
     expect(latestProps?.locale).toBe('de-DE');
     expect(latestProps?.localeText).toMatchObject({
       title: 'Feldplanung',
-      resources: 'Beete',
+      resources: 'Anbauflächen',
       today: 'Heute',
     });
     expect(latestProps?.editMode).toBe(false);
