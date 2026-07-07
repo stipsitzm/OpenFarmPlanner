@@ -93,8 +93,9 @@ import {
 } from '../components/buttons/segmentedControlStyles';
 import { getGanttRenderWindow } from './ganttRenderWindow';
 import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState';
-import { collectExpandedIdsUpToDepth, collectVisibleIdsWithAncestors, flattenTreeRows } from '../components/hierarchy/utils/treeRows';
-import { HierarchyViewLevelMenu, type HierarchyViewLevel } from '../components/hierarchy/HierarchyViewLevelMenu';
+import { collectVisibleIdsWithAncestors, flattenTreeRows } from '../components/hierarchy/utils/treeRows';
+import { useHierarchyDepthControl } from '../components/hierarchy/hooks/useHierarchyDepthControl';
+import { HierarchyDepthControl } from '../components/hierarchy/HierarchyDepthControl';
 
 type CalendarMode = 'occupancy' | 'seedlings';
 const GanttChartWithFocusMode = GanttChart as React.ComponentType<
@@ -1175,14 +1176,15 @@ function GanttChartPage() {
     }
   }, [expandAllHierarchy, hasPersistedHierarchyExpansion, occupancyHierarchyNodes]);
 
-  const handleSelectHierarchyViewLevel = useCallback((level: HierarchyViewLevel): void => {
-    if (level === 'collapsed') {
-      expandAllHierarchy([]);
-      return;
-    }
-    const maxDepth = level === 'locations' ? 1 : level === 'locationsAndFields' ? 2 : Number.POSITIVE_INFINITY;
-    expandAllHierarchy(Array.from(collectExpandedIdsUpToDepth(occupancyHierarchyNodes, maxDepth)));
-  }, [expandAllHierarchy, occupancyHierarchyNodes]);
+  const hierarchyDepthControl = useHierarchyDepthControl(
+    occupancyHierarchyNodes,
+    expandedHierarchyIds,
+    expandAllHierarchy,
+  );
+  const getHierarchyDepthLevelAriaLabel = useCallback(
+    (level: number): string => t(`ganttChart:treeDepth.level${level}`),
+    [t],
+  );
 
   const occupancyFieldOptions = useMemo(
     () => (occupancyLocationFilter === 'all'
@@ -1597,6 +1599,14 @@ function GanttChartPage() {
             </Tooltip>
           ) : null}
         </Box>
+        {calendarMode === 'occupancy' && !useMobileFilterLayout ? (
+          <HierarchyDepthControl
+            levelCount={hierarchyDepthControl.levelCount}
+            activeLevel={hierarchyDepthControl.activeLevel}
+            onSelectLevel={hierarchyDepthControl.onSelectLevel}
+            getLevelAriaLabel={getHierarchyDepthLevelAriaLabel}
+          />
+        ) : null}
         {showViewModeSelector ? (
           <Box sx={{ ml: 'auto', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
             <Select
@@ -1651,7 +1661,15 @@ function GanttChartPage() {
         ) : null}
       </Box>
     </Box>
-  ), [calendarMode, editMode, handleTimelineViewModeChange, t]);
+  ), [
+    calendarMode,
+    editMode,
+    getHierarchyDepthLevelAriaLabel,
+    handleTimelineViewModeChange,
+    hierarchyDepthControl,
+    t,
+    useMobileFilterLayout,
+  ]);
 
   const activeTaskGroups = calendarMode === 'occupancy' ? occupancyTaskGroups : seedlingTaskGroups;
   const getActiveGanttRowHeight = useCallback(
@@ -2622,7 +2640,6 @@ function GanttChartPage() {
                     )}
                     label={t('ganttChart:treeFilters.onlyOccupiedBeds')}
                   />
-                  <HierarchyViewLevelMenu onSelectLevel={handleSelectHierarchyViewLevel} />
                 </Box>
               )}
             </Box>

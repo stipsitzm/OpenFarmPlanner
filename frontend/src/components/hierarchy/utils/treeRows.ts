@@ -140,3 +140,65 @@ export function collectExpandedIdsUpToDepth<T extends TreeRowNode>(
   walk(null, 0);
   return result;
 }
+
+/**
+ * Number of distinct levels present in the tree (root = level 1). A plain
+ * Standort -> Parzelle -> Beet tree has 3; a tree that omits the location
+ * level entirely (single-location projects, see FieldsBedsHierarchy) has 2.
+ * Backs a depth control that offers exactly as many levels as the tree
+ * actually has, instead of assuming a fixed depth.
+ */
+export function getTreeLevelCount<T extends TreeRowNode>(nodes: readonly T[]): number {
+  const childrenIndex = buildChildrenIndex(nodes);
+  let maxDepth = 0;
+
+  const walk = (parentId: string | number | null, depth: number): void => {
+    const children = childrenIndex.get(parentId) ?? [];
+    children.forEach((node) => {
+      maxDepth = Math.max(maxDepth, depth);
+      walk(node.id, depth + 1);
+    });
+  };
+
+  walk(null, 0);
+  return maxDepth + 1;
+}
+
+/**
+ * Which depth-control level (1-based) the current `expandedIds` matches, if
+ * any — i.e. whether it equals exactly what selecting that level would
+ * produce (`collectExpandedIdsUpToDepth(nodes, level - 1)`). Returns null
+ * once the user has manually expanded/collapsed individual rows away from
+ * any of the N presets, so the control simply shows no active level rather
+ * than a misleading one.
+ *
+ * Only ids that are actually expandable nodes in this tree are considered,
+ * so unrelated leftover ids in a shared/persisted `expandedIds` set (e.g.
+ * from a different project or view) don't prevent a match.
+ */
+export function computeActiveDepthLevel<T extends TreeRowNode>(
+  nodes: readonly T[],
+  expandedIds: ReadonlySet<string | number>,
+  levelCount: number,
+): number | null {
+  const childrenIndex = buildChildrenIndex(nodes);
+  const expandableIds = new Set(
+    nodes
+      .filter((node) => (childrenIndex.get(node.id)?.length ?? 0) > 0)
+      .map((node) => node.id),
+  );
+  const relevantExpanded = new Set(
+    [...expandedIds].filter((id) => expandableIds.has(id)),
+  );
+
+  for (let level = 1; level <= levelCount; level += 1) {
+    const expected = collectExpandedIdsUpToDepth(nodes, level - 1);
+    if (
+      expected.size === relevantExpanded.size
+      && [...expected].every((id) => relevantExpanded.has(id))
+    ) {
+      return level;
+    }
+  }
+  return null;
+}

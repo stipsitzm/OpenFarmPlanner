@@ -1549,44 +1549,43 @@ describe('GanttChartPage', () => {
       });
     });
 
-    it('the "Ansicht" menu changes how many tree levels are expanded', async () => {
+    it('the "Tiefe" control changes how many tree levels are expanded', async () => {
       setUpMultiLocationFixture();
       renderWithAuth();
 
       await screen.findByText('Karottenbeet');
       // "Nur belegte Beete" forces the ancestor chain of every occupied bed to stay
       // visible regardless of collapse state (same as an active search match) — turn
-      // it off so the expand-level control's own effect is observable in isolation.
+      // it off so the depth control's own effect is observable in isolation.
       fireEvent.click(screen.getByRole('checkbox', { name: 'Nur belegte Beete' }));
       await screen.findByText('Leerbeet');
 
-      fireEvent.click(screen.getByRole('button', { name: 'Darstellungstiefe der Baumansicht wählen' }));
-      fireEvent.click(await screen.findByRole('menuitem', { name: 'Nur Standorte anzeigen' }));
-
-      // Locations expanded reveals their direct Parzelle children (as collapsed
-      // rows) — only the Beet level (Parzellen's own children) stays hidden.
+      // Level 1: only Standort rows, nothing expanded.
+      fireEvent.click(screen.getByRole('button', { name: 'Nur Standorte anzeigen' }));
       await waitFor(() => {
         expect(screen.getByText('Hof')).toBeInTheDocument();
         expect(screen.getByText('Pacht')).toBeInTheDocument();
+        expect(screen.queryByText('Nordfeld')).not.toBeInTheDocument();
+      });
+
+      // Level 2: Standorte expanded, revealing Parzelle rows (still collapsed themselves).
+      fireEvent.click(screen.getByRole('button', { name: 'Standorte und Parzellen anzeigen' }));
+      await waitFor(() => {
         expect(screen.getByText('Nordfeld')).toBeInTheDocument();
         expect(screen.queryByText('Karottenbeet')).not.toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByRole('button', { name: 'Darstellungstiefe der Baumansicht wählen' }));
-      fireEvent.click(await screen.findByRole('menuitem', { name: 'Alle Ebenen anzeigen' }));
-
+      // Level 3: fully expanded, Beet rows visible too.
+      fireEvent.click(screen.getByRole('button', { name: 'Standorte, Parzellen und Beete anzeigen' }));
       await waitFor(() => {
-        expect(screen.getByText('Nordfeld')).toBeInTheDocument();
         expect(screen.getByText('Karottenbeet')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByRole('button', { name: 'Darstellungstiefe der Baumansicht wählen' }));
-      fireEvent.click(await screen.findByRole('menuitem', { name: 'Alle einklappen' }));
-
+      // Back to level 1 marks it (and only it) as the active/pressed button.
+      fireEvent.click(screen.getByRole('button', { name: 'Nur Standorte anzeigen' }));
       await waitFor(() => {
-        // Root-level nodes (Standorte) always render; "collapse all" only hides their descendants.
-        expect(screen.getByText('Hof')).toBeInTheDocument();
-        expect(screen.queryByText('Nordfeld')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Nur Standorte anzeigen' })).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByRole('button', { name: 'Standorte und Parzellen anzeigen' })).toHaveAttribute('aria-pressed', 'false');
       });
     });
 

@@ -50,13 +50,9 @@
     "showAll": "Alle einblenden",
     "hideAll": "Alle ausblenden"
   },
-  "treeView": {
-    "button": "Ansicht",
-    "buttonTooltip": "Darstellungstiefe der Baumansicht wählen",
-    "locations": "Nur Standorte anzeigen",
-    "locationsAndFields": "Standorte und Parzellen anzeigen",
-    "all": "Alle Ebenen anzeigen",
-    "collapsed": "Alle einklappen"
+  "treeDepth": {
+    "label": "Tiefe:",
+    "groupAriaLabel": "Sichtbare Hierarchietiefe wählen"
   },
   "project": "Projekt",
   "setupActions": {
