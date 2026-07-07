@@ -57,6 +57,10 @@ import {
 import { useNavigationBlocker } from "../hooks/autosave";
 import { useHierarchyData, type HierarchyDataState } from "../components/hierarchy/hooks/useHierarchyData";
 import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
+import { type TreeRowNode } from "../components/hierarchy/utils/treeRows";
+import { useHierarchyDepthControl } from "../components/hierarchy/hooks/useHierarchyDepthControl";
+import { HierarchyDepthControl } from "../components/hierarchy/HierarchyDepthControl";
+import { hasPersistedEntityId } from "../components/hierarchy/utils/hierarchyUtils";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { useHierarchyDelete } from "../components/hierarchy/hooks/useHierarchyDelete";
 import { useHierarchyGridFocus } from "../components/hierarchy/hooks/useHierarchyGridFocus";
@@ -506,6 +510,46 @@ function FieldsBedsHierarchy({
       hasInitiallyExpandedRef.current = true;
     }
   }, [expandAll, fields, hasPersistedState, locations]);
+
+  // Flat {id, parentId} view of the tree for the shared "Tiefe" depth
+  // control (see HierarchyDepthControl / useHierarchyDepthControl).
+  // Single-location projects render without a location row at all (see
+  // buildHierarchyRowsFromIndex), so the location level is only included
+  // here when there's more than one — the control then offers 2 levels
+  // (Parzelle/Beet) instead of 3.
+  const hasMultipleLocations = locations.length > 1;
+  const hierarchyTreeNodes = useMemo<TreeRowNode[]>(() => {
+    const nodes: TreeRowNode[] = [];
+
+    if (hasMultipleLocations) {
+      locations.forEach((location) => {
+        if (!hasPersistedEntityId(location.id)) return;
+        nodes.push({ id: `location-${location.id}`, parentId: null });
+      });
+    }
+
+    fields.forEach((field) => {
+      if (!hasPersistedEntityId(field.id)) return;
+      nodes.push({
+        id: `field-${field.id}`,
+        parentId: hasMultipleLocations ? `location-${field.location}` : null,
+      });
+    });
+
+    beds.forEach((bed) => {
+      if (!hasPersistedEntityId(bed.id) || !hasPersistedEntityId(bed.field)) return;
+      nodes.push({ id: bed.id, parentId: `field-${bed.field}` });
+    });
+
+    return nodes;
+  }, [beds, fields, hasMultipleLocations, locations]);
+
+  const hierarchyDepthControl = useHierarchyDepthControl(hierarchyTreeNodes, expandedRows, expandAll);
+  const getHierarchyDepthLevelAriaLabel = useCallback((level: number): string => (
+    hasMultipleLocations
+      ? t(`treeDepth.level${level}WithLocations`)
+      : t(`treeDepth.level${level}SingleLocation`)
+  ), [hasMultipleLocations, t]);
 
   /**
    * Handle pending edit mode after rows are updated
@@ -1307,6 +1351,17 @@ function FieldsBedsHierarchy({
             containerSx={{ mx: 0 }}
           />
         )}
+
+        {shouldShowHierarchyTable && !isMobileViewport ? (
+          <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 1 }}>
+            <HierarchyDepthControl
+              levelCount={hierarchyDepthControl.levelCount}
+              activeLevel={hierarchyDepthControl.activeLevel}
+              onSelectLevel={hierarchyDepthControl.onSelectLevel}
+              getLevelAriaLabel={getHierarchyDepthLevelAriaLabel}
+            />
+          </Box>
+        ) : null}
 
         {shouldShowHierarchyTable ? (
           <Box

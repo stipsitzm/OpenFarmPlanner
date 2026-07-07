@@ -50,6 +50,10 @@
     "showAll": "Alle einblenden",
     "hideAll": "Alle ausblenden"
   },
+  "treeDepth": {
+    "label": "Tiefe:",
+    "groupAriaLabel": "Sichtbare Hierarchietiefe wählen"
+  },
   "project": "Projekt",
   "setupActions": {
     "createField": "Parzelle hinzufügen",

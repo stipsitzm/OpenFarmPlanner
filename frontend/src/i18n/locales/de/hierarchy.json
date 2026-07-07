@@ -46,6 +46,13 @@
     "addField": "Parzelle hinzufügen",
     "calculatedArea": "Wird automatisch aus Länge × Breite berechnet. Nicht direkt bearbeitbar."
   },
+  "treeDepth": {
+    "level1WithLocations": "Nur Standorte anzeigen",
+    "level2WithLocations": "Standorte und Parzellen anzeigen",
+    "level3WithLocations": "Standorte, Parzellen und Beete anzeigen",
+    "level1SingleLocation": "Nur Parzellen anzeigen",
+    "level2SingleLocation": "Parzellen und Beete anzeigen"
+  },
   "messages": {
     "createLocationFirst": "Bitte erstellen Sie zuerst einen Standort.",
     "singleLocationHint": "Standort: {{name}}",
