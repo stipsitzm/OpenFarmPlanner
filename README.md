@@ -2,7 +2,7 @@
 
 🌐 **Website:** https://openfarmplanner.org
 
-OpenFarmPlanner is an open-source crop planning tool for vegetable production. It helps market gardens and community-supported agriculture (CSA) operations plan crops, growing areas, and planting schedules in one place.
+OpenFarmPlanner is an open-source crop planning tool for vegetable production. It helps market gardens and community-supported agriculture (CSA) plan crops, growing areas, and planting schedules in one place.
 
 Built with a Django REST Framework backend and a React frontend in a single repository.
 
