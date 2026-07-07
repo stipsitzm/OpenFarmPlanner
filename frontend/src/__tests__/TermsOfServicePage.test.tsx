@@ -1,0 +1,69 @@
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import TermsOfServicePage from '../pages/public/TermsOfServicePage';
+
+function renderTermsOfServicePage(): ReturnType<typeof render> {
+  return render(
+    <MemoryRouter>
+      <TermsOfServicePage />
+    </MemoryRouter>,
+  );
+}
+
+describe('TermsOfServicePage', () => {
+  it('renders the heading and every section with resolved (non-key) titles', () => {
+    renderTermsOfServicePage();
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Nutzungsbedingungen' })).toBeInTheDocument();
+
+    const sectionHeadings = screen.getAllByRole('heading', { level: 6 });
+    expect(sectionHeadings.length).toBeGreaterThanOrEqual(13);
+    for (const heading of sectionHeadings) {
+      expect(heading.textContent).not.toMatch(/legal\.terms\.sections/);
+    }
+  });
+
+  it('begins directly with section 1, without a preceding intro paragraph', () => {
+    renderTermsOfServicePage();
+
+    expect(screen.queryByText(/bewusst schlank gehalten/)).not.toBeInTheDocument();
+    const sectionHeadings = screen.getAllByRole('heading', { level: 6 });
+    expect(sectionHeadings[0].textContent).toMatch(/^1\./);
+  });
+
+  it('mentions the privacy policy from within the scope section instead of a standalone link', () => {
+    renderTermsOfServicePage();
+
+    expect(screen.getByText(/Verarbeitung personenbezogener Daten.*Datenschutzerklärung/)).toBeInTheDocument();
+  });
+
+  it('covers liability in plain language, without citing specific paragraphs or statutes', () => {
+    renderTermsOfServicePage();
+
+    expect(screen.getByRole('heading', { name: /Haftung/ })).toBeInTheDocument();
+    expect(screen.getByText(/nicht garantieren/)).toBeInTheDocument();
+    expect(screen.getByText(/verantwortlich, nicht OpenFarmPlanner/)).toBeInTheDocument();
+    expect(screen.getByText(/ersetzen keine fachliche Beratung/)).toBeInTheDocument();
+    expect(screen.getByText(/Soweit gesetzlich zulässig, ist unsere Haftung beschränkt/)).toBeInTheDocument();
+    expect(screen.queryByText(/Konsumentenschutzgesetz/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Produkthaftungsgesetz/)).not.toBeInTheDocument();
+  });
+
+  it('no longer mentions being free of charge', () => {
+    renderTermsOfServicePage();
+
+    expect(screen.queryByText(/derzeit kostenlos/)).not.toBeInTheDocument();
+  });
+
+  it('mentions the AGPLv3 open-source license', () => {
+    renderTermsOfServicePage();
+
+    expect(screen.getByText(/GNU Affero General Public License/)).toBeInTheDocument();
+  });
+
+  it('uses a concrete revision date instead of a generic month/year stamp', () => {
+    renderTermsOfServicePage();
+
+    expect(screen.getByText(/Stand: 7\. Juli 2026/)).toBeInTheDocument();
+  });
+});

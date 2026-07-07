@@ -14,7 +14,8 @@ from rest_framework import serializers
 
 from farm.models import ProjectMembership
 from farm.project_context import resolve_project_for_user
-from .models import AccountDeletionRequest
+from .consent import get_pending_consent_documents, record_acceptance
+from .models import AccountDeletionRequest, DocumentConsent
 
 User = get_user_model()
 _username_validator = UnicodeUsernameValidator()
@@ -63,6 +64,7 @@ class UserSerializer(serializers.ModelSerializer):
     needs_project_selection = serializers.SerializerMethodField()
     account_pending_deletion = serializers.SerializerMethodField()
     scheduled_deletion_at = serializers.SerializerMethodField()
+    pending_consents = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -79,6 +81,7 @@ class UserSerializer(serializers.ModelSerializer):
             'needs_project_selection',
             'account_pending_deletion',
             'scheduled_deletion_at',
+            'pending_consents',
         )
         read_only_fields = fields
 
@@ -137,8 +140,22 @@ class UserSerializer(serializers.ModelSerializer):
             return None
         return deletion.scheduled_deletion_at.isoformat()
 
+    def get_pending_consents(self, obj: User) -> list[str]:
+        return get_pending_consent_documents(obj)
+
+
+class ConsentAcceptSerializer(serializers.Serializer):
+    document = serializers.ChoiceField(choices=DocumentConsent.DOCUMENT_CHOICES)
+
 
 class RegisterSerializer(serializers.Serializer):
+    """Registration has no separate terms-acceptance field: creating an account
+
+    itself constitutes acceptance of the current Terms of Service (see
+    `create()`), matching the implicit-consent pattern used by platforms like
+    GitHub or Wikipedia rather than a dedicated checkbox.
+    """
+
     email = serializers.EmailField()
     display_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     password = serializers.CharField(**_password_field_kwargs)
@@ -158,13 +175,15 @@ class RegisterSerializer(serializers.Serializer):
 
     def create(self, validated_data: dict[str, str]) -> User:
         display_name = validated_data.get('display_name', '').strip()
-        return User.objects.create_user(
+        user = User.objects.create_user(
             username=build_username_from_email(validated_data['email']),
             email=validated_data['email'],
             password=validated_data['password'],
             first_name=display_name,
             is_active=False,
         )
+        record_acceptance(user, DocumentConsent.DOCUMENT_TERMS)
+        return user
 
 
 class ActivateSerializer(serializers.Serializer):

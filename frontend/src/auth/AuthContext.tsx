@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  acceptConsent as acceptConsentRequest,
   activate as activateRequest,
   getMe,
   login as loginRequest,
@@ -127,6 +128,11 @@ export function AuthProvider({
           displayName,
         );
         return response.detail;
+      },
+      acceptConsent: async (document) => {
+        const me = await acceptConsentRequest(document);
+        applyAuthenticatedUser(me);
+        return me;
       },
       activate: async (uid, token) => {
         const me = await activateRequest(uid, token);

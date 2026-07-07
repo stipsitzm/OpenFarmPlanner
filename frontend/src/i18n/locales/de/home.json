@@ -18,6 +18,7 @@
   "footer": {
     "imprint": "Impressum",
     "privacy": "Datenschutzerklärung",
+    "terms": "Nutzungsbedingungen",
     "contactLabel": "Kontakt: {{email}}",
     "contactEmail": "info@openfarmplanner.org"
   },
@@ -50,7 +51,7 @@
         },
         "generalNotice": {
           "title": "Allgemeine Hinweise",
-          "content": "Wir verarbeiten Ihre personenbezogenen Daten vertraulich und entsprechend der gesetzlichen Datenschutzvorschriften sowie dieser Datenschutzerklärung.\n\nDie Nutzung der Startseite von OpenFarmPlanner ist ohne Angabe personenbezogener Daten möglich. Sobald Sie ein Benutzerkonto anlegen und die Anwendung nutzen, verarbeiten wir die in den folgenden Abschnitten beschriebenen Daten. Für jede Verarbeitung ist die jeweils angegebene Rechtsgrundlage nach Art. 6 Abs. 1 DSGVO maßgeblich."
+          "content": "Wir verarbeiten Ihre personenbezogenen Daten vertraulich und entsprechend der gesetzlichen Datenschutzvorschriften sowie dieser Datenschutzerklärung. Diese Datenschutzerklärung ergänzt die Nutzungsbedingungen von OpenFarmPlanner; im Zweifel gilt für datenschutzrechtliche Fragen diese Datenschutzerklärung.\n\nDie Nutzung der Startseite von OpenFarmPlanner ist ohne Angabe personenbezogener Daten möglich. Sobald Sie ein Benutzerkonto anlegen und die Anwendung nutzen, verarbeiten wir die in den folgenden Abschnitten beschriebenen Daten. Für jede Verarbeitung ist die jeweils angegebene Rechtsgrundlage nach Art. 6 Abs. 1 DSGVO maßgeblich."
         },
         "hosting": {
           "title": "Hosting",
@@ -90,7 +91,7 @@
         },
         "publicLibrary": {
           "title": "Öffentliche Kulturbibliothek",
-          "content": "Sie können einzelne Kultur-Datensätze (z. B. Anbauinformationen zu einer Gemüsesorte) aus einem privaten Projekt eigenständig in eine öffentliche Kulturbibliothek veröffentlichen. Diese Bibliothek kann von allen angemeldeten Nutzern eingesehen und in ein eigenes Projekt importiert werden. Die Veröffentlichung ist freiwillig und für die Nutzung von OpenFarmPlanner nicht erforderlich.",
+          "content": "Sie können einzelne Kultur-Datensätze (z. B. Anbauinformationen zu einer Gemüsesorte) aus einem privaten Projekt eigenständig in eine öffentliche Kulturbibliothek veröffentlichen. Diese Bibliothek kann von allen angemeldeten Nutzern eingesehen und in ein eigenes Projekt importiert werden. Die Veröffentlichung ist freiwillig und für die Nutzung von OpenFarmPlanner nicht erforderlich. Welche Nutzungsrechte Sie OpenFarmPlanner damit einräumen, regeln die Nutzungsbedingungen, Abschnitt „Nutzungsrechte an veröffentlichten Kulturdaten“.",
           "bullets": {
             "publicContent": "Veröffentlicht werden ausschließlich die landwirtschaftlichen Anbaudaten der Kultur (z. B. Name, Sorte, Wachstums- und Erntedauer, Pflanzabstände, Saatgutmenge, Lieferantenname). Notizen aus dem privaten Projekt werden nicht mitveröffentlicht.",
             "attribution": "Als Urheber eines veröffentlichten Eintrags wird ausschließlich Ihr öffentlicher Benutzername angezeigt (künftig soll dieser durch einen frei wählbaren Anzeigenamen ersetzbar sein). Ihre E-Mail-Adresse ist zu keinem Zeitpunkt Bestandteil eines öffentlichen Eintrags; sie dient ausschließlich der Kontoverwaltung und unserer Kommunikation mit Ihnen (siehe Abschnitt „E-Mail-Kommunikation“).",
@@ -165,6 +166,70 @@
         "changes": {
           "title": "Änderungen dieser Datenschutzerklärung",
           "content": "Wir passen diese Datenschutzerklärung an, wenn sich die Datenverarbeitung durch neue Funktionen oder geänderte rechtliche Anforderungen ändert. Maßgeblich ist stets die zum Zeitpunkt Ihrer Nutzung innerhalb der Anwendung veröffentlichte Fassung; das Datum der letzten Änderung finden Sie oben auf dieser Seite."
+        }
+      }
+    },
+    "terms": {
+      "title": "Nutzungsbedingungen",
+      "version": "Stand: 7. Juli 2026",
+      "sections": {
+        "scope": {
+          "title": "Geltungsbereich und Nutzung der Plattform",
+          "content": "Diese Nutzungsbedingungen gelten für die Nutzung von OpenFarmPlanner, einer Webanwendung zur Planung von landwirtschaftlichem und gärtnerischem Anbau. Mit der Registrierung eines Benutzerkontos oder der Nutzung der Anwendung erkennen Sie diese Nutzungsbedingungen an.\n\nOpenFarmPlanner richtet sich an Privatpersonen sowie landwirtschaftliche und gärtnerische Betriebe, die ihre Anbauplanung digital organisieren möchten. Informationen zur Verarbeitung personenbezogener Daten finden Sie in der Datenschutzerklärung."
+        },
+        "accounts": {
+          "title": "Benutzerkonten",
+          "content": "Für die Nutzung der Anwendung ist ein Benutzerkonto erforderlich. Sie sind verpflichtet, bei der Registrierung wahrheitsgemäße Angaben zu machen und Ihr Passwort geheim zu halten.\n\nSie sind für sämtliche Aktivitäten verantwortlich, die über Ihr Benutzerkonto erfolgen. Informieren Sie uns bitte unverzüglich unter info@openfarmplanner.org, wenn Sie den Verdacht haben, dass jemand unbefugt auf Ihr Konto zugreift. Ein Benutzerkonto ist persönlich und nicht übertragbar."
+        },
+        "userContent": {
+          "title": "Ihre Inhalte in OpenFarmPlanner",
+          "content": "Innerhalb Ihrer Projekte können Sie eigene Daten anlegen, etwa Standort-, Flächen- und Kulturdaten, Anbaupläne, Aufgaben sowie Notizen und Fotos. Für die Richtigkeit, Vollständigkeit und Rechtmäßigkeit dieser Inhalte sind Sie selbst verantwortlich.\n\nLaden Sie keine Inhalte hoch, an denen Sie nicht die erforderlichen Rechte besitzen, etwa urheberrechtlich geschützte Fotos Dritter."
+        },
+        "publicLibrary": {
+          "title": "Öffentliche Kulturbibliothek",
+          "content": "Sie können einzelne Kultur-Datensätze freiwillig aus einem privaten Projekt in die öffentliche Kulturbibliothek veröffentlichen. Diese ist für alle angemeldeten Nutzer sichtbar und in eigene Projekte importierbar. Welche Daten dabei veröffentlicht werden, dass nur Ihr öffentlicher Benutzername als Urheber angezeigt wird und wie Sie eine Veröffentlichung rückgängig machen können, erfahren Sie in der Datenschutzerklärung, Abschnitt „Öffentliche Kulturbibliothek“.\n\nMit der Veröffentlichung bestätigen Sie, dass die veröffentlichten Angaben nach bestem Wissen zutreffend sind und Sie berechtigt sind, diese zu veröffentlichen."
+        },
+        "contributionLicense": {
+          "title": "Nutzungsrechte an veröffentlichten Kulturdaten",
+          "content": "Wenn Sie einen Kultur-Datensatz in die öffentliche Kulturbibliothek veröffentlichen, räumen Sie OpenFarmPlanner ein einfaches, zeitlich und räumlich unbeschränktes Recht ein, diese Angaben allen angemeldeten Nutzern anzuzeigen, deren Übernahme (Import) in eigene Projekte zu ermöglichen und die Angaben dafür technisch zu speichern und zu verarbeiten.\n\nSie bleiben Inhaber Ihrer Rechte an den Daten. Sie können die genannte Nutzung jederzeit mit Wirkung für die Zukunft widerrufen (siehe Abschnitt „Entfernung von Inhalten“); Kopien, die andere Nutzer bereits vor dem Widerruf in ihr eigenes Projekt importiert haben, sind davon nicht betroffen, da diese eigenständig im jeweiligen Projekt bestehen bleiben."
+        },
+        "prohibitedContent": {
+          "title": "Verbotene Inhalte und Verhalten",
+          "content": "Bei der Nutzung von OpenFarmPlanner, insbesondere beim Veröffentlichen von Inhalten in der öffentlichen Kulturbibliothek, ist es nicht gestattet,",
+          "bullets": {
+            "illegalContent": "rechtswidrige, irreführende oder Rechte Dritter (z. B. Urheber- oder Persönlichkeitsrechte) verletzende Inhalte einzustellen,",
+            "malware": "Schadsoftware zu verbreiten oder Sicherheitsmaßnahmen der Anwendung zu umgehen,",
+            "abuse": "die Anwendung automatisiert zu missbrauchen, etwa durch Massenregistrierungen oder Spam,",
+            "misrepresentation": "sich als andere Person auszugeben oder wissentlich falsche Angaben zu veröffentlichen."
+          }
+        },
+        "copyright": {
+          "title": "Urheberrechte",
+          "content": "Die Software von OpenFarmPlanner ist urheberrechtlich geschützt und steht unter der in Abschnitt „Open-Source-Software“ genannten Lizenz. Die von Ihnen eingegebenen Inhalte, etwa Kulturdaten oder Notizen, bleiben Ihr Eigentum.\n\nWenn Sie glauben, dass ein in der öffentlichen Kulturbibliothek veröffentlichter Eintrag Ihre Urheber- oder sonstigen Rechte verletzt, wenden Sie sich bitte an info@openfarmplanner.org. Wir gehen berechtigten Hinweisen nach (siehe Abschnitt „Entfernung von Inhalten“)."
+        },
+        "contentRemoval": {
+          "title": "Entfernung von Inhalten",
+          "content": "Wir behalten uns vor, veröffentlichte Inhalte der öffentlichen Kulturbibliothek ganz oder teilweise zu entfernen oder zu sperren, wenn konkrete Anhaltspunkte für einen Verstoß gegen diese Nutzungsbedingungen oder geltendes Recht vorliegen, etwa nach einem Hinweis im Sinne des Art. 16 der EU-Verordnung über digitale Dienste (Digital Services Act). Zu einer anlasslosen, allgemeinen Überwachung veröffentlichter Inhalte sind wir nicht verpflichtet.\n\nSie können die Entfernung eines von Ihnen veröffentlichten Eintrags jederzeit unter info@openfarmplanner.org verlangen."
+        },
+        "accountSuspension": {
+          "title": "Sperrung von Benutzerkonten",
+          "content": "Bei einem schwerwiegenden oder wiederholten Verstoß gegen diese Nutzungsbedingungen können wir den Zugriff auf Ihr Benutzerkonto vorübergehend einschränken oder das Konto sperren. Wir gehen dabei verhältnismäßig vor und berücksichtigen die Schwere des Verstoßes sowie, ob es sich um einen einmaligen oder wiederholten Vorfall handelt.\n\nBei einer Sperrung informieren wir Sie, soweit möglich, über den Grund. Sie können sich dazu jederzeit an info@openfarmplanner.org wenden."
+        },
+        "liability": {
+          "title": "Haftung",
+          "content": "OpenFarmPlanner wird mit großer Sorgfalt entwickelt und betrieben. Eine jederzeit fehlerfreie oder unterbrechungsfreie Verfügbarkeit können wir dennoch nicht garantieren, etwa bei Wartungsarbeiten, technischen Störungen oder Ereignissen außerhalb unseres Einflussbereichs.\n\nDie öffentliche Kulturbibliothek enthält Inhalte, die von Nutzern selbst erstellt wurden. Für deren Richtigkeit sind die jeweils veröffentlichenden Nutzer verantwortlich, nicht OpenFarmPlanner (siehe Abschnitt „Ihre Inhalte in OpenFarmPlanner“).\n\nLandwirtschaftliche und gärtnerische Informationen in OpenFarmPlanner, etwa zu Wachstums- und Erntedauer, Pflanzabständen oder Saatgutmengen, dienen ausschließlich der Unterstützung Ihrer eigenen Anbauplanung und ersetzen keine fachliche Beratung.\n\nSoweit gesetzlich zulässig, ist unsere Haftung beschränkt. Zwingende gesetzliche Haftungsregelungen bleiben davon selbstverständlich unberührt."
+        },
+        "openSource": {
+          "title": "Open-Source-Software",
+          "content": "Der Quellcode von OpenFarmPlanner ist als Open-Source-Software unter der GNU Affero General Public License Version 3 (AGPLv3) veröffentlicht und kann im GitHub-Repository von OpenFarmPlanner eingesehen, weiterverwendet und verändert werden. Die Lizenz regelt die Rechte an der Software selbst und schließt, wie bei Open-Source-Software üblich, jede Gewährleistung für die Software aus.\n\nDavon zu unterscheiden ist die Nutzung der unter openfarmplanner.org gehosteten Anwendung: Diese richtet sich nach den vorliegenden Nutzungsbedingungen."
+        },
+        "futureFeatures": {
+          "title": "Weiterentwicklung der Plattform",
+          "content": "OpenFarmPlanner wird kontinuierlich weiterentwickelt. Diese Nutzungsbedingungen gelten sinngemäß auch für künftige Funktionen rund um von Nutzern bereitgestellte Inhalte, etwa Kommentare, Bewertungen oder Versionshistorien zu Einträgen der öffentlichen Kulturbibliothek, sowie für einen künftig frei wählbaren Anzeigenamen anstelle des öffentlichen Benutzernamens. Bei wesentlichen neuen Funktionen dieser Art passen wir diese Nutzungsbedingungen bei Bedarf an (siehe Abschnitt „Änderungen dieser Nutzungsbedingungen“)."
+        },
+        "changes": {
+          "title": "Änderungen dieser Nutzungsbedingungen",
+          "content": "Wir passen diese Nutzungsbedingungen an, wenn sich die angebotenen Funktionen oder rechtliche Rahmenbedingungen ändern. Maßgeblich ist die zum Zeitpunkt Ihrer Nutzung innerhalb der Anwendung veröffentlichte Fassung; das Datum der letzten Änderung finden Sie oben auf dieser Seite. Bei wesentlichen Änderungen informieren wir aktive Nutzer in geeigneter Weise, etwa per E-Mail oder durch einen Hinweis in der Anwendung."
         }
       }
     }

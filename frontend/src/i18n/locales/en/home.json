@@ -18,6 +18,7 @@
   "footer": {
     "imprint": "Imprint",
     "privacy": "Privacy policy",
+    "terms": "Terms of service",
     "contactLabel": "Contact: {{email}}",
     "contactEmail": "info@openfarmplanner.org"
   },

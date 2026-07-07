@@ -15,7 +15,8 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts.models import AccountDeletionRequest, AccountEmailChangeRequest, PendingActivation
+from accounts.consent import CURRENT_VERSIONS
+from accounts.models import AccountDeletionRequest, AccountEmailChangeRequest, DocumentConsent, PendingActivation
 
 User = get_user_model()
 
@@ -57,6 +58,8 @@ class AuthApiTest(APITestCase):
         self.assertIn('/activate?uid=', activation_email_body)
         self.assertIn('&token=', activation_email_body)
         self.assertNotIn('&amp;token=', activation_email_body)
+        terms_acceptance = DocumentConsent.objects.get(user=created, document=DocumentConsent.DOCUMENT_TERMS)
+        self.assertEqual(terms_acceptance.version, CURRENT_VERSIONS[DocumentConsent.DOCUMENT_TERMS])
 
         duplicate = self.client.post(
             '/openfarmplanner/api/auth/register/',
@@ -133,6 +136,21 @@ class AuthApiTest(APITestCase):
         self.assertIn('email', response.data)
         self.assertIn('password', response.data)
         self.assertIn('password_confirm', response.data)
+
+    def test_registration_records_acceptance_of_the_current_terms_version_without_a_dedicated_field(self) -> None:
+        response = self.client.post(
+            '/openfarmplanner/api/auth/register/',
+            {
+                'email': 'implicit-consent@example.com',
+                'password': 'new-safe-password-123',
+                'password_confirm': 'new-safe-password-123',
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        created = User.objects.get(email='implicit-consent@example.com')
+        record = DocumentConsent.objects.get(user=created, document=DocumentConsent.DOCUMENT_TERMS)
+        self.assertEqual(record.version, CURRENT_VERSIONS[DocumentConsent.DOCUMENT_TERMS])
 
     def test_registration_rejects_password_confirmation_mismatch(self) -> None:
         response = self.client.post(
@@ -698,3 +716,92 @@ class AuthApiTest(APITestCase):
         self.assertTrue(User.objects.filter(id=still_pending.id).exists())
         self.assertTrue(User.objects.filter(id=self.user.id).exists())
         self.assertIn('Deleted 1 expired inactive users.', output.getvalue())
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend', FRONTEND_URL='http://localhost:5173')
+class ConsentApiTest(APITestCase):
+    def setUp(self) -> None:
+        self.password = 'safe-password-123'
+        # Simulates a user who registered before the Terms of Service / consent
+        # tracking existed: no DocumentConsent row at all.
+        self.user = User.objects.create_user(
+            username='pre-existing',
+            email='pre-existing@example.com',
+            password=self.password,
+            is_active=True,
+        )
+
+    def test_existing_user_without_any_acceptance_is_flagged_as_pending_on_login(self) -> None:
+        response = self.client.post(
+            '/openfarmplanner/api/auth/login/',
+            {'email': self.user.email, 'password': self.password},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['pending_consents'], ['terms'])
+
+    def test_existing_user_who_accepted_an_older_version_is_flagged_as_pending(self) -> None:
+        DocumentConsent.objects.create(user=self.user, document=DocumentConsent.DOCUMENT_TERMS, version='2020-01-01')
+
+        response = self.client.post(
+            '/openfarmplanner/api/auth/login/',
+            {'email': self.user.email, 'password': self.password},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['pending_consents'], ['terms'])
+
+    def test_me_endpoint_reports_pending_consents_for_an_existing_session(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+
+        response = self.client.get('/openfarmplanner/api/auth/me/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['pending_consents'], ['terms'])
+
+    def test_accepting_current_terms_clears_the_pending_consent(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+
+        response = self.client.post('/openfarmplanner/api/auth/consent/accept/', {'document': 'terms'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['pending_consents'], [])
+
+        record = DocumentConsent.objects.get(user=self.user, document=DocumentConsent.DOCUMENT_TERMS)
+        self.assertEqual(record.version, CURRENT_VERSIONS[DocumentConsent.DOCUMENT_TERMS])
+
+        me_response = self.client.get('/openfarmplanner/api/auth/me/')
+        self.assertEqual(me_response.data['pending_consents'], [])
+
+    def test_accept_endpoint_requires_authentication(self) -> None:
+        response = self.client.post('/openfarmplanner/api/auth/consent/accept/', {'document': 'terms'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_accept_endpoint_rejects_unknown_document(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+
+        response = self.client.post('/openfarmplanner/api/auth/consent/accept/', {'document': 'cookies'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('document', response.data)
+
+    def test_newly_registered_user_has_no_pending_consent_after_activation(self) -> None:
+        register_response = self.client.post(
+            '/openfarmplanner/api/auth/register/',
+            {
+                'email': 'brand-new@example.com',
+                'password': 'new-safe-password-123',
+                'password_confirm': 'new-safe-password-123',
+            },
+            format='json',
+        )
+        self.assertEqual(register_response.status_code, status.HTTP_201_CREATED)
+
+        new_user = User.objects.get(email='brand-new@example.com')
+        new_user.is_active = True
+        new_user.save(update_fields=['is_active'])
+
+        login_response = self.client.post(
+            '/openfarmplanner/api/auth/login/',
+            {'email': 'brand-new@example.com', 'password': 'new-safe-password-123'},
+            format='json',
+        )
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(login_response.data['pending_consents'], [])

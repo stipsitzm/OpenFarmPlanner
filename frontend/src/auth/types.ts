@@ -17,6 +17,8 @@ export interface AuthUser {
   memberships: ProjectMembershipInfo[];
   account_pending_deletion: boolean;
   scheduled_deletion_at: string | null;
+  /** Document keys (e.g. "terms") whose current version this user has not yet accepted. */
+  pending_consents: string[];
 }
 
 export interface ProjectSwitchResponse {

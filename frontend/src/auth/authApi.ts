@@ -39,6 +39,7 @@ const authFieldLabelFallbacks: Record<string, string> = {
   uid: 'Benutzerkennung',
   token: 'Token',
   display_name: 'Anzeigename',
+  document: 'Dokument',
   detail: 'Fehler',
   non_field_errors: 'Fehler',
 };
@@ -181,7 +182,12 @@ export function getMe(): Promise<AuthUser> {
   return request<AuthUser>('/auth/me/', { method: 'GET' });
 }
 
-export async function register(email: string, password: string, passwordConfirm: string, displayName = ''): Promise<{ detail: string }> {
+export async function register(
+  email: string,
+  password: string,
+  passwordConfirm: string,
+  displayName = '',
+): Promise<{ detail: string }> {
   await ensureCsrfCookie();
   return request<{ detail: string }>('/auth/register/', {
     method: 'POST',
@@ -192,6 +198,15 @@ export async function register(email: string, password: string, passwordConfirm:
       password_confirm: passwordConfirm,
       display_name: displayName,
     }),
+  });
+}
+
+export async function acceptConsent(document: string): Promise<AuthUser> {
+  await ensureCsrfCookie();
+  return request<AuthUser>('/auth/consent/accept/', {
+    method: 'POST',
+    headers: csrfHeader(),
+    body: JSON.stringify({ document }),
   });
 }
 

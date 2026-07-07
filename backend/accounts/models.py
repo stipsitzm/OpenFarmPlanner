@@ -96,6 +96,43 @@ class AccountDeletionRequest(models.Model):
         return f'Account deletion state for {identifier}'
 
 
+class DocumentConsent(models.Model):
+    """Records that a user accepted a specific version of a consent-requiring document.
+
+    One row per acceptance event (not per user), so a user can have several
+    rows for the same document across versions over time — this is the audit
+    trail of who accepted which version, when. The current status for a user
+    is derived by looking at their most recent row per document; see
+    `accounts.consent` for the helpers that do this and the central version
+    registry. Kept separate from the (Django built-in) user model, and keyed
+    by a generic `document` field rather than one field per document, so
+    additional consent-requiring documents (privacy policy, cookie policy,
+    ...) can be added later without a schema change.
+    """
+
+    DOCUMENT_TERMS = 'terms'
+    DOCUMENT_CHOICES = [
+        (DOCUMENT_TERMS, 'Terms of Service'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='document_consents',
+    )
+    document = models.CharField(max_length=32, choices=DOCUMENT_CHOICES, default=DOCUMENT_TERMS)
+    version = models.CharField(max_length=32)
+    accepted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-accepted_at']
+        indexes = [models.Index(fields=['user', 'document', '-accepted_at'])]
+
+    def __str__(self) -> str:
+        identifier = getattr(self.user, 'email', '') or getattr(self.user, 'username', '')
+        return f'{self.get_document_display()} consent for {identifier} (v{self.version}, {self.accepted_at.isoformat()})'
+
+
 class AccountEmailChangeRequest(models.Model):
     """Stores pending email-change requests that require token confirmation."""
 

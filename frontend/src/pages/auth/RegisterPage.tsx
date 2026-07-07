@@ -1,10 +1,11 @@
-import { Alert, Box, Button, Container, InputAdornment, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Container, InputAdornment, Link, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { projectAPI, type InvitationPublicStatus } from '../../api/api';
 import { useAuth } from '../../auth/useAuth';
 import PasswordVisibilityToggle from '../../components/inputs/PasswordVisibilityToggle';
+import LegalLinks from '../../components/legal/LegalLinks';
 import { useTranslation } from '../../i18n';
 import { getNextFromSearch, getTokenFromNextPath, storeInvitationRedirect } from '../invitationAcceptance';
 
@@ -179,10 +180,24 @@ export default function RegisterPage() {
             }}
           />
           <Button type="submit" variant="contained" disabled={submitting || isLoggedIn}>{submitting ? t('auth:register.submitting') : t('auth:register.submit')}</Button>
-          <Button type="button" onClick={() => void handleResend()} disabled={!email || isLoggedIn || !registrationSucceeded}>{t('auth:register.resendActivation')}</Button>
+          <Typography variant="caption" color="text.secondary">
+            {t('auth:register.termsNoticePrefix')}
+            <Link component={RouterLink} to="/nutzungsbedingungen" target="_blank" rel="noopener">
+              {t('auth:register.termsNoticeTermsLinkLabel')}
+            </Link>
+            {t('auth:register.termsNoticeMiddle')}
+            <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener">
+              {t('auth:register.termsNoticePrivacyLinkLabel')}
+            </Link>
+            {t('auth:register.termsNoticeSuffix')}
+          </Typography>
+          {registrationSucceeded && !isLoggedIn ? (
+            <Button type="button" onClick={() => void handleResend()}>{t('auth:register.resendActivation')}</Button>
+          ) : null}
           <Button type="button" component={RouterLink} to={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'} state={location.state}>{t('auth:register.hasAccount')}</Button>
         </Stack>
       </Box>
+      <LegalLinks dense sx={{ mt: 4, justifyContent: 'center' }} />
     </Container>
   );
 }

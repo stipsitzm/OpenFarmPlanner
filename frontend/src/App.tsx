@@ -135,6 +135,7 @@ function FileExportIcon(props: SvgIconProps) {
 const HomePage = React.lazy(() => import('./pages/public/HomePage'));
 const ImprintPage = React.lazy(() => import('./pages/public/ImprintPage'));
 const PrivacyPolicyPage = React.lazy(() => import('./pages/public/PrivacyPolicyPage'));
+const TermsOfServicePage = React.lazy(() => import('./pages/public/TermsOfServicePage'));
 const LoginPage = React.lazy(() => import('./pages/auth/LoginPage'));
 const RegisterPage = React.lazy(() => import('./pages/auth/RegisterPage'));
 const ActivatePage = React.lazy(() => import('./pages/auth/ActivatePage'));
@@ -2228,6 +2229,10 @@ function createAppRouter(basename: string) {
         {
           path: 'datenschutz',
           element: withLazyFallback(<PrivacyPolicyPage />),
+        },
+        {
+          path: 'nutzungsbedingungen',
+          element: withLazyFallback(<TermsOfServicePage />),
         },
         {
           path: 'login',

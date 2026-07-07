@@ -1,4 +1,5 @@
-import { Box, Container, Stack, Typography } from '@mui/material';
+import { Box, Container, Link, Stack, Typography } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
 
 const privacySections = [
@@ -39,6 +40,10 @@ export default function PrivacyPolicyPage() {
         <Typography variant="h3" component="h1">
           {t('legal.privacy.title')}
         </Typography>
+
+        <Link component={RouterLink} to="/nutzungsbedingungen" underline="hover">
+          {t('legal.terms.title')}
+        </Link>
 
         {privacySections.map((sectionKey, index) => {
           const bulletKeys = privacySectionBulletKeys[sectionKey];

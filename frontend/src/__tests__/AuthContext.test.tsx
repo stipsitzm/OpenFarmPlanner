@@ -18,6 +18,7 @@ const baseUser: AuthUser = {
   memberships: [],
   account_pending_deletion: false,
   scheduled_deletion_at: null,
+  pending_consents: [],
 };
 
 const getMeMock = vi.hoisted(() => vi.fn(async () => baseUser));
