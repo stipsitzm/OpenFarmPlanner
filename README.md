@@ -3,6 +3,8 @@
 OpenFarmPlanner is a full-stack web application for planning and managing market-garden or CSA farm operations.
 It combines a Django REST backend and a React frontend in one repository, with project-based workflows, planting planning, and operational farm data management.
 
+Website: [openfarmplanner.org](https://openfarmplanner.org/)
+
 > Deployment and infrastructure are maintained in a separate repository: **[OpenFarmPlanner-ops](https://github.com/stipsitzm/OpenFarmPlanner-ops)**.
 
 ## Main Features
