@@ -17,6 +17,11 @@
     "tooltipPeriod": "Zeitraum",
     "tooltipYield": "Ertrag"
   },
+  "legend": {
+    "showAll": "Kulturen anzeigen ({{count}})",
+    "expand": "Mehr anzeigen",
+    "collapse": "Weniger anzeigen"
+  },
   "contextMenu": {
     "openCulture": "Kultur öffnen"
   },
