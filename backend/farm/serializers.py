@@ -801,6 +801,10 @@ class CultureSerializer(serializers.ModelSerializer):
                 return obj.source_public_culture_id
             return None
 
+        prefetched = getattr(obj, '_prefetched_owned_public_cultures', None)
+        if prefetched is not None:
+            return prefetched[0].id if prefetched else None
+
         linked_public = PublicCulture.objects.filter(
             source_project_culture=obj,
             created_by=user,

@@ -368,6 +368,25 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
 
+    def test_culture_list_query_count_does_not_scale_with_result_count(self):
+        # Regression test: get_queryset() previously dropped the select_related/
+        # prefetch_related applied on the class-level `queryset`, causing one extra
+        # query per culture for `supplier`, `image_file`, `source_public_culture`,
+        # `seed_packages`, and the owned-public-culture lookup.
+        for index in range(5):
+            Culture.objects.create(
+                name=f'Extra Culture {index}',
+                growth_duration_days=7,
+                harvest_duration_days=2,
+                project=self.project,
+                supplier=self.supplier,
+            )
+
+        with self.assertNumQueries(8):
+            response = self.client.get('/openfarmplanner/api/cultures/')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 6)
+
     def test_culture_detail_returns_all_supplier_data_rows(self):
         supplier_a = Supplier.objects.create(name='Supplier A', homepage_url='https://supplier-a.example', project=self.project)
         supplier_b = Supplier.objects.create(name='Supplier B', homepage_url='https://supplier-b.example', project=self.project)
