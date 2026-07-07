@@ -8,10 +8,10 @@ const privacySections = [
   'registration',
   'projectData',
   'publicLibrary',
-  'aiEnrichment',
   'emailCommunication',
   'logFiles',
   'cookies',
+  'localStorage',
   'dataSharing',
   'storageDuration',
   'rights',
@@ -22,12 +22,12 @@ const privacySections = [
 const privacySectionBulletKeys: Partial<Record<(typeof privacySections)[number], readonly string[]>> = {
   hosting: ['ipAddress', 'requestTime', 'browser', 'operatingSystem', 'referrerUrl'],
   registration: ['emailAddress', 'nameOptional', 'encryptedPassword'],
-  projectData: ['projectData', 'cultureData', 'cultivationPlanning', 'fieldData', 'tasks', 'noteAttachments', 'versionHistory'],
+  projectData: ['projectData', 'fieldData', 'cultureData', 'cultivationPlanning', 'tasks', 'noteAttachments', 'versionHistory'],
   publicLibrary: ['publicContent', 'attribution', 'noReview', 'persistence', 'removal', 'futureOutlook'],
   emailCommunication: ['registration', 'accountActivation', 'passwordReset', 'projectInvitations', 'systemNotifications'],
   logFiles: ['ipAddress', 'errorMessages', 'accessData', 'timestamps'],
   cookies: ['sessionCookies', 'securityCookies'],
-  rights: ['access', 'rectification', 'deletion', 'restriction', 'portability', 'objection'],
+  rights: ['access', 'rectification', 'deletion', 'restriction', 'portability', 'objection', 'consentWithdrawal'],
 } as const;
 
 export default function PrivacyPolicyPage() {
