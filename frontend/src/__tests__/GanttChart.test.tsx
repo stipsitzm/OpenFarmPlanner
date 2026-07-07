@@ -662,6 +662,45 @@ describe('GanttChartPage', () => {
     });
   });
 
+  it('keeps the current row scroll position when switching calendar modes mid-session', async () => {
+    // Regression test: the restore effect used to reapply the `rowScrollTop` value
+    // captured once at mount (via a memoized read of localStorage) whenever
+    // calendarMode changed, snapping the view back to whatever was stored before
+    // the user started scrolling in this session — typically the top.
+    mocks.planList.mockResolvedValue({
+      data: {
+        results: [
+          {
+            id: 10,
+            culture: 5,
+            culture_name: 'Salat',
+            bed: 3,
+            planting_date: '2026-04-20',
+            harvest_date: '2026-05-20',
+          },
+        ],
+      },
+    });
+    mocks.cultureList.mockResolvedValue({ data: { results: [{ id: 5, name: 'Salat' }] } });
+
+    renderWithAuth();
+
+    const virtualViewport = await screen.findByTestId('gantt-virtual-viewport');
+    await waitFor(() => expect(topbarContext.latestTitleActions).toHaveLength(2));
+
+    fireEvent.scroll(virtualViewport, { target: { scrollTop: 300 } });
+    await waitFor(() => expect(virtualViewport.scrollTop).toBe(300));
+
+    act(() => {
+      getTopbarAction('calendar-view-mode-seedlings').onClick();
+    });
+
+    await waitFor(() => {
+      expect(getTopbarAction('calendar-view-mode-seedlings')).toMatchObject({ active: true });
+    });
+    expect(virtualViewport.scrollTop).toBe(300);
+  });
+
   it('resizes the desktop Gantt sidebar and stores the selected width', async () => {
     mocks.planList.mockResolvedValue({
       data: {
