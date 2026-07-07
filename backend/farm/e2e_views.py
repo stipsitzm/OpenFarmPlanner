@@ -14,6 +14,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from config.frontend_urls import build_public_frontend_url
 
+from accounts.consent import record_acceptance
+from accounts.models import DocumentConsent
 from farm.models import Project, ProjectInvitation, ProjectMembership
 
 User = get_user_model()
@@ -95,6 +97,11 @@ class E2EInvitationFixtureView(APIView):
             password=E2E_PASSWORD,
             is_active=True,
         )
+        # These fixture users are created directly (bypassing RegisterSerializer,
+        # which normally records this), so they need it recorded explicitly or
+        # every E2E login would be blocked by the Terms of Service re-consent gate.
+        for fixture_user in (admin, invitee, outsider):
+            record_acceptance(fixture_user, DocumentConsent.DOCUMENT_TERMS)
         ProjectMembership.objects.create(user=admin, project=project, role=ProjectMembership.ROLE_ADMIN)
 
         invitation = ProjectInvitation.objects.create(
