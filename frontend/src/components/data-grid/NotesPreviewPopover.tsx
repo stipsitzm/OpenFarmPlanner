@@ -173,6 +173,9 @@ export function NotesPreviewPopover({
       disableAutoFocus
       disableEnforceFocus
       disableRestoreFocus
+      hideBackdrop
+      disableScrollLock
+      sx={{ pointerEvents: 'none' }}
       slotProps={{
         paper: {
           role: 'dialog',
@@ -185,6 +188,7 @@ export function NotesPreviewPopover({
             p: 2,
             borderRadius: 2,
             boxShadow: 4,
+            pointerEvents: 'auto',
           },
         },
       }}

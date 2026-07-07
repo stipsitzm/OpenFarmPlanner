@@ -1538,16 +1538,20 @@ export function EditableDataGrid<T extends EditableRow>({
               rawValue={value}
               attachmentCount={attachmentCount}
               compactIndicator={Boolean(fieldConfig?.compactIndicator)}
-              onOpen={() => notesEditor.handleOpen(params.id, col.field)}
+              onOpen={() => {
+                notesPreview.close();
+                notesEditor.handleOpen(params.id, col.field);
+              }}
               onOpenAttachments={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
+                notesPreview.close();
                 notesEditor.handleOpen(params.id, col.field, { focusAttachments: true });
               }}
               hasFocus={params.hasFocus}
               isPreviewOpen={isPreviewOpen}
-              onPreviewOpen={(anchorEl, mode) => notesPreview.openPreview(anchorEl, params.id, col.field, mode)}
-              onPreviewClose={notesPreview.scheduleClose}
+              onPreviewOpen={notesEditor.isOpen ? undefined : (anchorEl, mode) => notesPreview.openPreview(anchorEl, params.id, col.field, mode)}
+              onPreviewClose={notesEditor.isOpen ? undefined : notesPreview.scheduleClose}
             />
           );
         },
