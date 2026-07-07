@@ -1528,17 +1528,17 @@ function GanttChartPage() {
           </Typography>
           {calendarMode === 'occupancy' ? (
             <Tooltip
-              title={editMode ? (
+              title={(
                 <Box component="span" sx={{ display: 'block' }}>
                   <Box component="span" sx={{ display: 'block', fontWeight: 600 }}>
-                    {t('ganttChart:moveModeActiveOption')}
+                    {editMode ? t('ganttChart:moveModeActiveOption') : t('ganttChart:moveModeOption')}
                   </Box>
                   <Box component="span" sx={{ display: 'block' }}>
-                    {t('ganttChart:moveModeActiveTooltipDescription')}
+                    {editMode
+                      ? t('ganttChart:moveModeActiveTooltipDescription')
+                      : t('ganttChart:moveModeTooltipDescription')}
                   </Box>
                 </Box>
-              ) : (
-                t('ganttChart:moveModeOption')
               )}
             >
               <Button

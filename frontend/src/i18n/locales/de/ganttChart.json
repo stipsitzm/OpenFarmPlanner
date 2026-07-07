@@ -62,7 +62,7 @@
   "moveModeCommandActivate": "Zeitraum verschieben aktivieren",
   "moveModeCommandDeactivate": "Zeitraum verschieben deaktivieren",
   "modeViewTooltip": "Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.",
-  "moveModeTooltip": "Verschiebemodus aktivieren: Anbauzeiträume können per Drag-and-Drop verschoben werden.",
+  "moveModeTooltipDescription": "Aktiviere den Verschiebemodus, um Anbauzeiträume per Drag-and-Drop zu verschieben.",
   "moveModeActiveTooltipDescription": "Ziehe einen Zeitraum nach links oder rechts, um den gesamten Anbauplan zeitlich zu verschieben.",
   "viewMode": "Ansichtsmodus",
   "viewSelectorAriaLabel": "Kalenderansicht auswählen",
