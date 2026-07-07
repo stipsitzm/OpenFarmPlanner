@@ -880,6 +880,11 @@ export default function YieldOverviewPage() {
       return;
     }
 
+    // React 18 StrictMode intentionally double-invokes this effect in dev,
+    // firing the request twice; without this guard the slower/stale response
+    // can resolve after the newer one and silently overwrite it with old data.
+    let ignore = false;
+
     const fetchData = async (): Promise<void> => {
       try {
         setLoading(true);
@@ -888,17 +893,28 @@ export default function YieldOverviewPage() {
           plantingPlanAPI.list(),
           yieldCalendarAPI.list(selectedYear),
         ]);
+        if (ignore) {
+          return;
+        }
         setPlantingPlans(plansRes.data.results);
         setWeeklyYield(weeklyYieldRes.data);
       } catch (err) {
+        if (ignore) {
+          return;
+        }
         console.error("Error fetching yield overview data:", err);
         setError(t("errors.load"));
       } finally {
-        setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     };
 
     void fetchData();
+    return () => {
+      ignore = true;
+    };
   }, [selectedYear, shouldShowProjectRequiredState, t]);
 
   const cultures = useMemo(() => {
