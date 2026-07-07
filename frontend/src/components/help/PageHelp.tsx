@@ -35,8 +35,6 @@ import {
   ListItemText,
   Popover,
   Stack,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   Typography,
   useMediaQuery,
@@ -113,7 +111,6 @@ const PAGE_SYMBOL_DEFINITIONS: Partial<Record<HelpPageKey, SymbolDefinition[]>> 
     { key: 'createPlan', icon: <AgricultureIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
     { key: 'edit', icon: <EditIcon fontSize="small" sx={{ color: 'rgba(37, 111, 42, 0.86)' }} /> },
     { key: 'more', icon: <MoreVertIcon fontSize="small" sx={{ color: 'text.secondary' }} /> },
-    { key: 'delete', icon: <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} /> },
   ],
   plantingPlans: [
     { key: 'add', icon: <AddIcon fontSize="small" sx={{ color: 'primary.main' }} /> },
@@ -150,6 +147,7 @@ const PAGE_SYMBOL_DEFINITIONS: Partial<Record<HelpPageKey, SymbolDefinition[]>> 
     { key: 'zoomOut', icon: <RemoveIcon fontSize="small" /> },
     { key: 'fit', icon: <FitScreenIcon fontSize="small" /> },
     { key: 'fullscreen', icon: <FullscreenIcon fontSize="small" /> },
+    { key: 'editToggle', icon: <EditOutlinedIcon fontSize="small" sx={{ color: 'success.dark' }} /> },
   ],
 };
 
@@ -246,7 +244,7 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
   };
 
   const renderHelpTextContent = (text: string): ReactElement | string => {
-    const tokens = text.split(/({{addIcon}}|{{moreIcon}})/);
+    const tokens = text.split(/({{addIcon}}|{{moreIcon}}|{{createPlanIcon}})/);
     if (tokens.length === 1) {
       return text;
     }
@@ -276,6 +274,20 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
                 sx={{
                   mx: 0.25,
                   color: 'text.secondary',
+                  verticalAlign: 'text-bottom',
+                }}
+              />
+            );
+          }
+          if (token === '{{createPlanIcon}}') {
+            return (
+              <AgricultureIcon
+                key={`${token}-${index}`}
+                aria-hidden
+                fontSize="small"
+                sx={{
+                  mx: 0.25,
+                  color: 'primary.main',
                   verticalAlign: 'text-bottom',
                 }}
               />
@@ -375,33 +387,6 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
             <HelpIconRow key={`${pageKey}-symbol-row-${index}`} icon={row.icon} text={row.text} />
           ))}
         </Stack>
-      </Box>
-
-      <Box>
-        <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
-          {t('pages.graphical.modeTitle')}
-        </Typography>
-        <Box sx={{ display: 'inline-flex', flexDirection: 'column', gap: 1, p: 1.25, borderRadius: 1.5, border: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="caption" sx={{ fontWeight: 600 }}>
-            {t('pages.graphical.modeLabel')}
-          </Typography>
-          <ToggleButtonGroup value="view" exclusive size="small" aria-label={t('pages.graphical.modeLabel')}>
-            <ToggleButton value="view" disabled>
-              {t('pages.graphical.modeView')}
-            </ToggleButton>
-            <ToggleButton value="edit" disabled>
-              {t('pages.graphical.modeEdit')}
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
-        <List dense disablePadding sx={{ mt: 1 }}>
-          <ListItem sx={{ py: 0.2, px: 0 }}>
-            <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${t('pages.graphical.modeViewDescription')}`} />
-          </ListItem>
-          <ListItem sx={{ py: 0.2, px: 0 }}>
-            <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={`• ${t('pages.graphical.modeEditDescription')}`} />
-          </ListItem>
-        </List>
       </Box>
     </Stack>
   );

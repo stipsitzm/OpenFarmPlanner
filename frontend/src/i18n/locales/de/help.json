@@ -6,6 +6,12 @@
   "intro": "OpenFarmPlanner besteht aus mehreren Seiten, die zusammenarbeiten:",
   "sections": [
     {
+      "title": "Übersicht",
+      "points": [
+        "Hier siehst du anstehende Termine für Aussaat, Pflanzung, Anzucht und Ernte auf einen Blick."
+      ]
+    },
+    {
       "title": "Anbauflächen",
       "points": [
         "Hier legst du Parzellen und Beete an. Bei Bedarf kannst du zusätzliche Standorte verwenden."
@@ -14,13 +20,13 @@
     {
       "title": "Kulturen",
       "points": [
-        "Hier trägst du deine Kulturdaten ein."
+        "Hier trägst du deine Kulturdaten ein oder greifst auf die öffentliche Kulturbibliothek zurück."
       ]
     },
     {
       "title": "Anbaupläne",
       "points": [
-        "Hier planst du, welche Kultur auf welchem Beet angebaut wird."
+        "Hier planst du, welche Kultur wann auf welchem Beet angebaut wird."
       ]
     },
     {
@@ -30,9 +36,21 @@
       ]
     },
     {
+      "title": "Ertragsübersicht",
+      "points": [
+        "Hier siehst du die aus deinen Anbauplänen erwarteten Erntemengen."
+      ]
+    },
+    {
       "title": "Saatgutbedarf",
       "points": [
         "Daraus wird berechnet, wie viel Saatgut du brauchst."
+      ]
+    },
+    {
+      "title": "Lieferanten",
+      "points": [
+        "Hier trägst du deine Lieferanten ein, um sie bei Kulturen zu hinterlegen."
       ]
     }
   ],
@@ -103,7 +121,7 @@
     },
     "areas": {
       "title": "Hilfe: Anbauflächen – Listenansicht",
-      "intro": "Hier verwaltest du die Flächenstruktur deines Betriebs – vom Standort über Parzellen bis zu einzelnen Beeten.\n\nNeue Standorte, Parzellen und Beete können über das {{addIcon}} hinzugefügt werden, das beim Überfahren eines Elements mit der Maus erscheint.\n\nEinträge können direkt in der Tabelle bearbeitet werden. Weitere Aktionen wie Umbenennen, Löschen oder das Anlegen von Anbauplänen findest du im Kontextmenü per Rechtsklick.",
+      "intro": "Hier verwaltest du die Flächenstruktur deines Betriebs – vom Standort über Parzellen bis zu einzelnen Beeten.\n\nNeue Standorte, Parzellen und Beete können über das {{addIcon}} hinzugefügt werden, das beim Überfahren eines Elements mit der Maus erscheint.\n\nEinträge können direkt in der Tabelle bearbeitet werden. Über das {{createPlanIcon}} bei einem Beet legst du direkt einen Anbauplan dafür an. Weitere Aktionen wie Umbenennen oder Löschen findest du im Kontextmenü per Rechtsklick.",
       "symbolsTitle": "Symbole und Bedienelemente",
       "symbols": {
         "expandToggle": "Abschnitt auf- oder zuklappen",
@@ -139,8 +157,7 @@
         "library": "Kulturbibliothek öffnen",
         "createPlan": "Anbauplan für diese Kultur hinzufügen",
         "more": "Weitere Aktionen öffnen",
-        "edit": "Kulturdaten bearbeiten",
-        "delete": "Kultur löschen"
+        "edit": "Kulturdaten bearbeiten"
       }
     },
     "plantingPlans": {
@@ -184,13 +201,13 @@
     },
     "graphical": {
       "title": "Hilfe: Anbauflächen – Grafische Ansicht",
-      "intro": "Hier siehst du Parzellen und Beete räumlich angeordnet. Wenn mehrere Standorte vorhanden sind, zeigt die grafische Ansicht auch die Standortstruktur.",
+      "intro": "Hier siehst du Parzellen und Beete räumlich angeordnet.",
       "sections": [
         {
           "title": "Bedienung",
           "points": [
             "Klicke auf ein Beet oder eine Parzelle, um Details anzuzeigen.",
-            "Verschiebe Elemente im Modus „Bearbeiten“.",
+            "Aktiviere „Grafik bearbeiten“ bei einem Standort, um dessen Beete und Parzellen zu verschieben und anzuordnen.",
             "Ziehe auf eine freie Fläche, um die Ansicht zu verschieben.",
             "Zoome mit Mausrad oder Pinch-Geste."
           ]
@@ -208,14 +225,9 @@
         "zoomIn": "Hineinzoomen",
         "zoomOut": "Herauszoomen",
         "fit": "Gesamte Ansicht einpassen",
-        "fullscreen": "Im Vollbild anzeigen"
-      },
-      "modeTitle": "Modus",
-      "modeLabel": "Modus",
-      "modeView": "Ansicht",
-      "modeEdit": "Bearbeiten",
-      "modeViewDescription": "Nur ansehen, navigieren und zoomen",
-      "modeEditDescription": "Elemente verschieben und anordnen"
+        "fullscreen": "Im Vollbild anzeigen",
+        "editToggle": "Grafik bearbeiten: Beete und Parzellen eines Standorts per Drag-and-Drop verschieben und anordnen"
+      }
     },
     "yieldOverview": {
       "title": "Hilfe: Ertragsübersicht",

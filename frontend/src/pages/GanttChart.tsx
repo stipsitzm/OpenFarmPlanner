@@ -1527,7 +1527,20 @@ function GanttChartPage() {
             {title}
           </Typography>
           {calendarMode === 'occupancy' ? (
-            <Tooltip title={t('ganttChart:moveModeOption')}>
+            <Tooltip
+              title={(
+                <Box component="span" sx={{ display: 'block' }}>
+                  <Box component="span" sx={{ display: 'block', fontWeight: 600 }}>
+                    {editMode ? t('ganttChart:moveModeActiveOption') : t('ganttChart:moveModeOption')}
+                  </Box>
+                  <Box component="span" sx={{ display: 'block' }}>
+                    {editMode
+                      ? t('ganttChart:moveModeActiveTooltipDescription')
+                      : t('ganttChart:moveModeTooltipDescription')}
+                  </Box>
+                </Box>
+              )}
+            >
               <Button
                 size="small"
                 variant={editMode ? 'contained' : 'outlined'}

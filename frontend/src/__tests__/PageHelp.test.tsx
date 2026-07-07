@@ -38,11 +38,26 @@ describe('PageHelp', () => {
     expect(screen.getByText('Neue Standorte, Parzellen und Beete können über das', { exact: false })).toBeInTheDocument();
     expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
     expect(screen.getByText('hinzugefügt werden, das beim Überfahren eines Elements mit der Maus erscheint.', { exact: false })).toBeInTheDocument();
-    expect(screen.getByText('Einträge können direkt in der Tabelle bearbeitet werden. Weitere Aktionen wie Umbenennen, Löschen oder das Anlegen von Anbauplänen findest du im Kontextmenü per Rechtsklick.')).toBeInTheDocument();
+    expect(screen.getByText('Einträge können direkt in der Tabelle bearbeitet werden. Über das', { exact: false })).toBeInTheDocument();
+    expect(screen.getByTestId('AgricultureIcon')).toBeInTheDocument();
+    expect(screen.getByText('bei einem Beet legst du direkt einen Anbauplan dafür an. Weitere Aktionen wie Umbenennen oder Löschen findest du im Kontextmenü per Rechtsklick.', { exact: false })).toBeInTheDocument();
     expect(screen.queryByText('Bedienung')).not.toBeInTheDocument();
     expect(screen.queryByText('Zusammenhang mit anderen Seiten')).not.toBeInTheDocument();
     expect(screen.queryByText('Symbole und Bedienelemente')).not.toBeInTheDocument();
     expect(screen.queryByText(/•/)).not.toBeInTheDocument();
+  });
+
+  it('renders graphical fields help with the per-location edit toggle instead of the obsolete global mode switch', async () => {
+    render(<PageHelp pageKey="graphical" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hilfe anzeigen' }));
+
+    expect(await screen.findByText('Aktiviere „Grafik bearbeiten“ bei einem Standort, um dessen Beete und Parzellen zu verschieben und anzuordnen.', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('Grafik bearbeiten: Beete und Parzellen eines Standorts per Drag-and-Drop verschieben und anordnen')).toBeInTheDocument();
+    expect(screen.getByTestId('EditOutlinedIcon')).toBeInTheDocument();
+    expect(screen.queryByText('Modus')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ansicht')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
   });
 
   it('renders cultures help with vertical more-actions icon and without separate delete symbol', async () => {
