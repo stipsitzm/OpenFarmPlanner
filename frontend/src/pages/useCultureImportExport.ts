@@ -156,29 +156,15 @@ export function useCultureImportExport({
           const filename = buildSingleCultureFilename(selectedCulture);
           downloadJsonFile(exportPayload, filename);
         } else {
-          const allCultures: Culture[] = [];
-          let nextUrl: string | null = '/cultures/';
-          while (nextUrl) {
-            const response = await cultureAPI.list(nextUrl);
-            allCultures.push(...response.data.results);
-            nextUrl = response.data.next;
-          }
+          const { results: allCultures } = await cultureAPI.listAll();
           const exportPayload = buildAllCulturesExport(allCultures);
           const filename = buildAllCulturesFilename();
           downloadJsonFile(exportPayload, filename);
         }
       } else {
-        const culturesToExport: Culture[] = [];
-        if (scope === 'current' && selectedCulture) {
-          culturesToExport.push(selectedCulture);
-        } else {
-          let nextUrl: string | null = '/cultures/';
-          while (nextUrl) {
-            const response = await cultureAPI.list(nextUrl);
-            culturesToExport.push(...response.data.results);
-            nextUrl = response.data.next;
-          }
-        }
+        const culturesToExport: Culture[] = scope === 'current' && selectedCulture
+          ? [selectedCulture]
+          : (await cultureAPI.listAll()).results;
         const filename = buildSpreadsheetFilename(format, scope === 'current' ? 'single' : 'all', selectedCulture ?? undefined);
         exportCulturesToSpreadsheet(culturesToExport, format, filename);
       }

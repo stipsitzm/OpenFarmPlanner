@@ -61,6 +61,38 @@ describe('API Client', () => {
     expect(getMock).toHaveBeenNthCalledWith(2, '/planting-plans/?page=2');
   });
 
+  it('strips the host from an absolute pagination `next` URL so requests stay same-origin', async () => {
+    // DRF builds `next` as an absolute URL using the backend's own host (e.g. when the
+    // dev proxy rewrites the request Host header). Following it verbatim would bypass
+    // the frontend's proxy and drop same-origin cookies, so only the query string may be reused.
+    getMock
+      .mockResolvedValueOnce({
+        data: {
+          count: 3,
+          next: 'http://127.0.0.1:8000/api/planting-plans/?page=2&page_size=1000',
+          previous: null,
+          results: [{ id: 1 }, { id: 2 }],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          count: 3,
+          next: null,
+          previous: '/planting-plans/',
+          results: [{ id: 3 }],
+        },
+      });
+
+    await expect(fetchAllPaginated<{ id: number }>('/planting-plans/')).resolves.toEqual({
+      count: 3,
+      next: null,
+      previous: null,
+      results: [{ id: 1 }, { id: 2 }, { id: 3 }],
+    });
+    expect(getMock).toHaveBeenNthCalledWith(1, '/planting-plans/?page_size=1000');
+    expect(getMock).toHaveBeenNthCalledWith(2, '/planting-plans/?page=2&page_size=1000');
+  });
+
   it('calls all culture endpoints with expected URLs and payloads', () => {
     const cultureData = { name: 'Karotte' };
     const importPreviewData = [{ name: 'Tomate' }];
