@@ -75,6 +75,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
   deleteErrorMessage: string;
   deleteConfirmMessage: string;
   addButtonLabel: string;
+  addButtonText?: string;
   showDeleteAction?: boolean;
   initialRow?: Partial<T>;
   tableKey?: string;

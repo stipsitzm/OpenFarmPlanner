@@ -254,6 +254,26 @@ export const dataGridFooterSx = {
 };
 
 /**
+ * Subtle, row-like "add" action shown in the DataGrid footer — deliberately not
+ * styled as a primary/contained button so it reads as a table affordance rather
+ * than competing with the page's main call-to-action button.
+ */
+export const dataGridAddRowButtonSx = {
+  color: 'text.secondary',
+  textTransform: 'none',
+  fontWeight: 400,
+  justifyContent: 'flex-start',
+  minHeight: 44,
+  minWidth: 44,
+  px: 1.5,
+  borderRadius: 1,
+  '&:hover': {
+    backgroundColor: 'surface.surfaceHoverBackground',
+    color: 'primary.main',
+  },
+};
+
+/**
  * Common styles for delete action IconButtons
  */
 export const deleteIconButtonSx = {

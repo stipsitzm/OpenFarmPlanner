@@ -18,11 +18,12 @@
 import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type ReactNode } from 'react';
 import {
   DataGrid,
+  GridPagination,
   GridRowEditStopReasons,
   GridRowModes,
   useGridApiRef,
 } from '@mui/x-data-grid';
-import { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';
+import { dataGridSx, dataGridFooterSx, dataGridAddRowButtonSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRenderCellParams, GridRowParams, GridPaginationModel, GridColumnVisibilityModel } from '@mui/x-data-grid';
 import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
@@ -126,6 +127,7 @@ export function EditableDataGrid<T extends EditableRow>({
   deleteErrorMessage,
   deleteConfirmMessage,
   addButtonLabel,
+  addButtonText,
   showDeleteAction = true,
   initialRow,
   tableKey,
@@ -1452,38 +1454,50 @@ export function EditableDataGrid<T extends EditableRow>({
     const hasInvalidCell = hasValidationError || hasInvalidRowInEditMode;
 
     return (
-      <Box sx={dataGridFooterSx}>
-        {showAddAction && (
-          <IconButton
-            onClick={handleAddClick}
-            color="primary"
-            size="small"
-            aria-label={addButtonLabel}
-          >
-            <AddIcon />
-          </IconButton>
-        )}
-        {showFooterEditControls && hasUnsavedChanges && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: showAddAction ? 1 : 0 }}>
-            <Button size="small" variant="contained" onClick={() => void handleSaveAllDirtyRows()}>
-              {t('actions.save')}
-            </Button>
-            <Button
-              size="small"
-              onClick={() => {
-                const editIds = Object.entries(rowModesModel)
-                  .filter(([, mode]) => mode.mode === GridRowModes.Edit)
-                  .map(([id]) => id);
-                for (const id of editIds) {
-                  handleDiscardRowChanges(id);
-                }
-              }}
-            >
-              {t('actions.cancel')}
-            </Button>
-            {hasInvalidCell && <Chip size="small" color="error" label={t('messages.validationErrors')} />}
-          </Box>
-        )}
+      <Box
+        sx={
+          paginationPageSizeOptions
+            ? { ...dataGridFooterSx, justifyContent: 'space-between' }
+            : dataGridFooterSx
+        }
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          {showAddAction && (
+            <Tooltip title={addButtonLabel}>
+              <Button
+                onClick={handleAddClick}
+                size="small"
+                startIcon={<AddIcon fontSize="small" />}
+                aria-label={addButtonLabel}
+                sx={dataGridAddRowButtonSx}
+              >
+                {addButtonText ?? addButtonLabel}
+              </Button>
+            </Tooltip>
+          )}
+          {showFooterEditControls && hasUnsavedChanges && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: showAddAction ? 1 : 0 }}>
+              <Button size="small" variant="contained" onClick={() => void handleSaveAllDirtyRows()}>
+                {t('actions.save')}
+              </Button>
+              <Button
+                size="small"
+                onClick={() => {
+                  const editIds = Object.entries(rowModesModel)
+                    .filter(([, mode]) => mode.mode === GridRowModes.Edit)
+                    .map(([id]) => id);
+                  for (const id of editIds) {
+                    handleDiscardRowChanges(id);
+                  }
+                }}
+              >
+                {t('actions.cancel')}
+              </Button>
+              {hasInvalidCell && <Chip size="small" color="error" label={t('messages.validationErrors')} />}
+            </Box>
+          )}
+        </Box>
+        {paginationPageSizeOptions && <GridPagination />}
       </Box>
     );
   };
