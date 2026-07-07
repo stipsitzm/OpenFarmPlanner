@@ -27,6 +27,7 @@ import { MarkdownToolbar, type MarkdownFormat } from './MarkdownToolbar';
 import { noteAttachmentAPI } from '../../api/api';
 import type { NoteAttachment } from '../../api/types';
 import { useTranslation } from '../../i18n';
+import { invalidateNoteAttachmentsCache } from './noteAttachmentsCache';
 
 export interface NotesDrawerProps {
   open: boolean;
@@ -275,6 +276,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, has
 
       const processed = await renderProcessedFile(pendingFile, sourceCrop);
       await noteAttachmentAPI.upload(noteId, processed, '', setUploadProgress);
+      invalidateNoteAttachmentsCache(noteId);
       await loadAttachments();
       clearPendingSelection();
     } catch (error) {
@@ -415,6 +417,7 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, has
                   <img src={attachment.image_url ?? attachment.image} alt={attachment.caption || t('notesDrawer.attachmentAlt')} loading="lazy" style={{ cursor: 'pointer' }} onClick={() => setSelectedImage(attachment.image_url ?? attachment.image)} />
                   <IconButton size="small" aria-label={t('actions.delete')} sx={{ position: 'absolute', right: 2, top: 2, bgcolor: 'rgba(0,0,0,0.4)', color: 'white' }} onClick={async () => {
                     await noteAttachmentAPI.delete(attachment.id);
+                    if (noteId) invalidateNoteAttachmentsCache(noteId);
                     await loadAttachments();
                   }}>
                     <DeleteIcon fontSize="small" />
