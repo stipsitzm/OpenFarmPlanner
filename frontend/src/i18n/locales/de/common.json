@@ -50,6 +50,14 @@
     "showAll": "Alle einblenden",
     "hideAll": "Alle ausblenden"
   },
+  "treeView": {
+    "button": "Ansicht",
+    "buttonTooltip": "Darstellungstiefe der Baumansicht wählen",
+    "locations": "Nur Standorte anzeigen",
+    "locationsAndFields": "Standorte und Parzellen anzeigen",
+    "all": "Alle Ebenen anzeigen",
+    "collapsed": "Alle einklappen"
+  },
   "project": "Projekt",
   "setupActions": {
     "createField": "Parzelle hinzufügen",

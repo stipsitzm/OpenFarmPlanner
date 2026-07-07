@@ -104,3 +104,39 @@ export function flattenTreeRows<T extends TreeRowNode>(
   walk(null, 0);
   return result;
 }
+
+/**
+ * Returns the ids of every node (root = depth 0) with children whose depth
+ * is less than `maxDepth`. Passing this set to an expand/collapse state
+ * reveals every node up to (but not including) that depth — e.g. maxDepth=1
+ * expands only root-level nodes (revealing their direct children), while
+ * those children's own children stay collapsed. Pass `Number.POSITIVE_INFINITY`
+ * to expand every level, or 0 to collapse everything (an empty set).
+ *
+ * Domain-agnostic: works for any tree fed through `flattenTreeRows` (the
+ * Standort/Parzelle/Beet hierarchy, the occupancy calendar tree, etc.),
+ * backing a single shared "expand to level N" control across pages.
+ */
+export function collectExpandedIdsUpToDepth<T extends TreeRowNode>(
+  nodes: readonly T[],
+  maxDepth: number,
+): Set<string | number> {
+  const childrenIndex = buildChildrenIndex(nodes);
+  const result = new Set<string | number>();
+
+  const walk = (parentId: string | number | null, depth: number): void => {
+    if (depth >= maxDepth) {
+      return;
+    }
+    const children = childrenIndex.get(parentId) ?? [];
+    children.forEach((node) => {
+      if ((childrenIndex.get(node.id)?.length ?? 0) > 0) {
+        result.add(node.id);
+      }
+      walk(node.id, depth + 1);
+    });
+  };
+
+  walk(null, 0);
+  return result;
+}

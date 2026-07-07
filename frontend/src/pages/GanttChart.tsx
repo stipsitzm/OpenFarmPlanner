@@ -93,7 +93,8 @@ import {
 } from '../components/buttons/segmentedControlStyles';
 import { getGanttRenderWindow } from './ganttRenderWindow';
 import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState';
-import { collectVisibleIdsWithAncestors, flattenTreeRows } from '../components/hierarchy/utils/treeRows';
+import { collectExpandedIdsUpToDepth, collectVisibleIdsWithAncestors, flattenTreeRows } from '../components/hierarchy/utils/treeRows';
+import { HierarchyViewLevelMenu, type HierarchyViewLevel } from '../components/hierarchy/HierarchyViewLevelMenu';
 
 type CalendarMode = 'occupancy' | 'seedlings';
 const GanttChartWithFocusMode = GanttChart as React.ComponentType<
@@ -1173,6 +1174,15 @@ function GanttChartPage() {
       hasInitiallyExpandedHierarchyRef.current = true;
     }
   }, [expandAllHierarchy, hasPersistedHierarchyExpansion, occupancyHierarchyNodes]);
+
+  const handleSelectHierarchyViewLevel = useCallback((level: HierarchyViewLevel): void => {
+    if (level === 'collapsed') {
+      expandAllHierarchy([]);
+      return;
+    }
+    const maxDepth = level === 'locations' ? 1 : level === 'locationsAndFields' ? 2 : Number.POSITIVE_INFINITY;
+    expandAllHierarchy(Array.from(collectExpandedIdsUpToDepth(occupancyHierarchyNodes, maxDepth)));
+  }, [expandAllHierarchy, occupancyHierarchyNodes]);
 
   const occupancyFieldOptions = useMemo(
     () => (occupancyLocationFilter === 'all'
@@ -2612,6 +2622,7 @@ function GanttChartPage() {
                     )}
                     label={t('ganttChart:treeFilters.onlyOccupiedBeds')}
                   />
+                  <HierarchyViewLevelMenu onSelectLevel={handleSelectHierarchyViewLevel} />
                 </Box>
               )}
             </Box>

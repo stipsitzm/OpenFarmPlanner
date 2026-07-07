@@ -57,6 +57,9 @@ import {
 import { useNavigationBlocker } from "../hooks/autosave";
 import { useHierarchyData, type HierarchyDataState } from "../components/hierarchy/hooks/useHierarchyData";
 import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
+import { collectExpandedIdsUpToDepth, type TreeRowNode } from "../components/hierarchy/utils/treeRows";
+import { HierarchyViewLevelMenu, type HierarchyViewLevel } from "../components/hierarchy/HierarchyViewLevelMenu";
+import { hasPersistedEntityId } from "../components/hierarchy/utils/hierarchyUtils";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { useHierarchyDelete } from "../components/hierarchy/hooks/useHierarchyDelete";
 import { useHierarchyGridFocus } from "../components/hierarchy/hooks/useHierarchyGridFocus";
@@ -506,6 +509,46 @@ function FieldsBedsHierarchy({
       hasInitiallyExpandedRef.current = true;
     }
   }, [expandAll, fields, hasPersistedState, locations]);
+
+  // Flat {id, parentId} view of the tree for the shared "Ansicht" expand-level
+  // control (see HierarchyViewLevelMenu). Single-location projects render
+  // without a location row at all (see buildHierarchyRowsFromIndex), so the
+  // location level is only included here when there's more than one.
+  const hasMultipleLocations = locations.length > 1;
+  const hierarchyTreeNodes = useMemo<TreeRowNode[]>(() => {
+    const nodes: TreeRowNode[] = [];
+
+    if (hasMultipleLocations) {
+      locations.forEach((location) => {
+        if (!hasPersistedEntityId(location.id)) return;
+        nodes.push({ id: `location-${location.id}`, parentId: null });
+      });
+    }
+
+    fields.forEach((field) => {
+      if (!hasPersistedEntityId(field.id)) return;
+      nodes.push({
+        id: `field-${field.id}`,
+        parentId: hasMultipleLocations ? `location-${field.location}` : null,
+      });
+    });
+
+    beds.forEach((bed) => {
+      if (!hasPersistedEntityId(bed.id) || !hasPersistedEntityId(bed.field)) return;
+      nodes.push({ id: bed.id, parentId: `field-${bed.field}` });
+    });
+
+    return nodes;
+  }, [beds, fields, hasMultipleLocations, locations]);
+
+  const handleSelectHierarchyViewLevel = useCallback((level: HierarchyViewLevel): void => {
+    if (level === 'collapsed') {
+      expandAll([]);
+      return;
+    }
+    const maxDepth = level === 'locations' ? 1 : level === 'locationsAndFields' ? 2 : Number.POSITIVE_INFINITY;
+    expandAll(Array.from(collectExpandedIdsUpToDepth(hierarchyTreeNodes, maxDepth)));
+  }, [expandAll, hierarchyTreeNodes]);
 
   /**
    * Handle pending edit mode after rows are updated
@@ -1307,6 +1350,12 @@ function FieldsBedsHierarchy({
             containerSx={{ mx: 0 }}
           />
         )}
+
+        {shouldShowHierarchyTable && !isMobileViewport ? (
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+            <HierarchyViewLevelMenu onSelectLevel={handleSelectHierarchyViewLevel} />
+          </Box>
+        ) : null}
 
         {shouldShowHierarchyTable ? (
           <Box

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  collectExpandedIdsUpToDepth,
   collectVisibleIdsWithAncestors,
   flattenTreeRows,
   type TreeRowNode,
@@ -92,5 +93,35 @@ describe('collectVisibleIdsWithAncestors', () => {
   it('returns an empty set when nothing matches', () => {
     const visible = collectVisibleIdsWithAncestors(nodes, new Set());
     expect(visible.size).toBe(0);
+  });
+});
+
+describe('collectExpandedIdsUpToDepth', () => {
+  it('maxDepth=1 expands only root-level nodes (revealing their direct children)', () => {
+    const ids = collectExpandedIdsUpToDepth(nodes, 1);
+    expect(ids).toEqual(new Set(['loc-1', 'loc-2']));
+
+    const rows = flattenTreeRows(nodes, { expandedIds: ids });
+    expect(rows.map((r) => r.node.id)).toEqual(['loc-1', 'field-1', 'field-2', 'loc-2', 'field-3']);
+  });
+
+  it('maxDepth=2 additionally expands depth-1 nodes (fields), revealing beds', () => {
+    const ids = collectExpandedIdsUpToDepth(nodes, 2);
+    expect(ids).toEqual(new Set(['loc-1', 'loc-2', 'field-1', 'field-2']));
+
+    const rows = flattenTreeRows(nodes, { expandedIds: ids });
+    expect(rows.map((r) => r.node.id)).toEqual([
+      'loc-1', 'field-1', 'bed-1', 'bed-2', 'field-2', 'bed-3', 'loc-2', 'field-3',
+    ]);
+  });
+
+  it('maxDepth=Infinity expands every node that has children', () => {
+    const ids = collectExpandedIdsUpToDepth(nodes, Number.POSITIVE_INFINITY);
+    expect(ids).toEqual(new Set(['loc-1', 'loc-2', 'field-1', 'field-2']));
+  });
+
+  it('maxDepth=0 expands nothing (collapse-all), matching an explicit empty set', () => {
+    const ids = collectExpandedIdsUpToDepth(nodes, 0);
+    expect(ids.size).toBe(0);
   });
 });

@@ -1549,6 +1549,47 @@ describe('GanttChartPage', () => {
       });
     });
 
+    it('the "Ansicht" menu changes how many tree levels are expanded', async () => {
+      setUpMultiLocationFixture();
+      renderWithAuth();
+
+      await screen.findByText('Karottenbeet');
+      // "Nur belegte Beete" forces the ancestor chain of every occupied bed to stay
+      // visible regardless of collapse state (same as an active search match) — turn
+      // it off so the expand-level control's own effect is observable in isolation.
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Nur belegte Beete' }));
+      await screen.findByText('Leerbeet');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Darstellungstiefe der Baumansicht wählen' }));
+      fireEvent.click(await screen.findByRole('menuitem', { name: 'Nur Standorte anzeigen' }));
+
+      // Locations expanded reveals their direct Parzelle children (as collapsed
+      // rows) — only the Beet level (Parzellen's own children) stays hidden.
+      await waitFor(() => {
+        expect(screen.getByText('Hof')).toBeInTheDocument();
+        expect(screen.getByText('Pacht')).toBeInTheDocument();
+        expect(screen.getByText('Nordfeld')).toBeInTheDocument();
+        expect(screen.queryByText('Karottenbeet')).not.toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Darstellungstiefe der Baumansicht wählen' }));
+      fireEvent.click(await screen.findByRole('menuitem', { name: 'Alle Ebenen anzeigen' }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Nordfeld')).toBeInTheDocument();
+        expect(screen.getByText('Karottenbeet')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Darstellungstiefe der Baumansicht wählen' }));
+      fireEvent.click(await screen.findByRole('menuitem', { name: 'Alle einklappen' }));
+
+      await waitFor(() => {
+        // Root-level nodes (Standorte) always render; "collapse all" only hides their descendants.
+        expect(screen.getByText('Hof')).toBeInTheDocument();
+        expect(screen.queryByText('Nordfeld')).not.toBeInTheDocument();
+      });
+    });
+
     it('uses compact search and filter controls on mobile', async () => {
       const restoreViewport = withMobileCalendarViewport();
       try {
