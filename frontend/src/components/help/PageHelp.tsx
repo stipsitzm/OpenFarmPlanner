@@ -245,7 +245,7 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
   };
 
   const renderHelpTextContent = (text: string): ReactElement | string => {
-    const tokens = text.split(/({{addIcon}}|{{moreIcon}})/);
+    const tokens = text.split(/({{addIcon}}|{{moreIcon}}|{{createPlanIcon}})/);
     if (tokens.length === 1) {
       return text;
     }
@@ -275,6 +275,20 @@ export default function PageHelp({ pageKey, ariaLabel, tooltip }: PageHelpProps)
                 sx={{
                   mx: 0.25,
                   color: 'text.secondary',
+                  verticalAlign: 'text-bottom',
+                }}
+              />
+            );
+          }
+          if (token === '{{createPlanIcon}}') {
+            return (
+              <AgricultureIcon
+                key={`${token}-${index}`}
+                aria-hidden
+                fontSize="small"
+                sx={{
+                  mx: 0.25,
+                  color: 'primary.main',
                   verticalAlign: 'text-bottom',
                 }}
               />

@@ -38,7 +38,9 @@ describe('PageHelp', () => {
     expect(screen.getByText('Neue Standorte, Parzellen und Beete können über das', { exact: false })).toBeInTheDocument();
     expect(screen.getByTestId('AddIcon')).toBeInTheDocument();
     expect(screen.getByText('hinzugefügt werden, das beim Überfahren eines Elements mit der Maus erscheint.', { exact: false })).toBeInTheDocument();
-    expect(screen.getByText('Einträge können direkt in der Tabelle bearbeitet werden. Weitere Aktionen wie Umbenennen, Löschen oder das Anlegen von Anbauplänen findest du im Kontextmenü per Rechtsklick.')).toBeInTheDocument();
+    expect(screen.getByText('Einträge können direkt in der Tabelle bearbeitet werden. Über das', { exact: false })).toBeInTheDocument();
+    expect(screen.getByTestId('AgricultureIcon')).toBeInTheDocument();
+    expect(screen.getByText('bei einem Beet legst du direkt einen Anbauplan dafür an. Weitere Aktionen wie Umbenennen oder Löschen findest du im Kontextmenü per Rechtsklick.', { exact: false })).toBeInTheDocument();
     expect(screen.queryByText('Bedienung')).not.toBeInTheDocument();
     expect(screen.queryByText('Zusammenhang mit anderen Seiten')).not.toBeInTheDocument();
     expect(screen.queryByText('Symbole und Bedienelemente')).not.toBeInTheDocument();

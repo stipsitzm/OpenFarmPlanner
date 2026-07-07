@@ -629,6 +629,10 @@ function RootLayout() {
     () => topbarContextActions.find((action) => action.id === 'fields-global-add-field') ?? null,
     [topbarContextActions],
   );
+  const isFieldsBedsGraphicalViewActive = useMemo(
+    () => topbarContextActions.some((action) => action.id === 'fields-view-mode-graphical' && action.active),
+    [topbarContextActions],
+  );
   const genericTopbarContextActions = useMemo(
     () => (isCulturesPage ? [] : topbarContextActions.filter((action) => action.id !== 'fields-global-add-field')),
     [isCulturesPage, topbarContextActions],
@@ -825,7 +829,12 @@ function RootLayout() {
   const topbarHelpConfig = useMemo(() => {
     if (location.pathname.startsWith('/app/dashboard')) return { pageKey: 'dashboard' as const, label: t('pageHelp.dashboard') };
     if (location.pathname.startsWith('/app/locations')) return { pageKey: 'locations' as const, label: t('pageHelp.locations') };
-    if (location.pathname.startsWith('/app/fields-beds')) return { pageKey: 'areas' as const, label: t('pageHelp.areas') };
+    if (location.pathname.startsWith('/app/fields-beds')) {
+      return {
+        pageKey: (isFieldsBedsGraphicalViewActive ? 'graphical' : 'areas') as const,
+        label: t('pageHelp.areas'),
+      };
+    }
     if (location.pathname.startsWith('/app/cultures')) return { pageKey: 'cultures' as const, label: t('pageHelp.cultures') };
     if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { pageKey: 'plantingPlans' as const, label: t('pageHelp.plantingPlans') };
     if (location.pathname.startsWith('/app/gantt-chart')) return { pageKey: 'calendar' as const, label: t('pageHelp.calendar') };
@@ -833,7 +842,7 @@ function RootLayout() {
     if (location.pathname.startsWith('/app/seed-demand')) return { pageKey: 'seedDemand' as const, label: t('pageHelp.seedDemand') };
     if (location.pathname.startsWith('/app/suppliers')) return { pageKey: 'suppliers' as const, label: t('pageHelp.suppliers') };
     return null;
-  }, [location.pathname, t]);
+  }, [isFieldsBedsGraphicalViewActive, location.pathname, t]);
   const topbarPrimaryAction = useMemo(() => {
     if (activeCreateActions.length > 0) {
       const isSingleCreateAction = activeCreateActions.length === 1;
