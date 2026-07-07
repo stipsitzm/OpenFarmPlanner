@@ -44,7 +44,12 @@ export async function fetchAllPaginated<T>(
     >(nextPath);
     results.push(...response.data.results);
     count = response.data.count;
-    nextPath = response.data.next;
+    // DRF returns an absolute URL for `next`, built from the backend's own host.
+    // Following it directly would bypass the frontend's dev proxy (and drop
+    // same-origin cookies), so only the query string is reused against the
+    // original relative path.
+    const next = response.data.next;
+    nextPath = next ? `${initialPath}?${new URL(next, window.location.origin).searchParams.toString()}` : null;
   }
 
   return {

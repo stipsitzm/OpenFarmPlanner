@@ -17,7 +17,7 @@ from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError, transaction
-from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q, Count
+from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q, Count, Prefetch
 from django.db.models.functions import Coalesce, Ceil, Cast
 from django.http import HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect
@@ -1237,9 +1237,21 @@ class CultureViewSet(ProjectScopedMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         include_deleted = self.request.query_params.get('include_deleted') in {'1', 'true', 'True'}
-        if include_deleted:
-            return Culture.all_objects.filter(project=self.request.active_project).prefetch_related('supplier_data__supplier')
-        return Culture.objects.filter(project=self.request.active_project).prefetch_related('supplier_data__supplier')
+        manager = Culture.all_objects if include_deleted else Culture.objects
+        owned_public_cultures_prefetch = Prefetch(
+            'published_public_cultures',
+            queryset=PublicCulture.objects.filter(
+                created_by=self.request.user,
+                status=PublicCulture.STATUS_PUBLISHED,
+            ).order_by('-updated_at', '-id'),
+            to_attr='_prefetched_owned_public_cultures',
+        )
+        return (
+            manager
+            .filter(project=self.request.active_project)
+            .select_related('supplier', 'image_file', 'source_public_culture')
+            .prefetch_related('supplier_data__supplier', 'seed_packages', owned_public_cultures_prefetch)
+        )
 
     @action(detail=False, methods=['get'], url_path='duplicate-check')
     def duplicate_check(self, request):

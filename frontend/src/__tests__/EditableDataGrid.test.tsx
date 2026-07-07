@@ -228,8 +228,11 @@ vi.mock('@mui/x-data-grid', async () => {
     );
   };
 
+  const GridPagination = () => <div data-testid="grid-pagination" />;
+
   return {
     DataGrid,
+    GridPagination,
     GridRowModes,
     GridRowEditStopReasons,
     getGridBooleanOperators: getMockFilterOperators,
