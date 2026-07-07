@@ -10,6 +10,7 @@ import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../../i18n';
+import type { NotesPreviewOpenMode } from './useNotesPreview';
 
 export interface NotesCellProps {
   hasValue: boolean;
@@ -20,6 +21,12 @@ export interface NotesCellProps {
   compactIndicator?: boolean;
   onOpenAttachments?: (event: MouseEvent<HTMLButtonElement>) => void;
   hasFocus?: boolean;
+  /** Whether the shared notes preview popover is currently open for this cell. */
+  isPreviewOpen?: boolean;
+  /** Request that the shared preview popover open, anchored to the given element. */
+  onPreviewOpen?: (anchorEl: HTMLElement, mode: NotesPreviewOpenMode) => void;
+  /** Request that the shared preview popover close (may be debounced by the caller). */
+  onPreviewClose?: () => void;
 }
 
 export function NotesCell({
@@ -31,10 +38,14 @@ export function NotesCell({
   compactIndicator = false,
   onOpenAttachments,
   hasFocus = false,
+  isPreviewOpen = false,
+  onPreviewOpen,
+  onPreviewClose,
 }: NotesCellProps) {
   const { t } = useTranslation('common');
   const compactTriggerRef = useRef<HTMLDivElement | null>(null);
   const notesButtonRef = useRef<HTMLButtonElement | null>(null);
+  const suppressNextClickRef = useRef(false);
 
   const firstLine = excerpt.split('\n')[0];
   const displayText = firstLine.length > 40 ? `${firstLine.substring(0, 37)}...` : firstLine;
@@ -92,64 +103,66 @@ export function NotesCell({
       : hasAttachments
         ? 'Bilder vorhanden'
         : 'Keine Notiz oder Bilder vorhanden';
-  const compactTooltip = hasValue && hasAttachments
-    ? `Notiz vorhanden. ${attachmentTooltip}`
-    : hasValue
-      ? 'Notiz vorhanden'
-      : hasAttachments
-        ? attachmentTooltip
-        : 'Keine Notiz oder Bilder vorhanden';
 
   if (compactIndicator) {
+    const hasPreview = Boolean(onPreviewOpen);
     return (
-      <Tooltip
-        title={compactTooltip}
-        arrow
-        disableHoverListener={!hasValue && !hasAttachments}
-        disableFocusListener={!hasValue && !hasAttachments}
-        disableTouchListener={!hasValue && !hasAttachments}
-      >
-        <Box
-          ref={compactTriggerRef}
-          role="button"
-          tabIndex={hasFocus ? 0 : -1}
-          aria-label={compactAriaLabel}
-          onClick={(event) => {
+      <Box
+        ref={compactTriggerRef}
+        role="button"
+        tabIndex={hasFocus ? 0 : -1}
+        aria-label={compactAriaLabel}
+        aria-haspopup={hasPreview ? 'dialog' : undefined}
+        aria-expanded={hasPreview ? isPreviewOpen : undefined}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (suppressNextClickRef.current) {
+            suppressNextClickRef.current = false;
+            return;
+          }
+          onOpen();
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
             event.stopPropagation();
             onOpen();
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              event.stopPropagation();
-              onOpen();
-            }
-          }}
-          sx={{
-            width: '100%',
-            height: '100%',
-            minHeight: 32,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 0.25,
-            whiteSpace: 'nowrap',
-            cursor: 'pointer',
+          }
+        }}
+        onMouseEnter={(event) => onPreviewOpen?.(event.currentTarget, 'hover')}
+        onMouseLeave={() => onPreviewClose?.()}
+        onFocus={(event) => onPreviewOpen?.(event.currentTarget, 'immediate')}
+        onBlur={() => onPreviewClose?.()}
+        onTouchStart={(event) => {
+          if (onPreviewOpen && !isPreviewOpen) {
+            suppressNextClickRef.current = true;
+            onPreviewOpen(event.currentTarget, 'immediate');
+          }
+        }}
+        sx={{
+          width: '100%',
+          height: '100%',
+          minHeight: 32,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 0.25,
+          whiteSpace: 'nowrap',
+          cursor: 'pointer',
+          outline: 'none',
+          '&:focus, &:focus-visible': {
             outline: 'none',
-            '&:focus, &:focus-visible': {
-              outline: 'none',
-            },
-          }}
-        >
-          {hasValue ? <NotesIcon fontSize="small" color="action" /> : null}
-          {hasAttachments ? <PhotoLibraryIcon fontSize="small" color="action" /> : null}
-          {!hasValue && !hasAttachments ? (
-            <Typography variant="body2" color="text.disabled" aria-hidden>
-              —
-            </Typography>
-          ) : null}
-        </Box>
-      </Tooltip>
+          },
+        }}
+      >
+        {hasValue ? <NotesIcon fontSize="small" color="action" /> : null}
+        {hasAttachments ? <PhotoLibraryIcon fontSize="small" color="action" /> : null}
+        {!hasValue && !hasAttachments ? (
+          <Typography variant="body2" color="text.disabled" aria-hidden>
+            —
+          </Typography>
+        ) : null}
+      </Box>
     );
   }
 

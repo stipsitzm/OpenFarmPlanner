@@ -66,6 +66,15 @@
     "attachmentsCount_one": "{{count}} Foto in Notizen",
     "attachmentsCount_other": "{{count}} Fotos in Notizen"
   },
+  "notesPreview": {
+    "heading": "Notiz",
+    "empty": "Keine Notiz vorhanden",
+    "openNote": "Notiz öffnen",
+    "loadingImages": "Bilder werden geladen…",
+    "imagesLoadError": "Bilder konnten nicht geladen werden.",
+    "openImageAria": "Foto öffnen",
+    "moreImagesAria": "{{count}} weitere Fotos öffnen"
+  },
   "notesDrawer": {
     "takePhoto": "Foto aufnehmen",
     "selectFromGallery": "Aus Galerie wählen",

@@ -43,6 +43,8 @@ import {
 } from './DeleteUndoSnackbar';
 import { getPlainExcerpt } from './markdown';
 import { useNotesEditor } from './useNotesEditor';
+import { useNotesPreview } from './useNotesPreview';
+import { NotesPreviewPopover } from './NotesPreviewPopover';
 import { extractApiErrorMessage } from '../../api/errors';
 import { germanDataGridLocaleText } from './localeText';
 import { TableCopyMenuItems } from './TableCopyMenuItems';
@@ -271,6 +273,7 @@ export function EditableDataGrid<T extends EditableRow>({
       setError(extractedError);
     },
   });
+  const notesPreview = useNotesPreview();
 
   const hasRowsInEditMode = Object.values(rowModesModel).some(
     (mode) => mode.mode === GridRowModes.Edit
@@ -1526,6 +1529,8 @@ export function EditableDataGrid<T extends EditableRow>({
             : 0;
           const attachmentCount = typeof attachmentCountRaw === 'number' ? attachmentCountRaw : 0;
 
+          const isPreviewOpen = notesPreview.state?.rowId === params.id && notesPreview.state?.field === col.field;
+
           return (
             <NotesCell
               hasValue={hasValue}
@@ -1533,19 +1538,26 @@ export function EditableDataGrid<T extends EditableRow>({
               rawValue={value}
               attachmentCount={attachmentCount}
               compactIndicator={Boolean(fieldConfig?.compactIndicator)}
-              onOpen={() => notesEditor.handleOpen(params.id, col.field)}
+              onOpen={() => {
+                notesPreview.close();
+                notesEditor.handleOpen(params.id, col.field);
+              }}
               onOpenAttachments={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
+                notesPreview.close();
                 notesEditor.handleOpen(params.id, col.field, { focusAttachments: true });
               }}
               hasFocus={params.hasFocus}
+              isPreviewOpen={isPreviewOpen}
+              onPreviewOpen={notesEditor.isOpen ? undefined : (anchorEl, mode) => notesPreview.openPreview(anchorEl, params.id, col.field, mode)}
+              onPreviewClose={notesEditor.isOpen ? undefined : notesPreview.scheduleClose}
             />
           );
         },
       });
     });
-  }, [columns, getInlineRowActions, inlineRowActionField, notes, notesEditor, notesFieldNames, renderInlineActionCell, showInlineRowActionMenu]);
+  }, [columns, getInlineRowActions, inlineRowActionField, notes, notesEditor, notesFieldNames, notesPreview, renderInlineActionCell, showInlineRowActionMenu]);
 
   const columnsWithActions: GridColDef[] = [
     ...processedColumns,
@@ -1728,6 +1740,23 @@ export function EditableDataGrid<T extends EditableRow>({
     // Last resort: use field name itself
     return `${notesEditor.field} – Notizen`;
   };
+
+  const previewState = notesPreview.state;
+  const previewRow = previewState ? rowsById.get(String(previewState.rowId)) : undefined;
+  const previewFieldConfig = previewState && notes
+    ? notes.fields.find((f) => f.field === previewState.field)
+    : undefined;
+  const previewRawValue = previewState && previewRow
+    ? ((previewRow[previewState.field as keyof T] as string) || '')
+    : '';
+  const previewAttachmentCountRaw = previewFieldConfig?.attachmentCountField && previewRow
+    ? previewRow[previewFieldConfig.attachmentCountField as keyof T]
+    : 0;
+  const previewAttachmentCount = typeof previewAttachmentCountRaw === 'number' ? previewAttachmentCountRaw : 0;
+  const previewNoteIdRaw = previewFieldConfig?.attachmentNoteIdField && previewRow
+    ? previewRow[previewFieldConfig.attachmentNoteIdField as keyof T]
+    : undefined;
+  const previewNoteId = typeof previewNoteIdRaw === 'number' ? previewNoteIdRaw : undefined;
 
   useEffect(() => {
     if (!onRowsStateChange) {
@@ -2209,6 +2238,31 @@ export function EditableDataGrid<T extends EditableRow>({
             const val = notesEditor.currentRow[cfg.attachmentNoteIdField as keyof typeof notesEditor.currentRow];
             return typeof val === "number" ? val : undefined;
           })()}
+        />
+      )}
+
+      {/* Notes preview popover: single shared instance for the whole grid */}
+      {notes && notes.fields && notes.fields.length > 0 && (
+        <NotesPreviewPopover
+          open={Boolean(previewState)}
+          anchorEl={previewState?.anchorEl ?? null}
+          rawValue={previewRawValue}
+          hasValue={previewRawValue.trim().length > 0}
+          noteId={previewNoteId}
+          attachmentCount={previewAttachmentCount}
+          onClose={notesPreview.close}
+          onOpenNote={() => {
+            if (!previewState) return;
+            notesEditor.handleOpen(previewState.rowId, previewState.field);
+            notesPreview.close();
+          }}
+          onOpenAttachment={() => {
+            if (!previewState) return;
+            notesEditor.handleOpen(previewState.rowId, previewState.field, { focusAttachments: true });
+            notesPreview.close();
+          }}
+          onMouseEnter={notesPreview.cancelScheduledClose}
+          onMouseLeave={notesPreview.scheduleClose}
         />
       )}
     </>
