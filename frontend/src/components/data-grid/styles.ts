@@ -25,14 +25,23 @@ const EDITING_ROW_HOVER_CELL_SELECTOR = [
   '& .ofp-row-editing:hover .MuiDataGrid-cell',
   '& .MuiDataGrid-row--editing:hover .MuiDataGrid-cell',
 ].join(', ');
-const SELECTED_ROW_CELL_SELECTOR = [
-  '& .MuiDataGrid-row.Mui-selected .MuiDataGrid-cell',
-  '& .MuiDataGrid-row.Mui-selected:hover .MuiDataGrid-cell',
-].join(', ');
+// `:not(.MuiDataGrid-row--editing)` keeps these overrides from clobbering the
+// (intentional, separate) edit-mode row tint when a row happens to be both
+// selected and in edit mode.
+const SELECTED_ROW_SELECTOR = '& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing)';
+const SELECTED_ROW_CELL_SELECTOR = '& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing) .MuiDataGrid-cell';
 const SELECTED_ROW_FOCUS_CELL_SELECTOR = [
-  '& .MuiDataGrid-row.Mui-selected .MuiDataGrid-cell:focus',
-  '& .MuiDataGrid-row.Mui-selected .MuiDataGrid-cell:focus-within',
+  '& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing) .MuiDataGrid-cell:focus',
+  '& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing) .MuiDataGrid-cell:focus-within',
 ].join(', ');
+const SELECTED_ROW_HOVER_SELECTOR = [
+  '& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing):hover',
+  '& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing):hover .MuiDataGrid-cell',
+].join(', ');
+const SELECTED_ROW_EDITABLE_CELL_SELECTOR = '& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing) .MuiDataGrid-cell--editable';
+const SELECTED_ROW_EDITABLE_CELL_HOVER_SELECTOR = '& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing) .MuiDataGrid-cell--editable:hover';
+const SELECTED_ROW_CALCULATED_CELL_SELECTOR = `& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing) .${CALCULATED_COLUMN_CELL_CLASS}`;
+const SELECTED_ROW_CALCULATED_CELL_HOVER_SELECTOR = `& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing):hover .${CALCULATED_COLUMN_CELL_CLASS}`;
 
 const getPrimaryOverlay = (theme: Theme, opacity: number): string =>
   alpha(theme.palette.primary.main, opacity);
@@ -189,12 +198,41 @@ export const dataGridSx = {
   [EDITING_ROW_HOVER_CELL_SELECTOR]: {
     backgroundColor: (theme: Theme) => getPrimaryOverlay(theme, EDITING_ROW_BACKGROUND_ALPHA),
   },
+  // Row "selection" here only tracks which row keyboard shortcuts (delete,
+  // duplicate, etc.) act on — it is not a visible multi-select feature, so a
+  // selected row must look identical to any other row except while actually
+  // hovered or its cell is focused. The rules below undo MUI DataGrid's
+  // built-in persistent `.Mui-selected` background, then restore the
+  // specific backgrounds (calculated column, editable cell, hover) that a
+  // plain cell would otherwise still have.
+  [SELECTED_ROW_SELECTOR]: {
+    backgroundColor: 'transparent',
+  },
   [SELECTED_ROW_CELL_SELECTOR]: {
-    backgroundColor: 'action.selected',
+    backgroundColor: 'transparent',
   },
   [SELECTED_ROW_FOCUS_CELL_SELECTOR]: {
-    backgroundColor: 'action.selected',
+    backgroundColor: 'transparent',
     boxShadow: (theme: Theme) => getDataGridCellFocusRing(theme),
+  },
+  [SELECTED_ROW_HOVER_SELECTOR]: {
+    backgroundColor: 'surface.surfaceHoverBackground',
+  },
+  [SELECTED_ROW_EDITABLE_CELL_SELECTOR]: {
+    bgcolor: (theme: Theme) =>
+      theme.palette.mode === 'dark'
+        ? '#383838'
+        : (theme.palette.surface?.surfaceBackground ?? theme.palette.background.paper),
+  },
+  [SELECTED_ROW_EDITABLE_CELL_HOVER_SELECTOR]: {
+    backgroundColor: 'surface.surfaceHoverBackground',
+  },
+  [SELECTED_ROW_CALCULATED_CELL_SELECTOR]: {
+    backgroundColor: CALCULATED_COLUMN_BACKGROUND,
+    color: CALCULATED_COLUMN_TEXT,
+  },
+  [SELECTED_ROW_CALCULATED_CELL_HOVER_SELECTOR]: {
+    backgroundColor: 'surface.surfaceHoverBackground',
   },
 };
 
