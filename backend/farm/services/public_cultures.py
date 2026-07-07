@@ -132,16 +132,13 @@ def detect_public_culture_duplicates(culture: Culture) -> list[DuplicateCandidat
     for item in queryset:
         if normalize_identity_value(get_public_supplier_label(item)) != normalized_supplier:
             continue
-        created_by_label = ''
-        if item.created_by:
-            created_by_label = item.created_by.get_full_name().strip() or item.created_by.username or item.created_by.email
         candidates.append(DuplicateCandidate(
             id=item.id,
             name=item.name,
             variety=item.variety,
             version=item.version,
             published_at=item.published_at,
-            created_by_label=created_by_label,
+            created_by_label=item.created_by_label,
         ))
         if len(candidates) >= 5:
             break

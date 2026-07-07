@@ -655,9 +655,7 @@ class PublicCultureSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_created_by_label(self, obj: PublicCulture) -> str:
-        if not obj.created_by:
-            return ''
-        return obj.created_by.get_full_name().strip() or obj.created_by.username or obj.created_by.email or ''
+        return obj.created_by_label
 
 
 class CultureSerializer(serializers.ModelSerializer):
