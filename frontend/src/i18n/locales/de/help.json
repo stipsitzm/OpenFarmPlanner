@@ -139,8 +139,7 @@
         "library": "Kulturbibliothek öffnen",
         "createPlan": "Anbauplan für diese Kultur hinzufügen",
         "more": "Weitere Aktionen öffnen",
-        "edit": "Kulturdaten bearbeiten",
-        "delete": "Kultur löschen"
+        "edit": "Kulturdaten bearbeiten"
       }
     },
     "plantingPlans": {
