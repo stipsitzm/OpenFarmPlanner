@@ -108,6 +108,34 @@ const withMobileCalendarViewport = (): (() => void) => {
   };
 };
 
+// Narrower than withMobileCalendarViewport: matches both the 'md' and 'sm'
+// down-queries, like an actual phone-width viewport would, so the
+// isPhoneViewport-gated level-toggle buttons can be tested as hidden.
+const withPhoneCalendarViewport = (): (() => void) => {
+  const originalMatchMedia = window.matchMedia;
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes('max-width:899.95px') || query.includes('max-width:599.95px'),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+  return () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: originalMatchMedia,
+    });
+  };
+};
+
 vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
   return {
@@ -191,6 +219,7 @@ vi.mock('../gantt-chart/src', () => ({
     locale?: string;
     localeText?: { title?: string } & Record<string, unknown>;
     maxHeight?: string | number;
+    headerLabel?: ReactNode;
   }) => {
     mocks.ganttProps(props);
     // With the occupancy tree, tasks[0] is often a Standort/Parzelle parent
@@ -209,6 +238,7 @@ vi.mock('../gantt-chart/src', () => ({
           onViewModeChange: vi.fn(),
           showViewModeSelector: true,
         })}
+        <div data-testid="mock-gantt-task-list-header">{props.headerLabel}</div>
         <div
           className="rmg-container"
           data-testid="mock-gantt-scroll-container"
@@ -549,7 +579,7 @@ describe('GanttChartPage', () => {
     expect(latestProps?.locale).toBe('de-DE');
     expect(latestProps?.localeText).toMatchObject({
       title: 'Feldplanung',
-      resources: 'Anbauflächen',
+      resources: 'Flächen',
       today: 'Heute',
     });
     expect(latestProps?.editMode).toBe(false);
@@ -1595,6 +1625,33 @@ describe('GanttChartPage', () => {
         expect(screen.getByText('Karottenbeet')).toBeInTheDocument();
       });
       expect(expandButton()).toBeDisabled();
+    });
+
+    it('keeps the level-toggle buttons on tablet-ish viewports', async () => {
+      // withMobileCalendarViewport simulates a tablet-ish width (under the
+      // 'md' breakpoint only) — the buttons should still show there.
+      const restoreTabletViewport = withMobileCalendarViewport();
+      try {
+        setUpMultiLocationFixture();
+        renderWithAuth();
+        await screen.findByText('Karottenbeet');
+        expect(screen.getByRole('button', { name: 'Eine Hierarchieebene ausblenden' })).toBeInTheDocument();
+      } finally {
+        restoreTabletViewport();
+      }
+    });
+
+    it('hides the level-toggle buttons on phone-sized viewports', async () => {
+      const restorePhoneViewport = withPhoneCalendarViewport();
+      try {
+        setUpMultiLocationFixture();
+        renderWithAuth();
+        await screen.findByText('Karottenbeet');
+        expect(screen.queryByRole('button', { name: 'Eine Hierarchieebene ausblenden' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Eine Hierarchieebene mehr anzeigen' })).not.toBeInTheDocument();
+      } finally {
+        restorePhoneViewport();
+      }
     });
 
     it('uses compact search and filter controls on mobile', async () => {

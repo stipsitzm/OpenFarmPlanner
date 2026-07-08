@@ -95,7 +95,7 @@ import { getGanttRenderWindow } from './ganttRenderWindow';
 import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState';
 import { collectVisibleIdsWithAncestors, flattenTreeRows } from '../components/hierarchy/utils/treeRows';
 import { useHierarchyLevelToggle } from '../components/hierarchy/hooks/useHierarchyLevelToggle';
-import { HierarchyLevelToggle } from '../components/hierarchy/HierarchyLevelToggle';
+import { HierarchyLevelButtons } from '../components/hierarchy/HierarchyLevelToggle';
 
 type CalendarMode = 'occupancy' | 'seedlings';
 const GanttChartWithFocusMode = GanttChart as React.ComponentType<
@@ -523,6 +523,10 @@ function GanttChartPage() {
   const { t, i18n } = useTranslation(['ganttChart', 'common']);
   const theme = useTheme();
   const useMobileFilterLayout = useMediaQuery(theme.breakpoints.down('md'));
+  // Narrower than useMobileFilterLayout on purpose: the level-toggle buttons
+  // embedded in the "Anbauflächen" header should still show on tablets, only
+  // hidden on phone-sized viewports where there isn't room for them.
+  const isPhoneViewport = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const authContext = useContext(AuthContext);
@@ -1491,6 +1495,35 @@ function GanttChartPage() {
       [ViewMode.YEAR]: t('ganttChart:chartLocaleText.viewModes.year'),
     },
   }), [calendarMode, t]);
+
+  // Embeds the expand/collapse-one-level buttons directly in the Gantt task
+  // list's own header (next to "Anbauflächen"/"Anzucht...") instead of a
+  // separate control in the page's toolbar row. Occupancy-only (seedlings
+  // mode has no expandable hierarchy) and hidden on phone-sized viewports;
+  // still shown on tablets. Falls back to the plain localeText.resources
+  // string (via core/GanttChart.tsx's own default) when undefined.
+  const ganttHeaderLabel = useMemo(() => {
+    if (calendarMode !== 'occupancy' || isPhoneViewport) {
+      return undefined;
+    }
+
+    return (
+      <>
+        <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {ganttLocaleText.resources}
+        </Box>
+        <Box sx={{ ml: 'auto', pl: 1.5, display: 'inline-flex', flexShrink: 0 }}>
+          <HierarchyLevelButtons
+            canExpand={hierarchyLevelToggle.canExpand}
+            canCollapse={hierarchyLevelToggle.canCollapse}
+            onExpandOneLevel={hierarchyLevelToggle.expandOneLevel}
+            onCollapseOneLevel={hierarchyLevelToggle.collapseOneLevel}
+          />
+        </Box>
+      </>
+    );
+  }, [calendarMode, ganttLocaleText.resources, hierarchyLevelToggle, isPhoneViewport]);
+
   const renderGanttHeader = useCallback(({
     title,
     viewMode,
@@ -1595,15 +1628,6 @@ function GanttChartPage() {
             </Tooltip>
           ) : null}
         </Box>
-        {calendarMode === 'occupancy' && !useMobileFilterLayout ? (
-          <HierarchyLevelToggle
-            levelCount={hierarchyLevelToggle.levelCount}
-            canExpand={hierarchyLevelToggle.canExpand}
-            canCollapse={hierarchyLevelToggle.canCollapse}
-            onExpandOneLevel={hierarchyLevelToggle.expandOneLevel}
-            onCollapseOneLevel={hierarchyLevelToggle.collapseOneLevel}
-          />
-        ) : null}
         {showViewModeSelector ? (
           <Box sx={{ ml: 'auto', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
             <Select
@@ -1662,9 +1686,7 @@ function GanttChartPage() {
     calendarMode,
     editMode,
     handleTimelineViewModeChange,
-    hierarchyLevelToggle,
     t,
-    useMobileFilterLayout,
   ]);
 
   const activeTaskGroups = calendarMode === 'occupancy' ? occupancyTaskGroups : seedlingTaskGroups;
@@ -2308,6 +2330,7 @@ function GanttChartPage() {
         tasks={renderedTaskGroups}
         locale={resolvedLocale}
         localeText={ganttLocaleText}
+        headerLabel={ganttHeaderLabel}
         viewMode={timelineViewMode}
         leftColumnWidth={activeGanttLeftColumnWidth}
         rowHeight={GANTT_ROW_HEIGHT}

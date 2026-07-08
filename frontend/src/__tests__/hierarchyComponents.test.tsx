@@ -487,6 +487,73 @@ describe('hierarchy components and behaviors', () => {
     expect(document.querySelectorAll('[data-testid="SwapHorizIcon"]').length).toBeGreaterThan(0);
   });
 
+  it('embeds the expand/collapse-one-level buttons in the "Name" header when levelToggle is provided', async () => {
+    const user = userEvent.setup();
+    const onExpandOneLevel = vi.fn();
+    const onCollapseOneLevel = vi.fn();
+    const parentClick = vi.fn();
+
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+      undefined,
+      {
+        levelToggle: {
+          canExpand: true,
+          canCollapse: false,
+          onExpandOneLevel,
+          onCollapseOneLevel,
+        },
+      },
+    );
+
+    const nameColumn = columns.find((column) => column.field === 'name');
+
+    render(
+      <div onClick={parentClick}>
+        {nameColumn?.renderHeader?.({} as never)}
+      </div>,
+    );
+
+    expect(screen.getByText('Name')).toBeInTheDocument();
+    const collapseButton = screen.getByRole('button', { name: 'Eine Hierarchieebene ausblenden' });
+    const expandButton = screen.getByRole('button', { name: 'Eine Hierarchieebene mehr anzeigen' });
+    expect(collapseButton).toBeDisabled();
+    expect(expandButton).not.toBeDisabled();
+
+    await user.click(expandButton);
+    expect(onExpandOneLevel).toHaveBeenCalledTimes(1);
+    expect(onCollapseOneLevel).not.toHaveBeenCalled();
+    // Clicking the header buttons must not bubble into the column header's
+    // own sort-toggle click handling.
+    expect(parentClick).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the plain "Name" header when no levelToggle is provided', () => {
+    const columns = createHierarchyColumns(
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      vi.fn(),
+      mockT as never,
+    );
+
+    const nameColumn = columns.find((column) => column.field === 'name');
+    expect(nameColumn?.renderHeader).toBeUndefined();
+    expect(nameColumn?.headerName).toBe('Name');
+  });
+
   it('returns bed dimensions and derived area via value getters', () => {
     const columns = createHierarchyColumns(
       vi.fn(),

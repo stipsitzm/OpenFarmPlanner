@@ -51,7 +51,6 @@
     "hideAll": "Alle ausblenden"
   },
   "hierarchyLevelToggle": {
-    "label": "Hierarchie",
     "expandTooltip": "Eine Hierarchieebene mehr anzeigen",
     "collapseTooltip": "Eine Hierarchieebene ausblenden"
   },

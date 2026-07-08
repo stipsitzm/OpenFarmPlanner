@@ -69,7 +69,7 @@
   "chartLocaleText": {
     "titleOccupancy": "Feldplanung",
     "titleSeedlings": "Anzuchtplanung",
-    "resources": "Anbauflächen",
+    "resources": "Flächen",
     "resourcesSeedlings": "Kulturen",
     "today": "Heute",
     "viewModes": {

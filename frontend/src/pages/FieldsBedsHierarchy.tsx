@@ -59,7 +59,6 @@ import { useHierarchyData, type HierarchyDataState } from "../components/hierarc
 import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
 import { type TreeRowNode } from "../components/hierarchy/utils/treeRows";
 import { useHierarchyLevelToggle } from "../components/hierarchy/hooks/useHierarchyLevelToggle";
-import { HierarchyLevelToggle } from "../components/hierarchy/HierarchyLevelToggle";
 import { hasPersistedEntityId } from "../components/hierarchy/utils/hierarchyUtils";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { useHierarchyDelete } from "../components/hierarchy/hooks/useHierarchyDelete";
@@ -512,7 +511,8 @@ function FieldsBedsHierarchy({
   }, [expandAll, fields, hasPersistedState, locations]);
 
   // Flat {id, parentId} view of the tree for the shared expand/collapse-one-
-  // level toggle (see HierarchyLevelToggle / useHierarchyLevelToggle).
+  // level toggle, embedded in the "Name" column header below (see
+  // HierarchyLevelButtons / useHierarchyLevelToggle).
   // Single-location projects render without a location row at all (see
   // buildHierarchyRowsFromIndex), so the location level is only included
   // here when there's more than one — the control then offers 2 levels
@@ -1176,6 +1176,15 @@ function FieldsBedsHierarchy({
       },
       {
         disableInlineHoverActions: isTouchLikePointer || isMobileViewport,
+        // Embedded directly in the "Name" column header instead of a
+        // dedicated row above the table (see HierarchyLevelButtons).
+        // Desktop-only, matching the toggle's previous placement.
+        levelToggle: isMobileViewport ? undefined : {
+          canExpand: hierarchyLevelToggle.canExpand,
+          canCollapse: hierarchyLevelToggle.canCollapse,
+          onExpandOneLevel: hierarchyLevelToggle.expandOneLevel,
+          onCollapseOneLevel: hierarchyLevelToggle.collapseOneLevel,
+        },
       },
     );
   }, [
@@ -1191,6 +1200,10 @@ function FieldsBedsHierarchy({
     nameColumnWidth,
     isTouchLikePointer,
     isMobileViewport,
+    hierarchyLevelToggle.canExpand,
+    hierarchyLevelToggle.canCollapse,
+    hierarchyLevelToggle.expandOneLevel,
+    hierarchyLevelToggle.collapseOneLevel,
   ]);
 
   const {
@@ -1346,18 +1359,6 @@ function FieldsBedsHierarchy({
             containerSx={{ mx: 0 }}
           />
         )}
-
-        {shouldShowHierarchyTable && !isMobileViewport ? (
-          <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 1 }}>
-            <HierarchyLevelToggle
-              levelCount={hierarchyLevelToggle.levelCount}
-              canExpand={hierarchyLevelToggle.canExpand}
-              canCollapse={hierarchyLevelToggle.canCollapse}
-              onExpandOneLevel={hierarchyLevelToggle.expandOneLevel}
-              onCollapseOneLevel={hierarchyLevelToggle.collapseOneLevel}
-            />
-          </Box>
-        ) : null}
 
         {shouldShowHierarchyTable ? (
           <Box

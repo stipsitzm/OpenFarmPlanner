@@ -9,6 +9,8 @@ export const i18nMap: Record<string, string> = {
   'common:actions.delete': 'Löschen',
   'common:actions.actions': 'Aktionen',
   'common:fields.notes': 'Notizen',
+  'hierarchyLevelToggle.expandTooltip': 'Eine Hierarchieebene mehr anzeigen',
+  'hierarchyLevelToggle.collapseTooltip': 'Eine Hierarchieebene ausblenden',
   'hierarchy:columns.name': 'Name',
   'hierarchy:columns.area': 'Fläche (m²)',
   'hierarchy:addBed': 'Beet hinzufügen',
