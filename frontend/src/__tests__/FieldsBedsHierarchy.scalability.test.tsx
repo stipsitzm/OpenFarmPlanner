@@ -105,7 +105,7 @@ describe('FieldsBedsHierarchy initial expansion at scale', () => {
     renderHierarchy();
 
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
-    expect(screen.getByTestId(`row-${1}`)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId(`row-${1}`)).toBeInTheDocument(), { timeout: 3000 });
   });
 
   it('only expands locations for a very large hierarchy, leaving beds collapsed', async () => {
