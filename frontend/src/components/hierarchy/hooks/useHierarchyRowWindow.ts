@@ -24,6 +24,17 @@ const EDGE_THRESHOLD_PX = 48;
 // immediately re-trigger from on the very next same-direction wheel/touch
 // event.
 const RESET_OFFSET_PX = 56;
+// Minimum accumulated scroll distance in one direction, while already at the
+// relevant edge, before a page transition fires. Real trackpads/precision
+// mice commonly emit a stray reversed-sign deltaY tick during otherwise
+// continuous scrolling (sub-pixel sampling noise, momentum-deceleration
+// tail) — reacting to a single event's sign flipped the page on that noise
+// alone whenever the current page happened to sit close enough to an edge
+// (which is common: some 100-row pages are only slightly taller than the
+// viewport, depending on where the boundary lands relative to field/bed
+// groupings). Requiring a small committed distance filters that noise
+// without perceptibly delaying an intentional scroll.
+const COMMIT_THRESHOLD_PX = 24;
 
 export interface HierarchyRowWindow {
   page: number;
@@ -102,56 +113,60 @@ export function useHierarchyRowWindow(
     // "scrolling up" and cascading back a page with no user input at all.
     // Gesture deltas aren't affected by either: they only exist while a
     // real wheel/touch event is in flight.
-    const handleWheel = (event: WheelEvent): void => {
-      if (pendingResetRef.current) {
+    //
+    // A single event's sign still isn't reliable enough on its own — see
+    // COMMIT_THRESHOLD_PX above — so deltas accumulate here and only commit
+    // to a transition once they add up to a real, sustained gesture in one
+    // direction. A sign change starts the accumulator over instead of
+    // partially cancelling it, so a genuine reversal isn't dampened by
+    // whatever noise preceded it.
+    let committedDelta = 0;
+    const processDelta = (deltaY: number): void => {
+      if (pendingResetRef.current || deltaY === 0) {
         return;
       }
+      committedDelta = Math.sign(committedDelta) === Math.sign(deltaY)
+        ? committedDelta + deltaY
+        : deltaY;
+
       const { scrollTop, scrollHeight, clientHeight } = container;
       const maxScrollTop = Math.max(0, scrollHeight - clientHeight);
-      if (event.deltaY > 0) {
-        if (scrollTop >= maxScrollTop - EDGE_THRESHOLD_PX && clampedPage < pageCount - 1) {
-          pendingResetRef.current = "top";
-          setPage(clampedPage + 1);
-        }
-      } else if (event.deltaY < 0) {
-        if (scrollTop <= EDGE_THRESHOLD_PX && clampedPage > 0) {
-          pendingResetRef.current = "bottom";
-          setPage(clampedPage - 1);
-        }
+      if (
+        committedDelta >= COMMIT_THRESHOLD_PX
+        && scrollTop >= maxScrollTop - EDGE_THRESHOLD_PX
+        && clampedPage < pageCount - 1
+      ) {
+        committedDelta = 0;
+        pendingResetRef.current = "top";
+        setPage(clampedPage + 1);
+      } else if (
+        committedDelta <= -COMMIT_THRESHOLD_PX
+        && scrollTop <= EDGE_THRESHOLD_PX
+        && clampedPage > 0
+      ) {
+        committedDelta = 0;
+        pendingResetRef.current = "bottom";
+        setPage(clampedPage - 1);
       }
     };
 
+    const handleWheel = (event: WheelEvent): void => {
+      processDelta(event.deltaY);
+    };
+
     // Touch has no deltaY, so direction is tracked as the distance dragged
-    // since the last touch point — same edge-threshold gating as wheel,
-    // same immunity to internal scrollTop churn since it never reads
-    // scrollTop's history, only the finger's.
+    // since the last touch point.
     let touchY = 0;
     const handleTouchStart = (event: TouchEvent): void => {
       touchY = event.touches[0]?.clientY ?? 0;
     };
     const handleTouchMove = (event: TouchEvent): void => {
-      if (pendingResetRef.current) {
-        return;
-      }
       const currentY = event.touches[0]?.clientY;
       if (currentY == null) {
         return;
       }
-      const deltaY = touchY - currentY;
+      processDelta(touchY - currentY);
       touchY = currentY;
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const maxScrollTop = Math.max(0, scrollHeight - clientHeight);
-      if (deltaY > 0) {
-        if (scrollTop >= maxScrollTop - EDGE_THRESHOLD_PX && clampedPage < pageCount - 1) {
-          pendingResetRef.current = "top";
-          setPage(clampedPage + 1);
-        }
-      } else if (deltaY < 0) {
-        if (scrollTop <= EDGE_THRESHOLD_PX && clampedPage > 0) {
-          pendingResetRef.current = "bottom";
-          setPage(clampedPage - 1);
-        }
-      }
     };
 
     container.addEventListener("wheel", handleWheel, { passive: true });

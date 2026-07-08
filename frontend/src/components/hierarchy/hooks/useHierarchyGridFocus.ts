@@ -191,15 +191,29 @@ export function useHierarchyGridFocus({
     applyPostEditFocus(editingRowId ?? undefined);
   }, [applyPostEditFocus, rowModesModel, rows]);
 
+  // Read at call time via a ref instead of depending on focusSelectedCell
+  // directly: it's recreated whenever ensureRowVisible's identity changes,
+  // which useHierarchyRowWindow does on every page transition (see there) -
+  // completely unrelated to selectedRowId or treeActive actually changing.
+  // Depending on it directly re-ran this effect on every such transition,
+  // which paged the grid straight back to wherever the already-selected row
+  // lives — on a large hierarchy, that meant scrolling forward past the
+  // first page boundary with any row selected immediately snapped back to
+  // that row's page, no matter how far the user kept scrolling.
+  const focusSelectedCellRef = useRef(focusSelectedCell);
+  useLayoutEffect(() => {
+    focusSelectedCellRef.current = focusSelectedCell;
+  });
+
   useLayoutEffect(() => {
     if (treeActive) {
       if (skipStaleSelectedFocusRef.current) {
         skipStaleSelectedFocusRef.current = false;
         return;
       }
-      focusSelectedCell();
+      focusSelectedCellRef.current();
     }
-  }, [focusSelectedCell, selectedRowId, treeActive]);
+  }, [selectedRowId, treeActive]);
 
   useLayoutEffect(() => {
     const previousRows = prevRowsRef.current;
