@@ -59,6 +59,7 @@ import { useHierarchyData, type HierarchyDataState } from "../components/hierarc
 import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
 import { type TreeRowNode } from "../components/hierarchy/utils/treeRows";
 import { useHierarchyLevelToggle } from "../components/hierarchy/hooks/useHierarchyLevelToggle";
+import { useHierarchyRowWindow } from "../components/hierarchy/hooks/useHierarchyRowWindow";
 import { hasPersistedEntityId } from "../components/hierarchy/utils/hierarchyUtils";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { useHierarchyDelete } from "../components/hierarchy/hooks/useHierarchyDelete";
@@ -132,6 +133,15 @@ const HIERARCHY_AUTO_EXPAND_ALL_THRESHOLD = 200;
 // and a floor so it never collapses to something unusably short.
 const TABLE_BOTTOM_MARGIN_PX = 24;
 const TABLE_MIN_HEIGHT_PX = 240;
+
+// The free/MIT @mui/x-data-grid we depend on hard-codes pagination on and
+// throws if paginationModel.pageSize exceeds 100 (DataGridPro lifts this;
+// not part of this project's dependencies). Above this many rows, the table
+// pages internally via useHierarchyRowWindow, which auto-advances/retreats
+// the page as the user scrolls near the grid's top/bottom edge — no pager UI
+// is shown, so it still reads as one continuous scroll.
+const HIERARCHY_GRID_PAGE_SIZE = 100;
+const HIERARCHY_VIRTUAL_SCROLLER_SELECTOR = ".MuiDataGrid-virtualScroller";
 
 const HIERARCHY_DATA_GRID_SX = {
   ...dataGridSx,
@@ -321,6 +331,27 @@ function FieldsBedsHierarchy({
     () => projectRows(expandedRows),
     [projectRows, expandedRows],
   );
+
+  const hierarchyRowWindow = useHierarchyRowWindow(
+    rows.length,
+    HIERARCHY_GRID_PAGE_SIZE,
+    HIERARCHY_VIRTUAL_SCROLLER_SELECTOR,
+    tableWrapperRef,
+  );
+
+  // Stable ref so ensureRowVisibleOnPage doesn't change identity on every
+  // expand/collapse (rows changes then) — same reasoning as rowsByIdRef
+  // below: focusRow depends on this, and an unstable identity there would
+  // re-fire the focus-restoring layout effect after every rows update.
+  const rowsArrayRef = useRef(rows);
+  useLayoutEffect(() => {
+    rowsArrayRef.current = rows;
+  }, [rows]);
+
+  const ensureRowVisibleOnPage = useCallback((rowId: GridRowId): boolean => {
+    const rowIndex = rowsArrayRef.current.findIndex((row) => String(row.id) === String(rowId));
+    return hierarchyRowWindow.ensureRowIndexVisible(rowIndex);
+  }, [hierarchyRowWindow]);
 
   const {
     expandedRowsRef,
@@ -766,6 +797,7 @@ function FieldsBedsHierarchy({
     selectRow,
     selectedRowId,
     treeActive,
+    ensureRowVisible: ensureRowVisibleOnPage,
   });
 
   const getPostEnterSaveFocusTarget = useCallback((rowId: GridRowId): GridRowId => {
@@ -869,12 +901,23 @@ function FieldsBedsHierarchy({
       // Expansion needs a render pass before the target row exists in the
       // DataGrid's virtualized viewport.
       requestAnimationFrame(() => {
-        const api = gridApiRef.current;
-        if (!api) return;
-        const rowIndex = api.getRowIndexRelativeToVisibleRows(targetRowId!);
-        if (typeof rowIndex === "number" && rowIndex >= 0) {
-          api.scrollToIndexes({ rowIndex });
+        const scrollAndFocus = (): void => {
+          const api = gridApiRef.current;
+          if (!api) return;
+          const rowIndex = api.getRowIndexRelativeToVisibleRows(targetRowId!);
+          if (typeof rowIndex === "number" && rowIndex >= 0) {
+            api.scrollToIndexes({ rowIndex });
+          }
           activateFirstRowForKeyboard(targetRowId!);
+        };
+
+        // On very large hierarchies (see useHierarchyRowWindow), the target
+        // row may be on a page that isn't displayed yet — page there first
+        // and wait one more frame before touching the grid API.
+        if (ensureRowVisibleOnPage(targetRowId!)) {
+          requestAnimationFrame(scrollAndFocus);
+        } else {
+          scrollAndFocus();
         }
       });
 
@@ -896,7 +939,7 @@ function FieldsBedsHierarchy({
       },
       { replace: true },
     );
-  }, [activateFirstRowForKeyboard, beds, ensureExpanded, fields, gridApiRef, loading, location.pathname, location.search, navigate]);
+  }, [activateFirstRowForKeyboard, beds, ensureExpanded, ensureRowVisibleOnPage, fields, gridApiRef, loading, location.pathname, location.search, navigate]);
 
   const handleHierarchyProcessRowUpdate = useCallback(
     async (newRow: HierarchyRow): Promise<HierarchyRow> => {
@@ -1470,6 +1513,14 @@ function FieldsBedsHierarchy({
               columns={columns}
               columnHeaderHeight={HEADER_ROW_HEIGHT}
               getRowHeight={getRowHeight}
+              // Without this, MUI falls back to the density-default row
+              // height as its estimate for any row it hasn't rendered yet,
+              // which is wrong for our taller location/field rows. At scale
+              // (many such rows off-screen), that under-estimate makes the
+              // grid's computed total scroll range too short, capping how
+              // far down you can actually scroll before ever reaching it —
+              // our row height is exact (not a guess), so reuse it here too.
+              getEstimatedRowHeight={getRowHeight}
               getRowClassName={(params) => (
                 params.id === highlightedRowId
                   ? `ofp-hierarchy-row-${params.row.type} ofp-hierarchy-row-highlighted`
@@ -1484,6 +1535,13 @@ function FieldsBedsHierarchy({
               editMode="row"
               autoHeight={isMobileViewport}
               hideFooter={true}
+              // See useHierarchyRowWindow: the free DataGrid always paginates
+              // and caps pageSize at 100, so very large hierarchies are paged
+              // internally (no pager UI) instead of relying on a single
+              // unbounded page. onPaginationModelChange is a no-op — our own
+              // scroll-position logic is the only thing that changes pages.
+              paginationModel={{ page: hierarchyRowWindow.page, pageSize: hierarchyRowWindow.pageSize }}
+              onPaginationModelChange={() => {}}
               sortingMode="server"
               sortModel={sortModel}
               onSortModelChange={setSortModel}

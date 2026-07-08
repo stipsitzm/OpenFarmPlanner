@@ -60,19 +60,23 @@ export function useHierarchyData(enabled = true): HierarchyDataState {
       setLoading(true);
     }
     try {
+      // listAll (not list) — list() is capped at the backend's default page
+      // size (100), which silently truncated large projects (more than 100
+      // fields or beds) to their first page, making the tail of the
+      // hierarchy tree unreachable no matter how the table itself scrolled.
       const [locationsRes, fieldsRes, bedsRes] = await Promise.all([
-        locationAPI.list(),
-        fieldAPI.list(),
-        bedAPI.list(),
+        locationAPI.listAll(),
+        fieldAPI.listAll(),
+        bedAPI.listAll(),
       ]);
 
       if (fetchRequestId !== latestFetchRequestRef.current) {
         return;
       }
       
-      const locs = locationsRes.data.results.filter(l => l.id !== undefined);
-      const flds = fieldsRes.data.results.filter(f => f.id !== undefined);
-      const bds = bedsRes.data.results.filter(b => b.id !== undefined);
+      const locs = locationsRes.results.filter(l => l.id !== undefined);
+      const flds = fieldsRes.results.filter(f => f.id !== undefined);
+      const bds = bedsRes.results.filter(b => b.id !== undefined);
       setLocations((currentLocations) =>
         mergePersistedWithTemporaryEntities(locs, currentLocations),
       );

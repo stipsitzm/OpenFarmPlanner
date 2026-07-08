@@ -8,9 +8,11 @@ const { locationListMock, fieldListMock, bedListMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('../api/api', () => ({
-  locationAPI: { list: locationListMock },
-  fieldAPI: { list: fieldListMock },
-  bedAPI: { list: bedListMock },
+  // listAll mirrors whatever list() is mocked to resolve, unwrapped —
+  // useHierarchyData uses listAll (not list) to fetch every page.
+  locationAPI: { list: locationListMock, listAll: async () => (await locationListMock()).data },
+  fieldAPI: { list: fieldListMock, listAll: async () => (await fieldListMock()).data },
+  bedAPI: { list: bedListMock, listAll: async () => (await bedListMock()).data },
 }));
 
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';
