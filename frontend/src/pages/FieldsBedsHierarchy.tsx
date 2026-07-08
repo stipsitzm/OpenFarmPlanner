@@ -121,24 +121,33 @@ interface HierarchyRowAction {
 const HIERARCHY_SELECTED_VIEW_ROW_SELECTOR =
   "& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing)";
 
+// Above this many combined locations/fields/beds, fully expanding the tree on
+// first load produces an unwieldy wall of rows before the user has done
+// anything. Below it, full expansion (the long-standing default) is more
+// useful than hiding everything behind a chevron — mirrors the same
+// size-based fallback used for the occupancy tree in GanttChart.tsx.
+const HIERARCHY_AUTO_EXPAND_ALL_THRESHOLD = 200;
+
+// Bottom breathing room left below the table when it's sized to the
+// available viewport height (see the tableWrapper measurement effect below),
+// and a floor so it never collapses to something unusably short.
+const TABLE_BOTTOM_MARGIN_PX = 24;
+const TABLE_MIN_HEIGHT_PX = 240;
+
 const HIERARCHY_DATA_GRID_SX = {
   ...dataGridSx,
-  width: "fit-content",
-  minWidth: 0,
+  // Intentionally no width: "fit-content" here (see git history/#50296dd7 for
+  // why it existed) — the name/dimension/area columns still keep their
+  // compact, content-based widths, but forcing the whole grid to shrink-wrap
+  // them fought the notes column's own flex: 1 (HierarchyColumns.tsx), which
+  // is designed to absorb whatever width is left over. Letting the grid fill
+  // its container lets notes do that job, so a horizontal scrollbar only
+  // shows up when the fixed columns genuinely don't fit (narrow viewports).
   "& .MuiDataGrid-filler": {
     display: "none",
   },
   "& .MuiDataGrid-scrollbarFiller": {
     display: "none",
-  },
-  "& .MuiDataGrid-main": {
-    width: "fit-content",
-  },
-  "& .MuiDataGrid-virtualScrollerContent": {
-    width: "fit-content !important",
-  },
-  "& .MuiDataGrid-columnHeaders": {
-    width: "fit-content !important",
   },
   "& .MuiDataGrid-columnHeader": {
     py: 0.25,
@@ -485,7 +494,16 @@ function FieldsBedsHierarchy({
   });
 
   /**
-   * Expand all rows when data is loaded (only once on initial load)
+   * Expand all rows when data is loaded (only once on initial load).
+   *
+   * Below HIERARCHY_AUTO_EXPAND_ALL_THRESHOLD combined entities, this fully
+   * expands the tree (locations and fields, revealing every bed) — the
+   * long-standing default. Above it, only locations are expanded, leaving
+   * fields (and their beds) collapsed, so opening a very large project shows
+   * a scannable top-level overview instead of a wall of thousands of rows.
+   * Single-location projects render fields as root rows (see
+   * hierarchyTreeNodes below), so they're always visible regardless of this
+   * threshold — only their bed children are affected.
    */
   useEffect(() => {
     if (
@@ -494,6 +512,8 @@ function FieldsBedsHierarchy({
       locations.length > 0 &&
       fields.length > 0
     ) {
+      const canFullyExpand =
+        locations.length + fields.length + beds.length <= HIERARCHY_AUTO_EXPAND_ALL_THRESHOLD;
       const allRowIds = new Set<string | number>();
 
       // Add all location IDs
@@ -501,15 +521,17 @@ function FieldsBedsHierarchy({
         allRowIds.add(`location-${location.id}`);
       });
 
-      // Add all field IDs
-      fields.forEach((field) => {
-        allRowIds.add(`field-${field.id}`);
-      });
+      if (canFullyExpand) {
+        // Add all field IDs
+        fields.forEach((field) => {
+          allRowIds.add(`field-${field.id}`);
+        });
+      }
 
       expandAll(Array.from(allRowIds));
       hasInitiallyExpandedRef.current = true;
     }
-  }, [expandAll, fields, hasPersistedState, locations]);
+  }, [beds.length, expandAll, fields, hasPersistedState, locations]);
 
   // Flat {id, parentId} view of the tree for the shared "Tiefe" depth
   // control (see HierarchyDepthControl / useHierarchyDepthControl).
@@ -1231,6 +1253,24 @@ function FieldsBedsHierarchy({
     return BED_ROW_HEIGHT;
   }, []);
 
+  // Exact height the grid would need to show every current row without its
+  // own scrollbar. Combined with availableTableHeight (measured below) via
+  // Math.min, this lets the table size snugly to its content for small
+  // hierarchies while filling the available viewport height (and internally
+  // scrolling/virtualizing) for large ones — instead of always reserving a
+  // fixed max height regardless of how much screen space is actually there.
+  const tableContentHeight = useMemo(() => (
+    HEADER_ROW_HEIGHT + rows.reduce((sum, row) => {
+      if (row.type === "location") {
+        return sum + LOCATION_ROW_HEIGHT;
+      }
+      if (row.type === "field") {
+        return sum + FIELD_ROW_HEIGHT;
+      }
+      return sum + BED_ROW_HEIGHT;
+    }, 0)
+  ), [rows]);
+
   const shouldShowMissingDimensionsHint = useMemo(() => {
     const hasBeds = beds.length > 0;
     const allBedsMissingLengthAndWidth = beds.every((bed) => {
@@ -1244,6 +1284,41 @@ function FieldsBedsHierarchy({
 
     return hasBeds && allBedsMissingLengthAndWidth;
   }, [beds]);
+
+  // How much vertical space is available below the table's own top edge,
+  // measured against the real viewport (not a fixed svh/px guess) so the
+  // table reaches close to the bottom of the visible app area regardless of
+  // how much the title/alerts/hints/toggle above it currently take up.
+  // Skipped on mobile, where the table keeps using autoHeight and the page
+  // itself scrolls (see the DataGrid props below).
+  const [availableTableHeight, setAvailableTableHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (isMobileViewport) {
+      return;
+    }
+
+    const measure = (): void => {
+      const wrapper = tableWrapperRef.current;
+      if (!wrapper) {
+        return;
+      }
+      const top = wrapper.getBoundingClientRect().top;
+      setAvailableTableHeight(
+        Math.max(TABLE_MIN_HEIGHT_PX, window.innerHeight - top - TABLE_BOTTOM_MARGIN_PX),
+      );
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [
+    isMobileViewport,
+    error,
+    draftValidationWarning,
+    showContextMenuHint,
+    shouldShowMissingDimensionsHint,
+    shouldShowHierarchyTable,
+  ]);
 
   const hasUnsavedInvalidNewRows = useMemo(() => (
     beds.some((bed) => isPartiallyFilledNamelessNewHierarchyRow({
@@ -1369,10 +1444,6 @@ function FieldsBedsHierarchy({
             sx={{
               width: "100%",
               maxWidth: "100%",
-              minWidth: 1,
-              overflowX: "auto",
-              overflowY: "visible",
-              display: "block",
               '& [role="row"][data-id]': {
                 WebkitTouchCallout: "none",
               },
@@ -1385,7 +1456,6 @@ function FieldsBedsHierarchy({
             onTouchEnd={handleGridTouchEnd}
             onTouchCancel={handleGridTouchEnd}
           >
-            <Box sx={{ display: "inline-block", minWidth: "100%" }}>
             <DataGrid
               rows={rows}
               columns={columns}
@@ -1403,21 +1473,27 @@ function FieldsBedsHierarchy({
               onProcessRowUpdateError={handleProcessRowUpdateError}
               loading={loading}
               editMode="row"
-              autoHeight
+              autoHeight={isMobileViewport}
               hideFooter={true}
               sortingMode="server"
               sortModel={sortModel}
               onSortModelChange={setSortModel}
               isRowSelectable={() => true}
               isCellEditable={isCellEditable}
-              sx={HIERARCHY_DATA_GRID_SX}
+              sx={
+                isMobileViewport
+                  ? HIERARCHY_DATA_GRID_SX
+                  : {
+                    ...HIERARCHY_DATA_GRID_SX,
+                    height: `${Math.min(tableContentHeight, availableTableHeight ?? tableContentHeight)}px`,
+                  }
+              }
               disableRowSelectionOnClick
               onCellClick={handleHierarchyCellClick}
               onCellKeyDown={handleHierarchyCellKeyDown}
               localeText={germanDataGridLocaleText}
               apiRef={gridApiRef}
             />
-            </Box>
           </Box>
         ) : null}
       </Box>
