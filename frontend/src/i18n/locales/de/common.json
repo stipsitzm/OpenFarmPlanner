@@ -50,9 +50,9 @@
     "showAll": "Alle einblenden",
     "hideAll": "Alle ausblenden"
   },
-  "treeDepth": {
-    "label": "Tiefe:",
-    "groupAriaLabel": "Sichtbare Hierarchietiefe wählen"
+  "hierarchyLevelToggle": {
+    "expandTooltip": "Eine Hierarchieebene mehr anzeigen",
+    "collapseTooltip": "Eine Hierarchieebene ausblenden"
   },
   "project": "Projekt",
   "setupActions": {
