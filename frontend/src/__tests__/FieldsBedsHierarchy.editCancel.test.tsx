@@ -65,18 +65,23 @@ vi.mock('../api/api', async () => {
       create: bedCreateMock,
       delete: bedDeleteMock,
       list: bedListMock,
+      // listAll mirrors whatever list() is mocked to resolve, unwrapped —
+      // useHierarchyData uses listAll (not list) to fetch every page.
+      listAll: async () => (await bedListMock()).data,
       update: bedUpdateMock,
     },
     fieldAPI: {
       create: fieldCreateMock,
       delete: fieldDeleteMock,
       list: fieldListMock,
+      listAll: async () => (await fieldListMock()).data,
       update: fieldUpdateMock,
     },
     locationAPI: {
       create: locationCreateMock,
       delete: locationDeleteMock,
       list: locationListMock,
+      listAll: async () => (await locationListMock()).data,
       update: locationUpdateMock,
     },
   };
