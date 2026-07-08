@@ -549,6 +549,11 @@ export function createHierarchyColumns(
     onOpenContextMenu,
   };
 
+  // Captured in a local so the type stays narrowed (non-undefined) inside
+  // the "name" column's renderHeader closure below — re-reading
+  // options.levelToggle there would widen back to the optional field type.
+  const { levelToggle } = options;
+
   return [
     {
       field: 'name',
@@ -560,7 +565,7 @@ export function createHierarchyColumns(
         const hasError = !params.props.value || params.props.value.trim() === '';
         return { ...params.props, error: hasError };
       },
-      ...(options.levelToggle ? {
+      ...(levelToggle ? {
         renderHeader: () => (
           <Box
             sx={{
@@ -573,7 +578,7 @@ export function createHierarchyColumns(
             }}
           >
             <Box component="span" sx={DATA_GRID_HEADER_LABEL_SX}>{t('hierarchy:columns.name')}</Box>
-            <HierarchyLevelButtons {...options.levelToggle} />
+            <HierarchyLevelButtons {...levelToggle} />
           </Box>
         ),
       } : {}),
