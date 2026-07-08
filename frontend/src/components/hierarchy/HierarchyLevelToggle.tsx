@@ -1,4 +1,4 @@
-import { Box, IconButton, Tooltip } from '@mui/material';
+import { Box, Button, Tooltip } from '@mui/material';
 import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLess';
 import { useTranslation } from '../../i18n';
@@ -33,33 +33,41 @@ export function HierarchyLevelToggle({
     return null;
   }
 
-  const expandLabel = t('hierarchyLevelToggle.expandTooltip');
-  const collapseLabel = t('hierarchyLevelToggle.collapseTooltip');
+  const expandLabel = t('hierarchyLevelToggle.expandLabel');
+  const expandTooltip = t('hierarchyLevelToggle.expandTooltip');
+  const collapseLabel = t('hierarchyLevelToggle.collapseLabel');
+  const collapseTooltip = t('hierarchyLevelToggle.collapseTooltip');
 
   return (
-    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-      <Tooltip title={expandLabel}>
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
+      <Tooltip title={expandTooltip}>
         <span>
-          <IconButton
+          <Button
             size="small"
+            variant="outlined"
+            color="inherit"
+            startIcon={<UnfoldMoreIcon fontSize="small" />}
             onClick={onExpandOneLevel}
             disabled={!canExpand}
-            aria-label={expandLabel}
+            sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
           >
-            <UnfoldMoreIcon fontSize="small" />
-          </IconButton>
+            {expandLabel}
+          </Button>
         </span>
       </Tooltip>
-      <Tooltip title={collapseLabel}>
+      <Tooltip title={collapseTooltip}>
         <span>
-          <IconButton
+          <Button
             size="small"
+            variant="outlined"
+            color="inherit"
+            startIcon={<UnfoldLessIcon fontSize="small" />}
             onClick={onCollapseOneLevel}
             disabled={!canCollapse}
-            aria-label={collapseLabel}
+            sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
           >
-            <UnfoldLessIcon fontSize="small" />
-          </IconButton>
+            {collapseLabel}
+          </Button>
         </span>
       </Tooltip>
     </Box>

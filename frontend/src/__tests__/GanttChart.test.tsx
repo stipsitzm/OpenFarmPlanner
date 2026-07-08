@@ -1560,8 +1560,8 @@ describe('GanttChartPage', () => {
       fireEvent.click(screen.getByRole('checkbox', { name: 'Nur belegte Beete' }));
       await screen.findByText('Leerbeet');
 
-      const expandButton = () => screen.getByRole('button', { name: 'Eine Hierarchieebene mehr anzeigen' });
-      const collapseButton = () => screen.getByRole('button', { name: 'Eine Hierarchieebene ausblenden' });
+      const expandButton = () => screen.getByRole('button', { name: 'Ebene erweitern' });
+      const collapseButton = () => screen.getByRole('button', { name: 'Ebene reduzieren' });
 
       // Small fixtures auto-expand fully on first load, so Beet rows start visible
       // and the expand button starts disabled.
