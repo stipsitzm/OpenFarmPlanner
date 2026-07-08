@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   collectExpandedIdsUpToDepth,
   collectVisibleIdsWithAncestors,
-  computeActiveDepthLevel,
+  computeExpandedDepthLevel,
   flattenTreeRows,
   getTreeLevelCount,
   type TreeRowNode,
@@ -148,28 +148,28 @@ describe('getTreeLevelCount', () => {
   });
 });
 
-describe('computeActiveDepthLevel', () => {
-  it('matches level 1 when nothing is expanded', () => {
-    expect(computeActiveDepthLevel(nodes, new Set(), 3)).toBe(1);
+describe('computeExpandedDepthLevel', () => {
+  it('is level 1 when nothing is expanded', () => {
+    expect(computeExpandedDepthLevel(nodes, new Set(), 3)).toBe(1);
   });
 
-  it('matches level 2 when exactly the level-2 preset is expanded', () => {
+  it('is level 2 when exactly the level-2 preset is expanded', () => {
     const level2Ids = collectExpandedIdsUpToDepth(nodes, 1);
-    expect(computeActiveDepthLevel(nodes, level2Ids, 3)).toBe(2);
+    expect(computeExpandedDepthLevel(nodes, level2Ids, 3)).toBe(2);
   });
 
-  it('matches level 3 (fully expanded) when every parent is expanded', () => {
+  it('is level 3 (fully expanded) when every parent is expanded', () => {
     const level3Ids = collectExpandedIdsUpToDepth(nodes, Number.POSITIVE_INFINITY);
-    expect(computeActiveDepthLevel(nodes, level3Ids, 3)).toBe(3);
+    expect(computeExpandedDepthLevel(nodes, level3Ids, 3)).toBe(3);
   });
 
-  it('returns null once manual expand/collapse deviates from every preset', () => {
+  it('reports the guaranteed floor level once manual expand/collapse deviates from a clean preset', () => {
     const manuallyMixed = new Set<string | number>(['loc-1']); // loc-2 left collapsed — not a clean preset
-    expect(computeActiveDepthLevel(nodes, manuallyMixed, 3)).toBe(null);
+    expect(computeExpandedDepthLevel(nodes, manuallyMixed, 3)).toBe(1);
   });
 
   it('ignores unrelated ids from a shared/persisted expandedIds set', () => {
     const withUnrelatedId = new Set<string | number>(['some-other-page-id']);
-    expect(computeActiveDepthLevel(nodes, withUnrelatedId, 3)).toBe(1);
+    expect(computeExpandedDepthLevel(nodes, withUnrelatedId, 3)).toBe(1);
   });
 });

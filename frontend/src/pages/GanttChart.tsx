@@ -94,8 +94,8 @@ import {
 import { getGanttRenderWindow } from './ganttRenderWindow';
 import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState';
 import { collectVisibleIdsWithAncestors, flattenTreeRows } from '../components/hierarchy/utils/treeRows';
-import { useHierarchyDepthControl } from '../components/hierarchy/hooks/useHierarchyDepthControl';
-import { HierarchyDepthControl } from '../components/hierarchy/HierarchyDepthControl';
+import { useHierarchyLevelToggle } from '../components/hierarchy/hooks/useHierarchyLevelToggle';
+import { HierarchyLevelToggle } from '../components/hierarchy/HierarchyLevelToggle';
 
 type CalendarMode = 'occupancy' | 'seedlings';
 const GanttChartWithFocusMode = GanttChart as React.ComponentType<
@@ -1176,14 +1176,10 @@ function GanttChartPage() {
     }
   }, [expandAllHierarchy, hasPersistedHierarchyExpansion, occupancyHierarchyNodes]);
 
-  const hierarchyDepthControl = useHierarchyDepthControl(
+  const hierarchyLevelToggle = useHierarchyLevelToggle(
     occupancyHierarchyNodes,
     expandedHierarchyIds,
     expandAllHierarchy,
-  );
-  const getHierarchyDepthLevelAriaLabel = useCallback(
-    (level: number): string => t(`ganttChart:treeDepth.level${level}`),
-    [t],
   );
 
   const occupancyFieldOptions = useMemo(
@@ -1600,11 +1596,12 @@ function GanttChartPage() {
           ) : null}
         </Box>
         {calendarMode === 'occupancy' && !useMobileFilterLayout ? (
-          <HierarchyDepthControl
-            levelCount={hierarchyDepthControl.levelCount}
-            activeLevel={hierarchyDepthControl.activeLevel}
-            onSelectLevel={hierarchyDepthControl.onSelectLevel}
-            getLevelAriaLabel={getHierarchyDepthLevelAriaLabel}
+          <HierarchyLevelToggle
+            levelCount={hierarchyLevelToggle.levelCount}
+            canExpand={hierarchyLevelToggle.canExpand}
+            canCollapse={hierarchyLevelToggle.canCollapse}
+            onExpandOneLevel={hierarchyLevelToggle.expandOneLevel}
+            onCollapseOneLevel={hierarchyLevelToggle.collapseOneLevel}
           />
         ) : null}
         {showViewModeSelector ? (
@@ -1664,9 +1661,8 @@ function GanttChartPage() {
   ), [
     calendarMode,
     editMode,
-    getHierarchyDepthLevelAriaLabel,
     handleTimelineViewModeChange,
-    hierarchyDepthControl,
+    hierarchyLevelToggle,
     t,
     useMobileFilterLayout,
   ]);

@@ -58,8 +58,8 @@ import { useNavigationBlocker } from "../hooks/autosave";
 import { useHierarchyData, type HierarchyDataState } from "../components/hierarchy/hooks/useHierarchyData";
 import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
 import { type TreeRowNode } from "../components/hierarchy/utils/treeRows";
-import { useHierarchyDepthControl } from "../components/hierarchy/hooks/useHierarchyDepthControl";
-import { HierarchyDepthControl } from "../components/hierarchy/HierarchyDepthControl";
+import { useHierarchyLevelToggle } from "../components/hierarchy/hooks/useHierarchyLevelToggle";
+import { HierarchyLevelToggle } from "../components/hierarchy/HierarchyLevelToggle";
 import { hasPersistedEntityId } from "../components/hierarchy/utils/hierarchyUtils";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { useHierarchyDelete } from "../components/hierarchy/hooks/useHierarchyDelete";
@@ -511,8 +511,8 @@ function FieldsBedsHierarchy({
     }
   }, [expandAll, fields, hasPersistedState, locations]);
 
-  // Flat {id, parentId} view of the tree for the shared "Tiefe" depth
-  // control (see HierarchyDepthControl / useHierarchyDepthControl).
+  // Flat {id, parentId} view of the tree for the shared expand/collapse-one-
+  // level toggle (see HierarchyLevelToggle / useHierarchyLevelToggle).
   // Single-location projects render without a location row at all (see
   // buildHierarchyRowsFromIndex), so the location level is only included
   // here when there's more than one — the control then offers 2 levels
@@ -544,12 +544,7 @@ function FieldsBedsHierarchy({
     return nodes;
   }, [beds, fields, hasMultipleLocations, locations]);
 
-  const hierarchyDepthControl = useHierarchyDepthControl(hierarchyTreeNodes, expandedRows, expandAll);
-  const getHierarchyDepthLevelAriaLabel = useCallback((level: number): string => (
-    hasMultipleLocations
-      ? t(`treeDepth.level${level}WithLocations`)
-      : t(`treeDepth.level${level}SingleLocation`)
-  ), [hasMultipleLocations, t]);
+  const hierarchyLevelToggle = useHierarchyLevelToggle(hierarchyTreeNodes, expandedRows, expandAll);
 
   /**
    * Handle pending edit mode after rows are updated
@@ -1354,11 +1349,12 @@ function FieldsBedsHierarchy({
 
         {shouldShowHierarchyTable && !isMobileViewport ? (
           <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 1 }}>
-            <HierarchyDepthControl
-              levelCount={hierarchyDepthControl.levelCount}
-              activeLevel={hierarchyDepthControl.activeLevel}
-              onSelectLevel={hierarchyDepthControl.onSelectLevel}
-              getLevelAriaLabel={getHierarchyDepthLevelAriaLabel}
+            <HierarchyLevelToggle
+              levelCount={hierarchyLevelToggle.levelCount}
+              canExpand={hierarchyLevelToggle.canExpand}
+              canCollapse={hierarchyLevelToggle.canCollapse}
+              onExpandOneLevel={hierarchyLevelToggle.expandOneLevel}
+              onCollapseOneLevel={hierarchyLevelToggle.collapseOneLevel}
             />
           </Box>
         ) : null}
