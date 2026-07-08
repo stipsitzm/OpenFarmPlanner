@@ -1,7 +1,7 @@
 import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Link, TextField, Typography, useMediaQuery } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
-import FieldsBedsHierarchy from './FieldsBedsHierarchy';
+import FieldsBedsHierarchy from './FieldsBedsHierarchyAgGridSpike';
 import GraphicalFields from './GraphicalFields';
 import { AddBedIcon } from '../components/hierarchy/AddBedIcon';
 import { HierarchyAddIcon } from '../components/hierarchy/HierarchyAddIcon';

@@ -26,6 +26,8 @@
     "@mui/icons-material": "^7.3.6",
     "@mui/material": "^7.3.6",
     "@mui/x-data-grid": "^8.20.0",
+    "ag-grid-community": "^36.0.0",
+    "ag-grid-react": "^36.0.0",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
     "html2canvas": "^1.4.1",
