@@ -18,9 +18,10 @@
     "tooltipYield": "Ertrag"
   },
   "legend": {
-    "showAll": "Kulturen anzeigen ({{count}})",
+    "showAll": "Alle {{count}} Kulturen anzeigen",
+    "showMore": "Weitere {{count}} anzeigen",
     "expand": "Mehr anzeigen",
-    "collapse": "Weniger anzeigen"
+    "collapse": "Auf Top {{count}} reduzieren"
   },
   "contextMenu": {
     "openCulture": "Kultur öffnen"
