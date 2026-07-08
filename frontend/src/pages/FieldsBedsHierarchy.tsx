@@ -258,6 +258,7 @@ function FieldsBedsHierarchy({
   const handledCreateFieldRequestRef = useRef(0);
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
+  const pageContentRef = useRef<HTMLDivElement | null>(null);
   const [highlightedRowId, setHighlightedRowId] = useState<GridRowId | null>(null);
   const highlightClearTimeoutRef = useRef<number | null>(null);
 
@@ -1299,6 +1300,13 @@ function FieldsBedsHierarchy({
   // how much the title/alerts/hints/toggle above it currently take up.
   // Skipped on mobile, where the table keeps using autoHeight and the page
   // itself scrolls (see the DataGrid props below).
+  //
+  // Re-measures via a ResizeObserver on the whole page content area (see
+  // pageContentRef below) rather than a hand-picked list of "things that
+  // might shift the table down" — that list is easy to miss a case for
+  // (e.g. an alert/hint whose height changes after an async data load), and
+  // missing one leaves availableTableHeight stale, under-sizing the table
+  // and making its last rows unreachable by scroll.
   const [availableTableHeight, setAvailableTableHeight] = useState<number | null>(null);
   useLayoutEffect(() => {
     if (isMobileViewport) {
@@ -1318,15 +1326,19 @@ function FieldsBedsHierarchy({
 
     measure();
     window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [
-    isMobileViewport,
-    error,
-    draftValidationWarning,
-    showContextMenuHint,
-    shouldShowMissingDimensionsHint,
-    shouldShowHierarchyTable,
-  ]);
+
+    let resizeObserver: ResizeObserver | undefined;
+    const observedElement = pageContentRef.current;
+    if (observedElement && typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(measure);
+      resizeObserver.observe(observedElement);
+    }
+
+    return () => {
+      window.removeEventListener("resize", measure);
+      resizeObserver?.disconnect();
+    };
+  }, [isMobileViewport]);
 
   const hasUnsavedInvalidNewRows = useMemo(() => (
     beds.some((bed) => isPartiallyFilledNamelessNewHierarchyRow({
@@ -1403,7 +1415,7 @@ function FieldsBedsHierarchy({
 
   return (
     <div className={showTitle ? "page-container" : undefined}>
-      <Box sx={{ width: "100%", minWidth: 0 }}>
+      <Box ref={pageContentRef} sx={{ width: "100%", minWidth: 0 }}>
         {showTitle && <h1>{t("title")}</h1>}
 
         {error && (
