@@ -16,7 +16,7 @@ const projectRequirementState = vi.hoisted(() => ({
   missingProjectReason: null as null | 'no_projects' | 'no_active_project',
 }));
 
-vi.mock('../pages/FieldsBedsHierarchy', () => ({
+vi.mock('../pages/FieldsBedsTanStackHierarchy', () => ({
   default: ({ createFieldRequest }: { createFieldRequest?: number }) => (
     <div>
       <div>Hierarchieansicht</div>
