@@ -108,6 +108,34 @@ const withMobileCalendarViewport = (): (() => void) => {
   };
 };
 
+// Narrower than withMobileCalendarViewport: matches both the 'md' and 'sm'
+// down-queries, like an actual phone-width viewport would, so the
+// isPhoneViewport-gated level-toggle buttons can be tested as hidden.
+const withPhoneCalendarViewport = (): (() => void) => {
+  const originalMatchMedia = window.matchMedia;
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes('max-width:899.95px') || query.includes('max-width:599.95px'),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+  return () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: originalMatchMedia,
+    });
+  };
+};
+
 vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
   return {
@@ -191,6 +219,7 @@ vi.mock('../gantt-chart/src', () => ({
     locale?: string;
     localeText?: { title?: string } & Record<string, unknown>;
     maxHeight?: string | number;
+    headerLabel?: ReactNode;
   }) => {
     mocks.ganttProps(props);
     // With the occupancy tree, tasks[0] is often a Standort/Parzelle parent
@@ -209,6 +238,7 @@ vi.mock('../gantt-chart/src', () => ({
           onViewModeChange: vi.fn(),
           showViewModeSelector: true,
         })}
+        <div data-testid="mock-gantt-task-list-header">{props.headerLabel}</div>
         <div
           className="rmg-container"
           data-testid="mock-gantt-scroll-container"
@@ -549,7 +579,7 @@ describe('GanttChartPage', () => {
     expect(latestProps?.locale).toBe('de-DE');
     expect(latestProps?.localeText).toMatchObject({
       title: 'Feldplanung',
-      resources: 'Anbauflächen',
+      resources: 'Flächen',
       today: 'Heute',
     });
     expect(latestProps?.editMode).toBe(false);
@@ -1549,44 +1579,79 @@ describe('GanttChartPage', () => {
       });
     });
 
-    it('the "Tiefe" control changes how many tree levels are expanded', async () => {
+    it('the expand/collapse-one-level toggle steps through the tree levels', async () => {
       setUpMultiLocationFixture();
       renderWithAuth();
 
       await screen.findByText('Karottenbeet');
       // "Nur belegte Beete" forces the ancestor chain of every occupied bed to stay
       // visible regardless of collapse state (same as an active search match) — turn
-      // it off so the depth control's own effect is observable in isolation.
+      // it off so the level toggle's own effect is observable in isolation.
       fireEvent.click(screen.getByRole('checkbox', { name: 'Nur belegte Beete' }));
       await screen.findByText('Leerbeet');
 
-      // Level 1: only Standort rows, nothing expanded.
-      fireEvent.click(screen.getByRole('button', { name: 'Nur Standorte anzeigen' }));
-      await waitFor(() => {
-        expect(screen.getByText('Hof')).toBeInTheDocument();
-        expect(screen.getByText('Pacht')).toBeInTheDocument();
-        expect(screen.queryByText('Nordfeld')).not.toBeInTheDocument();
-      });
+      const expandButton = () => screen.getByRole('button', { name: 'Eine Hierarchieebene mehr anzeigen' });
+      const collapseButton = () => screen.getByRole('button', { name: 'Eine Hierarchieebene ausblenden' });
 
-      // Level 2: Standorte expanded, revealing Parzelle rows (still collapsed themselves).
-      fireEvent.click(screen.getByRole('button', { name: 'Standorte und Parzellen anzeigen' }));
+      // Small fixtures auto-expand fully on first load, so Beet rows start visible
+      // and the expand button starts disabled.
+      expect(expandButton()).toBeDisabled();
+
+      // Collapse once: Beet rows hide, Parzelle rows stay visible.
+      fireEvent.click(collapseButton());
       await waitFor(() => {
         expect(screen.getByText('Nordfeld')).toBeInTheDocument();
         expect(screen.queryByText('Karottenbeet')).not.toBeInTheDocument();
       });
 
-      // Level 3: fully expanded, Beet rows visible too.
-      fireEvent.click(screen.getByRole('button', { name: 'Standorte, Parzellen und Beete anzeigen' }));
+      // Collapse again: only Standort rows remain, and collapsing further is disabled.
+      fireEvent.click(collapseButton());
+      await waitFor(() => {
+        expect(screen.getByText('Hof')).toBeInTheDocument();
+        expect(screen.queryByText('Nordfeld')).not.toBeInTheDocument();
+      });
+      expect(collapseButton()).toBeDisabled();
+
+      // Expand once: Parzelle rows reappear, Beet rows stay hidden.
+      fireEvent.click(expandButton());
+      await waitFor(() => {
+        expect(screen.getByText('Nordfeld')).toBeInTheDocument();
+        expect(screen.queryByText('Karottenbeet')).not.toBeInTheDocument();
+      });
+
+      // Expand again: fully expanded, Beet rows visible and expanding further is disabled.
+      fireEvent.click(expandButton());
       await waitFor(() => {
         expect(screen.getByText('Karottenbeet')).toBeInTheDocument();
       });
+      expect(expandButton()).toBeDisabled();
+    });
 
-      // Back to level 1 marks it (and only it) as the active/pressed button.
-      fireEvent.click(screen.getByRole('button', { name: 'Nur Standorte anzeigen' }));
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: 'Nur Standorte anzeigen' })).toHaveAttribute('aria-pressed', 'true');
-        expect(screen.getByRole('button', { name: 'Standorte und Parzellen anzeigen' })).toHaveAttribute('aria-pressed', 'false');
-      });
+    it('keeps the level-toggle buttons on tablet-ish viewports', async () => {
+      // withMobileCalendarViewport simulates a tablet-ish width (under the
+      // 'md' breakpoint only) — the buttons should still show there.
+      const restoreTabletViewport = withMobileCalendarViewport();
+      try {
+        setUpMultiLocationFixture();
+        renderWithAuth();
+        await screen.findByText('Karottenbeet');
+        expect(screen.getByRole('button', { name: 'Eine Hierarchieebene ausblenden' })).toBeInTheDocument();
+      } finally {
+        restoreTabletViewport();
+      }
+    });
+
+    it('hides the level-toggle buttons on phone-sized viewports', async () => {
+      const restorePhoneViewport = withPhoneCalendarViewport();
+      try {
+        setUpMultiLocationFixture();
+        renderWithAuth();
+        await screen.findByText('Karottenbeet');
+        expect(screen.queryByRole('button', { name: 'Eine Hierarchieebene ausblenden' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Eine Hierarchieebene mehr anzeigen' })).not.toBeInTheDocument();
+      } finally {
+        restorePhoneViewport();
+      }
     });
 
     it('uses compact search and filter controls on mobile', async () => {

@@ -4,7 +4,7 @@ import { ViewMode } from "./enums";
 
 export interface TaskListRenderProps {
   tasks: TaskGroup[];
-  headerLabel?: string;
+  headerLabel?: React.ReactNode;
   onGroupClick?: (group: TaskGroup) => void;
   onToggleGroupExpand?: (groupId: string) => void;
   viewMode: ViewMode;
@@ -81,7 +81,7 @@ export interface GanttChartProps {
   allowProgressEdit?: boolean; // Allow progress bar editing (default: true, requires editMode=true)
   allowTaskResize?: boolean; // Allow task resizing (default: true, requires editMode=true)
   allowTaskMove?: boolean; // Allow task movement (default: true, requires editMode=true)
-  headerLabel?: string;
+  headerLabel?: React.ReactNode;
   leftColumnWidth?: number;
   showProgress?: boolean;
   darkMode?: boolean;
@@ -208,7 +208,7 @@ export interface TaskRowProps {
 
 export interface TaskListProps {
   tasks: TaskGroup[];
-  headerLabel?: string;
+  headerLabel?: React.ReactNode;
   showIcon?: boolean;
   showTaskCount?: boolean;
   showDescription?: boolean;

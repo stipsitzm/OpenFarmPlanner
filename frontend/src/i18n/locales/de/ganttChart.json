@@ -69,7 +69,7 @@
   "chartLocaleText": {
     "titleOccupancy": "Feldplanung",
     "titleSeedlings": "Anzuchtplanung",
-    "resources": "Anbauflächen",
+    "resources": "Flächen",
     "resourcesSeedlings": "Kulturen",
     "today": "Heute",
     "viewModes": {
@@ -160,11 +160,6 @@
   },
   "sidebar": {
     "resizeHandle": "Seitenleiste verbreitern oder verkleinern"
-  },
-  "treeDepth": {
-    "level1": "Nur Standorte anzeigen",
-    "level2": "Standorte und Parzellen anzeigen",
-    "level3": "Standorte, Parzellen und Beete anzeigen"
   },
   "treeFilters": {
     "searchPlaceholder": "Suche nach Kultur, Beet, Parzelle oder Standort…",
