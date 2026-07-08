@@ -51,9 +51,8 @@
     "hideAll": "Alle ausblenden"
   },
   "hierarchyLevelToggle": {
-    "expandLabel": "Ebene erweitern",
+    "label": "Hierarchie",
     "expandTooltip": "Eine Hierarchieebene mehr anzeigen",
-    "collapseLabel": "Ebene reduzieren",
     "collapseTooltip": "Eine Hierarchieebene ausblenden"
   },
   "project": "Projekt",
