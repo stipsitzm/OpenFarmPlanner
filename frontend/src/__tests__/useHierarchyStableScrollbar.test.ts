@@ -113,7 +113,7 @@ describe('useHierarchyStableScrollbar', () => {
     expect(Math.abs(thumbTopAfterTransition - thumbTopBeforeTransition)).toBeLessThan(15);
   });
 
-  it('dragging the thumb across a page boundary calls ensureRowIndexVisible for the target row', () => {
+  it('dragging the thumb across a page boundary calls ensureRowIndexVisible for the target row', async () => {
     const { container, wrapperRef, trackRef } = setUpDom();
     const rowHeights = Array.from({ length: 300 }, () => ROW_HEIGHT); // 9000px total
     container.scrollTop = 0;
@@ -139,6 +139,11 @@ describe('useHierarchyStableScrollbar', () => {
     const dragDeltaY = thumbTravel; // drags to the very bottom of the track
     const MoveEvent = typeof PointerEvent !== 'undefined' ? PointerEvent : MouseEvent;
     window.dispatchEvent(new MoveEvent('pointermove', { clientY: dragDeltaY } as MouseEventInit));
+
+    // The drag handler coalesces pointermove to one update per animation
+    // frame (see useHierarchyStableScrollbar) rather than acting on every
+    // event synchronously, so the resulting call lands on the next frame.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
     expect(ensureRowIndexVisible).toHaveBeenCalled();
     const targetRowIndex = ensureRowIndexVisible.mock.calls[0][0] as number;

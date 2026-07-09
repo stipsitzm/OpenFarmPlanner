@@ -116,16 +116,37 @@ export function useHierarchyStableScrollbar(
       return undefined;
     }
 
+    // A native 'scroll' event can fire far more often than the display can
+    // paint (every pixel of trackpad momentum, dozens of times a second),
+    // and each call here was two setState calls re-rendering the whole
+    // hierarchy page underneath. Coalescing to one measurement per
+    // animation frame keeps the thumb visually in sync (still every frame)
+    // without redoing that work for events the user could never see
+    // between two paints anyway.
+    let rafId: number | null = null;
+    const scheduleMeasure = (): void => {
+      if (rafId !== null) {
+        return;
+      }
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        measure();
+      });
+    };
+
     let resizeObserver: ResizeObserver | undefined;
     if (typeof ResizeObserver !== "undefined") {
-      resizeObserver = new ResizeObserver(measure);
+      resizeObserver = new ResizeObserver(scheduleMeasure);
       resizeObserver.observe(container);
     }
 
-    container.addEventListener("scroll", measure, { passive: true });
+    container.addEventListener("scroll", scheduleMeasure, { passive: true });
     return () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
       resizeObserver?.disconnect();
-      container.removeEventListener("scroll", measure);
+      container.removeEventListener("scroll", scheduleMeasure);
     };
   }, [getContainer, page, headerHeight]);
 
@@ -207,11 +228,26 @@ export function useHierarchyStableScrollbar(
     const startGlobalScrollTop = globalScrollTop;
     event.currentTarget.setPointerCapture(event.pointerId);
 
-    const handleMove = (moveEvent: PointerEvent): void => {
-      const deltaRatio = (moveEvent.clientY - startClientY) / thumbTravel;
+    // Dragging can emit pointermove far faster than the display repaints -
+    // coalesce to the latest position once per animation frame instead of
+    // calling scrollToGlobalOffset (a setState) for every single event.
+    let rafId: number | null = null;
+    let latestClientY = startClientY;
+    const applyLatestMove = (): void => {
+      rafId = null;
+      const deltaRatio = (latestClientY - startClientY) / thumbTravel;
       scrollToGlobalOffset(startGlobalScrollTop + deltaRatio * maxGlobalScrollTop);
     };
+    const handleMove = (moveEvent: PointerEvent): void => {
+      latestClientY = moveEvent.clientY;
+      if (rafId === null) {
+        rafId = requestAnimationFrame(applyLatestMove);
+      }
+    };
     const handleUp = (): void => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
       window.removeEventListener("pointermove", handleMove);
       window.removeEventListener("pointerup", handleUp);
     };
