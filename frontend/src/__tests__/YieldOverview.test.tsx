@@ -468,6 +468,8 @@ describe("YieldOverviewPage", () => {
       await screen.findByRole("heading", { name: "Ertragsverteilung" });
       const legendNames = screen.getAllByText(/^(Aprikose|Zucchini|Möhre)$/).map((el) => el.textContent);
       expect(legendNames).toEqual(["Zucchini", "Möhre", "Aprikose"]);
+      expect(screen.getByRole("button", { name: "Zucchini 5 kg" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Aprikose 0,5 kg" })).toBeInTheDocument();
     });
 
     it("shows the full legend without a toggle for 12 or fewer cultures", async () => {
@@ -487,10 +489,10 @@ describe("YieldOverviewPage", () => {
       await screen.findByRole("heading", { name: "Ertragsverteilung" });
       expect(screen.getByText("Kultur 1")).toBeInTheDocument();
       expect(screen.getByText("Kultur 12")).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /Mehr anzeigen|Kulturen anzeigen/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Mehr anzeigen|Kulturen anzeigen|Weitere/ })).not.toBeInTheDocument();
     });
 
-    it("collapses the legend behind a count button once there are more than 30 cultures", async () => {
+    it("shows the top 15 legend entries and can expand or collapse the remaining cultures", async () => {
       const cultures = Array.from({ length: 45 }, (_, index) => ({
         culture_id: index + 1,
         culture_name: `Kultur ${index + 1}`,
@@ -505,13 +507,52 @@ describe("YieldOverviewPage", () => {
       );
 
       await screen.findByRole("heading", { name: "Ertragsverteilung" });
-      expect(screen.queryByText("Kultur 1")).not.toBeInTheDocument();
-      const showAllButton = screen.getByRole("button", { name: "Kulturen anzeigen (45)" });
+      expect(screen.getByText("Kultur 1")).toBeInTheDocument();
+      expect(screen.getByText("Kultur 15")).toBeInTheDocument();
+      expect(screen.queryByText("Kultur 16")).not.toBeInTheDocument();
+      expect(screen.queryByText("Kultur 45")).not.toBeInTheDocument();
+      const showMoreButton = screen.getByRole("button", { name: "Weitere 30 anzeigen" });
 
-      fireEvent.click(showAllButton);
+      fireEvent.click(showMoreButton);
 
-      expect(await screen.findByText("Kultur 1")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Weniger anzeigen" })).toBeInTheDocument();
+      expect(await screen.findByText("Kultur 45")).toBeInTheDocument();
+      const collapseButton = screen.getByRole("button", { name: "Auf Top 15 reduzieren" });
+
+      fireEvent.click(collapseButton);
+
+      expect(screen.queryByText("Kultur 16")).not.toBeInTheDocument();
+    });
+
+    it("highlights a clicked legend culture and dims other chart segments", async () => {
+      mocks.yieldList.mockResolvedValue({
+        data: [
+          buildWeek(13, [
+            { culture_id: 1, culture_name: "Kohl", yield: 5 },
+            { culture_id: 2, culture_name: "Karotte", yield: 2 },
+          ]),
+        ],
+      });
+
+      render(
+        <FocusManagerProvider><MemoryRouter>
+          <YieldOverviewPage />
+        </MemoryRouter></FocusManagerProvider>,
+      );
+
+      const kohlLegendButton = await screen.findByRole("button", { name: "Kohl 5 kg" });
+      const kohlSegment = screen.getByTestId("yield-bar-2026-W13-1");
+      const carrotSegment = screen.getByTestId("yield-bar-2026-W13-2");
+
+      fireEvent.click(kohlLegendButton);
+
+      expect(kohlLegendButton).toHaveAttribute("aria-pressed", "true");
+      expect(kohlSegment).toHaveStyle({ opacity: "1" });
+      expect(carrotSegment).toHaveStyle({ opacity: "0.28" });
+
+      fireEvent.click(kohlLegendButton);
+
+      expect(kohlLegendButton).toHaveAttribute("aria-pressed", "false");
+      expect(carrotSegment).toHaveStyle({ opacity: "1" });
     });
   });
 });

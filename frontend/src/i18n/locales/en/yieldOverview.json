@@ -17,6 +17,12 @@
     "tooltipPeriod": "Period",
     "tooltipYield": "Yield"
   },
+  "legend": {
+    "showAll": "Show all {{count}} crops",
+    "showMore": "Show {{count}} more",
+    "expand": "Show more",
+    "collapse": "Reduce to top {{count}}"
+  },
   "contextMenu": {
     "openCulture": "Open crop"
   },

@@ -57,6 +57,10 @@ interface YieldCultureMeta {
   color: string;
 }
 
+interface YieldChartCulture extends YieldCultureMeta {
+  totalYield: number;
+}
+
 interface YieldChartColumn {
   id: string;
   startDate: string;
@@ -67,6 +71,16 @@ interface YieldChartColumn {
 }
 
 const ALL_CULTURES = "all";
+const DEFAULT_LEGEND_CULTURE_LIMIT = 15;
+
+function formatCompactYield(value: number, locale: string): string {
+  const formatter = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: value < 10 ? 1 : 0,
+  });
+
+  return formatter.format(value);
+}
 
 function formatDateToAPI(date: Date): string {
   const year = date.getFullYear();
@@ -142,7 +156,7 @@ function useYieldChartData(
     if (sortedByStart.length === 0) {
       return {
         chartData: [] as YieldChartColumn[],
-        chartCultures: [] as YieldCultureMeta[],
+        chartCultures: [] as YieldChartCulture[],
         availableCultures,
         maxTotalYield: 0,
       };
@@ -217,10 +231,14 @@ function useYieldChartData(
         );
       });
     });
-    const chartCultures = availableCultures
+    const chartCultures: YieldChartCulture[] = availableCultures
       .filter((culture) => totalYieldByCultureId.has(culture.id))
+      .map((culture) => ({
+        ...culture,
+        totalYield: totalYieldByCultureId.get(culture.id) ?? 0,
+      }))
       .sort((left, right) => (
-        (totalYieldByCultureId.get(right.id) ?? 0) - (totalYieldByCultureId.get(left.id) ?? 0)
+        right.totalYield - left.totalYield
       ));
 
     return {
@@ -257,6 +275,7 @@ interface YieldChartSegmentProps {
   isKeyboardTooltipOpen: boolean;
   isTooltipSuppressed: boolean;
   isPressed: boolean;
+  isDimmed: boolean;
   tooltipPeriodLabel: string;
   tooltipYieldLabel: string;
   actionsLabel: string;
@@ -300,6 +319,7 @@ const YieldChartSegment = memo(function YieldChartSegment({
   isKeyboardTooltipOpen,
   isTooltipSuppressed,
   isPressed,
+  isDimmed,
   tooltipPeriodLabel,
   tooltipYieldLabel,
   actionsLabel,
@@ -376,8 +396,9 @@ const YieldChartSegment = memo(function YieldChartSegment({
           height: `${heightPercent}%`,
           minHeight: yieldValue > 0 ? "2px" : 0,
           backgroundColor: color,
+          opacity: isDimmed ? 0.28 : 1,
           filter: isPressed ? "brightness(0.9)" : undefined,
-          transition: "filter 0.15s ease",
+          transition: "filter 0.15s ease, opacity 0.15s ease",
           ...contextMenuIndicatorHostSx,
         }}
       >
@@ -424,8 +445,12 @@ function YieldDistributionChart({
   // so hover has to be tracked explicitly here to keep the tooltip always
   // controlled by a real boolean, letting the keyboard (Space) toggle work.
   const [hoveredSegmentKey, setHoveredSegmentKey] = useState<string | null>(null);
+  const [highlightedCultureId, setHighlightedCultureId] = useState<number | null>(null);
   const handleHoverEnd = useCallback((key: string) => {
     setHoveredSegmentKey((current) => (current === key ? null : current));
+  }, []);
+  const toggleHighlightedCulture = useCallback((cultureId: number) => {
+    setHighlightedCultureId((current) => (current === cultureId ? null : cultureId));
   }, []);
   const registerSegmentElement = useCallback((key: string, element: HTMLElement | null) => {
     if (element) segmentElementsRef.current.set(key, element);
@@ -622,16 +647,34 @@ function YieldDistributionChart({
     return () => resizeObserver.disconnect();
   }, []);
 
-  // Adaptive legend: fully visible for a handful of cultures, capped to two
-  // lines with a toggle for a moderate amount, and collapsed behind a count
-  // button entirely once there are enough to overwhelm the header. Cultures
-  // are pre-sorted by visible yield (see useYieldChartData), so whichever
-  // subset is shown first is always the most relevant one.
+  // Cultures are pre-sorted by visible yield (see useYieldChartData), so the
+  // collapsed legend still shows the most relevant entries instead of hiding
+  // every culture behind a count button.
   const [isLegendExpanded, setIsLegendExpanded] = useState(false);
   const legendCultureCount = chartCultures.length;
-  const isLegendCollapsedByDefault = legendCultureCount > 30;
-  const isLegendLineLimited = legendCultureCount > 12 && legendCultureCount <= 30;
-  const showLegendItems = !isLegendCollapsedByDefault || isLegendExpanded;
+  const isLegendExpandable = legendCultureCount > DEFAULT_LEGEND_CULTURE_LIMIT;
+  const visibleLegendCultures = useMemo(
+    () => (
+      isLegendExpanded || !isLegendExpandable
+        ? chartCultures
+        : chartCultures.slice(0, DEFAULT_LEGEND_CULTURE_LIMIT)
+    ),
+    [chartCultures, isLegendExpanded, isLegendExpandable],
+  );
+  const hiddenLegendCultureCount = legendCultureCount - DEFAULT_LEGEND_CULTURE_LIMIT;
+
+  useEffect(() => {
+    setIsLegendExpanded(false);
+  }, [legendCultureCount, period, selectedCultureId]);
+
+  useEffect(() => {
+    if (
+      highlightedCultureId !== null
+      && !chartCultures.some((culture) => culture.id === highlightedCultureId)
+    ) {
+      setHighlightedCultureId(null);
+    }
+  }, [chartCultures, highlightedCultureId]);
 
   return (
     <>
@@ -650,21 +693,53 @@ function YieldDistributionChart({
           {t("chart.title")}
         </Typography>
         <Box sx={{ my: 2 }}>
-          {showLegendItems ? (
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 1.5,
-                ...(isLegendLineLimited && !isLegendExpanded
-                  ? { maxHeight: 64, overflow: "hidden" }
-                  : {}),
-              }}
-            >
-              {chartCultures.map((culture) => (
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 1,
+            }}
+          >
+            {visibleLegendCultures.map((culture) => {
+              const isHighlighted = highlightedCultureId === culture.id;
+              const isDimmed = highlightedCultureId !== null && !isHighlighted;
+              const formattedYield = formatCompactYield(
+                culture.totalYield,
+                i18n.resolvedLanguage ?? i18n.language,
+              );
+              return (
                 <Box
                   key={culture.id}
-                  sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
+                  component="button"
+                  type="button"
+                  aria-label={`${culture.name} ${formattedYield} kg`}
+                  aria-pressed={isHighlighted}
+                  onClick={() => toggleHighlightedCulture(culture.id)}
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.75,
+                    minHeight: 30,
+                    px: 0.75,
+                    py: 0.25,
+                    border: "1px solid",
+                    borderColor: isHighlighted ? "primary.main" : "transparent",
+                    borderRadius: 1,
+                    bgcolor: isHighlighted ? "action.selected" : "transparent",
+                    color: "text.primary",
+                    cursor: "pointer",
+                    font: "inherit",
+                    opacity: isDimmed ? 0.55 : 1,
+                    transition: "background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease",
+                    "&:hover": {
+                      bgcolor: "action.hover",
+                    },
+                    "&:focus-visible": {
+                      outline: "2px solid",
+                      outlineColor: "primary.main",
+                      outlineOffset: 2,
+                    },
+                  }}
                 >
                   <Box
                     sx={{
@@ -672,30 +747,32 @@ function YieldDistributionChart({
                       height: 12,
                       borderRadius: "2px",
                       backgroundColor: culture.color,
+                      flex: "0 0 auto",
                     }}
                   />
-                  <Typography variant="body2">{culture.name}</Typography>
+                  <Typography variant="body2" component="span" sx={{ lineHeight: 1.3 }}>
+                    {culture.name}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    component="span"
+                    sx={{ color: "text.secondary", fontWeight: 600, lineHeight: 1.3, whiteSpace: "nowrap" }}
+                  >
+                    {formattedYield} kg
+                  </Typography>
                 </Box>
-              ))}
-            </Box>
-          ) : null}
-          {isLegendCollapsedByDefault ? (
+              );
+            })}
+          </Box>
+          {isLegendExpandable ? (
             <Button
               size="small"
               onClick={() => setIsLegendExpanded((value) => !value)}
-              sx={{ textTransform: "none", mt: showLegendItems ? 1 : 0 }}
+              sx={{ textTransform: "none", mt: 1 }}
             >
               {isLegendExpanded
-                ? t("legend.collapse")
-                : t("legend.showAll", { count: legendCultureCount })}
-            </Button>
-          ) : isLegendLineLimited ? (
-            <Button
-              size="small"
-              onClick={() => setIsLegendExpanded((value) => !value)}
-              sx={{ textTransform: "none", mt: 0.5 }}
-            >
-              {isLegendExpanded ? t("legend.collapse") : t("legend.expand")}
+                ? t("legend.collapse", { count: DEFAULT_LEGEND_CULTURE_LIMIT })
+                : t("legend.showMore", { count: hiddenLegendCultureCount })}
             </Button>
           ) : null}
         </Box>
@@ -792,6 +869,7 @@ function YieldDistributionChart({
                           isKeyboardTooltipOpen={keyboardTooltipKey === segmentKey}
                           isTooltipSuppressed={contextMenuState !== null}
                           isPressed={pressedSegmentKey === segmentKey && isLongPressing}
+                          isDimmed={highlightedCultureId !== null && highlightedCultureId !== culture.culture_id}
                           tooltipPeriodLabel={tooltipPeriodLabel}
                           tooltipYieldLabel={tooltipYieldLabel}
                           actionsLabel={actionsLabel}
