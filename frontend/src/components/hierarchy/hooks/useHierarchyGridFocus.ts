@@ -18,6 +18,14 @@ interface UseHierarchyGridFocusParams {
   selectRow: (rowId: GridRowId) => void;
   selectedRowId: string | number | null;
   treeActive: boolean;
+  /**
+   * Lets very large hierarchies (see useHierarchyRowWindow) page the grid to
+   * the row being focused before attempting to focus it. Returns true if a
+   * page change was triggered, in which case the row's cell doesn't exist in
+   * the DOM yet — focusRow retries once after the next paint instead of
+   * calling the (currently no-op) grid API immediately.
+   */
+  ensureRowVisible?: (rowId: GridRowId) => boolean;
 }
 
 interface UseHierarchyGridFocusResult {
@@ -76,6 +84,7 @@ export function useHierarchyGridFocus({
   selectRow,
   selectedRowId,
   treeActive,
+  ensureRowVisible,
 }: UseHierarchyGridFocusParams): UseHierarchyGridFocusResult {
   const focusedFieldRef = useRef(DEFAULT_FOCUS_FIELD);
   const postEditFocusTargetRef = useRef<{ rowId: GridRowId; preferredField?: string; sourceRowId?: GridRowId } | null>(null);
@@ -88,13 +97,24 @@ export function useHierarchyGridFocus({
     focusedFieldRef.current = field || DEFAULT_FOCUS_FIELD;
   }, []);
 
-  const focusRow = useCallback((rowId: GridRowId, preferredField?: string): void => {
+  const applyCellFocus = useCallback((rowId: GridRowId, preferredField?: string): void => {
     const api = gridApiRef.current;
     const focusField = getFocusableField?.(rowId, preferredField ?? focusedFieldRef.current) ?? DEFAULT_FOCUS_FIELD;
     focusedFieldRef.current = focusField;
     api?.setCellFocus?.(rowId, focusField);
     api?.getCellElement?.(rowId, focusField)?.focus({ preventScroll: true });
   }, [getFocusableField, gridApiRef]);
+
+  const focusRow = useCallback((rowId: GridRowId, preferredField?: string): void => {
+    if (ensureRowVisible?.(rowId)) {
+      // The target row isn't on the currently displayed page yet — the page
+      // change just triggered will re-render before the next paint, so wait
+      // for that instead of focusing a cell that doesn't exist in the DOM.
+      requestAnimationFrame(() => applyCellFocus(rowId, preferredField));
+      return;
+    }
+    applyCellFocus(rowId, preferredField);
+  }, [applyCellFocus, ensureRowVisible]);
 
   // Pre-focus the stable cell container div before switching the row back to View mode.
   // When React removes the edit <input> from the DOM, the browser's native focus-fixup
@@ -171,15 +191,29 @@ export function useHierarchyGridFocus({
     applyPostEditFocus(editingRowId ?? undefined);
   }, [applyPostEditFocus, rowModesModel, rows]);
 
+  // Read at call time via a ref instead of depending on focusSelectedCell
+  // directly: it's recreated whenever ensureRowVisible's identity changes,
+  // which useHierarchyRowWindow does on every page transition (see there) -
+  // completely unrelated to selectedRowId or treeActive actually changing.
+  // Depending on it directly re-ran this effect on every such transition,
+  // which paged the grid straight back to wherever the already-selected row
+  // lives — on a large hierarchy, that meant scrolling forward past the
+  // first page boundary with any row selected immediately snapped back to
+  // that row's page, no matter how far the user kept scrolling.
+  const focusSelectedCellRef = useRef(focusSelectedCell);
+  useLayoutEffect(() => {
+    focusSelectedCellRef.current = focusSelectedCell;
+  });
+
   useLayoutEffect(() => {
     if (treeActive) {
       if (skipStaleSelectedFocusRef.current) {
         skipStaleSelectedFocusRef.current = false;
         return;
       }
-      focusSelectedCell();
+      focusSelectedCellRef.current();
     }
-  }, [focusSelectedCell, selectedRowId, treeActive]);
+  }, [selectedRowId, treeActive]);
 
   useLayoutEffect(() => {
     const previousRows = prevRowsRef.current;

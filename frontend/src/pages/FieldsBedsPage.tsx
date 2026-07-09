@@ -329,6 +329,17 @@ export default function FieldsBedsPage() {
 
   return (
     <>
+      {/*
+        Wrapped in one Box instead of leaving these as two separate
+        PageContainer siblings: <main> (in App.tsx) lays its direct children
+        out with a flex `gap`, which applied unconditionally between these
+        two - even when the alerts/empty-state container below has nothing
+        to show and renders as an empty, zero-height div. That left a bigger
+        gap above the table here than pages with only one top-level
+        container. Nesting them removes that outer gap; the alerts/hints
+        keep their own mb spacing for when they do render something.
+      */}
+      <Box>
       <PageContainer variant="standard">
         {globalActionError ? (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -394,6 +405,7 @@ export default function FieldsBedsPage() {
           />
         ) : null}
       </PageContainer>
+      </Box>
       <Dialog open={addLocationDialogOpen} onClose={() => setAddLocationDialogOpen(false)} fullWidth maxWidth="xs">
         <Box component="form" onSubmit={handleAdditionalLocationSubmit}>
           <DialogTitle>{t('hierarchy:dialogs.addAdditionalLocation.title')}</DialogTitle>

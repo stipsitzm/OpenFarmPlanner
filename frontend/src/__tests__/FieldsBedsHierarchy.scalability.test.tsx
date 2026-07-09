@@ -34,9 +34,20 @@ vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
   return {
     ...actual,
-    bedAPI: { create: vi.fn(), delete: vi.fn(), list: bedListMock, update: vi.fn() },
-    fieldAPI: { create: vi.fn(), delete: vi.fn(), list: fieldListMock, update: vi.fn() },
-    locationAPI: { create: vi.fn(), delete: vi.fn(), list: locationListMock, update: vi.fn() },
+    // listAll mirrors whatever list() is mocked to resolve, unwrapped —
+    // useHierarchyData uses listAll (not list) to fetch every page.
+    bedAPI: {
+      create: vi.fn(), delete: vi.fn(), list: bedListMock, update: vi.fn(),
+      listAll: async () => (await bedListMock()).data,
+    },
+    fieldAPI: {
+      create: vi.fn(), delete: vi.fn(), list: fieldListMock, update: vi.fn(),
+      listAll: async () => (await fieldListMock()).data,
+    },
+    locationAPI: {
+      create: vi.fn(), delete: vi.fn(), list: locationListMock, update: vi.fn(),
+      listAll: async () => (await locationListMock()).data,
+    },
   };
 });
 
@@ -105,7 +116,7 @@ describe('FieldsBedsHierarchy initial expansion at scale', () => {
     renderHierarchy();
 
     await waitFor(() => expect(screen.getByTestId('row-field-1')).toBeInTheDocument());
-    expect(screen.getByTestId(`row-${1}`)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId(`row-${1}`)).toBeInTheDocument(), { timeout: 3000 });
   });
 
   it('only expands locations for a very large hierarchy, leaving beds collapsed', async () => {

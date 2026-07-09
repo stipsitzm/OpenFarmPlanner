@@ -59,6 +59,8 @@ import { useHierarchyData, type HierarchyDataState } from "../components/hierarc
 import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
 import { type TreeRowNode } from "../components/hierarchy/utils/treeRows";
 import { useHierarchyLevelToggle } from "../components/hierarchy/hooks/useHierarchyLevelToggle";
+import { useHierarchyRowWindow } from "../components/hierarchy/hooks/useHierarchyRowWindow";
+import { useHierarchyStableScrollbar } from "../components/hierarchy/hooks/useHierarchyStableScrollbar";
 import { hasPersistedEntityId } from "../components/hierarchy/utils/hierarchyUtils";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { useHierarchyDelete } from "../components/hierarchy/hooks/useHierarchyDelete";
@@ -132,6 +134,15 @@ const HIERARCHY_AUTO_EXPAND_ALL_THRESHOLD = 200;
 // and a floor so it never collapses to something unusably short.
 const TABLE_BOTTOM_MARGIN_PX = 24;
 const TABLE_MIN_HEIGHT_PX = 240;
+
+// The free/MIT @mui/x-data-grid we depend on hard-codes pagination on and
+// throws if paginationModel.pageSize exceeds 100 (DataGridPro lifts this;
+// not part of this project's dependencies). Above this many rows, the table
+// pages internally via useHierarchyRowWindow, which auto-advances/retreats
+// the page as the user scrolls near the grid's top/bottom edge — no pager UI
+// is shown, so it still reads as one continuous scroll.
+const HIERARCHY_GRID_PAGE_SIZE = 100;
+const HIERARCHY_VIRTUAL_SCROLLER_SELECTOR = ".MuiDataGrid-virtualScroller";
 
 const HIERARCHY_DATA_GRID_SX = {
   ...dataGridSx,
@@ -227,6 +238,13 @@ const HIERARCHY_DATA_GRID_SX = {
     "70%": { backgroundColor: "rgba(37, 111, 42, 0.14)" },
     "100%": { backgroundColor: "transparent" },
   },
+  // Replaced by the custom track/thumb rendered alongside the grid (see
+  // useHierarchyStableScrollbar) — MUI's own floating scrollbar sizes itself
+  // from only the currently-loaded ~100-row page, which visibly jumps on
+  // every internal page transition (see useHierarchyRowWindow).
+  "& .MuiDataGrid-scrollbar--vertical": {
+    display: "none",
+  },
 };
 
 function FieldsBedsHierarchy({
@@ -258,6 +276,8 @@ function FieldsBedsHierarchy({
   const handledCreateFieldRequestRef = useRef(0);
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
+  const stableScrollbarTrackRef = useRef<HTMLDivElement | null>(null);
+  const pageContentRef = useRef<HTMLDivElement | null>(null);
   const [highlightedRowId, setHighlightedRowId] = useState<GridRowId | null>(null);
   const highlightClearTimeoutRef = useRef<number | null>(null);
 
@@ -320,6 +340,27 @@ function FieldsBedsHierarchy({
     () => projectRows(expandedRows),
     [projectRows, expandedRows],
   );
+
+  const hierarchyRowWindow = useHierarchyRowWindow(
+    rows.length,
+    HIERARCHY_GRID_PAGE_SIZE,
+    HIERARCHY_VIRTUAL_SCROLLER_SELECTOR,
+    tableWrapperRef,
+  );
+
+  // Stable ref so ensureRowVisibleOnPage doesn't change identity on every
+  // expand/collapse (rows changes then) — same reasoning as rowsByIdRef
+  // below: focusRow depends on this, and an unstable identity there would
+  // re-fire the focus-restoring layout effect after every rows update.
+  const rowsArrayRef = useRef(rows);
+  useLayoutEffect(() => {
+    rowsArrayRef.current = rows;
+  }, [rows]);
+
+  const ensureRowVisibleOnPage = useCallback((rowId: GridRowId): boolean => {
+    const rowIndex = rowsArrayRef.current.findIndex((row) => String(row.id) === String(rowId));
+    return hierarchyRowWindow.ensureRowIndexVisible(rowIndex);
+  }, [hierarchyRowWindow]);
 
   const {
     expandedRowsRef,
@@ -765,6 +806,7 @@ function FieldsBedsHierarchy({
     selectRow,
     selectedRowId,
     treeActive,
+    ensureRowVisible: ensureRowVisibleOnPage,
   });
 
   const getPostEnterSaveFocusTarget = useCallback((rowId: GridRowId): GridRowId => {
@@ -868,12 +910,23 @@ function FieldsBedsHierarchy({
       // Expansion needs a render pass before the target row exists in the
       // DataGrid's virtualized viewport.
       requestAnimationFrame(() => {
-        const api = gridApiRef.current;
-        if (!api) return;
-        const rowIndex = api.getRowIndexRelativeToVisibleRows(targetRowId!);
-        if (typeof rowIndex === "number" && rowIndex >= 0) {
-          api.scrollToIndexes({ rowIndex });
+        const scrollAndFocus = (): void => {
+          const api = gridApiRef.current;
+          if (!api) return;
+          const rowIndex = api.getRowIndexRelativeToVisibleRows(targetRowId!);
+          if (typeof rowIndex === "number" && rowIndex >= 0) {
+            api.scrollToIndexes({ rowIndex });
+          }
           activateFirstRowForKeyboard(targetRowId!);
+        };
+
+        // On very large hierarchies (see useHierarchyRowWindow), the target
+        // row may be on a page that isn't displayed yet — page there first
+        // and wait one more frame before touching the grid API.
+        if (ensureRowVisibleOnPage(targetRowId!)) {
+          requestAnimationFrame(scrollAndFocus);
+        } else {
+          scrollAndFocus();
         }
       });
 
@@ -895,7 +948,7 @@ function FieldsBedsHierarchy({
       },
       { replace: true },
     );
-  }, [activateFirstRowForKeyboard, beds, ensureExpanded, fields, gridApiRef, loading, location.pathname, location.search, navigate]);
+  }, [activateFirstRowForKeyboard, beds, ensureExpanded, ensureRowVisibleOnPage, fields, gridApiRef, loading, location.pathname, location.search, navigate]);
 
   const handleHierarchyProcessRowUpdate = useCallback(
     async (newRow: HierarchyRow): Promise<HierarchyRow> => {
@@ -1250,8 +1303,7 @@ function FieldsBedsHierarchy({
     toggleExpand,
   });
 
-  const getRowHeight = useCallback((params: GridRowHeightParams) => {
-    const row = params.model as HierarchyRow;
+  const rowHeightForType = useCallback((row: HierarchyRow) => {
     if (row.type === "location") {
       return LOCATION_ROW_HEIGHT;
     }
@@ -1261,23 +1313,56 @@ function FieldsBedsHierarchy({
     return BED_ROW_HEIGHT;
   }, []);
 
+  const getRowHeight = useCallback((params: GridRowHeightParams) => (
+    rowHeightForType(params.model as HierarchyRow)
+  ), [rowHeightForType]);
+
+  // Per-row heights for every currently visible row (all pages, not just the
+  // one internally loaded via useHierarchyRowWindow) — feeds the exact
+  // cumulative offsets useHierarchyStableScrollbar needs to keep the
+  // scrollbar's thumb stable across page transitions.
+  const rowHeights = useMemo(
+    () => rows.map((row) => rowHeightForType(row as HierarchyRow)),
+    [rows, rowHeightForType],
+  );
+
   // Exact height the grid would need to show every current row without its
   // own scrollbar. Combined with availableTableHeight (measured below) via
   // Math.min, this lets the table size snugly to its content for small
   // hierarchies while filling the available viewport height (and internally
   // scrolling/virtualizing) for large ones — instead of always reserving a
   // fixed max height regardless of how much screen space is actually there.
-  const tableContentHeight = useMemo(() => (
-    HEADER_ROW_HEIGHT + rows.reduce((sum, row) => {
-      if (row.type === "location") {
-        return sum + LOCATION_ROW_HEIGHT;
-      }
-      if (row.type === "field") {
-        return sum + FIELD_ROW_HEIGHT;
-      }
-      return sum + BED_ROW_HEIGHT;
-    }, 0)
-  ), [rows]);
+  const tableContentHeight = useMemo(
+    () => HEADER_ROW_HEIGHT + rowHeights.reduce((sum, height) => sum + height, 0),
+    [rowHeights],
+  );
+
+  // Height needed for just the rows on the internal page currently loaded
+  // (see useHierarchyRowWindow) rather than every row across every page.
+  // Pages other than the last are always full (pageSize rows), so this
+  // equals tableContentHeight-ish and gets capped by availableTableHeight
+  // the same as before; the last page is usually shorter than a full page,
+  // and without this the grid kept reserving availableTableHeight's worth of
+  // height regardless, leaving dead whitespace below its last row once
+  // scrolled all the way to the end.
+  const currentPageContentHeight = useMemo(() => {
+    const startIndex = hierarchyRowWindow.page * hierarchyRowWindow.pageSize;
+    const endIndex = Math.min(startIndex + hierarchyRowWindow.pageSize, rowHeights.length);
+    let sum = HEADER_ROW_HEIGHT;
+    for (let i = startIndex; i < endIndex; i += 1) {
+      sum += rowHeights[i];
+    }
+    return sum;
+  }, [rowHeights, hierarchyRowWindow.page, hierarchyRowWindow.pageSize]);
+
+  const stableScrollbar = useHierarchyStableScrollbar(
+    rowHeights,
+    hierarchyRowWindow,
+    HIERARCHY_VIRTUAL_SCROLLER_SELECTOR,
+    tableWrapperRef,
+    stableScrollbarTrackRef,
+    HEADER_ROW_HEIGHT,
+  );
 
   const shouldShowMissingDimensionsHint = useMemo(() => {
     const hasBeds = beds.length > 0;
@@ -1299,6 +1384,13 @@ function FieldsBedsHierarchy({
   // how much the title/alerts/hints/toggle above it currently take up.
   // Skipped on mobile, where the table keeps using autoHeight and the page
   // itself scrolls (see the DataGrid props below).
+  //
+  // Re-measures via a ResizeObserver on the whole page content area (see
+  // pageContentRef below) rather than a hand-picked list of "things that
+  // might shift the table down" — that list is easy to miss a case for
+  // (e.g. an alert/hint whose height changes after an async data load), and
+  // missing one leaves availableTableHeight stale, under-sizing the table
+  // and making its last rows unreachable by scroll.
   const [availableTableHeight, setAvailableTableHeight] = useState<number | null>(null);
   useLayoutEffect(() => {
     if (isMobileViewport) {
@@ -1318,15 +1410,19 @@ function FieldsBedsHierarchy({
 
     measure();
     window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [
-    isMobileViewport,
-    error,
-    draftValidationWarning,
-    showContextMenuHint,
-    shouldShowMissingDimensionsHint,
-    shouldShowHierarchyTable,
-  ]);
+
+    let resizeObserver: ResizeObserver | undefined;
+    const observedElement = pageContentRef.current;
+    if (observedElement && typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(measure);
+      resizeObserver.observe(observedElement);
+    }
+
+    return () => {
+      window.removeEventListener("resize", measure);
+      resizeObserver?.disconnect();
+    };
+  }, [isMobileViewport]);
 
   const hasUnsavedInvalidNewRows = useMemo(() => (
     beds.some((bed) => isPartiallyFilledNamelessNewHierarchyRow({
@@ -1403,7 +1499,7 @@ function FieldsBedsHierarchy({
 
   return (
     <div className={showTitle ? "page-container" : undefined}>
-      <Box sx={{ width: "100%", minWidth: 0 }}>
+      <Box ref={pageContentRef} sx={{ width: "100%", minWidth: 0 }}>
         {showTitle && <h1>{t("title")}</h1>}
 
         {error && (
@@ -1439,6 +1535,7 @@ function FieldsBedsHierarchy({
           <Box
             ref={tableWrapperRef}
             sx={{
+              position: "relative",
               width: "100%",
               maxWidth: "100%",
               '& [role="row"][data-id]': {
@@ -1458,6 +1555,14 @@ function FieldsBedsHierarchy({
               columns={columns}
               columnHeaderHeight={HEADER_ROW_HEIGHT}
               getRowHeight={getRowHeight}
+              // Without this, MUI falls back to the density-default row
+              // height as its estimate for any row it hasn't rendered yet,
+              // which is wrong for our taller location/field rows. At scale
+              // (many such rows off-screen), that under-estimate makes the
+              // grid's computed total scroll range too short, capping how
+              // far down you can actually scroll before ever reaching it —
+              // our row height is exact (not a guess), so reuse it here too.
+              getEstimatedRowHeight={getRowHeight}
               getRowClassName={(params) => (
                 params.id === highlightedRowId
                   ? `ofp-hierarchy-row-${params.row.type} ofp-hierarchy-row-highlighted`
@@ -1472,6 +1577,13 @@ function FieldsBedsHierarchy({
               editMode="row"
               autoHeight={isMobileViewport}
               hideFooter={true}
+              // See useHierarchyRowWindow: the free DataGrid always paginates
+              // and caps pageSize at 100, so very large hierarchies are paged
+              // internally (no pager UI) instead of relying on a single
+              // unbounded page. onPaginationModelChange is a no-op — our own
+              // scroll-position logic is the only thing that changes pages.
+              paginationModel={{ page: hierarchyRowWindow.page, pageSize: hierarchyRowWindow.pageSize }}
+              onPaginationModelChange={() => {}}
               sortingMode="server"
               sortModel={sortModel}
               onSortModelChange={setSortModel}
@@ -1482,7 +1594,7 @@ function FieldsBedsHierarchy({
                   ? HIERARCHY_DATA_GRID_SX
                   : {
                     ...HIERARCHY_DATA_GRID_SX,
-                    height: `${Math.min(tableContentHeight, availableTableHeight ?? tableContentHeight)}px`,
+                    height: `${Math.min(currentPageContentHeight, availableTableHeight ?? tableContentHeight)}px`,
                   }
               }
               disableRowSelectionOnClick
@@ -1491,6 +1603,35 @@ function FieldsBedsHierarchy({
               localeText={germanDataGridLocaleText}
               apiRef={gridApiRef}
             />
+            {!isMobileViewport && stableScrollbar.isActive && (
+              <Box
+                ref={stableScrollbarTrackRef}
+                onPointerDown={stableScrollbar.onTrackPointerDown}
+                sx={{
+                  position: "absolute",
+                  top: `${HEADER_ROW_HEIGHT}px`,
+                  bottom: 0,
+                  right: 0,
+                  width: "10px",
+                  zIndex: 60,
+                }}
+              >
+                <Box
+                  onPointerDown={stableScrollbar.onThumbPointerDown}
+                  sx={{
+                    position: "absolute",
+                    top: `${stableScrollbar.thumbTop}px`,
+                    height: `${stableScrollbar.thumbHeight}px`,
+                    left: "2px",
+                    right: "2px",
+                    borderRadius: "4px",
+                    backgroundColor: "rgba(0, 0, 0, 0.3)",
+                    cursor: "pointer",
+                    "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.45)" },
+                  }}
+                />
+              </Box>
+            )}
           </Box>
         ) : null}
       </Box>

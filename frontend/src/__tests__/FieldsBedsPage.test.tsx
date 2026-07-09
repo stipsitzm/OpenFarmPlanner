@@ -41,14 +41,19 @@ vi.mock('../api/api', async () => {
   const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
   return {
     ...actual,
+    // listAll mirrors whatever list() is mocked to resolve, unwrapped —
+    // useHierarchyData uses listAll (not list) to fetch every page.
     locationAPI: {
       list: locationListMock,
+      listAll: async () => (await locationListMock()).data,
     },
     fieldAPI: {
       list: fieldListMock,
+      listAll: async () => (await fieldListMock()).data,
     },
     bedAPI: {
       list: bedListMock,
+      listAll: async () => (await bedListMock()).data,
     },
   };
 });
