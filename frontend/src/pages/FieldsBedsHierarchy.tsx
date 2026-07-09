@@ -60,6 +60,7 @@ import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState
 import { type TreeRowNode } from "../components/hierarchy/utils/treeRows";
 import { useHierarchyLevelToggle } from "../components/hierarchy/hooks/useHierarchyLevelToggle";
 import { useHierarchyRowWindow } from "../components/hierarchy/hooks/useHierarchyRowWindow";
+import { useHierarchyStableScrollbar } from "../components/hierarchy/hooks/useHierarchyStableScrollbar";
 import { hasPersistedEntityId } from "../components/hierarchy/utils/hierarchyUtils";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
 import { useHierarchyDelete } from "../components/hierarchy/hooks/useHierarchyDelete";
@@ -237,6 +238,13 @@ const HIERARCHY_DATA_GRID_SX = {
     "70%": { backgroundColor: "rgba(37, 111, 42, 0.14)" },
     "100%": { backgroundColor: "transparent" },
   },
+  // Replaced by the custom track/thumb rendered alongside the grid (see
+  // useHierarchyStableScrollbar) — MUI's own floating scrollbar sizes itself
+  // from only the currently-loaded ~100-row page, which visibly jumps on
+  // every internal page transition (see useHierarchyRowWindow).
+  "& .MuiDataGrid-scrollbar--vertical": {
+    display: "none",
+  },
 };
 
 function FieldsBedsHierarchy({
@@ -268,6 +276,7 @@ function FieldsBedsHierarchy({
   const handledCreateFieldRequestRef = useRef(0);
   const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
+  const stableScrollbarTrackRef = useRef<HTMLDivElement | null>(null);
   const pageContentRef = useRef<HTMLDivElement | null>(null);
   const [highlightedRowId, setHighlightedRowId] = useState<GridRowId | null>(null);
   const highlightClearTimeoutRef = useRef<number | null>(null);
@@ -1294,8 +1303,7 @@ function FieldsBedsHierarchy({
     toggleExpand,
   });
 
-  const getRowHeight = useCallback((params: GridRowHeightParams) => {
-    const row = params.model as HierarchyRow;
+  const rowHeightForType = useCallback((row: HierarchyRow) => {
     if (row.type === "location") {
       return LOCATION_ROW_HEIGHT;
     }
@@ -1305,23 +1313,56 @@ function FieldsBedsHierarchy({
     return BED_ROW_HEIGHT;
   }, []);
 
+  const getRowHeight = useCallback((params: GridRowHeightParams) => (
+    rowHeightForType(params.model as HierarchyRow)
+  ), [rowHeightForType]);
+
+  // Per-row heights for every currently visible row (all pages, not just the
+  // one internally loaded via useHierarchyRowWindow) — feeds the exact
+  // cumulative offsets useHierarchyStableScrollbar needs to keep the
+  // scrollbar's thumb stable across page transitions.
+  const rowHeights = useMemo(
+    () => rows.map((row) => rowHeightForType(row as HierarchyRow)),
+    [rows, rowHeightForType],
+  );
+
   // Exact height the grid would need to show every current row without its
   // own scrollbar. Combined with availableTableHeight (measured below) via
   // Math.min, this lets the table size snugly to its content for small
   // hierarchies while filling the available viewport height (and internally
   // scrolling/virtualizing) for large ones — instead of always reserving a
   // fixed max height regardless of how much screen space is actually there.
-  const tableContentHeight = useMemo(() => (
-    HEADER_ROW_HEIGHT + rows.reduce((sum, row) => {
-      if (row.type === "location") {
-        return sum + LOCATION_ROW_HEIGHT;
-      }
-      if (row.type === "field") {
-        return sum + FIELD_ROW_HEIGHT;
-      }
-      return sum + BED_ROW_HEIGHT;
-    }, 0)
-  ), [rows]);
+  const tableContentHeight = useMemo(
+    () => HEADER_ROW_HEIGHT + rowHeights.reduce((sum, height) => sum + height, 0),
+    [rowHeights],
+  );
+
+  // Height needed for just the rows on the internal page currently loaded
+  // (see useHierarchyRowWindow) rather than every row across every page.
+  // Pages other than the last are always full (pageSize rows), so this
+  // equals tableContentHeight-ish and gets capped by availableTableHeight
+  // the same as before; the last page is usually shorter than a full page,
+  // and without this the grid kept reserving availableTableHeight's worth of
+  // height regardless, leaving dead whitespace below its last row once
+  // scrolled all the way to the end.
+  const currentPageContentHeight = useMemo(() => {
+    const startIndex = hierarchyRowWindow.page * hierarchyRowWindow.pageSize;
+    const endIndex = Math.min(startIndex + hierarchyRowWindow.pageSize, rowHeights.length);
+    let sum = HEADER_ROW_HEIGHT;
+    for (let i = startIndex; i < endIndex; i += 1) {
+      sum += rowHeights[i];
+    }
+    return sum;
+  }, [rowHeights, hierarchyRowWindow.page, hierarchyRowWindow.pageSize]);
+
+  const stableScrollbar = useHierarchyStableScrollbar(
+    rowHeights,
+    hierarchyRowWindow,
+    HIERARCHY_VIRTUAL_SCROLLER_SELECTOR,
+    tableWrapperRef,
+    stableScrollbarTrackRef,
+    HEADER_ROW_HEIGHT,
+  );
 
   const shouldShowMissingDimensionsHint = useMemo(() => {
     const hasBeds = beds.length > 0;
@@ -1494,6 +1535,7 @@ function FieldsBedsHierarchy({
           <Box
             ref={tableWrapperRef}
             sx={{
+              position: "relative",
               width: "100%",
               maxWidth: "100%",
               '& [role="row"][data-id]': {
@@ -1552,7 +1594,7 @@ function FieldsBedsHierarchy({
                   ? HIERARCHY_DATA_GRID_SX
                   : {
                     ...HIERARCHY_DATA_GRID_SX,
-                    height: `${Math.min(tableContentHeight, availableTableHeight ?? tableContentHeight)}px`,
+                    height: `${Math.min(currentPageContentHeight, availableTableHeight ?? tableContentHeight)}px`,
                   }
               }
               disableRowSelectionOnClick
@@ -1561,6 +1603,35 @@ function FieldsBedsHierarchy({
               localeText={germanDataGridLocaleText}
               apiRef={gridApiRef}
             />
+            {!isMobileViewport && stableScrollbar.isActive && (
+              <Box
+                ref={stableScrollbarTrackRef}
+                onPointerDown={stableScrollbar.onTrackPointerDown}
+                sx={{
+                  position: "absolute",
+                  top: `${HEADER_ROW_HEIGHT}px`,
+                  bottom: 0,
+                  right: 0,
+                  width: "10px",
+                  zIndex: 60,
+                }}
+              >
+                <Box
+                  onPointerDown={stableScrollbar.onThumbPointerDown}
+                  sx={{
+                    position: "absolute",
+                    top: `${stableScrollbar.thumbTop}px`,
+                    height: `${stableScrollbar.thumbHeight}px`,
+                    left: "2px",
+                    right: "2px",
+                    borderRadius: "4px",
+                    backgroundColor: "rgba(0, 0, 0, 0.3)",
+                    cursor: "pointer",
+                    "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.45)" },
+                  }}
+                />
+              </Box>
+            )}
           </Box>
         ) : null}
       </Box>
