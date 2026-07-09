@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import type { TFunction } from 'i18next';
-import type { GridRowModesModel } from '@mui/x-data-grid';
 import { bedAPI, fieldAPI, locationAPI, type Bed, type Field, type Location as FarmLocation } from '../../../api/api';
 import { extractApiErrorMessage } from '../../../api/errors';
 import type { HierarchyRow } from '../utils/types';
@@ -35,7 +34,6 @@ interface UseHierarchyDeleteParams {
   onPendingDeletionCountChange?: (count: number) => void;
   t: TFunction;
   rowSnapshotRef?: React.MutableRefObject<Map<string, HierarchyRow>>;
-  setRowModesModel?: React.Dispatch<React.SetStateAction<GridRowModesModel>>;
   setDraftValidationWarning?: (warning: string) => void;
 }
 
@@ -61,7 +59,6 @@ export function useHierarchyDelete({
   onPendingDeletionCountChange,
   t,
   rowSnapshotRef,
-  setRowModesModel,
   setDraftValidationWarning,
 }: UseHierarchyDeleteParams): UseHierarchyDeleteResult {
   const [pendingDeletions, setPendingDeletions] = useState<PendingHierarchyDeletion[]>([]);
@@ -71,7 +68,9 @@ export function useHierarchyDelete({
     const fieldIdMap = new Map<number, number>();
 
     for (const locationItem of deletion.locations) {
-      const { id, created_at, updated_at, ...locationPayload } = locationItem;
+      const { id, ...locationPayload } = locationItem;
+      delete locationPayload.created_at;
+      delete locationPayload.updated_at;
       if (typeof id !== 'number') {
         continue;
       }
@@ -82,7 +81,10 @@ export function useHierarchyDelete({
     }
 
     for (const field of deletion.fields) {
-      const { id, location_name, created_at, updated_at, ...fieldPayload } = field;
+      const { id, ...fieldPayload } = field;
+      delete fieldPayload.location_name;
+      delete fieldPayload.created_at;
+      delete fieldPayload.updated_at;
       if (typeof id !== 'number') {
         continue;
       }
@@ -97,7 +99,10 @@ export function useHierarchyDelete({
     }
 
     for (const bed of deletion.beds) {
-      const { id, field_name, created_at, updated_at, ...bedPayload } = bed;
+      const { id, ...bedPayload } = bed;
+      delete bedPayload.field_name;
+      delete bedPayload.created_at;
+      delete bedPayload.updated_at;
       if (typeof id !== 'number') {
         continue;
       }
@@ -218,11 +223,6 @@ export function useHierarchyDelete({
     if (!hasPersistedEntityId(targetId)) {
       removeDeletedItemsFromLocalState();
       rowSnapshotRef?.current.delete(String(row.id));
-      setRowModesModel?.((currentModel) => {
-        const nextModel = { ...currentModel };
-        delete nextModel[row.id];
-        return nextModel;
-      });
       setDraftValidationWarning?.('');
       setError('');
       return;
@@ -272,7 +272,6 @@ export function useHierarchyDelete({
     setDraftValidationWarning,
     setFields,
     setLocations,
-    setRowModesModel,
     setSelectedRowId,
     setError,
     t,

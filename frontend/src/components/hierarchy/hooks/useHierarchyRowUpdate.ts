@@ -1,6 +1,4 @@
 import { useCallback } from "react";
-import type { GridRowId, GridRowModesModel } from "@mui/x-data-grid";
-import { GridRowModes } from "@mui/x-data-grid";
 import type { Bed, Field, Location } from "../../../api/api";
 import { fieldAPI, locationAPI } from "../../../api/api";
 import { extractApiErrorMessage } from "../../../api/errors";
@@ -17,9 +15,7 @@ import {
 import type { TFunction } from "i18next";
 
 interface UseHierarchyRowUpdateParams {
-  getDraftRow: (rowId: GridRowId) => HierarchyRow | null;
-  rowModesModel: GridRowModesModel;
-  rowsById: Map<string, HierarchyRow>;
+  getDraftRow: (rowId: string | number) => HierarchyRow | null;
   beds: Bed[];
   fields: Field[];
   locations: Location[];
@@ -27,7 +23,6 @@ interface UseHierarchyRowUpdateParams {
   setFields: React.Dispatch<React.SetStateAction<Field[]>>;
   setLocations: React.Dispatch<React.SetStateAction<Location[]>>;
   rowSnapshotRef: React.MutableRefObject<Map<string, HierarchyRow>>;
-  setRowModesModel: React.Dispatch<React.SetStateAction<GridRowModesModel>>;
   setError: (error: string) => void;
   setDraftValidationWarning: (warning: string) => void;
   fetchData: (options?: { showLoading: boolean }) => Promise<void>;
@@ -37,8 +32,6 @@ interface UseHierarchyRowUpdateParams {
 
 export function useHierarchyRowUpdate({
   getDraftRow,
-  rowModesModel,
-  rowsById,
   beds,
   fields,
   locations,
@@ -46,7 +39,6 @@ export function useHierarchyRowUpdate({
   setFields,
   setLocations,
   rowSnapshotRef,
-  setRowModesModel,
   setError,
   setDraftValidationWarning,
   fetchData,
@@ -126,7 +118,7 @@ export function useHierarchyRowUpdate({
   );
 
   const discardRowEdit = useCallback(
-    (rowId: GridRowId): void => {
+    (rowId: string | number): void => {
       const draftRow = getDraftRow(rowId);
 
       if (draftRow?.isNew) {
@@ -136,10 +128,6 @@ export function useHierarchyRowUpdate({
           );
           setDraftValidationWarning("");
           rowSnapshotRef.current.delete(String(rowId));
-          setRowModesModel((previousModel) => ({
-            ...previousModel,
-            [rowId]: { mode: GridRowModes.View, ignoreModifications: true },
-          }));
           return;
         }
 
@@ -154,21 +142,9 @@ export function useHierarchyRowUpdate({
       }
 
       rowSnapshotRef.current.delete(String(rowId));
-      setRowModesModel((previousModel) => ({
-        ...previousModel,
-        [rowId]: { mode: GridRowModes.View, ignoreModifications: true },
-      }));
     },
-    [getDraftRow, preservePartialNewBedDraft, rowSnapshotRef, setBeds, setDraftValidationWarning, setFields, setRowModesModel],
+    [getDraftRow, preservePartialNewBedDraft, rowSnapshotRef, setBeds, setDraftValidationWarning, setFields],
   );
-
-  const discardActiveRowEdit = useCallback((): void => {
-    const editingRowId = Object.entries(rowModesModel).find(
-      ([, mode]) => mode.mode === GridRowModes.Edit,
-    )?.[0];
-    if (editingRowId === undefined) return;
-    discardRowEdit(rowsById.get(editingRowId)?.id ?? editingRowId);
-  }, [discardRowEdit, rowModesModel, rowsById]);
 
   const processRowUpdate = useCallback(
     async (newRow: HierarchyRow): Promise<HierarchyRow> => {
@@ -423,7 +399,6 @@ export function useHierarchyRowUpdate({
       return newRow;
     },
     [
-      beds,
       fetchData,
       fields,
       getBedAreaSum,
@@ -432,7 +407,6 @@ export function useHierarchyRowUpdate({
       locations,
       preservePartialNewBedDraft,
       saveBed,
-      setBeds,
       setDraftValidationWarning,
       setError,
       setFields,
@@ -457,7 +431,6 @@ export function useHierarchyRowUpdate({
   return {
     preservePartialNewBedDraft,
     discardRowEdit,
-    discardActiveRowEdit,
     processRowUpdate,
     handleProcessRowUpdateError,
   };

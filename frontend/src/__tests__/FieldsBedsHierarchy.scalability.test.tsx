@@ -5,9 +5,9 @@
  * HIERARCHY_AUTO_EXPAND_ALL_THRESHOLD only expand locations, leaving fields
  * (and their beds) collapsed for a scannable initial overview.
  *
- * The DataGrid is mocked to a plain row list (no MUI internals), since the
+ * AG Grid is mocked to a plain row list (no grid internals), since the
  * behavior under test is which rows the page decides are visible — not
- * DataGrid's own rendering/virtualization.
+ * AG Grid's own rendering or virtualization.
  */
 
 import React from 'react';
@@ -51,33 +51,17 @@ vi.mock('../api/api', async () => {
   };
 });
 
-vi.mock('@mui/x-data-grid', async () => {
-  const ReactModule = await import('react');
-  const useGridApiRef = vi.fn(() => ReactModule.useRef({}));
-
-  const DataGrid = ({ rows }: { rows: Array<{ id: string | number; type: string }> }) => (
+vi.mock('ag-grid-react', () => ({
+  AgGridReact: ({ rowData }: { rowData: Array<{ id: string | number; type: string }> }) => (
     <div data-testid="hierarchy-grid">
-      {rows.map((row) => (
+      {rowData.map((row) => (
         <div data-testid={`row-${row.id}`} key={String(row.id)} role="row">
           {String(row.id)}
         </div>
       ))}
     </div>
-  );
-
-  return {
-    DataGrid,
-    GridRowModes: { Edit: 'edit', View: 'view' },
-    GridRowEditStopReasons: {
-      escapeKeyDown: 'escapeKeyDown',
-      enterKeyDown: 'enterKeyDown',
-      rowFocusOut: 'rowFocusOut',
-      shiftTabKeyDown: 'shiftTabKeyDown',
-      tabKeyDown: 'tabKeyDown',
-    },
-    useGridApiRef,
-  };
-});
+  ),
+}));
 
 const renderHierarchy = () =>
   render(

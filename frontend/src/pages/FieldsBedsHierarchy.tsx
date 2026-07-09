@@ -1,11 +1,10 @@
 /**
- * Hierarchical Fields and Beds page component.
+ * AG Grid Community table for the fields/beds hierarchy.
  *
- * Displays Locations > Fields > Beds in a tree structure with inline editing.
- * Uses MUI Data Grid with custom row grouping logic.
- * UI text is in German, code comments remain in English.
- *
- * @returns The hierarchical Fields/Beds page component
+ * This intentionally avoids AG Grid Enterprise-only features such as Tree Data
+ * and the built-in context menu. The Standort > Parzelle > Beet hierarchy is
+ * still projected by OpenFarmPlanner code and rendered as a flat indented row
+ * list.
  */
 
 import React, {
@@ -17,78 +16,89 @@ import React, {
   useState,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useTranslation } from "../i18n";
+import { AgGridReact } from "ag-grid-react";
 import {
-  DataGrid,
-  GridRowEditStopReasons,
-  GridRowModes,
-  useGridApiRef,
-} from "@mui/x-data-grid";
-import { germanDataGridLocaleText } from "../components/data-grid/localeText";
-import type {
-  GridCellParams,
-  GridEventListener,
-  GridRowHeightParams,
-  GridRowId,
-  GridRowsProp,
-  GridRowModesModel,
-} from "@mui/x-data-grid";
-import { Box, Alert, useMediaQuery } from "@mui/material";
+  CellStyleModule,
+  ClientSideRowModelApiModule,
+  ClientSideRowModelModule,
+  ColumnApiModule,
+  LocaleModule,
+  NumberEditorModule,
+  NumberFilterModule,
+  RenderApiModule,
+  RowApiModule,
+  RowStyleModule,
+  ScrollApiModule,
+  TextEditorModule,
+  TextFilterModule,
+  TooltipModule,
+  ModuleRegistry,
+  ValidationModule,
+  themeMaterial,
+  type CellClickedEvent,
+  type CellContextMenuEvent,
+  type CellEditRequestEvent,
+  type CellEditingStartedEvent,
+  type CellEditingStoppedEvent,
+  type CellKeyDownEvent,
+  type ColDef,
+  type GetRowIdParams,
+  type GridApi,
+  type GridReadyEvent,
+  type ICellRendererParams,
+  type RowClassParams,
+  type RowHeightParams,
+} from "ag-grid-community";
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  IconButton,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Tooltip,
+  useMediaQuery,
+} from "@mui/material";
 import Divider from "@mui/material/Divider";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
-import EmptyStateCard from '../components/project/EmptyStateCard';
-import { CALCULATED_COLUMN_CELL_CLASS } from "../components/data-grid/calculatedColumns";
-import { dataGridSx } from "../components/data-grid/styles";
+import AgricultureIcon from "@mui/icons-material/Agriculture";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import DeleteIcon from "@mui/icons-material/Delete";
+import ViewColumnIcon from "@mui/icons-material/ViewColumn";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import SwapVertIcon from "@mui/icons-material/SwapVert";
+import EmptyStateCard from "../components/project/EmptyStateCard";
 import {
-  DeleteUndoSnackbar,
   ContextMenuHint,
-  TableCopyMenuItems,
-  useNotesEditor,
+  DeleteUndoSnackbar,
+  NotesCell,
   NotesDrawer,
+  TableCopyMenuItems,
   getPlainExcerpt,
   useContextMenuHint,
+  useNotesEditor,
 } from "../components/data-grid";
+import { CALCULATED_COLUMN_CELL_CLASS } from "../components/data-grid/calculatedColumns";
 import { handleContextMenuKeyboardNavigation } from "../components/data-grid/contextMenuFocus";
-import {
-  isInteractiveCellTarget,
-  preventReadOnlyCellMouseFocus,
-} from "../components/data-grid/keyboardNavigation";
-import { useNavigationBlocker } from "../hooks/autosave";
-import { useHierarchyData, type HierarchyDataState } from "../components/hierarchy/hooks/useHierarchyData";
-import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
-import { type TreeRowNode } from "../components/hierarchy/utils/treeRows";
-import { useHierarchyLevelToggle } from "../components/hierarchy/hooks/useHierarchyLevelToggle";
-import { useHierarchyRowWindow } from "../components/hierarchy/hooks/useHierarchyRowWindow";
-import { hasPersistedEntityId } from "../components/hierarchy/utils/hierarchyUtils";
+import { ContextMenuIndicator } from "../components/contextMenu/ContextMenuIndicator";
+import { contextMenuActionsOverlaySx } from "../components/contextMenu/contextMenuIndicatorStyles";
 import { useBedOperations } from "../components/hierarchy/hooks/useBedOperations";
+import { useExpandedState } from "../components/hierarchy/hooks/useExpandedState";
+import { useHierarchyData, type HierarchyDataState } from "../components/hierarchy/hooks/useHierarchyData";
 import { useHierarchyDelete } from "../components/hierarchy/hooks/useHierarchyDelete";
-import { useHierarchyGridFocus } from "../components/hierarchy/hooks/useHierarchyGridFocus";
-import { useHierarchyNavigationState } from "../components/hierarchy/hooks/useHierarchyNavigationState";
+import { useHierarchyLevelToggle } from "../components/hierarchy/hooks/useHierarchyLevelToggle";
 import { useHierarchyRowUpdate } from "../components/hierarchy/hooks/useHierarchyRowUpdate";
-import { useHierarchyContextMenu } from "../components/hierarchy/hooks/useHierarchyContextMenu";
-import { useHierarchyKeyboard } from "../components/hierarchy/hooks/useHierarchyKeyboard";
-import { useHierarchyGridKeyboard } from "../components/hierarchy/hooks/useHierarchyGridKeyboard";
-import { usePersistentSortModel } from "../hooks/usePersistentSortModel";
-import { fieldAPI, bedAPI, locationAPI, type Field } from "../api/api";
+import { HierarchyAddIcon } from "../components/hierarchy/HierarchyAddIcon";
+import { HierarchyLevelButtons } from "../components/hierarchy/HierarchyLevelToggle";
 import {
   buildHierarchyIndex,
   createHierarchyRowsProjector,
+  hasPersistedEntityId,
   type HierarchySortConfig,
 } from "../components/hierarchy/utils/hierarchyUtils";
 import {
-  createHierarchyColumns,
-  DEFAULT_HIERARCHY_COLUMN_WIDTHS,
-} from "../components/hierarchy/HierarchyColumns";
-import type { HierarchyRow } from "../components/hierarchy/utils/types";
-import {
-  calculateHierarchyNameColumnWidth,
-  getHierarchyNameMeasureKey,
-  measureHierarchyNameTextWidths,
-  type HierarchyNameMeasureEntry,
-} from "../components/hierarchy/utils/hierarchyNameColumnWidth";
-import {
-  isCompletelyEmptyNewHierarchyRow,
   isPartiallyFilledNamelessNewHierarchyRow,
 } from "../components/hierarchy/utils/hierarchyRowDraft";
 import {
@@ -97,9 +107,49 @@ import {
   parseDimensionValue,
 } from "../components/hierarchy/utils/hierarchyAreaParsing";
 import {
-  useRegisterCommands,
-} from "../commands/useCommandContext";
-import type { CommandSpec } from "../commands/types";
+  calculateHierarchyNameColumnWidth,
+  getHierarchyNameMeasureKey,
+  measureHierarchyNameTextWidths,
+  type HierarchyNameMeasureEntry,
+} from "../components/hierarchy/utils/hierarchyNameColumnWidth";
+import type { HierarchyRow } from "../components/hierarchy/utils/types";
+import type { TreeRowNode } from "../components/hierarchy/utils/treeRows";
+import { useNavigationBlocker } from "../hooks/autosave";
+import { usePersistentSortModel } from "../hooks/usePersistentSortModel";
+import { useTranslation } from "../i18n";
+import { bedAPI, fieldAPI, locationAPI, type Field } from "../api/api";
+
+ModuleRegistry.registerModules([
+  CellStyleModule,
+  ClientSideRowModelApiModule,
+  ClientSideRowModelModule,
+  ColumnApiModule,
+  LocaleModule,
+  NumberEditorModule,
+  NumberFilterModule,
+  RenderApiModule,
+  RowApiModule,
+  RowStyleModule,
+  ScrollApiModule,
+  TextEditorModule,
+  TextFilterModule,
+  TooltipModule,
+  ...(import.meta.env.DEV ? [ValidationModule] : []),
+]);
+
+interface HierarchyColumnWidths {
+  name: number;
+  area: number;
+  dimensions: number;
+  notes: number;
+}
+
+const DEFAULT_HIERARCHY_COLUMN_WIDTHS: HierarchyColumnWidths = {
+  name: 280,
+  area: 120,
+  dimensions: 130,
+  notes: 220,
+};
 
 interface FieldsBedsHierarchyProps {
   showTitle?: boolean;
@@ -118,126 +168,318 @@ interface HierarchyRowAction {
   onClick: () => void;
 }
 
-const HIERARCHY_SELECTED_VIEW_ROW_SELECTOR =
-  "& .MuiDataGrid-row.Mui-selected:not(.MuiDataGrid-row--editing)";
-
-// Above this many combined locations/fields/beds, fully expanding the tree on
-// first load produces an unwieldy wall of rows before the user has done
-// anything. Below it, full expansion (the long-standing default) is more
-// useful than hiding everything behind a chevron — mirrors the same
-// size-based fallback used for the occupancy tree in GanttChart.tsx.
 const HIERARCHY_AUTO_EXPAND_ALL_THRESHOLD = 200;
-
-// Bottom breathing room left below the table when it's sized to the
-// available viewport height (see the tableWrapper measurement effect below),
-// and a floor so it never collapses to something unusably short.
 const TABLE_BOTTOM_MARGIN_PX = 24;
 const TABLE_MIN_HEIGHT_PX = 240;
+const HEADER_ROW_HEIGHT = 40;
+const LOCATION_ROW_HEIGHT = 46;
+const FIELD_ROW_HEIGHT = 42;
+const BED_ROW_HEIGHT = 36;
+const EXPAND_ICON_SLOT_SIZE = 32;
 
-// The free/MIT @mui/x-data-grid we depend on hard-codes pagination on and
-// throws if paginationModel.pageSize exceeds 100 (DataGridPro lifts this;
-// not part of this project's dependencies). Above this many rows, the table
-// pages internally via useHierarchyRowWindow, which auto-advances/retreats
-// the page as the user scrolls near the grid's top/bottom edge — no pager UI
-// is shown, so it still reads as one continuous scroll.
-const HIERARCHY_GRID_PAGE_SIZE = 100;
-const HIERARCHY_VIRTUAL_SCROLLER_SELECTOR = ".MuiDataGrid-virtualScroller";
+const agGridGermanLocaleText = {
+  contains: "Enthält",
+  notContains: "Enthält nicht",
+  equals: "Gleich",
+  notEqual: "Ungleich",
+  startsWith: "Beginnt mit",
+  endsWith: "Endet mit",
+  blank: "Leer",
+  notBlank: "Nicht leer",
+  filterOoo: "Filtern...",
+  noRowsToShow: "Keine Einträge",
+  loadingOoo: "Wird geladen...",
+  sortAscending: "Aufsteigend sortieren",
+  sortDescending: "Absteigend sortieren",
+  sortUnSort: "Sortierung entfernen",
+};
 
-const HIERARCHY_DATA_GRID_SX = {
-  ...dataGridSx,
-  // Intentionally no width: "fit-content" here (see git history/#50296dd7 for
-  // why it existed) — the name/dimension/area columns still keep their
-  // compact, content-based widths, but forcing the whole grid to shrink-wrap
-  // them fought the notes column's own flex: 1 (HierarchyColumns.tsx), which
-  // is designed to absorb whatever width is left over. Letting the grid fill
-  // its container lets notes do that job, so a horizontal scrollbar only
-  // shows up when the fixed columns genuinely don't fit (narrow viewports).
-  "& .MuiDataGrid-filler": {
-    display: "none",
-  },
-  "& .MuiDataGrid-scrollbarFiller": {
-    display: "none",
-  },
-  "& .MuiDataGrid-columnHeader": {
-    py: 0.25,
-  },
-  "& .MuiDataGrid-cell": {
-    py: 0,
-  },
-  "& .ofp-hierarchy-row-location .MuiDataGrid-cell": {
-    py: 0.5,
-  },
-  "& .ofp-hierarchy-row-field .MuiDataGrid-cell": {
-    py: 0.25,
-  },
-  "& .ofp-hierarchy-row-bed .MuiDataGrid-cell": {
-    py: 0,
-  },
-  "& .MuiDataGrid-row--editing .MuiDataGrid-cell": {
-    py: 0,
-  },
-  "& .MuiDataGrid-row--editing .MuiInputBase-root": {
-    minHeight: "30px",
-    height: "30px",
-    fontSize: "0.875rem",
-  },
-  "& .MuiDataGrid-row--editing .MuiInputBase-input": {
-    py: 0.5,
-  },
-  "& .MuiDataGrid-row--editing .MuiSelect-select": {
-    minHeight: "unset !important",
-    py: 0.5,
-  },
-  "& .MuiDataGrid-row--editing .MuiIconButton-root": {
-    width: 28,
-    height: 28,
-  },
-  "& .MuiDataGrid-row--editing .MuiDataGrid-cell[data-field='name'] .MuiInputBase-root":
-    {
-      minHeight: "32px",
-      height: "32px",
+const NON_BLOCKING_TOOLTIP_PROPS = {
+  disableInteractive: true,
+  slotProps: {
+    popper: {
+      style: { pointerEvents: "none" as const },
     },
-  [HIERARCHY_SELECTED_VIEW_ROW_SELECTOR]: {
-    backgroundColor: "transparent",
-  },
-  [`${HIERARCHY_SELECTED_VIEW_ROW_SELECTOR} .MuiDataGrid-cell`]: {
-    backgroundColor: "transparent",
-  },
-  [`${HIERARCHY_SELECTED_VIEW_ROW_SELECTOR} .MuiDataGrid-cell.MuiDataGrid-cell--editable`]:
-    {
-      backgroundColor: "surface.surfaceBackground",
-    },
-  [`${HIERARCHY_SELECTED_VIEW_ROW_SELECTOR} .MuiDataGrid-cell.${CALCULATED_COLUMN_CELL_CLASS}`]:
-    {
-      backgroundColor: "#F5F5F5",
-    },
-  [`${HIERARCHY_SELECTED_VIEW_ROW_SELECTOR} .MuiDataGrid-cell.ofp-hierarchy-cell-missing-dimension`]:
-    {
-      backgroundColor: "#fbf2d5",
-    },
-  [`${HIERARCHY_SELECTED_VIEW_ROW_SELECTOR} .MuiDataGrid-cell:focus, ${HIERARCHY_SELECTED_VIEW_ROW_SELECTOR} .MuiDataGrid-cell:focus-within`]:
-    {
-      backgroundColor: "transparent",
-    },
-  "& .ofp-hierarchy-cell-missing-dimension": {
-    backgroundColor: "#fbf2d5",
-    color: "text.primary",
-  },
-  "& .MuiDataGrid-row:hover .ofp-hierarchy-cell-missing-dimension": {
-    backgroundColor: "surface.surfaceHoverBackground",
-    boxShadow: "inset 0 0 0 9999px rgba(237, 108, 2, 0.14)",
-  },
-  "& .ofp-hierarchy-row-highlighted .MuiDataGrid-cell": {
-    animation: "ofp-hierarchy-row-highlight-flash 2.5s ease-out",
-  },
-  // Matches the app's established green "selected" look (e.g. CultureDetail's
-  // selected list item) instead of an unrelated yellow flash.
-  "@keyframes ofp-hierarchy-row-highlight-flash": {
-    "0%": { backgroundColor: "rgba(37, 111, 42, 0.22)" },
-    "70%": { backgroundColor: "rgba(37, 111, 42, 0.14)" },
-    "100%": { backgroundColor: "transparent" },
   },
 };
+
+const getRowHeightForHierarchyRow = (row: HierarchyRow): number => {
+  if (row.type === "location") return LOCATION_ROW_HEIGHT;
+  if (row.type === "field") return FIELD_ROW_HEIGHT;
+  return BED_ROW_HEIGHT;
+};
+
+const getEditableFieldsForRow = (row: HierarchyRow): string[] => (
+  row.type === "location"
+    ? ["name"]
+    : ["name", "length_m", "width_m"]
+);
+
+const isEditableField = (row: HierarchyRow, field: string | null | undefined): boolean => (
+  Boolean(field && getEditableFieldsForRow(row).includes(field))
+);
+
+const calculateAreaValue = (row: HierarchyRow): number | string | undefined => {
+  if (row.type === "location") return undefined;
+  const length = typeof row.length_m === "number" ? row.length_m : null;
+  const width = typeof row.width_m === "number" ? row.width_m : null;
+  if (length !== null && width !== null) {
+    return Math.round(length * width * 10) / 10;
+  }
+  return row.area_sqm;
+};
+
+const parseNumericValue = (value: unknown): number | undefined => {
+  if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number.parseFloat(value.replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+};
+
+const isDimensionCellIncomplete = (row: HierarchyRow, field: "length_m" | "width_m" | "area_sqm"): boolean => {
+  if (row.type !== "field" && row.type !== "bed") return false;
+  const hasLength = Number.isFinite(parseNumericValue(row.length_m) ?? NaN);
+  const hasWidth = Number.isFinite(parseNumericValue(row.width_m) ?? NaN);
+  const hasArea = Number.isFinite(parseNumericValue(row.area_sqm) ?? NaN);
+  if (field === "length_m") return !hasLength;
+  if (field === "width_m") return !hasWidth;
+  return !(hasArea || (hasLength && hasWidth));
+};
+
+function startEditingRow(api: GridApi<HierarchyRow> | null, rowId: string | number, colKey = "name"): void {
+  if (!api) return;
+  let rowIndex: number | null = null;
+  api.forEachNode((node) => {
+    if (String(node.data?.id) === String(rowId)) {
+      rowIndex = node.rowIndex;
+    }
+  });
+  if (rowIndex === null || rowIndex < 0) return;
+  api.ensureIndexVisible(rowIndex, "middle");
+  window.setTimeout(() => {
+    api.setFocusedCell(rowIndex!, colKey);
+    api.startEditingCell({ rowIndex: rowIndex!, colKey });
+  }, 0);
+}
+
+function focusGridRow(api: GridApi<HierarchyRow> | null, rowId: string | number, colKey = "name"): void {
+  if (!api) return;
+  api.forEachNode((node) => {
+    if (String(node.data?.id) === String(rowId) && node.rowIndex !== null) {
+      api.ensureIndexVisible(node.rowIndex, "middle");
+      api.setFocusedCell(node.rowIndex, colKey);
+    }
+  });
+}
+
+function NameCellRenderer({
+  data,
+  value,
+  context,
+}: ICellRendererParams<HierarchyRow>) {
+  const row = data;
+  if (!row) return null;
+  const {
+    disableInlineHoverActions,
+    onAddBed,
+    onAddField,
+    onCreatePlantingPlan,
+    onDeleteRow,
+    onOpenContextMenu,
+    onToggleExpand,
+    t,
+  } = context as {
+    disableInlineHoverActions: boolean;
+    onAddBed: (fieldId: number) => void;
+    onAddField: (locationId?: number) => void;
+    onCreatePlantingPlan: (bedId: number) => void;
+    onDeleteRow: (row: HierarchyRow) => void;
+    onOpenContextMenu: (event: React.MouseEvent<HTMLElement>, row: HierarchyRow) => void;
+    onToggleExpand: (rowId: string | number) => void;
+    t: ReturnType<typeof useTranslation>["t"];
+  };
+  const hasExpandToggle = (row.type === "location" || row.type === "field") && row.hasChildren;
+  const actionButtons = disableInlineHoverActions ? null : (
+    <Box className="ofp-ag-hierarchy-actions" sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}>
+      {row.type === "location" ? (
+        <Tooltip title={t("hierarchy:addField")} {...NON_BLOCKING_TOOLTIP_PROPS}>
+          <span>
+            <HierarchyAddIcon
+              ariaLabel={t("hierarchy:addField")}
+              tabIndex={-1}
+              onClick={(event) => {
+                event.stopPropagation();
+                onAddField(row.locationId);
+              }}
+              sx={{ p: 0.5, "& .MuiSvgIcon-root": { fontSize: 18 } }}
+            />
+          </span>
+        </Tooltip>
+      ) : null}
+      {row.type === "field" && row.fieldId ? (
+        <Tooltip title={t("hierarchy:addBedToField")} {...NON_BLOCKING_TOOLTIP_PROPS}>
+          <span>
+            <HierarchyAddIcon
+              ariaLabel={t("hierarchy:addBedToField")}
+              tabIndex={-1}
+              onClick={(event) => {
+                event.stopPropagation();
+                onAddBed(row.fieldId!);
+              }}
+              sx={{ p: 0.5, "& .MuiSvgIcon-root": { fontSize: 18 } }}
+            />
+          </span>
+        </Tooltip>
+      ) : null}
+      {row.type === "bed" && row.bedId ? (
+        <Tooltip title={t("hierarchy:createPlantingPlan")} {...NON_BLOCKING_TOOLTIP_PROPS}>
+          <IconButton
+            size="small"
+            color="primary"
+            aria-label={t("hierarchy:createPlantingPlan")}
+            tabIndex={-1}
+            onClick={(event) => {
+              event.stopPropagation();
+              onCreatePlantingPlan(row.bedId!);
+            }}
+            sx={{ p: 0.5, "& .MuiSvgIcon-root": { fontSize: 18 } }}
+          >
+            <AgricultureIcon />
+          </IconButton>
+        </Tooltip>
+      ) : null}
+      <Tooltip title={t("common:actions.delete")} {...NON_BLOCKING_TOOLTIP_PROPS}>
+        <IconButton
+          size="small"
+          color="error"
+          aria-label={t("common:actions.delete")}
+          tabIndex={-1}
+          onClick={(event) => {
+            event.stopPropagation();
+            onDeleteRow(row);
+          }}
+          sx={{ p: 0.5, "& .MuiSvgIcon-root": { fontSize: 18 } }}
+        >
+          <DeleteIcon />
+        </IconButton>
+      </Tooltip>
+      <ContextMenuIndicator
+        label={t("common:actions.actions")}
+        tabIndex={-1}
+        onClick={(event) => onOpenContextMenu(event, row)}
+      />
+    </Box>
+  );
+
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", pl: `${row.level * 24}px`, width: "100%", gap: 0.5 }}>
+      <Box
+        sx={{
+          width: EXPAND_ICON_SLOT_SIZE,
+          minWidth: EXPAND_ICON_SLOT_SIZE,
+          height: EXPAND_ICON_SLOT_SIZE,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          mr: 1,
+        }}
+      >
+        {hasExpandToggle ? (
+          <Tooltip title={row.expanded ? t("tooltips.collapse") : t("tooltips.expand")} {...NON_BLOCKING_TOOLTIP_PROPS}>
+            <IconButton
+              size="small"
+              aria-label={row.expanded ? t("tooltips.collapse") : t("tooltips.expand")}
+              tabIndex={-1}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleExpand(row.id);
+              }}
+            >
+              {row.expanded ? <ExpandMoreIcon /> : <ChevronRightIcon />}
+            </IconButton>
+          </Tooltip>
+        ) : null}
+      </Box>
+      <Box
+        sx={{ position: "relative", display: "inline-flex", alignItems: "center", width: "100%", minWidth: 0 }}
+        onContextMenu={(event) => onOpenContextMenu(event, row)}
+      >
+        <Box
+          component="span"
+          data-testid="hierarchy-name-text"
+          sx={{
+            flex: "1 1 auto",
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            fontWeight: row.type === "location" ? 600 : 400,
+            fontSize: row.type === "location" ? "1.02rem" : row.type === "bed" ? "0.95rem" : "1rem",
+          }}
+        >
+          {String(value ?? "")}
+        </Box>
+        {actionButtons ? (
+          <Box
+            data-testid="hierarchy-name-actions-overlay"
+            sx={{
+              ...contextMenuActionsOverlaySx(".ag-row-hover &"),
+              ".ag-row.ag-row-focus &": { opacity: 1, pointerEvents: "auto" },
+            }}
+          >
+            {actionButtons}
+          </Box>
+        ) : null}
+      </Box>
+    </Box>
+  );
+}
+
+function DimensionCellRenderer({ data, value, colDef, context }: ICellRendererParams<HierarchyRow>) {
+  const row = data;
+  if (!row) return null;
+  const field = colDef?.field as "length_m" | "width_m" | "area_sqm" | undefined;
+  if (!field) return null;
+  const t = (context as { t: ReturnType<typeof useTranslation>["t"] }).t;
+  const displayValue = value === null || value === undefined || value === "" ? "" : String(value);
+
+  if (!isDimensionCellIncomplete(row, field)) {
+    return <Box component="span">{displayValue}</Box>;
+  }
+
+  return (
+    <Tooltip title={t("hierarchy:messages.missingDimensionsCellTooltip")} enterDelay={250} {...NON_BLOCKING_TOOLTIP_PROPS}>
+      <Box component="span" sx={{ color: displayValue ? "text.primary" : "text.secondary" }}>
+        {displayValue || "-"}
+      </Box>
+    </Tooltip>
+  );
+}
+
+function NotesCellRenderer({ data, value, context }: ICellRendererParams<HierarchyRow>) {
+  const row = data;
+  if (!row) return null;
+  const onOpenNotes = (context as { onOpenNotes: (rowId: string | number, field: string) => void }).onOpenNotes;
+  const rawValue = typeof value === "string" ? value : "";
+  const hasValue = rawValue.trim().length > 0;
+  const excerpt = hasValue ? getPlainExcerpt(rawValue, 120) : "";
+
+  return (
+    <Box
+      sx={{ width: "100%", height: "100%", display: "flex", alignItems: "center" }}
+      onClick={() => onOpenNotes(row.id, "notes")}
+    >
+      <NotesCell
+        hasValue={hasValue}
+        excerpt={excerpt}
+        rawValue={rawValue}
+        onOpen={() => onOpenNotes(row.id, "notes")}
+      />
+    </Box>
+  );
+}
 
 function FieldsBedsHierarchy({
   showTitle = true,
@@ -247,33 +489,33 @@ function FieldsBedsHierarchy({
   onPendingDeletionCountChange,
   suppressContextMenuHint = false,
 }: FieldsBedsHierarchyProps) {
-  const LOCATION_ROW_HEIGHT = 46;
-  const FIELD_ROW_HEIGHT = 42;
-  const BED_ROW_HEIGHT = 36;
-  const HEADER_ROW_HEIGHT = 40;
-
   const { t } = useTranslation(["hierarchy", "common"]);
   const navigate = useNavigate();
   const location = useLocation();
-  const gridApiRef = useGridApiRef();
   const isTouchLikePointer = useMediaQuery("(pointer: coarse)");
   const isMobileViewport = useMediaQuery("(max-width:900px)");
-  const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
-  const rowModesModelRef = useRef(rowModesModel);
-  useLayoutEffect(() => {
-    rowModesModelRef.current = rowModesModel;
-  }, [rowModesModel]);
-  const [draftValidationWarning, setDraftValidationWarning] = useState("");
+  const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
+  const gridApiRef = useRef<GridApi<HierarchyRow> | null>(null);
+  const tableWrapperRef = useRef<HTMLDivElement | null>(null);
+  const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
   const hasInitiallyExpandedRef = useRef(false);
   const handledCreateFieldRequestRef = useRef(0);
-  const rowSnapshotRef = useRef<Map<string, HierarchyRow>>(new Map());
-  const tableWrapperRef = useRef<HTMLDivElement | null>(null);
-  const pageContentRef = useRef<HTMLDivElement | null>(null);
-  const [highlightedRowId, setHighlightedRowId] = useState<GridRowId | null>(null);
   const highlightClearTimeoutRef = useRef<number | null>(null);
+  const [draftValidationWarning, setDraftValidationWarning] = useState("");
+  const [selectedRowId, setSelectedRowId] = useState<string | number | null>(null);
+  const [editingRowId, setEditingRowId] = useState<string | number | null>(null);
+  const [pendingFieldEditRow, setPendingFieldEditRow] = useState<string | number | null>(null);
+  const [highlightedRowId, setHighlightedRowId] = useState<string | number | null>(null);
+  const [availableTableHeight, setAvailableTableHeight] = useState<number | null>(null);
+  const [contextMenuState, setContextMenuState] = useState<{
+    row: HierarchyRow;
+    mouseX: number;
+    mouseY: number;
+  } | null>(null);
+  const [columnMenuAnchor, setColumnMenuAnchor] = useState<HTMLElement | null>(null);
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(() => new Set());
+  const contextMenuListRef = useRef<HTMLUListElement | null>(null);
 
-  // Data fetching
-  const internalHierarchyData = useHierarchyData(hierarchyData === undefined);
   const {
     loading,
     error,
@@ -281,13 +523,12 @@ function FieldsBedsHierarchy({
     locations,
     setLocations,
     fields,
+    setFields,
     beds,
     setBeds,
-    setFields,
     fetchData,
   } = hierarchyData ?? internalHierarchyData;
 
-  // Expansion state
   const {
     expandedRows,
     hasPersistedState,
@@ -295,27 +536,21 @@ function FieldsBedsHierarchy({
     ensureExpanded,
     expandAll,
   } = useExpandedState("fieldsBedsHierarchy");
+
   const { sortModel, setSortModel } = usePersistentSortModel({
     tableKey: "fieldsBedsHierarchy",
     allowedFields: ["name", "area_sqm"],
     persistInUrl: true,
   });
+
   const hierarchySortConfig = useMemo<HierarchySortConfig | undefined>(() => {
     const [firstSort] = sortModel;
-    if (!firstSort || !firstSort.sort) {
-      return undefined;
-    }
-
-    return {
-      field: firstSort.field,
-      direction: firstSort.sort,
-    };
+    if (!firstSort?.sort) return undefined;
+    return { field: firstSort.field, direction: firstSort.sort };
   }, [sortModel]);
 
-  // Bed operations
   const { addBed, saveBed, pendingEditRow, setPendingEditRow } =
     useBedOperations(setBeds, setError, t);
-  const [pendingFieldEditRow, setPendingFieldEditRow] = useState<string | number | null>(null);
 
   const hierarchyIndex = useMemo(
     () => buildHierarchyIndex(locations, fields, beds, hierarchySortConfig),
@@ -327,49 +562,26 @@ function FieldsBedsHierarchy({
     [hierarchyIndex],
   );
 
-  const rows = useMemo<GridRowsProp<HierarchyRow>>(
+  const rows = useMemo(
     () => projectRows(expandedRows),
-    [projectRows, expandedRows],
+    [expandedRows, projectRows],
   );
 
-  const hierarchyRowWindow = useHierarchyRowWindow(
-    rows.length,
-    HIERARCHY_GRID_PAGE_SIZE,
-    HIERARCHY_VIRTUAL_SCROLLER_SELECTOR,
-    tableWrapperRef,
-  );
-
-  // Stable ref so ensureRowVisibleOnPage doesn't change identity on every
-  // expand/collapse (rows changes then) — same reasoning as rowsByIdRef
-  // below: focusRow depends on this, and an unstable identity there would
-  // re-fire the focus-restoring layout effect after every rows update.
-  const rowsArrayRef = useRef(rows);
-  useLayoutEffect(() => {
-    rowsArrayRef.current = rows;
+  const rowsById = useMemo(() => {
+    const nextRowsById = new Map<string, HierarchyRow>();
+    rows.forEach((row) => nextRowsById.set(String(row.id), row));
+    return nextRowsById;
   }, [rows]);
 
-  const ensureRowVisibleOnPage = useCallback((rowId: GridRowId): boolean => {
-    const rowIndex = rowsArrayRef.current.findIndex((row) => String(row.id) === String(rowId));
-    return hierarchyRowWindow.ensureRowIndexVisible(rowIndex);
-  }, [hierarchyRowWindow]);
+  const rowsRef = useRef(rows);
+  useLayoutEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
 
-  const {
-    expandedRowsRef,
-    rowsRef,
-    selectRow,
-    selectRowTransient,
-    selectedRowId,
-    selectedRowIdRef,
-    setSelectedRowId,
-    setTreeActive,
-    treeActive,
-    treeActiveRef,
-  } = useHierarchyNavigationState({
-    expandedRows,
-    rows,
-  });
+  const getDraftRow = useCallback((rowId: string | number): HierarchyRow | null => (
+    rowsById.get(String(rowId)) ?? null
+  ), [rowsById]);
 
-  // Delete with undo
   const {
     pendingDeletions,
     deleteHierarchyRowWithUndo,
@@ -390,71 +602,14 @@ function FieldsBedsHierarchy({
     onPendingDeletionCountChange,
     t,
     rowSnapshotRef,
-    setRowModesModel,
     setDraftValidationWarning,
   });
 
-  const shouldShowHierarchyTable = hierarchyIndex.hasMultipleLocations || fields.length > 0 || createFieldRequest > 0;
-  const hasUsableHierarchyRows = shouldShowHierarchyTable && (
-    rows.length > 0
-    || locations.length > 0
-    || fields.length > 0
-    || beds.length > 0
-  );
-  const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
-    enabled: !suppressContextMenuHint,
-    isLoading: loading,
-    hasRows: hasUsableHierarchyRows,
-  });
-
   const {
-    contextMenuState,
-    openContextMenuForRow,
-    handleNameCellContextMenu,
-    handleGridContextMenu,
-    handleGridTouchStart,
-    handleGridTouchEnd,
-    closeContextMenu,
-    contextMenuListRef,
-  } = useHierarchyContextMenu({
-    rows: rows as HierarchyRow[],
-    markContextMenuHintUsed,
-    setSelectedRowId,
-    setTreeActive,
-  });
-
-  const rowsById = useMemo(() => {
-    const nextRowsById = new Map<string, HierarchyRow>();
-    rows.forEach((row) => nextRowsById.set(String(row.id), row));
-    return nextRowsById;
-  }, [rows]);
-
-  const rememberRowSnapshot = useCallback((rowId: GridRowId): void => {
-    const rowKey = String(rowId);
-    if (rowSnapshotRef.current.has(rowKey)) {
-      return;
-    }
-
-    const row = rowsById.get(rowKey);
-    if (row) {
-      rowSnapshotRef.current.set(rowKey, row);
-    }
-  }, [rowsById]);
-
-  const getDraftRow = useCallback((rowId: GridRowId): HierarchyRow | null => {
-    const api = gridApiRef.current;
-    const draftRow = api?.getRowWithUpdatedValues?.(rowId, "") as HierarchyRow | null | undefined;
-    return draftRow ?? rowsById.get(String(rowId)) ?? null;
-  }, [gridApiRef, rowsById]);
-
-  const {
-    discardRowEdit,
     processRowUpdate,
     handleProcessRowUpdateError,
   } = useHierarchyRowUpdate({
     getDraftRow,
-    rowModesModel,
-    rowsById,
     beds,
     fields,
     locations,
@@ -462,7 +617,6 @@ function FieldsBedsHierarchy({
     setFields,
     setLocations,
     rowSnapshotRef,
-    setRowModesModel,
     setError,
     setDraftValidationWarning,
     fetchData,
@@ -470,18 +624,22 @@ function FieldsBedsHierarchy({
     t,
   });
 
-  // Notes editor - must be after rows definition
+  const shouldShowHierarchyTable = hierarchyIndex.hasMultipleLocations || fields.length > 0 || createFieldRequest > 0;
+  const hasUsableHierarchyRows = shouldShowHierarchyTable && (
+    rows.length > 0 || locations.length > 0 || fields.length > 0 || beds.length > 0
+  );
+  const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
+    enabled: !suppressContextMenuHint,
+    isLoading: loading,
+    hasRows: hasUsableHierarchyRows,
+  });
+
   const notesEditor = useNotesEditor<HierarchyRow>({
     rows,
     onSave: async ({ row, value }) => {
-      if (!row.name) {
-        throw new Error(t("validation.nameRequired"));
-      }
-
+      if (!row.name) throw new Error(t("validation.nameRequired"));
       const parsedArea = parseAreaValue(row.area_sqm);
-
       if (row.type === "bed" && row.bedId) {
-        // Save bed with notes
         await bedAPI.update(row.bedId, {
           name: row.name,
           field: row.field!,
@@ -490,13 +648,8 @@ function FieldsBedsHierarchy({
           width_m: parseDimensionValue(row.width_m),
           notes: value,
         });
-
-        // Update local state
-        setBeds((prev) =>
-          prev.map((b) => (b.id === row.bedId ? { ...b, notes: value } : b)),
-        );
+        setBeds((previous) => previous.map((bed) => bed.id === row.bedId ? { ...bed, notes: value } : bed));
       } else if (row.type === "field" && row.fieldId) {
-        // Save field with notes
         await fieldAPI.update(row.fieldId, {
           name: row.name,
           location: row.locationId!,
@@ -505,37 +658,17 @@ function FieldsBedsHierarchy({
           width_m: parseDimensionValue(row.width_m),
           notes: value,
         });
-
-        // Update local state
-        setFields((prev) =>
-          prev.map((f) => (f.id === row.fieldId ? { ...f, notes: value } : f)),
-        );
+        setFields((previous) => previous.map((field) => field.id === row.fieldId ? { ...field, notes: value } : field));
       } else if (row.type === "location" && row.locationId) {
-        const locationItem = locations.find((l) => l.id === row.locationId);
+        const locationItem = locations.find((item) => item.id === row.locationId);
         if (!locationItem) return;
-
         await locationAPI.update(row.locationId, { ...locationItem, notes: value });
-
-        setLocations((prev) =>
-          prev.map((l) => (l.id === row.locationId ? { ...l, notes: value } : l)),
-        );
+        setLocations((previous) => previous.map((item) => item.id === row.locationId ? { ...item, notes: value } : item));
       }
     },
     onError: setError,
   });
 
-  /**
-   * Expand all rows when data is loaded (only once on initial load).
-   *
-   * Below HIERARCHY_AUTO_EXPAND_ALL_THRESHOLD combined entities, this fully
-   * expands the tree (locations and fields, revealing every bed) — the
-   * long-standing default. Above it, only locations are expanded, leaving
-   * fields (and their beds) collapsed, so opening a very large project shows
-   * a scannable top-level overview instead of a wall of thousands of rows.
-   * Single-location projects render fields as root rows (see
-   * hierarchyTreeNodes below), so they're always visible regardless of this
-   * threshold — only their bed children are affected.
-   */
   useEffect(() => {
     if (
       !hasPersistedState &&
@@ -546,42 +679,25 @@ function FieldsBedsHierarchy({
       const canFullyExpand =
         locations.length + fields.length + beds.length <= HIERARCHY_AUTO_EXPAND_ALL_THRESHOLD;
       const allRowIds = new Set<string | number>();
-
-      // Add all location IDs
-      locations.forEach((location) => {
-        allRowIds.add(`location-${location.id}`);
-      });
-
+      locations.forEach((locationItem) => allRowIds.add(`location-${locationItem.id}`));
       if (canFullyExpand) {
-        // Add all field IDs
-        fields.forEach((field) => {
-          allRowIds.add(`field-${field.id}`);
-        });
+        fields.forEach((field) => allRowIds.add(`field-${field.id}`));
       }
-
       expandAll(Array.from(allRowIds));
       hasInitiallyExpandedRef.current = true;
     }
   }, [beds.length, expandAll, fields, hasPersistedState, locations]);
 
-  // Flat {id, parentId} view of the tree for the shared expand/collapse-one-
-  // level toggle, embedded in the "Name" column header below (see
-  // HierarchyLevelButtons / useHierarchyLevelToggle).
-  // Single-location projects render without a location row at all (see
-  // buildHierarchyRowsFromIndex), so the location level is only included
-  // here when there's more than one — the control then offers 2 levels
-  // (Parzelle/Beet) instead of 3.
   const hasMultipleLocations = locations.length > 1;
   const hierarchyTreeNodes = useMemo<TreeRowNode[]>(() => {
     const nodes: TreeRowNode[] = [];
-
     if (hasMultipleLocations) {
-      locations.forEach((location) => {
-        if (!hasPersistedEntityId(location.id)) return;
-        nodes.push({ id: `location-${location.id}`, parentId: null });
+      locations.forEach((locationItem) => {
+        if (hasPersistedEntityId(locationItem.id)) {
+          nodes.push({ id: `location-${locationItem.id}`, parentId: null });
+        }
       });
     }
-
     fields.forEach((field) => {
       if (!hasPersistedEntityId(field.id)) return;
       nodes.push({
@@ -589,120 +705,85 @@ function FieldsBedsHierarchy({
         parentId: hasMultipleLocations ? `location-${field.location}` : null,
       });
     });
-
     beds.forEach((bed) => {
-      if (!hasPersistedEntityId(bed.id) || !hasPersistedEntityId(bed.field)) return;
-      nodes.push({ id: bed.id, parentId: `field-${bed.field}` });
+      if (hasPersistedEntityId(bed.id) && hasPersistedEntityId(bed.field)) {
+        nodes.push({ id: bed.id, parentId: `field-${bed.field}` });
+      }
     });
-
     return nodes;
   }, [beds, fields, hasMultipleLocations, locations]);
-
   const hierarchyLevelToggle = useHierarchyLevelToggle(hierarchyTreeNodes, expandedRows, expandAll);
 
-  /**
-   * Handle pending edit mode after rows are updated
-   */
-  useEffect(() => {
-    if (pendingEditRow !== null) {
-      // Check if the row exists in the current rows
-      const rowExists = rows.some((r) => r.id === pendingEditRow);
-      if (rowExists) {
-        const rowId = pendingEditRow;
-        setTimeout(() => {
-          setRowModesModel((oldModel) => ({
-            ...oldModel,
-            [rowId]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
-          }));
-          setPendingEditRow(null);
-        }, 0);
-      }
-    }
-  }, [rows, pendingEditRow, setPendingEditRow]);
+  const handleAddField = useCallback((locationId: number): void => {
+    const locationItem = locations.find((item) => item.id === locationId);
+    if (!locationItem) return;
+    const newFieldId = -Date.now();
+    const newField: Field = {
+      id: newFieldId,
+      name: "",
+      location: locationId,
+      area_sqm: undefined,
+      length_m: null,
+      width_m: null,
+      notes: "",
+    };
+    ensureExpanded(`location-${locationId}`);
+    setFields((previousFields) => [newField, ...previousFields]);
+    setPendingFieldEditRow(`field-${newFieldId}`);
+  }, [ensureExpanded, locations, setFields]);
+
+  const handleAddBed = useCallback((fieldId: number): void => {
+    const field = fields.find((item) => item.id === fieldId);
+    if (!field) return;
+    ensureExpanded(`field-${fieldId}`);
+    const newBedId = addBed(fieldId);
+    setPendingEditRow(newBedId);
+  }, [addBed, ensureExpanded, fields, setPendingEditRow]);
 
   useEffect(() => {
-    if (pendingFieldEditRow === null) {
-      return;
+    if (pendingEditRow !== null && rows.some((row) => row.id === pendingEditRow)) {
+      startEditingRow(gridApiRef.current, pendingEditRow);
+      setPendingEditRow(null);
     }
+  }, [pendingEditRow, rows, setPendingEditRow]);
 
-    const rowExists = rows.some((row) => row.id === pendingFieldEditRow);
-    if (!rowExists) {
-      return;
-    }
-
-    const rowId = pendingFieldEditRow;
-    setTimeout(() => {
-      setRowModesModel((oldModel) => ({
-        ...oldModel,
-        [rowId]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
-      }));
+  useEffect(() => {
+    if (pendingFieldEditRow !== null && rows.some((row) => row.id === pendingFieldEditRow)) {
+      startEditingRow(gridApiRef.current, pendingFieldEditRow);
       setPendingFieldEditRow(null);
-    }, 0);
+    }
   }, [pendingFieldEditRow, rows]);
 
-  const handleAddField = useCallback(
-    (locationId: number): void => {
-      const locationItem = locations.find((item) => item.id === locationId);
-      if (!locationItem) return;
-
-      const newFieldId = -Date.now();
-      const newField: Field = {
-        id: newFieldId,
-        name: "",
-        location: locationId,
-        area_sqm: undefined,
-        length_m: null,
-        width_m: null,
-        notes: "",
-      };
-
-      ensureExpanded(`location-${locationId}`);
-      setFields((previousFields) => [newField, ...previousFields]);
-      setPendingFieldEditRow(`field-${newFieldId}`);
-    },
-    [ensureExpanded, locations, setFields],
-  );
-
-  const handleAddBed = useCallback(
-    (fieldId: number): void => {
-      const field = fields.find((f) => f.id === fieldId);
-      if (!field) return;
-
-      const fieldKey = `field-${fieldId}`;
-      ensureExpanded(fieldKey);
-
-      const newBedId = addBed(fieldId);
-
-      setPendingEditRow(newBedId); //will be applied after re-render
-    },
-    [addBed, ensureExpanded, fields, setPendingEditRow],
-  );
-
   useEffect(() => {
-    if (!location.pathname.startsWith("/app/fields-beds")) {
-      return;
-    }
-
+    if (!location.pathname.startsWith("/app/fields-beds")) return;
     const searchParams = new URLSearchParams(location.search);
-    if (searchParams.get("createBed") !== "true" || loading) {
-      return;
-    }
-
+    if (searchParams.get("createBed") !== "true" || loading) return;
     const firstField = fields.find((field) => field.id !== undefined);
     if (firstField?.id !== undefined) {
       handleAddBed(firstField.id);
     }
-
     searchParams.delete("createBed");
     const nextSearch = searchParams.toString();
-    navigate(
-      {
-        pathname: location.pathname,
-        search: nextSearch ? `?${nextSearch}` : "",
-      },
-      { replace: true },
-    );
+    navigate({ pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : "" }, { replace: true });
   }, [fields, handleAddBed, loading, location.pathname, location.search, navigate]);
+
+  useEffect(() => {
+    if (
+      createFieldRequest <= 0 ||
+      loading ||
+      createFieldRequest <= handledCreateFieldRequestRef.current
+    ) {
+      return;
+    }
+    const hasActiveFieldDraft = fields.some((field) => typeof field.id === "number" && field.id < 0);
+    const firstLocationId = locations.find((locationItem) => locationItem.id !== undefined)?.id;
+    if (!hasActiveFieldDraft && firstLocationId === undefined) return;
+    handledCreateFieldRequestRef.current = createFieldRequest;
+    if (!hasActiveFieldDraft && firstLocationId !== undefined) {
+      handleAddField(firstLocationId);
+    }
+    onCreateFieldRequestHandled?.();
+  }, [createFieldRequest, fields, handleAddField, loading, locations, onCreateFieldRequestHandled]);
 
   useEffect(() => () => {
     if (highlightClearTimeoutRef.current !== null) {
@@ -711,164 +792,13 @@ function FieldsBedsHierarchy({
   }, []);
 
   useEffect(() => {
-    if (
-      createFieldRequest <= 0
-      || loading
-      || createFieldRequest <= handledCreateFieldRequestRef.current
-    ) {
-      return;
-    }
-
-    const hasActiveFieldDraft = fields.some((field) => typeof field.id === "number" && field.id < 0);
-    const firstLocation = locations.find((locationItem) => locationItem.id !== undefined);
-    const firstLocationId = firstLocation?.id;
-    if (!hasActiveFieldDraft && firstLocationId === undefined) {
-      return;
-    }
-
-    handledCreateFieldRequestRef.current = createFieldRequest;
-    if (!hasActiveFieldDraft && firstLocationId !== undefined) {
-      handleAddField(firstLocationId);
-    }
-    onCreateFieldRequestHandled?.();
-  }, [createFieldRequest, fields, handleAddField, loading, locations, onCreateFieldRequestHandled]);
-
-  const handleCreatePlantingPlan = useCallback(
-    (bedId: number): void => {
-      navigate(`/app/planting-plans?bedId=${bedId}`);
-    },
-    [navigate],
-  );
-
-  const isHierarchyCellAction = useCallback((params: GridCellParams<HierarchyRow>): boolean => (
-    params.field === "notes"
-  ), []);
-
-  const isCellEditable = useCallback((params: { row: HierarchyRow; field: string }) => {
-    if (params.row.type === "location") {
-      return params.field === "name";
-    }
-    if (params.row.type === "field" || params.row.type === "bed") {
-      return (
-        params.field === "name" ||
-        params.field === "length_m" ||
-        params.field === "width_m"
-      );
-    }
-    return false;
-  }, []);
-
-  const isHierarchyCellFocusable = useCallback((row: HierarchyRow, field: string): boolean => (
-    field === "notes"
-    || isCellEditable({ row, field })
-  ), [isCellEditable]);
-
-  // Stable ref so getHierarchyFocusableField doesn't change on every expand/collapse.
-  // If it did, focusRow → focusSelectedCell → useLayoutEffect would re-fire after each
-  // rows update and re-focus selectedRowId STATE instead of the arrow-navigated row.
-  const rowsByIdRef = useRef(rowsById);
-  useLayoutEffect(() => {
-    rowsByIdRef.current = rowsById;
-  }, [rowsById]);
-
-  const getHierarchyFocusableField = useCallback((rowId: GridRowId, preferredField: string): string | null => {
-    const row = rowsByIdRef.current.get(String(rowId));
-    if (!row) {
-      return null;
-    }
-
-    const focusableFields = row.type === "location"
-      ? ["name", "notes"]
-      : ["name", "length_m", "width_m", "notes"];
-    return focusableFields.includes(preferredField) ? preferredField : focusableFields[0] ?? null;
-  }, []);
-
-  const {
-    applyOrReapplyPostEditFocus,
-    focusRow,
-    preFocusEditCell,
-    queuePostEditFocus,
-    rememberFocusedField,
-  } = useHierarchyGridFocus({
-    getFocusableField: getHierarchyFocusableField,
-    gridApiRef,
-    rowModesModel,
-    rows,
-    selectRow,
-    selectedRowId,
-    treeActive,
-    ensureRowVisible: ensureRowVisibleOnPage,
-  });
-
-  const getPostEnterSaveFocusTarget = useCallback((rowId: GridRowId): GridRowId => {
-    const currentIndex = rows.findIndex((row) => String(row.id) === String(rowId));
-    if (currentIndex < 0) {
-      return rowId;
-    }
-
-    for (let index = currentIndex + 1; index < rows.length; index += 1) {
-      const nextRow = rows[index];
-      if (getHierarchyFocusableField(nextRow.id, "name")) {
-        return nextRow.id;
-      }
-    }
-
-    return rowId;
-  }, [getHierarchyFocusableField, rows]);
-
-  const handleHierarchyRowEditStop = useCallback<GridEventListener<"rowEditStop">>((params, event): void => {
-    if (params.reason === GridRowEditStopReasons.escapeKeyDown) {
-      event.defaultMuiPrevented = true;
-      discardRowEdit(params.id);
-      return;
-    }
-
-    if (
-      params.reason === GridRowEditStopReasons.enterKeyDown ||
-      params.reason === GridRowEditStopReasons.tabKeyDown ||
-      params.reason === GridRowEditStopReasons.shiftTabKeyDown
-    ) {
-      if (params.reason === GridRowEditStopReasons.enterKeyDown) {
-        queuePostEditFocus(getPostEnterSaveFocusTarget(params.id), undefined, params.id);
-      }
-      preFocusEditCell(params.id);
-    }
-  }, [discardRowEdit, getPostEnterSaveFocusTarget, preFocusEditCell, queuePostEditFocus]);
-
-  const activateFirstRowForKeyboard = useCallback((rowId: GridRowId): void => {
-    selectedRowIdRef.current = rowId;
-    treeActiveRef.current = true;
-    setSelectedRowId(rowId);
-    setTreeActive(true);
-    focusRow(rowId, "name");
-  }, [focusRow, selectedRowIdRef, setSelectedRowId, setTreeActive, treeActiveRef]);
-
-  const selectRowForKeyboard = useCallback((rowId: GridRowId): void => {
-    selectRowTransient(rowId);
-    focusRow(rowId);
-  }, [focusRow, selectRowTransient]);
-
-  // Consumes a `?highlight=location:<id>|field:<id>|bed:<id>` deep link (e.g.
-  // from the Gantt calendar's "Standort/Parzelle/Beet öffnen" context menu
-  // actions): expands the ancestor chain so the target row is visible,
-  // scrolls it into view, makes it the active row for keyboard nav (reusing
-  // activateFirstRowForKeyboard/focusRow above instead of touching the grid
-  // API directly), and flashes it briefly so the user can find it.
-  useEffect(() => {
-    if (!location.pathname.startsWith("/app/fields-beds")) {
-      return;
-    }
-
+    if (!location.pathname.startsWith("/app/fields-beds")) return;
     const searchParams = new URLSearchParams(location.search);
     const highlightParam = searchParams.get("highlight");
-    if (!highlightParam || loading) {
-      return;
-    }
-
+    if (!highlightParam || loading) return;
     const [highlightType, highlightIdRaw] = highlightParam.split(":");
     const highlightId = Number(highlightIdRaw);
-
-    let targetRowId: GridRowId | null = null;
+    let targetRowId: string | number | null = null;
     let locationIdToExpand: number | undefined;
     let fieldIdToExpand: number | undefined;
 
@@ -889,38 +819,10 @@ function FieldsBedsHierarchy({
     }
 
     if (targetRowId !== null) {
-      if (locationIdToExpand !== undefined) {
-        ensureExpanded(`location-${locationIdToExpand}`);
-      }
-      if (fieldIdToExpand !== undefined) {
-        ensureExpanded(`field-${fieldIdToExpand}`);
-      }
-
+      if (locationIdToExpand !== undefined) ensureExpanded(`location-${locationIdToExpand}`);
+      if (fieldIdToExpand !== undefined) ensureExpanded(`field-${fieldIdToExpand}`);
       setHighlightedRowId(targetRowId);
-
-      // Expansion needs a render pass before the target row exists in the
-      // DataGrid's virtualized viewport.
-      requestAnimationFrame(() => {
-        const scrollAndFocus = (): void => {
-          const api = gridApiRef.current;
-          if (!api) return;
-          const rowIndex = api.getRowIndexRelativeToVisibleRows(targetRowId!);
-          if (typeof rowIndex === "number" && rowIndex >= 0) {
-            api.scrollToIndexes({ rowIndex });
-          }
-          activateFirstRowForKeyboard(targetRowId!);
-        };
-
-        // On very large hierarchies (see useHierarchyRowWindow), the target
-        // row may be on a page that isn't displayed yet — page there first
-        // and wait one more frame before touching the grid API.
-        if (ensureRowVisibleOnPage(targetRowId!)) {
-          requestAnimationFrame(scrollAndFocus);
-        } else {
-          scrollAndFocus();
-        }
-      });
-
+      requestAnimationFrame(() => focusGridRow(gridApiRef.current, targetRowId!));
       if (highlightClearTimeoutRef.current !== null) {
         window.clearTimeout(highlightClearTimeoutRef.current);
       }
@@ -932,268 +834,41 @@ function FieldsBedsHierarchy({
 
     searchParams.delete("highlight");
     const nextSearch = searchParams.toString();
-    navigate(
-      {
-        pathname: location.pathname,
-        search: nextSearch ? `?${nextSearch}` : "",
-      },
-      { replace: true },
-    );
-  }, [activateFirstRowForKeyboard, beds, ensureExpanded, ensureRowVisibleOnPage, fields, gridApiRef, loading, location.pathname, location.search, navigate]);
+    navigate({ pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : "" }, { replace: true });
+  }, [beds, ensureExpanded, fields, loading, location.pathname, location.search, navigate]);
 
-  const handleHierarchyProcessRowUpdate = useCallback(
-    async (newRow: HierarchyRow): Promise<HierarchyRow> => {
-      const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      const preferredField = activeElement
-        ?.closest('[role="gridcell"]')
-        ?.getAttribute("data-field") ?? undefined;
-      if (preferredField) {
-        rememberFocusedField(preferredField);
-      }
-      queuePostEditFocus(getPostEnterSaveFocusTarget(newRow.id), preferredField, newRow.id);
-
-      const savedRow = await processRowUpdate(newRow);
-      // MUI's own onRowModesModelChange usually flips this row to View (and our
-      // rowModesModel layout effect already restores focus onto the queued target)
-      // well before this async save resolves. Only re-anchor and re-apply View mode
-      // here if that hasn't happened yet — otherwise this would yank focus back onto
-      // the just-saved row for an instant, causing a visible focus flash/flicker.
-      if (rowModesModelRef.current[newRow.id]?.mode === GridRowModes.Edit) {
-        preFocusEditCell(newRow.id);
-        setRowModesModel((previousModel) => ({
-          ...previousModel,
-          [newRow.id]: { mode: GridRowModes.View, ignoreModifications: true },
-        }));
-      }
-      window.setTimeout(() => {
-        applyOrReapplyPostEditFocus(newRow.id);
-      }, 0);
-      return savedRow;
-    },
-    [
-      applyOrReapplyPostEditFocus,
-      getPostEnterSaveFocusTarget,
-      preFocusEditCell,
-      processRowUpdate,
-      queuePostEditFocus,
-      rememberFocusedField,
-    ],
-  );
-
-  const handleReadOnlyHierarchyCellMouseDown = useCallback((event: React.MouseEvent<HTMLElement>): void => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-    if (isInteractiveCellTarget(target)) {
-      return;
-    }
-
-    const cellElement = target.closest<HTMLElement>('[role="gridcell"][data-field]');
-    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
-    const field = cellElement?.dataset.field;
-    const rowId = rowElement?.dataset.id;
-    if (!field || rowId === undefined) {
-      return;
-    }
-
-    const row = rowsById.get(String(rowId));
-    if (!row || isHierarchyCellFocusable(row, field)) {
-      return;
-    }
-
-    preventReadOnlyCellMouseFocus(event);
-  }, [isHierarchyCellFocusable, rowsById]);
-
-  // Read the current row from refs at call time so these callbacks are stable
-  // and don't trigger re-renders of areaCommands on every navigation keypress.
-  const handleDeleteSelected = useCallback(() => {
-    const row = rowsRef.current.find((r) => r.id === selectedRowIdRef.current);
-    if (!row) return;
-    if (row.type === "location" || row.type === "field" || row.type === "bed") {
-      void deleteHierarchyRowWithUndo(row);
-    }
-  }, [deleteHierarchyRowWithUndo, rowsRef, selectedRowIdRef]);
-
-  const handleCreateBySelection = useCallback(() => {
-    const row = rowsRef.current.find((r) => r.id === selectedRowIdRef.current);
-    if (!row) return;
-    if (row.type === "location" && row.locationId) {
-      handleAddField(row.locationId);
-      return;
-    }
-    if (row.type === "field" && row.fieldId) {
-      handleAddBed(row.fieldId);
-      return;
-    }
-    if (row.type === "bed" && row.field) {
-      handleAddBed(row.field);
-    }
-  }, [handleAddBed, handleAddField, rowsRef, selectedRowIdRef]);
-
-  const handleEditSelected = useCallback(() => {
-    const row = rowsRef.current.find((r) => r.id === selectedRowIdRef.current);
-    if (!row) return;
-    rememberRowSnapshot(row.id);
-    setRowModesModel((previous) => ({
-      ...previous,
-      [row.id]: { mode: GridRowModes.Edit, fieldToFocus: "name" },
-    }));
-  }, [rememberRowSnapshot, rowsRef, selectedRowIdRef]);
-
-  const getHierarchyRowActions = useCallback((row: HierarchyRow): HierarchyRowAction[] => {
-    const createActions: HierarchyRowAction[] = [];
-
-    if (row.type === "location" && row.locationId) {
-      createActions.push({
-        id: "add-field",
-        label: t("actions.addField"),
-        group: "create",
-        onClick: () => handleAddField(row.locationId!),
-      });
-    }
-
-    if (row.type === "field" && row.fieldId) {
-      createActions.push({
-        id: "add-bed",
-        label: t("actions.addBed"),
-        group: "create",
-        onClick: () => handleAddBed(row.fieldId!),
-      });
-    }
-
-    if (row.type === "bed" && row.bedId) {
-      createActions.push({
-        id: "create-planting-plan",
-        label: t("createPlantingPlan"),
-        group: "create",
-        onClick: () => handleCreatePlantingPlan(row.bedId!),
-      });
-    }
-
-    const destructiveActions: HierarchyRowAction[] = [{
-      id: "delete",
-      label: t("common:actions.delete"),
-      group: "destructive",
-      color: "error",
-      onClick: () => {
-        void deleteHierarchyRowWithUndo(row);
-      },
-    }];
-
-    return [...createActions, ...destructiveActions];
-  }, [
-    deleteHierarchyRowWithUndo,
-    handleAddBed,
-    handleAddField,
-    handleCreatePlantingPlan,
-    t,
-  ]);
-
-  const areaCommands = useMemo<CommandSpec[]>(
-    () => [
-      {
-        id: "areas.create",
-        label: "Neu erstellen",
-        group: 'navigation',
-      keywords: ["neu", "anbauflächen", "create"],
-                        contextTags: ["areas"],
-        isEnabled: () => selectedRowIdRef.current !== null,
-        action: handleCreateBySelection,
-      },
-      {
-        id: "areas.edit",
-        label: "Bearbeiten",
-        group: 'navigation',
-      keywords: ["bearbeiten", "edit"],
-        contextTags: ["areas"],
-        isEnabled: () => {
-          const row = rowsRef.current.find((r) => r.id === selectedRowIdRef.current);
-          return row !== undefined && row.type !== "location";
-        },
-        action: handleEditSelected,
-      },
-      {
-        id: "areas.delete",
-        label: "Löschen (Alt+Shift+D)",
-        group: 'navigation',
-      keywords: ["löschen", "delete"],
-                keys: { key: "Delete" },
-        contextTags: ["areas"],
-        isEnabled: () => selectedRowIdRef.current !== null,
-        action: handleDeleteSelected,
-      },
-    ],
-    [handleCreateBySelection, handleDeleteSelected, handleEditSelected, rowsRef, selectedRowIdRef],
-  );
-
-  useRegisterCommands("areas-page", areaCommands);
-
-  // Clicking outside the grid while a row is being edited doesn't go through MUI's
-  // own cell-focus-out handling (that only fires when focus moves to another grid
-  // cell), so the row is neither saved nor discarded by default. A still-blank
-  // draft is discarded, a nameless-but-partially-filled draft is preserved
-  // locally the same way Escape does (attempting a real save would just reject
-  // for the missing name and strand the row in edit mode), and anything else is
-  // committed for real (matching normal click-away-to-save UX and avoiding
-  // silent data loss).
-  const handleClickOutsideGrid = useCallback((): void => {
-    const editingRowId = Object.entries(rowModesModel).find(
-      ([, mode]) => mode.mode === GridRowModes.Edit,
-    )?.[0];
-    if (editingRowId === undefined) return;
-    const rowId = rowsById.get(editingRowId)?.id ?? editingRowId;
-    const draftRow = getDraftRow(rowId);
-    if (
-      draftRow &&
-      (isCompletelyEmptyNewHierarchyRow(draftRow) || isPartiallyFilledNamelessNewHierarchyRow(draftRow))
-    ) {
-      discardRowEdit(rowId);
-      return;
-    }
-    gridApiRef.current?.stopRowEditMode({ id: rowId });
-  }, [discardRowEdit, getDraftRow, gridApiRef, rowModesModel, rowsById]);
-
-  useHierarchyKeyboard({
-    contextMenuState,
-    treeActiveRef,
-    tableWrapperRef,
-    rowsRef,
-    selectedRowIdRef,
-    expandedRowsRef,
-    activateFirstRow: activateFirstRowForKeyboard,
-    selectRow: selectRowForKeyboard,
-    setTreeActive,
-    toggleExpand,
-    discardActiveRowEdit: handleClickOutsideGrid,
-    openContextMenuForRow,
-  });
+  useLayoutEffect(() => {
+    if (isMobileViewport) return;
+    const measure = (): void => {
+      const wrapper = tableWrapperRef.current;
+      if (!wrapper) return;
+      const top = wrapper.getBoundingClientRect().top;
+      setAvailableTableHeight(Math.max(TABLE_MIN_HEIGHT_PX, window.innerHeight - top - TABLE_BOTTOM_MARGIN_PX));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [draftValidationWarning, error, isMobileViewport, showContextMenuHint, shouldShowHierarchyTable]);
 
   const nameColumnWidth = useMemo(() => {
     const hierarchyEntries: HierarchyNameMeasureEntry[] = [];
     if (hierarchyIndex.hasMultipleLocations) {
-      hierarchyIndex.sortedLocations.forEach((location) => {
-        hierarchyEntries.push({ name: location.name, level: 0, type: "location" });
-        const locationFields =
-          hierarchyIndex.fieldsByLocation.get(location.id!) ?? [];
+      hierarchyIndex.sortedLocations.forEach((locationItem) => {
+        hierarchyEntries.push({ name: locationItem.name, level: 0, type: "location" });
+        const locationFields = hierarchyIndex.fieldsByLocation.get(locationItem.id!) ?? [];
         locationFields.forEach((field) => {
           hierarchyEntries.push({ name: field.name, level: 1, type: "field" });
           const fieldBeds = hierarchyIndex.bedsByField.get(field.id!) ?? [];
-          fieldBeds.forEach((bed) => {
-            hierarchyEntries.push({ name: bed.name, level: 2, type: "bed" });
-          });
+          fieldBeds.forEach((bed) => hierarchyEntries.push({ name: bed.name, level: 2, type: "bed" }));
         });
       });
     } else {
       hierarchyIndex.sortedTopLevelFields.forEach((field) => {
         hierarchyEntries.push({ name: field.name, level: 0, type: "field" });
         const fieldBeds = hierarchyIndex.bedsByField.get(field.id!) ?? [];
-        fieldBeds.forEach((bed) => {
-          hierarchyEntries.push({ name: bed.name, level: 1, type: "bed" });
-        });
+        fieldBeds.forEach((bed) => hierarchyEntries.push({ name: bed.name, level: 1, type: "bed" }));
       });
     }
-
     const measuredTextWidths = measureHierarchyNameTextWidths(hierarchyEntries);
     return calculateHierarchyNameColumnWidth(
       hierarchyEntries,
@@ -1201,126 +876,248 @@ function FieldsBedsHierarchy({
     );
   }, [hierarchyIndex]);
 
-  /**
-   * Create columns with callbacks
-   */
-  const columns = useMemo(() => {
-    return createHierarchyColumns(
-      toggleExpand,
-      handleAddBed,
-      (bedId) => {
-        const row = rowsById.get(String(bedId));
-        if (row) {
-          void deleteHierarchyRowWithUndo(row);
-        }
-      },
-      (locationId) => {
-        if (locationId === undefined) {
-          return;
-        }
-        handleAddField(locationId);
-      },
-      (fieldId) => {
-        const row = rowsById.get(`field-${fieldId}`);
-        if (row) {
-          void deleteHierarchyRowWithUndo(row);
-        }
-      },
-      (locationId) => {
-        const row = rowsById.get(`location-${locationId}`);
-        if (row) {
-          void deleteHierarchyRowWithUndo(row);
-        }
-      },
-      handleCreatePlantingPlan,
-      handleNameCellContextMenu,
-      notesEditor.handleOpen,
-      t,
-      {
-        ...DEFAULT_HIERARCHY_COLUMN_WIDTHS,
-        name: nameColumnWidth,
-      },
-      {
-        disableInlineHoverActions: isTouchLikePointer || isMobileViewport,
-        // Embedded directly in the "Name" column header instead of a
-        // dedicated row above the table (see HierarchyLevelButtons).
-        // Desktop-only, matching the toggle's previous placement.
-        levelToggle: isMobileViewport ? undefined : {
-          canExpand: hierarchyLevelToggle.canExpand,
-          canCollapse: hierarchyLevelToggle.canCollapse,
-          onExpandOneLevel: hierarchyLevelToggle.expandOneLevel,
-          onCollapseOneLevel: hierarchyLevelToggle.collapseOneLevel,
-        },
-      },
+  const updateSort = useCallback((field: "name" | "area_sqm") => {
+    const current = sortModel[0];
+    const nextSort = current?.field !== field
+      ? "asc"
+      : current.sort === "asc"
+        ? "desc"
+        : current.sort === "desc"
+          ? null
+          : "asc";
+    setSortModel(nextSort ? [{ field, sort: nextSort }] : []);
+  }, [setSortModel, sortModel]);
+
+  const renderSortableHeader = useCallback((label: string, field: "name" | "area_sqm", accessory?: React.ReactNode) => {
+    const current = sortModel[0]?.field === field ? sortModel[0]?.sort : null;
+    return (
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", minWidth: 0, gap: 1 }}>
+        <Box
+          component="button"
+          type="button"
+          onClick={() => updateSort(field)}
+          style={{
+            border: 0,
+            background: "transparent",
+            padding: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            cursor: "pointer",
+            font: "inherit",
+            fontWeight: 600,
+            minWidth: 0,
+          }}
+        >
+          <span>{label}</span>
+          <span aria-hidden="true">{current === "asc" ? "▲" : current === "desc" ? "▼" : ""}</span>
+        </Box>
+        {accessory}
+      </Box>
     );
-  }, [
-    toggleExpand,
-    handleAddBed,
-    handleAddField,
-    deleteHierarchyRowWithUndo,
-    handleCreatePlantingPlan,
-    handleNameCellContextMenu,
-    notesEditor.handleOpen,
-    rowsById,
-    t,
-    nameColumnWidth,
-    isTouchLikePointer,
-    isMobileViewport,
-    hierarchyLevelToggle.canExpand,
-    hierarchyLevelToggle.canCollapse,
-    hierarchyLevelToggle.expandOneLevel,
-    hierarchyLevelToggle.collapseOneLevel,
-  ]);
+  }, [sortModel, updateSort]);
 
-  const {
-    handleCellClick: handleHierarchyCellClick,
-    handleCellKeyDown: handleHierarchyCellKeyDown,
-  } = useHierarchyGridKeyboard({
-    columns,
-    discardRowEdit,
-    gridApiRef,
-    isCellFocusable: isHierarchyCellFocusable,
-    isHierarchyCellAction,
-    notesEditor,
-    openContextMenuForRow,
-    rememberFocusedField,
-    rememberRowSnapshot,
-    rowModesModel,
-    rows: rows as HierarchyRow[],
-    rowsById,
-    selectRow,
-    setRowModesModel,
-    setTreeActive,
-    toggleExpand,
-  });
+  const columnWidths: HierarchyColumnWidths = {
+    ...DEFAULT_HIERARCHY_COLUMN_WIDTHS,
+    name: nameColumnWidth,
+  };
 
-  const getRowHeight = useCallback((params: GridRowHeightParams) => {
-    const row = params.model as HierarchyRow;
-    if (row.type === "location") {
-      return LOCATION_ROW_HEIGHT;
-    }
-    if (row.type === "field") {
-      return FIELD_ROW_HEIGHT;
-    }
-    return BED_ROW_HEIGHT;
+  const handleOpenContextMenu = useCallback((event: React.MouseEvent<HTMLElement>, row: HierarchyRow): void => {
+    event.preventDefault();
+    event.stopPropagation();
+    markContextMenuHintUsed();
+    setSelectedRowId(row.id);
+    setContextMenuState({ row, mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
+  }, [markContextMenuHintUsed]);
+
+  const handleCellContextMenu = useCallback((event: CellContextMenuEvent<HierarchyRow>): void => {
+    const mouseEvent = event.event;
+    if (!event.data || !(mouseEvent instanceof MouseEvent)) return;
+    mouseEvent.preventDefault();
+    markContextMenuHintUsed();
+    setSelectedRowId(event.data.id);
+    setContextMenuState({ row: event.data, mouseX: mouseEvent.clientX + 2, mouseY: mouseEvent.clientY - 6 });
+  }, [markContextMenuHintUsed]);
+
+  const handleGridContextMenu = useCallback((event: React.MouseEvent<HTMLElement>): void => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const rowElement = target.closest<HTMLElement>(".ag-row[row-id]");
+    const rowId = rowElement?.getAttribute("row-id");
+    const row = rowId ? rowsById.get(rowId) : undefined;
+    if (!row) return;
+    event.preventDefault();
+    markContextMenuHintUsed();
+    setSelectedRowId(row.id);
+    setContextMenuState({ row, mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
+  }, [markContextMenuHintUsed, rowsById]);
+
+  const closeContextMenu = useCallback((): void => {
+    setContextMenuState(null);
   }, []);
 
-  // Exact height the grid would need to show every current row without its
-  // own scrollbar. Combined with availableTableHeight (measured below) via
-  // Math.min, this lets the table size snugly to its content for small
-  // hierarchies while filling the available viewport height (and internally
-  // scrolling/virtualizing) for large ones — instead of always reserving a
-  // fixed max height regardless of how much screen space is actually there.
+  const handleDeleteRow = useCallback((row: HierarchyRow): void => {
+    rowSnapshotRef.current.set(String(row.id), row);
+    void deleteHierarchyRowWithUndo(row);
+  }, [deleteHierarchyRowWithUndo]);
+
+  const handleCreatePlantingPlan = useCallback((bedId: number): void => {
+    navigate(`/app/planting-plans?bedId=${bedId}`);
+  }, [navigate]);
+
+  const toggleColumnVisibility = useCallback((field: string): void => {
+    if (field === "name") return;
+    setHiddenColumns((currentHiddenColumns) => {
+      const nextHiddenColumns = new Set(currentHiddenColumns);
+      if (nextHiddenColumns.has(field)) {
+        nextHiddenColumns.delete(field);
+      } else {
+        nextHiddenColumns.add(field);
+      }
+      return nextHiddenColumns;
+    });
+  }, []);
+
+  const showAllColumns = useCallback((): void => {
+    setHiddenColumns(new Set());
+  }, []);
+
+  const columnVisibilityOptions = useMemo(() => [
+    { field: "name", label: t("hierarchy:columns.name"), required: true },
+    { field: "length_m", label: t("columns.length"), required: false },
+    { field: "width_m", label: t("columns.width"), required: false },
+    { field: "area_sqm", label: t("hierarchy:columns.area"), required: false },
+    { field: "notes", label: t("common:fields.notes"), required: false },
+  ], [t]);
+
+  const columnDefs = useMemo<ColDef<HierarchyRow>[]>(() => [
+    {
+      field: "name",
+      headerName: t("hierarchy:columns.name"),
+      width: columnWidths.name,
+      minWidth: isMobileViewport ? 220 : 260,
+      flex: 1.2,
+      editable: (params) => isEditableField(params.data!, "name"),
+      filter: "agTextColumnFilter",
+      floatingFilter: true,
+      sortable: false,
+      cellRenderer: NameCellRenderer,
+      headerComponent: () => renderSortableHeader(
+        t("hierarchy:columns.name"),
+        "name",
+        isMobileViewport ? null : (
+          <HierarchyLevelButtons
+            canExpand={hierarchyLevelToggle.canExpand}
+            canCollapse={hierarchyLevelToggle.canCollapse}
+            onExpandOneLevel={hierarchyLevelToggle.expandOneLevel}
+            onCollapseOneLevel={hierarchyLevelToggle.collapseOneLevel}
+          />
+        ),
+      ),
+    },
+    {
+      field: "length_m",
+      hide: hiddenColumns.has("length_m"),
+      headerName: t("columns.length"),
+      width: columnWidths.dimensions,
+      minWidth: isMobileViewport ? 96 : 118,
+      editable: (params) => isEditableField(params.data!, "length_m"),
+      filter: "agNumberColumnFilter",
+      floatingFilter: !isMobileViewport,
+      sortable: false,
+      cellRenderer: DimensionCellRenderer,
+      headerComponent: () => (
+        <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, fontWeight: 600 }}>
+          <SwapVertIcon fontSize="small" aria-hidden="true" />
+          <span>{t("columns.length")}</span>
+        </Box>
+      ),
+    },
+    {
+      field: "width_m",
+      hide: hiddenColumns.has("width_m"),
+      headerName: t("columns.width"),
+      width: columnWidths.dimensions,
+      minWidth: isMobileViewport ? 96 : 118,
+      editable: (params) => isEditableField(params.data!, "width_m"),
+      filter: "agNumberColumnFilter",
+      floatingFilter: !isMobileViewport,
+      sortable: false,
+      cellRenderer: DimensionCellRenderer,
+      headerComponent: () => (
+        <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, fontWeight: 600 }}>
+          <SwapHorizIcon fontSize="small" aria-hidden="true" />
+          <span>{t("columns.width")}</span>
+        </Box>
+      ),
+    },
+    {
+      field: "area_sqm",
+      hide: hiddenColumns.has("area_sqm"),
+      headerName: t("hierarchy:columns.area"),
+      width: columnWidths.area,
+      minWidth: 108,
+      editable: false,
+      filter: "agNumberColumnFilter",
+      floatingFilter: !isMobileViewport,
+      sortable: false,
+      valueGetter: (params) => params.data ? calculateAreaValue(params.data) : undefined,
+      cellClass: CALCULATED_COLUMN_CELL_CLASS,
+      cellRenderer: DimensionCellRenderer,
+      headerComponent: () => renderSortableHeader(t("hierarchy:columns.area"), "area_sqm"),
+    },
+    {
+      field: "notes",
+      hide: hiddenColumns.has("notes"),
+      headerName: t("common:fields.notes"),
+      minWidth: isMobileViewport ? 150 : columnWidths.notes,
+      flex: 1,
+      editable: false,
+      filter: "agTextColumnFilter",
+      floatingFilter: !isMobileViewport,
+      sortable: false,
+      cellRenderer: NotesCellRenderer,
+    },
+  ], [
+    columnWidths.area,
+    columnWidths.dimensions,
+    columnWidths.name,
+    columnWidths.notes,
+    hierarchyLevelToggle.canCollapse,
+    hierarchyLevelToggle.canExpand,
+    hierarchyLevelToggle.collapseOneLevel,
+    hierarchyLevelToggle.expandOneLevel,
+    hiddenColumns,
+    isMobileViewport,
+    renderSortableHeader,
+    t,
+  ]);
+
+  const gridContext = useMemo(() => ({
+    disableInlineHoverActions: isTouchLikePointer || isMobileViewport,
+    onAddBed: handleAddBed,
+    onAddField: handleAddField,
+    onCreatePlantingPlan: handleCreatePlantingPlan,
+    onDeleteRow: handleDeleteRow,
+    onOpenContextMenu: handleOpenContextMenu,
+    onOpenNotes: notesEditor.handleOpen,
+    onToggleExpand: toggleExpand,
+    t,
+  }), [
+    handleAddBed,
+    handleAddField,
+    handleCreatePlantingPlan,
+    handleDeleteRow,
+    handleOpenContextMenu,
+    isMobileViewport,
+    isTouchLikePointer,
+    notesEditor.handleOpen,
+    t,
+    toggleExpand,
+  ]);
+
   const tableContentHeight = useMemo(() => (
-    HEADER_ROW_HEIGHT + rows.reduce((sum, row) => {
-      if (row.type === "location") {
-        return sum + LOCATION_ROW_HEIGHT;
-      }
-      if (row.type === "field") {
-        return sum + FIELD_ROW_HEIGHT;
-      }
-      return sum + BED_ROW_HEIGHT;
-    }, 0)
+    HEADER_ROW_HEIGHT + rows.reduce((sum, row) => sum + getRowHeightForHierarchyRow(row), 0)
   ), [rows]);
 
   const shouldShowMissingDimensionsHint = useMemo(() => {
@@ -1328,60 +1125,10 @@ function FieldsBedsHierarchy({
     const allBedsMissingLengthAndWidth = beds.every((bed) => {
       const length = parseDimensionValue(bed.length_m);
       const width = parseDimensionValue(bed.width_m);
-      const hasLength = Number.isFinite(length ?? NaN);
-      const hasWidth = Number.isFinite(width ?? NaN);
-
-      return !hasLength && !hasWidth;
+      return !Number.isFinite(length ?? NaN) && !Number.isFinite(width ?? NaN);
     });
-
     return hasBeds && allBedsMissingLengthAndWidth;
   }, [beds]);
-
-  // How much vertical space is available below the table's own top edge,
-  // measured against the real viewport (not a fixed svh/px guess) so the
-  // table reaches close to the bottom of the visible app area regardless of
-  // how much the title/alerts/hints/toggle above it currently take up.
-  // Skipped on mobile, where the table keeps using autoHeight and the page
-  // itself scrolls (see the DataGrid props below).
-  //
-  // Re-measures via a ResizeObserver on the whole page content area (see
-  // pageContentRef below) rather than a hand-picked list of "things that
-  // might shift the table down" — that list is easy to miss a case for
-  // (e.g. an alert/hint whose height changes after an async data load), and
-  // missing one leaves availableTableHeight stale, under-sizing the table
-  // and making its last rows unreachable by scroll.
-  const [availableTableHeight, setAvailableTableHeight] = useState<number | null>(null);
-  useLayoutEffect(() => {
-    if (isMobileViewport) {
-      return;
-    }
-
-    const measure = (): void => {
-      const wrapper = tableWrapperRef.current;
-      if (!wrapper) {
-        return;
-      }
-      const top = wrapper.getBoundingClientRect().top;
-      setAvailableTableHeight(
-        Math.max(TABLE_MIN_HEIGHT_PX, window.innerHeight - top - TABLE_BOTTOM_MARGIN_PX),
-      );
-    };
-
-    measure();
-    window.addEventListener("resize", measure);
-
-    let resizeObserver: ResizeObserver | undefined;
-    const observedElement = pageContentRef.current;
-    if (observedElement && typeof ResizeObserver !== "undefined") {
-      resizeObserver = new ResizeObserver(measure);
-      resizeObserver.observe(observedElement);
-    }
-
-    return () => {
-      window.removeEventListener("resize", measure);
-      resizeObserver?.disconnect();
-    };
-  }, [isMobileViewport]);
 
   const hasUnsavedInvalidNewRows = useMemo(() => (
     beds.some((bed) => isPartiallyFilledNamelessNewHierarchyRow({
@@ -1399,13 +1146,8 @@ function FieldsBedsHierarchy({
     }))
   ), [beds]);
 
-  const isAnyRowInEditMode = useMemo(
-    () => Object.values(rowModesModel).some((mode) => mode.mode === GridRowModes.Edit),
-    [rowModesModel],
-  );
-
   useNavigationBlocker(
-    hasUnsavedInvalidNewRows || isAnyRowInEditMode,
+    hasUnsavedInvalidNewRows || editingRowId !== null,
     hasUnsavedInvalidNewRows
       ? t("messages.unsavedInvalidRowsNavigationWarning")
       : t("messages.unsavedRowEditNavigationWarning"),
@@ -1417,20 +1159,120 @@ function FieldsBedsHierarchy({
     }
   }, [hasUnsavedInvalidNewRows]);
 
-  const contextMenuActions = contextMenuState
-    ? getHierarchyRowActions(contextMenuState.row)
-    : [];
-  const formatHierarchyValue = useCallback((value: unknown): string => {
-    if (value === null || value === undefined || value === "") {
-      return "—";
+  const handleCellEditRequest = useCallback(async (event: CellEditRequestEvent<HierarchyRow>): Promise<void> => {
+    if (!event.data || !event.colDef.field) return;
+    const nextRow = {
+      ...event.data,
+      [event.colDef.field]: event.newValue,
+    };
+    try {
+      await processRowUpdate(nextRow);
+      setError("");
+    } catch (err) {
+      handleProcessRowUpdateError(err instanceof Error ? err : new Error(String(err)));
     }
+  }, [handleProcessRowUpdateError, processRowUpdate, setError]);
+
+  const handleCellClicked = useCallback((event: CellClickedEvent<HierarchyRow>): void => {
+    if (!event.data) return;
+    setSelectedRowId(event.data.id);
+  }, []);
+
+  const handleCellKeyDown = useCallback((event: CellKeyDownEvent<HierarchyRow>): void => {
+    if (!event.data) return;
+    const keyboardEvent = event.event;
+    if (!(keyboardEvent instanceof KeyboardEvent)) return;
+    setSelectedRowId(event.data.id);
+    if (keyboardEvent.key === "ArrowRight" && event.data.hasChildren && !event.data.expanded) {
+      keyboardEvent.preventDefault();
+      toggleExpand(event.data.id);
+    } else if (keyboardEvent.key === "ArrowLeft" && event.data.hasChildren && event.data.expanded) {
+      keyboardEvent.preventDefault();
+      toggleExpand(event.data.id);
+    } else if (keyboardEvent.key === "F2" && isEditableField(event.data, event.column.getColId())) {
+      keyboardEvent.preventDefault();
+      startEditingRow(gridApiRef.current, event.data.id, event.column.getColId());
+    } else if (keyboardEvent.key === "Delete") {
+      keyboardEvent.preventDefault();
+      handleDeleteRow(event.data);
+    } else if ((keyboardEvent.shiftKey && keyboardEvent.key === "F10") || keyboardEvent.key === "ContextMenu") {
+      keyboardEvent.preventDefault();
+      const focusedCell = gridApiRef.current?.getFocusedCell();
+      const rowElement = focusedCell
+        ? document.querySelector<HTMLElement>(`.ag-row[row-index="${focusedCell.rowIndex}"]`)
+        : null;
+      const rect = rowElement?.getBoundingClientRect();
+      setContextMenuState({
+        row: event.data,
+        mouseX: rect ? rect.left + 24 : window.innerWidth / 2,
+        mouseY: rect ? rect.top + 24 : window.innerHeight / 2,
+      });
+    }
+  }, [handleDeleteRow, toggleExpand]);
+
+  const handleEditingStarted = useCallback((event: CellEditingStartedEvent<HierarchyRow>): void => {
+    if (event.data) {
+      setEditingRowId(event.data.id);
+      rowSnapshotRef.current.set(String(event.data.id), event.data);
+    }
+  }, []);
+
+  const handleEditingStopped = useCallback((event: CellEditingStoppedEvent<HierarchyRow>): void => {
+    if (event.data && String(editingRowId) === String(event.data.id)) {
+      setEditingRowId(null);
+    }
+  }, [editingRowId]);
+
+  const handleGridReady = useCallback((event: GridReadyEvent<HierarchyRow>): void => {
+    gridApiRef.current = event.api;
+  }, []);
+
+  const getRowClass = useCallback((params: RowClassParams<HierarchyRow>): string => {
+    const row = params.data;
+    if (!row) return "";
+    const classes = [`ofp-hierarchy-row-${row.type}`];
+    if (String(row.id) === String(highlightedRowId)) {
+      classes.push("ofp-hierarchy-row-highlighted");
+    }
+    if (String(row.id) === String(selectedRowId)) {
+      classes.push("ofp-hierarchy-row-selected");
+    }
+    return classes.join(" ");
+  }, [highlightedRowId, selectedRowId]);
+
+  const contextMenuActions = contextMenuState ? (() => {
+    const row = contextMenuState.row;
+    const createActions: HierarchyRowAction[] = [];
+    if (row.type === "location" && row.locationId) {
+      createActions.push({ id: "add-field", label: t("actions.addField"), group: "create", onClick: () => handleAddField(row.locationId!) });
+    }
+    if (row.type === "field" && row.fieldId) {
+      createActions.push({ id: "add-bed", label: t("actions.addBed"), group: "create", onClick: () => handleAddBed(row.fieldId!) });
+    }
+    if (row.type === "bed" && row.bedId) {
+      createActions.push({ id: "create-planting-plan", label: t("createPlantingPlan"), group: "create", onClick: () => handleCreatePlantingPlan(row.bedId!) });
+    }
+    return [
+      ...createActions,
+      {
+        id: "delete",
+        label: t("common:actions.delete"),
+        group: "destructive",
+        color: "error",
+        onClick: () => handleDeleteRow(row),
+      } satisfies HierarchyRowAction,
+    ];
+  })() : [];
+  // eslint-disable-next-line react-hooks/refs -- Derived menu actions do not read ref.current during render.
+  const hasContextMenuActions = contextMenuActions.length > 0;
+
+  const formatHierarchyValue = useCallback((value: unknown): string => {
+    if (value === null || value === undefined || value === "") return "-";
     return String(value);
   }, []);
 
   const getHierarchyAreaValue = useCallback((row: HierarchyRow): string => {
-    if (row.type === "location") {
-      return "—";
-    }
+    if (row.type === "location") return "-";
     if (typeof row.length_m === "number" && typeof row.width_m === "number") {
       return String(Math.round(row.length_m * row.width_m * 10) / 10);
     }
@@ -1439,8 +1281,8 @@ function FieldsBedsHierarchy({
 
   const getHierarchyRowClipboardValues = useCallback((row: HierarchyRow): string[] => [
     row.name ?? "",
-    row.type === "location" ? "—" : formatHierarchyValue(row.length_m),
-    row.type === "location" ? "—" : formatHierarchyValue(row.width_m),
+    row.type === "location" ? "-" : formatHierarchyValue(row.length_m),
+    row.type === "location" ? "-" : formatHierarchyValue(row.width_m),
     getHierarchyAreaValue(row),
     getPlainExcerpt(row.notes ?? "", 120),
   ], [formatHierarchyValue, getHierarchyAreaValue]);
@@ -1456,23 +1298,16 @@ function FieldsBedsHierarchy({
     ...rows.map(getHierarchyRowClipboardValues),
   ], [getHierarchyRowClipboardValues, rows, t]);
 
+  const gridHeight = isMobileViewport
+    ? Math.min(Math.max(tableContentHeight, TABLE_MIN_HEIGHT_PX), 640)
+    : Math.min(tableContentHeight, availableTableHeight ?? tableContentHeight);
+
   return (
     <div className={showTitle ? "page-container" : undefined}>
-      <Box ref={pageContentRef} sx={{ width: "100%", minWidth: 0 }}>
+      <Box sx={{ width: "100%", minWidth: 0 }}>
         {showTitle && <h1>{t("title")}</h1>}
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {draftValidationWarning && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            {draftValidationWarning}
-          </Alert>
-        )}
-
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {draftValidationWarning && <Alert severity="warning" sx={{ mb: 2 }}>{draftValidationWarning}</Alert>}
         {showContextMenuHint && (
           <ContextMenuHint
             message={t("common:messages.contextMenuTableHint")}
@@ -1481,91 +1316,108 @@ function FieldsBedsHierarchy({
             sx={{ mb: 1.5, maxWidth: 560 }}
           />
         )}
-
         {shouldShowMissingDimensionsHint && (
           <EmptyStateCard
-            title={t('messages.missingDimensionsHint')}
-            description={t('messages.missingDimensionsHintOptional')}
+            title={t("messages.missingDimensionsHint")}
+            description={t("messages.missingDimensionsHintOptional")}
             containerSx={{ mx: 0 }}
           />
         )}
-
+        {shouldShowHierarchyTable ? (
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1 }}>
+            <Tooltip title={t("common:columnVisibility.buttonTooltip")} {...NON_BLOCKING_TOOLTIP_PROPS}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<ViewColumnIcon />}
+                onClick={(event) => setColumnMenuAnchor(event.currentTarget)}
+              >
+                {t("common:columnVisibility.button")}
+              </Button>
+            </Tooltip>
+          </Box>
+        ) : null}
         {shouldShowHierarchyTable ? (
           <Box
             ref={tableWrapperRef}
+            onContextMenu={handleGridContextMenu}
             sx={{
               width: "100%",
               maxWidth: "100%",
-              '& [role="row"][data-id]': {
-                WebkitTouchCallout: "none",
+              height: gridHeight,
+              minHeight: TABLE_MIN_HEIGHT_PX,
+              overflow: "hidden",
+              "& .ag-root-wrapper": {
+                borderColor: "divider",
+                borderRadius: "4px",
+              },
+              "& .ag-header-cell-label": {
+                fontWeight: 600,
+              },
+              "& .ag-cell": {
+                display: "flex",
+                alignItems: "center",
+                lineHeight: 1.35,
+              },
+              "& .ofp-hierarchy-row-location .ag-cell": {
+                py: 0.5,
+              },
+              "& .ofp-hierarchy-row-field .ag-cell": {
+                py: 0.25,
+              },
+              "& .ofp-hierarchy-cell-missing-dimension": {
+                backgroundColor: "#fbf2d5",
+                color: "text.primary",
+              },
+              "& .ofp-hierarchy-row-selected .ag-cell-focus:not(.ag-cell-inline-editing)": {
+                outlineColor: "primary.main",
+              },
+              "& .ofp-hierarchy-row-highlighted .ag-cell": {
+                animation: "ofp-hierarchy-row-highlight-flash 2.5s ease-out",
+              },
+              "@keyframes ofp-hierarchy-row-highlight-flash": {
+                "0%": { backgroundColor: "rgba(37, 111, 42, 0.22)" },
+                "70%": { backgroundColor: "rgba(37, 111, 42, 0.14)" },
+                "100%": { backgroundColor: "transparent" },
               },
             }}
-            onClick={() => setTreeActive(true)}
-            onContextMenu={handleGridContextMenu}
-            onMouseDownCapture={handleReadOnlyHierarchyCellMouseDown}
-            onTouchStart={handleGridTouchStart}
-            onTouchMove={handleGridTouchEnd}
-            onTouchEnd={handleGridTouchEnd}
-            onTouchCancel={handleGridTouchEnd}
           >
-            <DataGrid
-              rows={rows}
-              columns={columns}
-              columnHeaderHeight={HEADER_ROW_HEIGHT}
-              getRowHeight={getRowHeight}
-              // Without this, MUI falls back to the density-default row
-              // height as its estimate for any row it hasn't rendered yet,
-              // which is wrong for our taller location/field rows. At scale
-              // (many such rows off-screen), that under-estimate makes the
-              // grid's computed total scroll range too short, capping how
-              // far down you can actually scroll before ever reaching it —
-              // our row height is exact (not a guess), so reuse it here too.
-              getEstimatedRowHeight={getRowHeight}
-              getRowClassName={(params) => (
-                params.id === highlightedRowId
-                  ? `ofp-hierarchy-row-${params.row.type} ofp-hierarchy-row-highlighted`
-                  : `ofp-hierarchy-row-${params.row.type}`
-              )}
-              rowModesModel={rowModesModel}
-              onRowModesModelChange={setRowModesModel}
-              onRowEditStop={handleHierarchyRowEditStop}
-              processRowUpdate={handleHierarchyProcessRowUpdate}
-              onProcessRowUpdateError={handleProcessRowUpdateError}
+            <AgGridReact<HierarchyRow>
+              theme={themeMaterial}
+              rowData={rows}
+              columnDefs={columnDefs}
+              context={gridContext}
               loading={loading}
-              editMode="row"
-              autoHeight={isMobileViewport}
-              hideFooter={true}
-              // See useHierarchyRowWindow: the free DataGrid always paginates
-              // and caps pageSize at 100, so very large hierarchies are paged
-              // internally (no pager UI) instead of relying on a single
-              // unbounded page. onPaginationModelChange is a no-op — our own
-              // scroll-position logic is the only thing that changes pages.
-              paginationModel={{ page: hierarchyRowWindow.page, pageSize: hierarchyRowWindow.pageSize }}
-              onPaginationModelChange={() => {}}
-              sortingMode="server"
-              sortModel={sortModel}
-              onSortModelChange={setSortModel}
-              isRowSelectable={() => true}
-              isCellEditable={isCellEditable}
-              sx={
-                isMobileViewport
-                  ? HIERARCHY_DATA_GRID_SX
-                  : {
-                    ...HIERARCHY_DATA_GRID_SX,
-                    height: `${Math.min(tableContentHeight, availableTableHeight ?? tableContentHeight)}px`,
-                  }
-              }
-              disableRowSelectionOnClick
-              onCellClick={handleHierarchyCellClick}
-              onCellKeyDown={handleHierarchyCellKeyDown}
-              localeText={germanDataGridLocaleText}
-              apiRef={gridApiRef}
+              headerHeight={HEADER_ROW_HEIGHT}
+              floatingFiltersHeight={isMobileViewport ? 0 : 36}
+              getRowHeight={(params: RowHeightParams<HierarchyRow>) => (
+                params.data ? getRowHeightForHierarchyRow(params.data) : BED_ROW_HEIGHT
+              )}
+              getRowClass={getRowClass}
+              getRowId={(params: GetRowIdParams<HierarchyRow>) => String(params.data.id)}
+              readOnlyEdit
+              suppressContextMenu
+              suppressDragLeaveHidesColumns
+              suppressHorizontalScroll={false}
+              defaultColDef={{
+                resizable: true,
+                suppressMovable: true,
+                filter: true,
+                floatingFilter: true,
+              }}
+              localeText={agGridGermanLocaleText}
+              onGridReady={handleGridReady}
+              onCellClicked={handleCellClicked}
+              onCellContextMenu={handleCellContextMenu}
+              onCellEditRequest={handleCellEditRequest}
+              onCellKeyDown={handleCellKeyDown}
+              onCellEditingStarted={handleEditingStarted}
+              onCellEditingStopped={handleEditingStopped}
             />
           </Box>
         ) : null}
       </Box>
 
-      {/* Notes Editor Drawer */}
       <NotesDrawer
         open={notesEditor.isOpen}
         title={t("columns.notes")}
@@ -1575,11 +1427,37 @@ function FieldsBedsHierarchy({
         onClose={notesEditor.handleClose}
         hasUnsavedChanges={Boolean(
           notesEditor.currentRow &&
-            notesEditor.field &&
-            notesEditor.draft !== ((notesEditor.currentRow[notesEditor.field] as string) || ""),
+          notesEditor.field &&
+          notesEditor.draft !== ((notesEditor.currentRow[notesEditor.field] as string) || ""),
         )}
         loading={notesEditor.isSaving}
       />
+      <Menu
+        open={columnMenuAnchor !== null}
+        anchorEl={columnMenuAnchor}
+        onClose={() => setColumnMenuAnchor(null)}
+      >
+        {columnVisibilityOptions.map((option) => (
+          <MenuItem
+            key={option.field}
+            disabled={option.required}
+            onClick={() => toggleColumnVisibility(option.field)}
+          >
+            <Checkbox
+              edge="start"
+              size="small"
+              checked={!hiddenColumns.has(option.field)}
+              tabIndex={-1}
+              disableRipple
+            />
+            <ListItemText primary={option.label} />
+          </MenuItem>
+        ))}
+        <Divider role="separator" />
+        <MenuItem onClick={showAllColumns}>
+          {t("common:columnVisibility.showAll")}
+        </MenuItem>
+      </Menu>
       <Menu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
@@ -1606,6 +1484,7 @@ function FieldsBedsHierarchy({
             : undefined
         }
       >
+        {/* eslint-disable-next-line react-hooks/refs -- Derived menu actions do not read ref.current during render. */}
         {contextMenuActions.flatMap((action, index) => {
           const previousAction = contextMenuActions[index - 1];
           const shouldSeparateGroup = previousAction !== undefined && previousAction.group !== action.group;
@@ -1621,7 +1500,6 @@ function FieldsBedsHierarchy({
               {action.label}
             </MenuItem>
           );
-
           return shouldSeparateGroup
             ? [<Divider key={`${action.id}-divider`} role="separator" />, menuItem]
             : [menuItem];
@@ -1634,7 +1512,7 @@ function FieldsBedsHierarchy({
           rowCopiedMessage={t("common:messages.rowCopied")}
           tableCopiedMessage={t("common:messages.tableCopied")}
           copyErrorMessage={t("common:messages.copyError")}
-          includeDivider={contextMenuActions.length > 0}
+          includeDivider={hasContextMenuActions}
           onClose={closeContextMenu}
         />
       </Menu>

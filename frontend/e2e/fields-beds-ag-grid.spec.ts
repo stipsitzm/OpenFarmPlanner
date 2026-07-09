@@ -47,9 +47,9 @@ async function loginWithAdmin(page: Page, request: APIRequestContext, scenario: 
   };
 }
 
-test.describe('fields-beds AG Grid Community spike', () => {
+test.describe('fields-beds AG Grid Community table', () => {
   test('supports hierarchy navigation, inline editing, context menu, and responsive width', async ({ page, request }) => {
-    const api = await loginWithAdmin(page, request, 'ag-grid-spike-small');
+    const api = await loginWithAdmin(page, request, 'ag-grid-small');
     const location = await api.post<{ id: number }>('/locations/', { name: 'AG Testhof' });
     const field = await api.post<{ id: number }>('/fields/', {
       name: 'AG Testfeld',
@@ -85,7 +85,14 @@ test.describe('fields-beds AG Grid Community spike', () => {
     await editInput.press('Enter');
     await expect(page.getByText('AG Testfeld bearbeitet')).toBeVisible({ timeout: 10_000 });
 
+    if (await page.getByText('AG Testbeet').count() === 0) {
+      const editedFieldRow = page.locator('.ag-row').filter({ hasText: 'AG Testfeld bearbeitet' }).first();
+      await editedFieldRow.getByRole('button').first().click();
+      await expect(page.getByText('AG Testbeet')).toBeVisible();
+    }
+
     const bedRow = page.locator('.ag-row').filter({ hasText: 'AG Testbeet' }).first();
+    await expect(bedRow).toBeVisible();
     await bedRow.click({ button: 'right' });
     await expect(page.getByRole('menuitem', { name: 'Anbauplan hinzufügen' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'Zeile kopieren' })).toBeVisible();
@@ -100,7 +107,7 @@ test.describe('fields-beds AG Grid Community spike', () => {
   });
 
   test('keeps a large expanded hierarchy virtualized', async ({ page, request }) => {
-    const api = await loginWithAdmin(page, request, 'ag-grid-spike-large');
+    const api = await loginWithAdmin(page, request, 'ag-grid-large');
     const location = await api.post<{ id: number }>('/locations/', { name: 'AG Large Hof' });
     const field = await api.post<{ id: number }>('/fields/', {
       name: 'AG Large Feld',
