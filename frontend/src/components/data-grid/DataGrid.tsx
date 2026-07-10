@@ -49,7 +49,7 @@ import { NotesPreviewPopover } from './NotesPreviewPopover';
 import { extractApiErrorMessage } from '../../api/errors';
 import { germanDataGridLocaleText } from './localeText';
 import { TableCopyMenuItems } from './TableCopyMenuItems';
-import { ColumnVisibilityMenu } from './ColumnVisibilityMenu';
+import { ColumnManagementToolbar } from './ColumnManagementToolbar';
 import { computeAutoFitColumnVisibility } from '../../hooks/useColumnVisibility';
 import { formatClipboardValue, type TableClipboardRow } from './tableClipboard';
 import { handleContextMenuKeyboardNavigation } from './contextMenuFocus';
@@ -1582,6 +1582,7 @@ export function EditableDataGrid<T extends EditableRow>({
             headerName: '',
             sortable: false,
             filterable: false,
+            hideable: false,
             width: 128,
             align: 'right' as const,
             renderCell: (params: GridCellParams<T>) => {
@@ -1903,17 +1904,6 @@ export function EditableDataGrid<T extends EditableRow>({
               minWidth: isContentSizedSurface ? 0 : '100%',
             }}
           >
-            {showColumnVisibilityButton && onColumnVisibilityModelChange ? (
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.75 }}>
-                <ColumnVisibilityMenu
-                  columns={columns}
-                  columnVisibilityModel={effectiveColumnVisibilityModel}
-                  onColumnVisibilityModelChange={onColumnVisibilityModelChange}
-                  autofitEnabled={columnVisibilityAutofit}
-                  onAutofitChange={onColumnVisibilityAutofitChange ? handleAutofitChange : undefined}
-                />
-              </Box>
-            ) : null}
             <Box
             ref={gridSurfaceRef}
             onContextMenu={hasContextualRowActions ? (event) => {
@@ -1946,6 +1936,7 @@ export function EditableDataGrid<T extends EditableRow>({
           rows={rowsForGrid}
           columns={columnsWithActions}
           columnVisibilityModel={effectiveColumnVisibilityModel}
+          onColumnVisibilityModelChange={onColumnVisibilityModelChange}
           rowModesModel={rowModesModel}
           onRowModesModelChange={setRowModesModel}
           onRowEditStop={(params, event, details) => {
@@ -1974,6 +1965,14 @@ export function EditableDataGrid<T extends EditableRow>({
           onRowSelectionModelChange={(nextModel) => setSelectedRowIds(Array.from(nextModel.ids))}
           slots={{
             footer: CustomFooter,
+            ...(showColumnVisibilityButton && onColumnVisibilityModelChange ? { toolbar: ColumnManagementToolbar } : {}),
+          }}
+          showToolbar={Boolean(showColumnVisibilityButton && onColumnVisibilityModelChange)}
+          slotProps={{
+            toolbar: {
+              autofitEnabled: columnVisibilityAutofit,
+              onAutofitChange: onColumnVisibilityAutofitChange ? handleAutofitChange : undefined,
+            },
           }}
           sx={{
             ...dataGridSx,
