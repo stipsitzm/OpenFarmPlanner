@@ -33,7 +33,7 @@ export type { AreaM2EditCellProps } from './AreaM2EditCell';
 export { PlantsCountEditCell } from './PlantsCountEditCell';
 export type { PlantsCountEditCellProps } from './PlantsCountEditCell';
 export { DateEditCell, toIsoDateString } from './DateEditCell';
-export { GermanDateEditCell, parseGermanDateText, formatDateAsGerman } from './GermanDateEditCell';
+export { parseGermanDateText, formatDateAsGerman } from './GermanDateEditCell';
 export { SearchableSelectEditCell } from './SearchableSelectEditCell';
 export type { SearchableSelectOption, SearchableSelectEditCellProps } from './SearchableSelectEditCell';
 export { createSearchableSelectColumn, createSingleSelectColumn } from './columns';

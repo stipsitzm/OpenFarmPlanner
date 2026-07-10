@@ -32,8 +32,10 @@ frontend/src/components/data-grid/
   keyboardEditing.ts       "just start typing" / F2 spreadsheet-edit-start behavior
   keyboardNavigation.ts    Tab/Arrow cell navigation rules, grid-API-agnostic
   contextMenuFocus.ts      Arrow/Home/End/Enter/Esc navigation *inside* an open menu
-  AreaM2EditCell.tsx, DateEditCell.tsx, GermanDateEditCell.tsx,
-  PlantsCountEditCell.tsx, SearchableSelectEditCell.tsx   custom edit cells
+  AreaM2EditCell.tsx, DateEditCell.tsx, PlantsCountEditCell.tsx,
+  SearchableSelectEditCell.tsx                            custom edit cells
+  GermanDateEditCell.tsx   shared German date parse/format helpers only
+                           (its edit-cell component was removed as dead code)
   NotesCell.tsx, NotesDrawer.tsx, NotesPreviewPopover.tsx,
   useNotesEditor.ts, useNotesPreview.ts, markdown.ts,
   noteAttachmentsCache.ts               rich markdown notes + photo attachments
@@ -87,12 +89,11 @@ MUI's stock edit cells didn't fit a few OpenFarmPlanner-specific needs:
   (with correct month-length/rollover handling), Left/Right move between
   segments, plus a hidden native `<input type="date">` behind a calendar
   icon as a picker fallback.
-- **`GermanDateEditCell`** is a simpler, non-segmented sibling (single text
-  field, parses on every change). `DateEditCell` also imports its
-  `parseGermanDateText`/`formatDateAsGerman` helpers. **Unclear/needs
-  check**: confirm whether any column still explicitly uses
-  `GermanDateEditCell` as `renderEditCell` before treating it as dead code
-  — `DateEditCell` is the default today.
+- **`GermanDateEditCell.tsx`** no longer exports an edit-cell component —
+  the component itself was confirmed unused as a `renderEditCell` anywhere
+  and removed. The file now only holds the shared
+  `parseGermanDateText`/`formatDateAsGerman` helpers that `DateEditCell`
+  imports.
 - **`SearchableSelectEditCell`** wraps an MUI Autocomplete for single-select
   columns with large option lists (cultures, suppliers) that a plain
   `singleSelect` dropdown wouldn't make browsable; `columns.tsx` also
