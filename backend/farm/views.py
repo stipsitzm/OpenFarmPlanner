@@ -708,21 +708,24 @@ class ProjectScopedMixin:
     def ensure_active_project_location(self) -> None:
         """Create the default location for legacy projects that do not have one.
 
-        Called from `initial()` on every request of viewsets that opt in via
-        `ensure_default_location`, so a page firing several such requests at
-        once (e.g. locations/fields/beds all loading together for a brand-new
-        project) can have multiple of them race here concurrently. Under
-        SQLite this read-then-write is prone to "database is locked": if
-        another connection commits a write between our `exists()` read and
-        the `create()`, the write can fail immediately rather than merely
-        wait for a lock, regardless of the busy timeout. Each attempt runs in
-        its own savepoint so a failed attempt only rolls back that savepoint
-        (not the whole request), and a short retry gives the other request's
-        transaction time to land — after which our `exists()` check sees its
-        location and we return without creating a duplicate.
+        Only LocationViewSet opts into `ensure_default_location`, so this
+        races specifically when two requests to /api/locations/ land close
+        together for a brand-new project (e.g. the app's own initial GET list
+        alongside an explicit POST creating the first location) — both see no
+        location yet and both try to create one. Under SQLite this
+        read-then-write is prone to "database is locked": ATOMIC_REQUESTS
+        holds the write lock for a request's *entire* duration (not just this
+        check), so a losing request can end up waiting out another request's
+        full processing/serialization time, not just a quick DB write —
+        easily longer than a couple hundred ms under CI load. Each attempt
+        runs in its own savepoint so a failed attempt only rolls back that
+        savepoint (not the whole request); the backoff is generous enough to
+        outlast a competing request's full lifecycle, after which our
+        `exists()` check sees its location and we return without duplicating
+        it.
         """
         project = self.request.active_project
-        attempts = 3
+        attempts = 8
         for attempt in range(attempts):
             try:
                 with transaction.atomic():
@@ -733,7 +736,7 @@ class ProjectScopedMixin:
             except OperationalError as exc:
                 if attempt == attempts - 1 or 'locked' not in str(exc).lower():
                     raise
-                time.sleep(0.05 * (attempt + 1))
+                time.sleep(min(0.05 * (2 ** attempt), 0.5))
 
     def get_queryset(self):
         queryset = super().get_queryset()
