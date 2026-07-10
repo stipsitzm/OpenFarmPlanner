@@ -926,22 +926,6 @@ class ApiEndpointsTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('supplier_product_url', response.data)
 
-    def test_enrich_requires_supplier(self):
-        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/', {'mode': 'complete'}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data.get('code'), 'supplier_missing')
-
-
-    def test_enrich_requires_allowed_domains(self):
-        self.culture.supplier = self.supplier
-        self.culture.save(update_fields=['supplier'])
-        self.supplier.homepage_url = ''
-        self.supplier.allowed_domains = []
-        self.supplier.save(update_fields=['homepage_url', 'allowed_domains'])
-        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/', {'mode': 'complete'}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data.get('code'), 'allowed_domains_missing')
-
     def test_field_create_with_invalid_area_too_small(self):
         data = {
             'name': 'Too Small Field',
@@ -1835,123 +1819,17 @@ class PlantingPlanRemainingAreaApiTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
-class CultureEnrichmentApiTest(DRFAPITestCase):
-    """Tests for enrichment endpoints on cultures."""
+class CultureLayoutApiTest(DRFAPITestCase):
+    """Tests for the bed/field layout endpoint on locations."""
 
     def setUp(self):
-        self.user = User.objects.create_user(username='enrichuser', email='enrich@example.com', password='testpass', is_active=True)
-        self.project = Project.objects.create(name='Enrichment Project', slug='enrichment-project')
+        self.user = User.objects.create_user(username='layoutuser', email='layoutuser@example.com', password='testpass', is_active=True)
+        self.project = Project.objects.create(name='Layout Project', slug='layout-project')
         ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
         self.client.force_authenticate(user=self.user)
         self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
         self.supplier = Supplier.objects.create(name='Default Supplier', homepage_url='https://supplier.example', project=self.project)
         self.culture = Culture.objects.create(name='Tomate', variety='Roma', supplier=self.supplier, supplier_product_url='https://supplier.example/tomate', project=self.project)
-
-    def test_enrich_single_returns_payload(self):
-        response = self.client.post(
-            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/',
-            {'mode': 'complete'},
-            format='json',
-        )
-
-        self.assertIn(response.status_code, (200, 503))
-        if response.status_code == 200:
-            self.assertIn('suggested_fields', response.data)
-
-
-
-    @patch('farm.views.enrich_culture')
-    def test_enrich_single_contains_usage_and_cost_estimate(self, enrich_mock):
-        enrich_mock.return_value = {
-            'run_id': 'enr_1_1',
-            'culture_id': self.culture.id,
-            'mode': 'complete',
-            'status': 'completed',
-            'started_at': '2026-01-01T00:00:00Z',
-            'finished_at': '2026-01-01T00:00:01Z',
-            'model': 'gpt-5',
-            'provider': 'openai_responses',
-            'search_provider': 'web_search',
-            'suggested_fields': {},
-            'evidence': {},
-            'structured_sources': [],
-            'validation': {'warnings': [], 'errors': []},
-            'usage': {'inputTokens': 100, 'cachedInputTokens': 10, 'outputTokens': 20},
-            'costEstimate': {
-                'currency': 'USD',
-                'total': 0.012,
-                'model': 'gpt-5',
-                'breakdown': {
-                    'input': 0.001,
-                    'cached_input': 0.0001,
-                    'output': 0.0002,
-                    'web_search_calls': 0.01,
-                    'web_search_call_count': 1,
-                },
-            },
-        }
-
-        response = self.client.post(
-            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/',
-            {'mode': 'complete'},
-            format='json',
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('usage', response.data)
-        self.assertIn('costEstimate', response.data)
-
-    def test_enrich_batch_returns_summary(self):
-        response = self.client.post(
-            '/openfarmplanner/api/cultures/enrich-batch/',
-            {'mode': 'complete_all', 'limit': 5},
-            format='json',
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('items', response.data)
-
-
-    @patch('farm.views.enrich_culture', side_effect=AttributeError('boom'))
-    def test_enrich_single_unexpected_error_returns_503(self, _mock):
-        response = self.client.post(
-            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/',
-            {'mode': 'complete'},
-            format='json',
-        )
-
-        self.assertEqual(response.status_code, 503)
-        self.assertIn('detail', response.data)
-
-    @patch('farm.views.enrich_culture', side_effect=AttributeError('boom'))
-    def test_enrich_batch_unexpected_error_is_item_failure_not_500(self, _mock):
-        response = self.client.post(
-            '/openfarmplanner/api/cultures/enrich-batch/',
-            {'mode': 'complete_all', 'limit': 5},
-            format='json',
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertGreaterEqual(response.data['failed'], 1)
-
-
-    def test_enrich_single_mode_list_is_coerced(self):
-        response = self.client.post(
-            f'/openfarmplanner/api/cultures/{self.culture.id}/enrich/',
-            {'mode': ['reresearch']},
-            format='json',
-        )
-
-        self.assertIn(response.status_code, (200, 503))
-
-    def test_enrich_batch_rejects_unexpected_mode_stringified_list(self):
-        response = self.client.post(
-            '/openfarmplanner/api/cultures/enrich-batch/',
-            {'mode': ['complete_all'], 'limit': 5},
-            format='json',
-        )
-
-        self.assertEqual(response.status_code, 200)
 
     def test_layouts_get_and_put(self):
         location = Location.objects.create(name='Layout test location', project=self.project)

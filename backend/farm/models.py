@@ -698,7 +698,7 @@ class Culture(TimestampedModel):
         related_name='seed_demand_cultures',
         help_text='Persisted supplier selection for seed-demand package calculations',
     )
-    supplier_product_url = models.URLField(null=True, blank=True, help_text='Supplier product page URL for enrichment')
+    supplier_product_url = models.URLField(null=True, blank=True, help_text='Supplier product page URL')
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='cultures')
     source_public_culture = models.ForeignKey('PublicCulture', null=True, blank=True, on_delete=models.SET_NULL, related_name='imported_cultures')
     source_public_version = models.IntegerField(null=True, blank=True)
@@ -1312,34 +1312,6 @@ class PublicCulture(TimestampedModel):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.variety})" if self.variety else self.name
-
-
-class EnrichmentAccountingRun(models.Model):
-    """Stores token usage and estimated costs per enrichment invocation."""
-
-    MODE_CHOICES = [
-        ('complete', 'Complete'),
-        ('reresearch', 'Re-research'),
-    ]
-
-    culture = models.ForeignKey(
-        Culture,
-        on_delete=models.CASCADE,
-        related_name='enrichment_accounting_runs',
-    )
-    mode = models.CharField(max_length=20, choices=MODE_CHOICES)
-    provider = models.CharField(max_length=50)
-    model = models.CharField(max_length=100)
-    input_tokens = models.IntegerField(default=0)
-    cached_input_tokens = models.IntegerField(default=0)
-    output_tokens = models.IntegerField(default=0)
-    web_search_call_count = models.IntegerField(default=0)
-    estimated_cost_usd = models.DecimalField(max_digits=12, decimal_places=6, default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-created_at']
-
 
 
 class CultureRevision(models.Model):

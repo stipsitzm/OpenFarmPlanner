@@ -18,8 +18,6 @@ import type {
   PublicCultureDuplicateCandidate,
   PublishPublicCultureResponse,
   RemainingAreaResponse,
-  EnrichmentResult,
-  EnrichmentBatchResult,
   BedLayoutEntry,
   FieldLayoutEntry,
   LocationLayoutsResponse,
@@ -120,13 +118,6 @@ export const cultureAPI = {
     skipped_count: number;
     errors: Array<{ index: number; error: unknown }>;
   }>('/cultures/import/apply/', data),
-  enrich: (id: number, mode: 'complete' | 'reresearch', signal?: AbortSignal) =>
-    http.post<EnrichmentResult>(`/cultures/${id}/enrich/`, { mode }, { signal }),
-  enrichBatch: (data?: { culture_ids?: number[]; limit?: number }, signal?: AbortSignal) =>
-    http.post<EnrichmentBatchResult>('/cultures/enrich-batch/', {
-      mode: 'complete_all',
-      ...data,
-    }, { signal }),
   publishPublic: (id: number) => http.post<PublishPublicCultureResponse>(`/cultures/${id}/publish-public/`, {}),
 };
 
@@ -365,8 +356,6 @@ export type {
   PublicCulture,
   PublicCultureDuplicateCandidate,
   RemainingAreaResponse,
-  EnrichmentResult,
-  EnrichmentBatchResult,
   BedLayoutEntry,
   FieldLayoutEntry,
   LocationLayoutsResponse,

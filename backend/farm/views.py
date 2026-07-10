@@ -82,7 +82,6 @@ from .image_processing import (
     ImageProcessingError,
     ImageProcessingBackendUnavailableError,
 )
-from .services.enrichment import enrich_culture, EnrichmentError
 from .services.seed_packages import PackageOption, compute_seed_package_suggestion
 from .seed_units import (
     SEED_PACKAGE_UNIT_GRAMS,
@@ -252,17 +251,6 @@ def _build_unique_project_slug(name: str) -> str:
         candidate = f'{base_slug}-{suffix}'
         suffix += 1
     return candidate
-
-def _supplier_enrichment_requirement_error(code: str, message: str) -> Response:
-    """Return standardized supplier enrichment requirement errors."""
-    return Response(
-        {
-            'code': code,
-            'message': message,
-        },
-        status=status.HTTP_400_BAD_REQUEST,
-    )
-
 
 def _week_start_for_iso_year(iso_year: int) -> date:
     """Return Monday of ISO week 1 for an ISO year."""
@@ -1695,131 +1683,6 @@ class CultureViewSet(ProjectScopedMixin, viewsets.ModelViewSet):
                 for item in duplicates
             ],
         }, status=status.HTTP_201_CREATED)
-
-    @action(detail=True, methods=['post'], url_path='enrich')
-    def enrich(self, request, pk=None):
-        """Create AI suggestions for one culture."""
-        culture = self.get_object()
-        if not culture.supplier_id:
-            return _supplier_enrichment_requirement_error('supplier_missing', 'Supplier is required for AI enrichment.')
-        if not (culture.supplier and culture.supplier.allowed_domains):
-            return _supplier_enrichment_requirement_error('allowed_domains_missing', 'Supplier allowed domains are required for AI enrichment.')
-        mode = _coerce_request_string(request.data.get('mode'), 'complete')
-        try:
-            payload = enrich_culture(culture, mode)
-        except EnrichmentError as error:
-            detail = str(error)
-            if detail.startswith('supplier_missing:') or 'supplier_missing' in detail:
-                return _supplier_enrichment_requirement_error('supplier_missing', 'Supplier is required for AI enrichment.')
-            if detail.startswith('allowed_domains_missing:') or 'allowed_domains_missing' in detail:
-                return _supplier_enrichment_requirement_error('allowed_domains_missing', 'Supplier allowed domains are required for AI enrichment.')
-            return Response({'detail': str(error)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-        except Exception as error:
-            logger.exception('Unexpected enrichment error for culture %s', culture.id)
-            return Response({'detail': f'Enrichment service failure: {error}'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-        return Response(payload, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=['post'], url_path='enrich-batch')
-    def enrich_batch(self, request):
-        """Create AI suggestions for multiple cultures (synchronous with hard limit)."""
-        mode = _coerce_request_string(request.data.get('mode'), 'complete_all')
-        requested_ids = request.data.get('culture_ids')
-        max_items = min(int(request.data.get('limit', 20)), 50)
-
-        if mode != 'complete_all':
-            return Response({'detail': 'Unsupported mode.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        queryset = self.get_queryset().order_by('id')
-        if isinstance(requested_ids, list) and requested_ids:
-            queryset = queryset.filter(id__in=requested_ids)
-
-        cultures = list(queryset[:max_items])
-        run_id = f"enr_batch_{int(timezone.now().timestamp())}"
-        items = []
-        for culture in cultures:
-            if not culture.supplier_id:
-                items.append({'culture_id': culture.id, 'status': 'failed', 'error': 'supplier_missing'})
-                continue
-            if not (culture.supplier and culture.supplier.allowed_domains):
-                items.append({'culture_id': culture.id, 'status': 'failed', 'error': 'allowed_domains_missing'})
-                continue
-            try:
-                item = enrich_culture(culture, 'complete')
-                items.append({'culture_id': culture.id, 'status': 'completed', 'result': item})
-            except EnrichmentError as error:
-                items.append({'culture_id': culture.id, 'status': 'failed', 'error': str(error)})
-            except Exception as error:
-                logger.exception('Unexpected batch enrichment error for culture %s', culture.id)
-                items.append({'culture_id': culture.id, 'status': 'failed', 'error': f'Unexpected enrichment failure: {error}'})
-
-        succeeded = sum(1 for item in items if item['status'] == 'completed')
-        failed = sum(1 for item in items if item['status'] == 'failed')
-
-        total_input_tokens = 0
-        total_cached_input_tokens = 0
-        total_output_tokens = 0
-        total_cost = 0.0
-        total_input_cost = 0.0
-        total_cached_input_cost = 0.0
-        total_output_cost = 0.0
-        total_web_search_cost = 0.0
-        total_web_search_call_count = 0
-        for item in items:
-            result = item.get('result') if isinstance(item, dict) else None
-            if not isinstance(result, dict):
-                continue
-            usage = result.get('usage') if isinstance(result.get('usage'), dict) else {}
-            cost = result.get('costEstimate') if isinstance(result.get('costEstimate'), dict) else {}
-            breakdown = cost.get('breakdown') if isinstance(cost.get('breakdown'), dict) else {}
-            total_input_tokens += int(usage.get('inputTokens') or 0)
-            total_cached_input_tokens += int(usage.get('cachedInputTokens') or 0)
-            total_output_tokens += int(usage.get('outputTokens') or 0)
-            total_cost += float(cost.get('total') or 0)
-            total_input_cost += float(breakdown.get('input') or 0)
-            total_cached_input_cost += float(breakdown.get('cached_input') or 0)
-            total_output_cost += float(breakdown.get('output') or 0)
-            total_web_search_cost += float(breakdown.get('web_search_calls') or 0)
-            total_web_search_call_count += int(breakdown.get('web_search_call_count') or 0)
-
-        cost_model_name = next(
-            (
-                str((item.get('result') or {}).get('costEstimate', {}).get('model') or '')
-                for item in items
-                if isinstance(item, dict)
-                and isinstance(item.get('result'), dict)
-                and isinstance((item.get('result') or {}).get('costEstimate'), dict)
-                and (item.get('result') or {}).get('costEstimate', {}).get('model')
-            ),
-            getattr(settings, 'AI_ENRICHMENT_MODEL', 'gpt-5'),
-        )
-
-        return Response({
-            'run_id': run_id,
-            'status': 'completed',
-            'total': len(items),
-            'processed': len(items),
-            'succeeded': succeeded,
-            'failed': failed,
-            'items': items,
-            'usage': {
-                'inputTokens': total_input_tokens,
-                'cachedInputTokens': total_cached_input_tokens,
-                'outputTokens': total_output_tokens,
-            },
-            'costEstimate': {
-                'currency': 'USD',
-                'total': total_cost,
-                'model': cost_model_name,
-                'breakdown': {
-                    'input': total_input_cost,
-                    'cached_input': total_cached_input_cost,
-                    'output': total_output_cost,
-                    'web_search_calls': total_web_search_cost,
-                    'web_search_call_count': total_web_search_call_count,
-                },
-            },
-        }, status=status.HTTP_200_OK)
-
 
 
 

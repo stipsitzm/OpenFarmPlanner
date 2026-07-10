@@ -73,40 +73,6 @@ function localizeBackendMessage(message: string, t: TFunction): string {
 }
 
 function formatServiceError(detail: string, t: TFunction, fallbackMessage: string): string {
-  const normalized = detail.toLowerCase();
-
-  if (normalized.includes('insufficient_quota')) {
-    return translatedOrFallback(
-      t,
-      'ai.quotaExceeded',
-      'OpenAI-Kontingent aufgebraucht. Bitte Abrechnung/Plan prüfen und erneut versuchen.',
-    );
-  }
-
-  if (normalized.includes('no web-research provider configured')) {
-    return translatedOrFallback(
-      t,
-      'ai.webResearchUnavailable',
-      'Kein Web-Research-Provider konfiguriert. Bitte AI_ENRICHMENT_PROVIDER prüfen.',
-    );
-  }
-
-  if (normalized.includes('openai responses error: 429')) {
-    return translatedOrFallback(
-      t,
-      'ai.providerRateLimited',
-      'OpenAI hat die Anfrage wegen Rate-Limit/Limitierung abgelehnt. Bitte später erneut versuchen.',
-    );
-  }
-
-  if (normalized.includes('openai request failed')) {
-    return translatedOrFallback(
-      t,
-      'ai.providerUnavailable',
-      'OpenAI ist derzeit nicht erreichbar. Bitte später erneut versuchen.',
-    );
-  }
-
   return localizeBackendMessage(detail || fallbackMessage, t);
 }
 

@@ -3,20 +3,15 @@ import { createCulturesCommandSpecs } from '../pages/culturesCommandSpecs';
 
 function buildOptions(overrides: Partial<Parameters<typeof createCulturesCommandSpecs>[0]> = {}) {
   return {
-    canRunEnrichmentForCulture: () => false,
     cultures: [],
-    enableAiEnrichment: false,
-    enrichmentLoading: false,
     focusSearch: vi.fn(),
     goToRelativeCulture: vi.fn(),
     handleCreatePlantingPlan: vi.fn(),
     handleDelete: vi.fn(),
     handleEdit: vi.fn(),
-    handleEnrichCurrent: vi.fn(async () => {}),
     handleExportAllCultures: vi.fn(),
     handleExportCurrentCulture: vi.fn(),
     handleImportFileTrigger: vi.fn(),
-    setEnrichAllConfirmOpen: vi.fn(),
     ...overrides,
   };
 }
