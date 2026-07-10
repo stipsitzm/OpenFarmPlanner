@@ -106,6 +106,11 @@ httpClient.interceptors.request.use((config) => {
     }
   }
 
+  // Read fresh from localStorage on every request (not from React state) so a
+  // project switch takes effect immediately for any request in flight, and so
+  // this stays correct across the full-page reload that AuthContext triggers
+  // after switchActiveProject(). See docs/architecture-overview.md
+  // ("Project, user, and permission model").
   const activeProjectId = window.localStorage.getItem('activeProjectId');
   if (activeProjectId) {
     config.headers = config.headers ?? {};

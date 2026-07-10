@@ -44,6 +44,11 @@ def get_active_project_or_400(request: Request) -> Project:
     agent_mode = bool(request.session.get('agent_mode'))
     agent_project_id = request.session.get('agent_project_id')
 
+    # Agent-mode sessions (created via AgentLoginToken, for automation/AI-agent
+    # access) are hard-locked to whichever project the token was issued for.
+    # The X-Project-Id header is still accepted but must match that binding —
+    # this is what stops an agent session from escalating to other projects
+    # the underlying user happens to belong to, just by changing a header.
     if agent_mode and agent_project_id is not None:
         try:
             bound_project_id = int(agent_project_id)

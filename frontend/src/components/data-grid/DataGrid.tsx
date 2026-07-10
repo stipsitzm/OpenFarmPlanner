@@ -13,6 +13,12 @@
  * Changes are saved through the row save action.
  * Keyboard navigation commits edit values locally without calling the API.
  * Navigation is blocked if there are unsaved changes (row in edit mode).
+ *
+ * See docs/datagrid-architecture.md for the full picture of what this adds on
+ * top of MUI X DataGrid (imperative command API, custom edit cells, row-action
+ * menu, notes cells, copy/paste, column visibility) — note that not every grid
+ * page uses this component (FieldsBedsHierarchy.tsx renders a raw MUI
+ * DataGrid with its own parallel implementation of several of these patterns).
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type ReactNode } from 'react';

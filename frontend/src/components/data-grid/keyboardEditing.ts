@@ -1,3 +1,6 @@
+// Excel-like "just start typing" (replace cell value) and F2 (edit in place)
+// entry points for EditableDataGrid. See docs/datagrid-architecture.md
+// ("Keyboard editing/navigation inside the grid") for the broader picture.
 import { useCallback, useEffect, useRef } from 'react';
 import type React from 'react';
 import { flushSync } from 'react-dom';
@@ -159,6 +162,12 @@ export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
     if (!pendingValue) {
       onBeforeEdit?.(params);
       apiRef.current?.setCellFocus?.(params.id, params.field);
+      // flushSync forces the row-mode change to commit synchronously so the edit
+      // cell exists in the DOM before we try to seed its value below. Without it,
+      // fast typing can race ahead of React's own render and the first keystroke
+      // (or several, on a slow render) would land before there's an input to type
+      // into — the pendingValuesRef buffer below exists specifically to survive
+      // that gap regardless, but flushSync keeps the common case tight.
       flushSync(() => {
         setRowModesModel((oldModel) => ({
           ...oldModel,

@@ -1,3 +1,9 @@
+// Right-click/long-press row-action menu for FieldsBedsHierarchy's raw MUI
+// DataGrid. This is a parallel, hand-rolled implementation of the same UX as
+// EditableDataGrid's useDataGridRowActionMenu — they share the lower-level
+// contextMenuFocus/utils/contextMenu primitives but not this state machine.
+// See docs/datagrid-architecture.md ("Hover actions / row actions / context
+// menu"). A fix here does not automatically apply to useDataGridRowActionMenu.
 import { useCallback, useRef, useState } from "react";
 import type { HierarchyRow } from "../utils/types";
 import {

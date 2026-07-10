@@ -2342,6 +2342,10 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                     'culture': culture,
                 },
             )
+            # Once one plan for this culture fails to compute a requirement, every
+            # later plan for the same culture is skipped too (not just the failing
+            # one) — the row shows a single warning rather than a partial total that
+            # would understate demand without saying so. See docs/seed-demand-calculation.md.
             if entry['warning']:
                 continue
             requirement_value, requirement_unit = self._compute_plan_requirement(plan)
