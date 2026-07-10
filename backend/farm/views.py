@@ -91,6 +91,9 @@ from .seed_units import (
     SEED_RATE_UNIT_SEEDS_PER_LFM,
     SEED_RATE_UNIT_SEEDS_PER_M2,
     SEED_RATE_UNIT_SEEDS_PER_PLANT,
+    are_units_convertible,
+    grams_to_seeds,
+    seeds_to_grams,
 )
 from .services.public_cultures import (
     DuplicatePublicCultureError,
@@ -2244,14 +2247,19 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
 
     @staticmethod
     def _convert_requirement_to_unit(*, requirement_value: Decimal, requirement_unit: str, target_unit: str, tkg: Decimal | None) -> tuple[Decimal | None, str | None]:
+        # Delegates to seed_units.py's shared TKG conversion helpers rather than
+        # reimplementing the formula here, so there is a single place to change
+        # it. See docs/seed-demand-calculation.md.
         if requirement_unit == target_unit:
             return requirement_value, None
         if not tkg or tkg <= 0:
             return None, 'Missing thousand-kernel weight for unit conversion.'
+        if not are_units_convertible(requirement_unit, target_unit):
+            return None, 'Cannot convert between required amount and package unit.'
         if requirement_unit == SEED_PACKAGE_UNIT_SEEDS and target_unit == SEED_PACKAGE_UNIT_GRAMS:
-            return (requirement_value * tkg) / Decimal('1000'), None
+            return seeds_to_grams(requirement_value, tkg), None
         if requirement_unit == SEED_PACKAGE_UNIT_GRAMS and target_unit == SEED_PACKAGE_UNIT_SEEDS:
-            return (requirement_value / tkg) * Decimal('1000'), None
+            return grams_to_seeds(requirement_value, tkg), None
         return None, 'Cannot convert between required amount and package unit.'
 
     @classmethod

@@ -145,16 +145,13 @@ package suggestion next to a "missing TKG" warning in the same row.
   so there's no point-in-time "what would this have cost last season"
   calculation.
 
-## A known internal inconsistency (documented, not hidden)
+## Unit conversion implementation
 
-`backend/farm/seed_units.py` defines reusable conversion helpers
-(`seeds_to_grams`, `grams_to_seeds`, `are_units_convertible`) that implement
-the same TKG formula described above — but the actual runtime conversion
-path in `SeedDemandListView` is a hand-rolled duplicate of that formula
-inline in the view, not a call to these functions. The formulas agree today,
-but if you need to change the conversion formula, **both places must be
-updated together**, or better: refactor the view to call the shared helper
-instead of leaving the duplication in place.
+`backend/farm/seed_units.py` defines the reusable TKG conversion helpers
+(`seeds_to_grams`, `grams_to_seeds`, `are_units_convertible`), and
+`SeedDemandListView._convert_requirement_to_unit` calls them directly rather
+than reimplementing the formula — there is one place to change the
+conversion rule if it ever needs to change.
 
 ## Unclear / needs check
 
