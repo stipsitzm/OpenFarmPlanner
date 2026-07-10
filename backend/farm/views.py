@@ -2293,6 +2293,25 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
             return Decimal(str(selected_supplier.thousand_kernel_weight_g))
         return culture_tkg
 
+    @staticmethod
+    def _apply_germination_rate(
+        amounts_by_unit: dict[str, Decimal],
+        germination_rate: float | None,
+    ) -> dict[str, Decimal]:
+        """Inflate raw seed-amount requirements to account for expected
+        germination loss: a germination_rate of e.g. 80 means only 80% of
+        sown seed is expected to produce a viable plant, so the raw
+        requirement is scaled up by 100/germination_rate to still end up with
+        enough plants. An unknown, zero, or out-of-range rate (the model only
+        validates 0-100) leaves amounts unadjusted rather than raising, since
+        germination_rate is optional per-supplier data. See
+        docs/seed-demand-calculation.md.
+        """
+        if germination_rate is None or germination_rate <= 0 or germination_rate > 100:
+            return amounts_by_unit
+        factor = Decimal('100') / Decimal(str(germination_rate))
+        return {unit: amount * factor for unit, amount in amounts_by_unit.items()}
+
     def _compute_plan_requirement(self, plan: PlantingPlan) -> tuple[Decimal | None, str | None]:
         value, unit = self._select_seed_rate(plan.culture, plan.cultivation_type)
         if value is None or not unit or value <= 0:
@@ -2394,8 +2413,10 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
                 selected_supplier_id = selected_supplier.supplier_id
 
             selected_tkg = self._select_tkg(entry['tkg'], selected_supplier)
+            germination_rate = selected_supplier.germination_rate if selected_supplier else None
+            germination_adjusted_amounts = self._apply_germination_rate(required_amounts_by_unit, germination_rate)
             display_required_amount, required_amount_warning = self._get_required_amount_in_unit(
-                amounts_by_unit=required_amounts_by_unit,
+                amounts_by_unit=germination_adjusted_amounts,
                 target_unit=SEED_PACKAGE_UNIT_GRAMS,
                 tkg=selected_tkg,
             )
@@ -2461,7 +2482,7 @@ class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
             )
             same_unit_packages = [pkg for pkg in packages if pkg['size_unit'] == target_unit]
             target_amount, conversion_warning = self._get_required_amount_in_unit(
-                amounts_by_unit=required_amounts_by_unit,
+                amounts_by_unit=germination_adjusted_amounts,
                 target_unit=target_unit,
                 tkg=selected_tkg,
             )

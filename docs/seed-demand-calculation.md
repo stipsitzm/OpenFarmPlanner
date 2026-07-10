@@ -75,13 +75,26 @@ For each culture with at least one planting plan:
    not a bug, if a value looks like it "changed for no reason" after a
    supplier switch.
 
-6. **Display amount** is always normalized to grams via the TKG conversion
-   above. If the native rate was in seeds and no TKG is available anywhere,
-   the amount can't be computed: `required_amount_value = None`,
+6. **Germination-rate adjustment**: if the selected supplier has a
+   `germination_rate` (0-100%), the margin-adjusted requirement (in whichever
+   unit(s) it's currently in) is scaled up by `100 / germination_rate` —
+   e.g. an 80% germination rate means 100 required plants need
+   `100 / 0.8 = 125` sown seed-equivalents, not 100. This runs *after*
+   summing all of a culture's plans and *after* the supplier is selected
+   (germination rate is per-supplier data, like TKG), so switching the
+   selected supplier can change both the TKG *and* the germination
+   adjustment at once. A missing, zero, or out-of-range rate leaves the
+   amount unadjusted (treated the same as "no germination data yet"), it
+   does not block the calculation or add a warning.
+
+7. **Display amount** is always normalized to grams via the TKG conversion
+   above, using the germination-adjusted amount from step 6. If the native
+   rate was in seeds and no TKG is available anywhere, the amount can't be
+   computed: `required_amount_value = None`,
    `required_amount_warning = 'missing_tkg'` — the UI shows a specific
    "missing TKG" message instead of `0` or a dash.
 
-7. **Package suggestion** (`compute_seed_package_suggestion`): only
+8. **Package suggestion** (`compute_seed_package_suggestion`): only
    attempted if the selected supplier has `packaging_sizes`. Converts the
    required amount into whichever unit the packages use (grams preferred if
    any package is in grams), then searches combinations of pack counts for
@@ -125,6 +138,14 @@ package suggestion can *still* be produced if the supplier's packages are
 sized directly in seeds (no conversion needed) — so it's normal to see a
 package suggestion next to a "missing TKG" warning in the same row.
 
+**D — germination-rate adjustment.**
+Seed rate `10 g/m²`, no margin, 10 m² → `100 g` raw requirement. Selected
+supplier's `germination_rate = 80`. Adjusted requirement:
+`100 g / (80 / 100) = 125 g` → `required_amount_value = 125.0`. A supplier
+with 25 g packages now needs `ceil(125 / 25) = 5` packages instead of the 4
+that the unadjusted 100 g would have needed — the extra pack exists purely
+to cover expected germination loss.
+
 ## Edge cases
 
 - **No supplier data at all** → warning `"Keine Lieferantendaten
@@ -134,10 +155,10 @@ package suggestion next to a "missing TKG" warning in the same row.
 - **Exactly one supplier** → auto-used for the calculation but never
   written to the database (there's no interaction available to trigger a
   write in that state anyway).
-- **`CultureSupplierData.germination_rate` is stored but currently
-  unused** in the quantity calculation — worth knowing if you're asked to
-  "why doesn't a low germination rate increase the suggested amount," since
-  the field exists but isn't wired into this formula.
+- **`CultureSupplierData.germination_rate` inflates the required amount**
+  (see step 6 above and example D) using the *selected supplier's* rate —
+  switching suppliers can change the displayed amount and package
+  suggestion via germination rate as well as via TKG.
 - **Historical package-size changes are not considered.** The calculation
   always reads the *current* `CultureSupplierData.packaging_sizes` and
   current culture/supplier fields — `CultureRevision` (deprecated, see
@@ -155,5 +176,7 @@ conversion rule if it ever needs to change.
 
 ## Unclear / needs check
 
-- Whether `germination_rate` is intended to factor into required-amount
-  math in a future iteration, or is deliberately display-only for now.
+- Whether the seed-demand UI should surface *which* rates (TKG,
+  germination) were applied to a given row, since both are now silently
+  supplier-dependent and can make the displayed number change for reasons
+  that aren't visible without opening the culture/supplier data.
