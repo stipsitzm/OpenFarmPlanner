@@ -468,8 +468,11 @@ function PlantingPlans() {
   const { shouldShowProjectRequiredState, missingProjectReason } = useProjectRequirement();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const { autofitEnabled, columnVisibilityModel, setManualColumnVisibility, setAutofitEnabled } = useColumnVisibility({
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("lg"));
+  const { columnVisibilityModel, setColumnVisibilityModel } = useColumnVisibility({
     tableKey: "plantingPlans",
+    defaultHiddenFieldsOnSmallScreen: ["harvest_date", "harvest_end_date"],
+    isSmallScreen,
   });
   const [searchParams] = useSearchParams();
   const location = useLocation();
@@ -2221,11 +2224,7 @@ function PlantingPlans() {
           defaultSortModel={[{ field: "planting_date", sort: "asc" }]}
           persistSortInUrl={true}
           columnVisibilityModel={columnVisibilityModel}
-          onColumnVisibilityModelChange={setManualColumnVisibility}
-          columnVisibilityAutofit={autofitEnabled}
-          onColumnVisibilityAutofitChange={setAutofitEnabled}
-          autoHideColumnPriority={["harvest_date", "harvest_end_date"]}
-          showColumnVisibilityButton={!isMobile}
+          onColumnVisibilityModelChange={setColumnVisibilityModel}
             notes={{
               fields: [
                 {

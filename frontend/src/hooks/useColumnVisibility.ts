@@ -1,14 +1,9 @@
-import { useCallback, useState } from 'react';
-import type { GridColDef, GridColumnVisibilityModel } from '@mui/x-data-grid';
+import { useCallback, useMemo, useState } from 'react';
+import type { GridColumnVisibilityModel } from '@mui/x-data-grid';
 
 const COLUMN_VISIBILITY_PREFIX = 'tableColumns.';
 
-interface StoredState {
-  autofit: boolean;
-  model: GridColumnVisibilityModel;
-}
-
-function loadFromStorage(key: string): StoredState | null {
+function loadFromStorage(key: string): GridColumnVisibilityModel | null {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
@@ -17,121 +12,63 @@ function loadFromStorage(key: string): StoredState | null {
 
     const obj = parsed as Record<string, unknown>;
 
-    // Current format: { autofit: boolean, model: {...} }
-    if ('autofit' in obj && 'model' in obj && obj.model !== null && typeof obj.model === 'object') {
-      return {
-        autofit: Boolean(obj.autofit),
-        model: obj.model as GridColumnVisibilityModel,
-      };
-    }
-
-    // Legacy format { model, customized }: treat as manual (autofit=false)
+    // Legacy format from the old Autofit-based implementation: { autofit, model }.
     if ('model' in obj && obj.model !== null && typeof obj.model === 'object') {
-      return { autofit: false, model: obj.model as GridColumnVisibilityModel };
+      return obj.model as GridColumnVisibilityModel;
     }
 
-    // Oldest legacy format: plain visibility model object
-    return { autofit: false, model: obj as GridColumnVisibilityModel };
+    // Plain visibility model object (current format).
+    return obj as GridColumnVisibilityModel;
   } catch { /* ignore malformed data */ }
   return null;
 }
 
-function saveToStorage(key: string, state: StoredState): void {
-  localStorage.setItem(key, JSON.stringify(state));
+function saveToStorage(key: string, model: GridColumnVisibilityModel): void {
+  localStorage.setItem(key, JSON.stringify(model));
 }
 
 export interface UseColumnVisibilityOptions {
   tableKey: string;
+  /**
+   * Fields hidden by default while the screen is small (`isSmallScreen`) and
+   * the user hasn't made an explicit choice yet. Once the user changes
+   * visibility, their saved choice always wins and is no longer affected by
+   * screen size.
+   */
+  defaultHiddenFieldsOnSmallScreen?: string[];
+  isSmallScreen?: boolean;
 }
 
-export function useColumnVisibility({ tableKey }: UseColumnVisibilityOptions): {
-  /** True when Autofit is active (default on first use). */
-  autofitEnabled: boolean;
-  /** The user's manually-saved visibility model (used when autofitEnabled=false). */
+export function useColumnVisibility({
+  tableKey,
+  defaultHiddenFieldsOnSmallScreen = [],
+  isSmallScreen = false,
+}: UseColumnVisibilityOptions): {
   columnVisibilityModel: GridColumnVisibilityModel;
-  /**
-   * Save a manual column visibility model and disable Autofit.
-   * Call this when the user explicitly toggles a column.
-   */
-  setManualColumnVisibility: (model: GridColumnVisibilityModel) => void;
-  /**
-   * Enable or disable Autofit.
-   * When enabling: resumes auto-hide/show based on container width.
-   * When disabling: call setManualColumnVisibility instead so the current
-   * effective model is captured at the same time.
-   */
-  setAutofitEnabled: (enabled: boolean) => void;
+  /** Call this whenever the user changes visibility (native panel, column menu, ...). */
+  setColumnVisibilityModel: (model: GridColumnVisibilityModel) => void;
 } {
   const storageKey = `${COLUMN_VISIBILITY_PREFIX}${tableKey}`;
 
-  const [savedState, setSavedState] = useState<StoredState>(
-    () => loadFromStorage(storageKey) ?? { autofit: true, model: {} },
+  const [savedModel, setSavedModel] = useState<GridColumnVisibilityModel | null>(
+    () => loadFromStorage(storageKey),
   );
 
-  const setManualColumnVisibility = useCallback(
+  const setColumnVisibilityModel = useCallback(
     (model: GridColumnVisibilityModel) => {
-      const next: StoredState = { autofit: false, model };
-      setSavedState(next);
-      saveToStorage(storageKey, next);
+      setSavedModel(model);
+      saveToStorage(storageKey, model);
     },
     [storageKey],
   );
 
-  const setAutofitEnabled = useCallback(
-    (enabled: boolean) => {
-      setSavedState((prev) => {
-        const next: StoredState = { ...prev, autofit: enabled };
-        saveToStorage(storageKey, next);
-        return next;
-      });
-    },
-    [storageKey],
-  );
+  const defaultModel = useMemo<GridColumnVisibilityModel>(() => {
+    if (!isSmallScreen || defaultHiddenFieldsOnSmallScreen.length === 0) return {};
+    return Object.fromEntries(defaultHiddenFieldsOnSmallScreen.map((field) => [field, false]));
+  }, [isSmallScreen, defaultHiddenFieldsOnSmallScreen]);
 
   return {
-    autofitEnabled: savedState.autofit,
-    columnVisibilityModel: savedState.model,
-    setManualColumnVisibility,
-    setAutofitEnabled,
+    columnVisibilityModel: savedModel ?? defaultModel,
+    setColumnVisibilityModel,
   };
-}
-
-/**
- * Pure utility: hides columns in `autoHidePriority` order until the total
- * minimum column width fits within `availableWidth`.
- *
- * - Returns `{}` (all visible) when all columns fit.
- * - Returns `fallbackModel` when `availableWidth <= 0` (not yet measured).
- *
- * Suitable for use in `useMemo`.
- *
- * @param columns         All rendered column definitions.
- * @param autoHidePriority Fields to hide, from first-to-hide to last-to-hide.
- * @param availableWidth  Container width in pixels (from ResizeObserver).
- * @param fallbackModel   Model to use before the first measurement fires.
- */
-export function computeAutoFitColumnVisibility(
-  columns: GridColDef[],
-  autoHidePriority: string[],
-  availableWidth: number,
-  fallbackModel: GridColumnVisibilityModel = {},
-): GridColumnVisibilityModel {
-  if (availableWidth <= 0) return fallbackModel;
-
-  const getColMinWidth = (col: GridColDef): number =>
-    col.minWidth ?? (typeof col.width === 'number' ? col.width : 0) ?? 50;
-
-  let remaining = columns.reduce((sum, col) => sum + getColMinWidth(col), 0);
-
-  if (remaining <= availableWidth) return {};
-
-  const model: GridColumnVisibilityModel = {};
-  for (const field of autoHidePriority) {
-    if (remaining <= availableWidth) break;
-    model[field] = false;
-    const col = columns.find(c => c.field === field);
-    if (col) remaining -= getColMinWidth(col);
-  }
-
-  return model;
 }

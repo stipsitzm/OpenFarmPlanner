@@ -193,6 +193,15 @@ if db_engine == 'sqlite':
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
             'ATOMIC_REQUESTS': True,
+            # SQLite only allows one writer at a time, and ATOMIC_REQUESTS holds a
+            # write lock for a request's full duration. Django's dev server handles
+            # requests in separate threads, so overlapping requests (e.g. a page
+            # firing several API calls at once) can easily outlast sqlite3's 5s
+            # default busy timeout under CI/e2e load, surfacing as spurious
+            # "database is locked" errors instead of just waiting briefly.
+            'OPTIONS': {
+                'timeout': 20,
+            },
         }
     }
 else:

@@ -25,7 +25,7 @@ import {
 } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, dataGridAddRowButtonSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
-import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRenderCellParams, GridRowParams, GridPaginationModel, GridColumnVisibilityModel } from '@mui/x-data-grid';
+import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRenderCellParams, GridRowParams, GridPaginationModel } from '@mui/x-data-grid';
 import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
@@ -49,8 +49,6 @@ import { NotesPreviewPopover } from './NotesPreviewPopover';
 import { extractApiErrorMessage } from '../../api/errors';
 import { germanDataGridLocaleText } from './localeText';
 import { TableCopyMenuItems } from './TableCopyMenuItems';
-import { ColumnManagementToolbar } from './ColumnManagementToolbar';
-import { computeAutoFitColumnVisibility } from '../../hooks/useColumnVisibility';
 import { formatClipboardValue, type TableClipboardRow } from './tableClipboard';
 import { handleContextMenuKeyboardNavigation } from './contextMenuFocus';
 import { ContextMenuHint } from './ContextMenuHint';
@@ -156,10 +154,6 @@ export function EditableDataGrid<T extends EditableRow>({
   initialPageSize = 25,
   columnVisibilityModel,
   onColumnVisibilityModelChange,
-  showColumnVisibilityButton = false,
-  autoHideColumnPriority,
-  columnVisibilityAutofit = false,
-  onColumnVisibilityAutofitChange,
 }: EditableDataGridProps<T>) {
   const gridApiRef = useGridApiRef();
   const resolvedSurfaceSizing = surfaceSizing ?? 'contentFit';
@@ -1797,73 +1791,6 @@ export function EditableDataGrid<T extends EditableRow>({
     onSelectedRowChange(selectedRow ?? null);
   }, [onSelectedRowChange, selectedRowIds, rows]);
 
-  // Autofit: measure the outer container and hide columns in priority order.
-  const outerContainerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
-
-  useEffect(() => {
-    const el = outerContainerRef.current;
-    if (!el || !autoHideColumnPriority?.length || typeof ResizeObserver === 'undefined') return;
-
-    const observer = new ResizeObserver(([entry]) => {
-      // Round to integer pixels to avoid float noise triggering extra renders.
-      const w = Math.round(entry.contentRect.width);
-      setContainerWidth((prev) => (prev === w ? prev : w));
-    });
-    observer.observe(el);
-    setContainerWidth(Math.round(el.clientWidth));
-
-    return () => observer.disconnect();
-  // autoHideColumnPriority identity is stable (array literal from JSX); only
-  // re-attach observer when the array reference changes (unlikely in practice).
-  }, [autoHideColumnPriority]);
-
-  // Conservative fallback shown before the first ResizeObserver measurement:
-  // hide all optional columns so we never flash wide → narrow.
-  const autofitFallbackModel = useMemo<GridColumnVisibilityModel>(() => {
-    if (!autoHideColumnPriority?.length) return {};
-    return Object.fromEntries(autoHideColumnPriority.map((f) => [f, false]));
-  }, [autoHideColumnPriority]);
-
-  // Stable-reference effective model: only creates a new object when the set
-  // of hidden columns actually changes, preventing unnecessary child renders.
-  const prevEffectiveRef = useRef<{ key: string; model: GridColumnVisibilityModel }>({
-    key: '',
-    model: {},
-  });
-
-  const effectiveColumnVisibilityModel = useMemo<GridColumnVisibilityModel>(() => {
-    let computed: GridColumnVisibilityModel;
-
-    if (!autoHideColumnPriority?.length || !columnVisibilityAutofit) {
-      computed = columnVisibilityModel ?? {};
-    } else {
-      computed = computeAutoFitColumnVisibility(
-        columnsWithActions,
-        autoHideColumnPriority,
-        containerWidth,
-        autofitFallbackModel,
-      );
-    }
-
-    // Stabilise reference: reuse previous object when keys/values are unchanged.
-    const key = JSON.stringify(computed);
-    if (key !== prevEffectiveRef.current.key) {
-      prevEffectiveRef.current = { key, model: computed };
-    }
-    return prevEffectiveRef.current.model;
-  }, [autoHideColumnPriority, columnVisibilityAutofit, containerWidth, columnsWithActions, columnVisibilityModel, autofitFallbackModel]);
-
-  // When user disables Autofit from the column menu, capture the current
-  // effective model so visible columns don't jump.
-  const handleAutofitChange = useCallback((enabled: boolean) => {
-    if (!enabled) {
-      onColumnVisibilityModelChange?.(effectiveColumnVisibilityModel);
-    } else {
-      onColumnVisibilityAutofitChange?.(true);
-    }
-  }, [effectiveColumnVisibilityModel, onColumnVisibilityModelChange, onColumnVisibilityAutofitChange]);
-
   return (
     <>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -1876,7 +1803,6 @@ export function EditableDataGrid<T extends EditableRow>({
       ) : null}
       
       <Box
-        ref={outerContainerRef}
         sx={{
           position: 'relative',
           width: '100%',
@@ -1935,7 +1861,7 @@ export function EditableDataGrid<T extends EditableRow>({
             <DataGrid
           rows={rowsForGrid}
           columns={columnsWithActions}
-          columnVisibilityModel={effectiveColumnVisibilityModel}
+          columnVisibilityModel={columnVisibilityModel}
           onColumnVisibilityModelChange={onColumnVisibilityModelChange}
           rowModesModel={rowModesModel}
           onRowModesModelChange={setRowModesModel}
@@ -1965,14 +1891,6 @@ export function EditableDataGrid<T extends EditableRow>({
           onRowSelectionModelChange={(nextModel) => setSelectedRowIds(Array.from(nextModel.ids))}
           slots={{
             footer: CustomFooter,
-            ...(showColumnVisibilityButton && onColumnVisibilityModelChange ? { toolbar: ColumnManagementToolbar } : {}),
-          }}
-          showToolbar={Boolean(showColumnVisibilityButton && onColumnVisibilityModelChange)}
-          slotProps={{
-            toolbar: {
-              autofitEnabled: columnVisibilityAutofit,
-              onAutofitChange: onColumnVisibilityAutofitChange ? handleAutofitChange : undefined,
-            },
           }}
           sx={{
             ...dataGridSx,

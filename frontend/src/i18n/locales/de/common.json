@@ -43,11 +43,6 @@
   "columns": {
     "project": "Projekt"
   },
-  "columnVisibility": {
-    "button": "Spalten ein-/ausblenden",
-    "buttonTooltip": "Sichtbare Spalten auswählen",
-    "autofitLabel": "Automatisch an Bildschirmbreite anpassen"
-  },
   "hierarchyLevelToggle": {
     "expandTooltip": "Eine Hierarchieebene mehr anzeigen",
     "collapseTooltip": "Eine Hierarchieebene ausblenden"

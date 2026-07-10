@@ -105,32 +105,14 @@ export interface EditableDataGridProps<T extends EditableRow> {
   paginationPageSizeOptions?: number[];
   initialPageSize?: number;
   /**
-   * User's manually-saved visibility model. Pass `columnVisibilityModel` from
-   * `useColumnVisibility`. Only used when `columnVisibilityAutofit` is false.
+   * Column visibility model. Pass `columnVisibilityModel` from
+   * `useColumnVisibility`.
    */
   columnVisibilityModel?: GridColumnVisibilityModel;
   /**
-   * Called when the user explicitly changes columns via the built-in menu.
-   * Pass `setManualColumnVisibility` from `useColumnVisibility`.
-   * This automatically disables Autofit in the hook.
+   * Called when the user changes column visibility via a column header's
+   * own native "Manage columns" menu. Pass `setColumnVisibilityModel` from
+   * `useColumnVisibility`.
    */
   onColumnVisibilityModelChange?: (model: GridColumnVisibilityModel) => void;
-  /** When true, renders the column-visibility toggle button above the grid. */
-  showColumnVisibilityButton?: boolean;
-  /**
-   * Column fields to auto-hide in priority order (index 0 = first to hide)
-   * when the table width exceeds the container. Requires `columnVisibilityAutofit`.
-   */
-  autoHideColumnPriority?: string[];
-  /**
-   * Pass `autofitEnabled` from `useColumnVisibility`.
-   * When true the grid auto-hides/shows optional columns to fit the container.
-   * When false the `columnVisibilityModel` is used as-is.
-   */
-  columnVisibilityAutofit?: boolean;
-  /**
-   * Called when the user toggles the Autofit checkbox.
-   * Pass `setAutofitEnabled` from `useColumnVisibility`.
-   */
-  onColumnVisibilityAutofitChange?: (enabled: boolean) => void;
 }
