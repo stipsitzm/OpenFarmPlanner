@@ -622,11 +622,12 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     fireEvent.contextMenu(locationRow);
 
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-      'Parzelle hinzufügen',
+      'Parzelle hinzufügenEinfg',
       'Löschen',
       'common:actions.copyRow',
       'common:actions.copyTable',
     ]);
+    expect(screen.getByRole('menuitem', { name: /^Parzelle hinzufügen/ })).toBeInTheDocument();
     expect(screen.getAllByRole('separator')).toHaveLength(2);
 
     fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
@@ -673,6 +674,21 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
 
     await waitFor(() => expect(screen.getByTestId('row--1700000000000')).toBeInTheDocument());
     await waitFor(() => expect(screen.getByTestId('mode--1700000000000')).toHaveTextContent('edit'));
+  });
+
+  it('adds a field via the Insert key when a location row is focused, mirroring "Parzelle hinzufügen"', async () => {
+    useMultipleLocations();
+    renderHierarchy();
+
+    const locationRow = await screen.findByTestId('row-location-1');
+    fireEvent.click(within(locationRow).getByRole('button', { name: 'Edit location-1' }));
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Insert', bubbles: true }));
+    });
+
+    await waitFor(() => expect(screen.getByTestId('row-field--1700000000000')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('mode-field--1700000000000')).toHaveTextContent('edit'));
   });
 
   it('does not add a bed via Insert when no row is focused', async () => {

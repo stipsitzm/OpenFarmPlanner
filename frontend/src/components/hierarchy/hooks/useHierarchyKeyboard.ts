@@ -22,7 +22,7 @@ interface UseHierarchyKeyboardParams {
     mouseY: number,
     origin?: HTMLElement | null,
   ) => void;
-  onAddBedShortcut: () => void;
+  onInsertShortcut: () => void;
 }
 
 export function useHierarchyKeyboard({
@@ -38,7 +38,7 @@ export function useHierarchyKeyboard({
   toggleExpand,
   discardActiveRowEdit,
   openContextMenuForRow,
-  onAddBedShortcut,
+  onInsertShortcut,
 }: UseHierarchyKeyboardParams): void {
   // Window-level keyboard handlers: Alt+T focus, ArrowDown/Up navigation,
   // ArrowLeft/Right expand/collapse. A separate listener handles context-menu
@@ -51,16 +51,17 @@ export function useHierarchyKeyboard({
       }
     };
 
-    // Insert mirrors the "Beet hinzufügen" context menu action. It is scoped to
+    // Insert mirrors the row's primary, highlighted "create" context menu
+    // action (e.g. "Parzelle hinzufügen", "Beet hinzufügen"). It is scoped to
     // the table being active (treeActiveRef) and never fires while editing
     // text, so it can't collide with browser/OS shortcuts or interrupt typing.
-    const handleInsertAddBed = (event: KeyboardEvent) => {
+    const handleInsertShortcut = (event: KeyboardEvent) => {
       if (event.key !== "Insert") return;
       if (!treeActiveRef.current) return;
       if (isTypingInEditableElement(document.activeElement)) return;
 
       event.preventDefault();
-      onAddBedShortcut();
+      onInsertShortcut();
     };
 
     const handleFocusTable = (event: KeyboardEvent) => {
@@ -114,15 +115,15 @@ export function useHierarchyKeyboard({
     document.addEventListener("mousedown", handleDocumentPointerDown);
     window.addEventListener("keydown", handleFocusTable);
     window.addEventListener("keydown", handleTreeNavigation);
-    window.addEventListener("keydown", handleInsertAddBed);
+    window.addEventListener("keydown", handleInsertShortcut);
 
     return () => {
       document.removeEventListener("mousedown", handleDocumentPointerDown);
       window.removeEventListener("keydown", handleFocusTable);
       window.removeEventListener("keydown", handleTreeNavigation);
-      window.removeEventListener("keydown", handleInsertAddBed);
+      window.removeEventListener("keydown", handleInsertShortcut);
     };
-  }, [activateFirstRow, contextMenuState, discardActiveRowEdit, expandedRowsRef, onAddBedShortcut, rowsRef, selectRow, selectedRowIdRef, setTreeActive, tableWrapperRef, toggleExpand, treeActiveRef]);
+  }, [activateFirstRow, contextMenuState, discardActiveRowEdit, expandedRowsRef, onInsertShortcut, rowsRef, selectRow, selectedRowIdRef, setTreeActive, tableWrapperRef, toggleExpand, treeActiveRef]);
 
   // Context-menu keyboard trigger (ContextMenu key / Shift+F10).
   useEffect(() => {
