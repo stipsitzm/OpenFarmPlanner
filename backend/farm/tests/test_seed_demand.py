@@ -46,7 +46,13 @@ def _create_plan(culture: Culture, bed: Bed, area: float, quantity: int | None =
     )
 
 
-def _create_supplier_data(culture: Culture, package_size: float, package_unit: str, thousand_kernel_weight_g: float | None = None) -> None:
+def _create_supplier_data(
+    culture: Culture,
+    package_size: float,
+    package_unit: str,
+    thousand_kernel_weight_g: float | None = None,
+    germination_rate: float | None = None,
+) -> None:
     supplier = Supplier.objects.create(
         name=f'Supplier {culture.name}',
         homepage_url=f'https://{culture.name.lower()}.example',
@@ -58,6 +64,7 @@ def _create_supplier_data(culture: Culture, package_size: float, package_unit: s
         project=culture.project,
         packaging_sizes=[{'size_value': package_size, 'size_unit': package_unit}],
         thousand_kernel_weight_g=thousand_kernel_weight_g,
+        germination_rate=germination_rate,
     )
 
 
@@ -83,6 +90,49 @@ def test_seed_demand_applies_safety_margin(api_client: APIClient, bed: Bed):
     assert row['required_amount_value'] == pytest.approx(110.0)
     assert row['required_amount_unit'] == 'g'
     assert row['package_suggestion']['pack_count'] == 5
+
+
+@pytest.mark.django_db
+def test_seed_demand_applies_germination_rate(api_client: APIClient, bed: Bed):
+    culture = Culture.objects.create(
+        name='Radish',
+        growth_duration_days=30,
+        harvest_duration_days=14,
+        cultivation_types=['direct_sowing'],
+        seed_rate_direct_value=10,
+        seed_rate_direct_unit='g_per_m2',
+        project=bed.project,
+    )
+    _create_plan(culture, bed, 10)
+    _create_supplier_data(culture, 25, 'g', germination_rate=80)
+
+    response = api_client.get('/openfarmplanner/api/seed-demand/')
+    row = response.json()['results'][0]
+    assert response.status_code == 200
+    # 10 m² * 10 g/m² = 100g raw, inflated by 100/80 germination rate = 125g.
+    assert row['required_amount_value'] == pytest.approx(125.0)
+    assert row['required_amount_unit'] == 'g'
+    assert row['package_suggestion']['pack_count'] == 5
+
+
+@pytest.mark.django_db
+def test_seed_demand_ignores_missing_germination_rate(api_client: APIClient, bed: Bed):
+    culture = Culture.objects.create(
+        name='Lettuce',
+        growth_duration_days=45,
+        harvest_duration_days=14,
+        cultivation_types=['direct_sowing'],
+        seed_rate_direct_value=10,
+        seed_rate_direct_unit='g_per_m2',
+        project=bed.project,
+    )
+    _create_plan(culture, bed, 10)
+    _create_supplier_data(culture, 25, 'g')
+
+    response = api_client.get('/openfarmplanner/api/seed-demand/')
+    row = response.json()['results'][0]
+    assert response.status_code == 200
+    assert row['required_amount_value'] == pytest.approx(100.0)
 
 
 @pytest.mark.django_db
