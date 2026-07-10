@@ -1,0 +1,142 @@
+{
+  "title": "Planting plans",
+  "columns": {
+    "culture": "Culture",
+    "location": "Location",
+    "field": "Field",
+    "bed": "Bed",
+    "fieldBed": "Field{{separator}}Bed",
+    "plantingDate": "Planting date",
+    "harvestDate": "Harvest date",
+    "harvestStartDate": "Harvest start",
+    "harvestEndDate": "Harvest end",
+    "areaM2": "Area (m²)",
+    "plantsCount": "Plants (≈)",
+    "notes": "Notes",
+    "cultivationType": "Cultivation type"
+  },
+  "labels": {
+    "coupled": "coupled"
+  },
+  "actions": {
+    "useAvailableArea": "Use remaining area",
+    "useBedArea": "Use bed area",
+    "copyPlantingPlan": "Copy planting plan"
+  },
+  "feedback": {
+    "areaAutoFilled": "Available remaining area applied automatically: {{area}}"
+  },
+  "dateEditor": {
+    "openCalendar": "Open calendar"
+  },
+  "areaValidation": {
+    "maxAreaApplied": "Maximum available area applied: {{area}}",
+    "remainingLimitTitle": "The specified area exceeds this bed's available remaining area.",
+    "noRemainingTitle": "No free area is available for this bed in the selected period.",
+    "bedLimitTitle": "The specified area exceeds this bed's size.",
+    "availableArea": "Available remaining area: {{area}}",
+    "bedArea": "Bed area: {{area}}",
+    "occupiedArea": "Already occupied: {{area}}",
+    "requestedArea": "Requested: {{area}}",
+    "acceptedArea": "Applied: {{area}}",
+    "applyRemainingArea": "Use remaining area",
+    "applyBedArea": "Use bed area"
+  },
+  "placeholders": {
+    "selectCulture": "Select culture",
+    "selectCultivationType": "Select cultivation type",
+    "selectArea": "Select growing area",
+    "plantsCount": "Enter quantity",
+    "maxKeyword": "max"
+  },
+  "tooltips": {
+    "coupledFields": "Area used: coupled with plant count. Changes automatically update the other value.",
+    "areaAutoMax": "Empty or \"max\" automatically uses the maximum available remaining area.",
+    "areaInputTitle": "Area occupied by this planting plan",
+    "areaInputDescription": "The area of the bed occupied by this planting plan. Changes to the area or plant count automatically update the other value. Empty or \"max\" uses the maximum available remaining area.",
+    "plantsFromSpacing": "Plant count: coupled with area used. Changes automatically update the other value.",
+    "calculatedHarvestDate": "Calculated automatically from the planting date and the culture library data."
+  },
+  "errors": {
+    "load": "Failed to load planting plans",
+    "save": "Failed to save planting plan",
+    "delete": "Failed to delete planting plan"
+  },
+  "messages": {
+    "deleted": "Planting plan deleted",
+    "plantingPlanCopied": "Planting plan copied."
+  },
+  "validation": {
+    "plantingDateRequired": "Planting date is required",
+    "cultureRequired": "Culture is required",
+    "bedRequired": "Bed is required",
+    "cultivationTypeRequired": "Cultivation type is required",
+    "requiredFields": "The following required fields must be filled in: {{fields}}",
+    "areaExceedsRemaining": "The specified area exceeds this bed's available remaining area.",
+    "areaExceedsBedArea": "The specified area exceeds this bed's size.",
+    "bedArea": "Bed area",
+    "alreadyAllocated": "Occupied",
+    "requestedArea": "Requested",
+    "availableArea": "Available remaining area",
+    "noAvailableArea": "No free area is available for this bed in the selected period anymore."
+  },
+  "confirmDelete": "Do you really want to delete this planting plan?",
+  "addButton": "Add planting plan",
+  "cultivationTypes": {
+    "directSowing": "Direct sowing",
+    "preCultivation": "Transplanting"
+  },
+  "areaAssignment": {
+    "title": "Change growing area",
+    "editButton": "Edit growing area",
+    "hierarchyHint": "Location filters fields, field filters beds.",
+    "emptyStateTitle": "No growing areas available",
+    "emptyStateDescription": "Create fields and beds first before assigning an area to a planting plan.",
+    "emptyStateAction": "Go to Fields & Beds",
+    "apply": "Apply",
+    "cancel": "Cancel"
+  },
+  "mobile": {
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
+    "fabLabel": "Add planting plan",
+    "fabAria": "Add planting plan",
+    "emptyTitle": "No planting plans yet",
+    "emptyDescription": "Create your first planting plan to manage culture, cultivation type, and time periods clearly on mobile.",
+    "emptyCta": "Add planting plan",
+    "createTitle": "Add planting plan",
+    "editTitle": "Edit planting plan",
+    "editAria": "Edit planting plan",
+    "actionsAria": "Actions for planting plan {{plan}}",
+    "notesPhotos": "Photos",
+    "notesPhotosAria": "Open notes and photos"
+  },
+  "emptyStates": {
+    "createBlockedTooltip": "Beds are added inside fields on the Fields & Beds page.",
+    "states": {
+      "fields": {
+        "title": "You can't add a planting plan yet.",
+        "description": "Open Fields & Beds and add a field to the appropriate location there."
+      },
+      "beds": {
+        "title": "You haven't created any beds yet.",
+        "description": "Beds are the foundation for planting plans. Open Fields & Beds and add a bed via a field."
+      },
+      "cultures": {
+        "title": "You haven't created any cultures yet.",
+        "description": "Cultures are required to create planting plans."
+      },
+      "plans": {
+        "title": "You haven't created a planting plan yet.",
+        "description": "Create your first planting plan now."
+      }
+    },
+    "actions": {
+      "createField": "Add field",
+      "createAreas": "Go to Fields & Beds",
+      "openCultureLibrary": "Open culture library",
+      "addCulture": "Add culture",
+      "createPlan": "Add planting plan"
+    }
+  }
+}

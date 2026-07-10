@@ -38,7 +38,7 @@ frontend/
     auth/              # Session/auth context, CSRF handling, ProtectedRoute
     focus/, commands/  # Keyboard focus regions and the command/shortcut system
     cultures/, crops/  # Culture domain UI vs. the (not yet public) Crop Library UI
-    i18n/              # Translation resources (German is complete; English is partial)
+    i18n/              # Translation resources (German + English complete, no switcher UI yet)
     gantt-chart/       # Vendored third-party Gantt component (MIT, see its own README)
   e2e/                 # Playwright end-to-end tests
 docs/                  # This documentation
@@ -112,9 +112,11 @@ docs/                  # This documentation
   axios client, `authApi.ts`'s own for the auth client) — a known
   duplication, not a bug, if you're looking for "the" error handler.
 - **i18n**: one JSON namespace per feature area under
-  `frontend/src/i18n/locales/{de,en}/`. German is complete (16 namespaces);
-  English is partial (8 namespaces) and falls back to German for anything
-  missing (`fallbackLng: 'de'`). Treat English as "started, not shipped."
+  `frontend/src/i18n/locales/{de,en}/`. Both German and English now have all
+  16 namespaces translated with matching key structure. There is no
+  language switcher UI yet, though — German (`lng: 'de'`,
+  `fallbackLng: 'de'`) is still the only language actually shown to users
+  today; the English resources exist ahead of that UI being built.
 - **Keyboard navigation & commands**: a focus-region model plus a
   shortcut/command system — see
   [keyboard-architecture.md](./keyboard-architecture.md).

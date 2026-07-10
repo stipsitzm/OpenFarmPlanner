@@ -1,0 +1,47 @@
+{
+  "title": "Suppliers",
+  "create": "Add supplier",
+  "edit": "Edit supplier",
+  "name": "Name",
+  "homepage": "Website",
+  "allowedDomains": "Allowed domains",
+  "active": "Active",
+  "actions": "Actions",
+  "save": "Save",
+  "cancel": "Cancel",
+  "addDomain": "Add domain",
+  "add": "Add",
+  "saveError": "Failed to save supplier.",
+  "loadError": "Failed to load suppliers.",
+  "yes": "Yes",
+  "no": "No",
+  "editAction": "Edit",
+  "deleteAction": "Delete",
+  "deleteError": "Failed to delete supplier.",
+  "restoreDeleteError": "Failed to restore supplier.",
+  "messages": {
+    "deleted": "Supplier deleted.",
+    "deletedWithUnlinkedCultures_one": "Supplier deleted. The supplier link was removed from {{count}} culture.",
+    "deletedWithUnlinkedCultures_other": "Supplier deleted. The supplier link was removed from {{count}} cultures."
+  },
+  "deleteUsageDialog": {
+    "title": "Supplier is still in use",
+    "summary_one": "This supplier is still used by {{count}} culture.",
+    "summary_other": "This supplier is still used by {{count}} cultures.",
+    "cultureUsage_one": "{{count}} culture uses this supplier directly.",
+    "cultureUsage_other": "{{count}} cultures use this supplier directly.",
+    "supplierDataUsage": "{{cultureCount}} cultures have seed or supplier data with {{rowCount}} entries.",
+    "seedDemandUsage_one": "{{count}} culture uses this supplier in seed demand planning.",
+    "seedDemandUsage_other": "{{count}} cultures use this supplier in seed demand planning.",
+    "unlinkExplanation": "If you continue, all cultures are kept. Only the supplier link is removed.",
+    "openAffectedCultures": "Go to affected cultures",
+    "unlinkAndDelete": "Remove supplier from all cultures and delete"
+  },
+  "invalidDomain": "Invalid domain: {{domain}}. Domains must be valid hostnames without a scheme or path (e.g. example.com).",
+  "domainValidationError": "Some domains are invalid. Please correct the input.",
+  "invalidUrl": "Please enter a valid URL (e.g. https://example.com).",
+  "emptyState": {
+    "title": "No suppliers yet",
+    "description": "Suppliers help you with seed demand planning and package comparison. You can also start without any suppliers."
+  }
+}

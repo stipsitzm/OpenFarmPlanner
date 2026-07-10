@@ -1,0 +1,22 @@
+{
+  "title": "Beds",
+  "columns": {
+    "name": "Name",
+    "field": "Field",
+    "area": "Area (m²)",
+    "notes": "Notes"
+  },
+  "errors": {
+    "load": "Failed to load beds",
+    "save": "Failed to save bed",
+    "delete": "Failed to delete bed",
+    "loadFields": "Failed to load fields"
+  },
+  "validation": {
+    "nameRequired": "Name is required",
+    "fieldRequired": "Field is required"
+  },
+  "confirmDelete": "Do you really want to delete this bed?",
+  "addButton": "Add bed",
+  "selectField": "Select field"
+}

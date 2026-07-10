@@ -1,0 +1,26 @@
+{
+  "title": "Overview",
+  "errors": {
+    "load": "Failed to load dashboard data"
+  },
+  "emptyState": {
+    "title": "Start your crop planning",
+    "description": "Open Fields & Beds and add a field there. Afterwards you can record cultures and planting plans.",
+    "shortDescription": "Add a field on the Fields & Beds page.",
+    "action": "Add field"
+  },
+  "tasks": {
+    "title": "Upcoming tasks",
+    "empty": "No upcoming tasks",
+    "emptyTitle": "No upcoming tasks",
+    "emptyDescription": "There are currently no upcoming tasks for this project."
+  },
+  "checklist": {
+    "title": "Project start",
+    "intro": "OpenFarmPlanner helps you structure the planning of areas, cultures, and growing cycles. Start with your first field.",
+    "field": "Add field",
+    "bed": "Add bed",
+    "culture": "Add culture",
+    "plan": "Add planting plan"
+  }
+}

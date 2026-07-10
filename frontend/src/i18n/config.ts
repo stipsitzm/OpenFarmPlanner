@@ -17,21 +17,30 @@ import navigationEN from './locales/en/navigation.json';
 import homeDE from './locales/de/home.json';
 import homeEN from './locales/en/home.json';
 import dashboardDE from './locales/de/dashboard.json';
+import dashboardEN from './locales/en/dashboard.json';
 import locationsDE from './locales/de/locations.json';
+import locationsEN from './locales/en/locations.json';
 import culturesDE from './locales/de/cultures.json';
 import culturesEN from './locales/en/cultures.json';
 import plantingPlansDE from './locales/de/plantingPlans.json';
+import plantingPlansEN from './locales/en/plantingPlans.json';
 import fieldsDE from './locales/de/fields.json';
 import fieldsEN from './locales/en/fields.json';
 import bedsDE from './locales/de/beds.json';
+import bedsEN from './locales/en/beds.json';
 import hierarchyDE from './locales/de/hierarchy.json';
+import hierarchyEN from './locales/en/hierarchy.json';
 import ganttChartDE from './locales/de/ganttChart.json';
+import ganttChartEN from './locales/en/ganttChart.json';
 import yieldOverviewDE from './locales/de/yieldOverview.json';
 import yieldOverviewEN from './locales/en/yieldOverview.json';
 import suppliersDE from './locales/de/suppliers.json';
+import suppliersEN from './locales/en/suppliers.json';
 import helpDE from './locales/de/help.json';
 import authDE from './locales/de/auth.json';
+import authEN from './locales/en/auth.json';
 import accountDE from './locales/de/account.json';
+import accountEN from './locales/en/account.json';
 import projectInvitationsDE from './locales/de/projectInvitations.json';
 import projectInvitationsEN from './locales/en/projectInvitations.json';
 import helpEN from './locales/en/help.json';
@@ -76,10 +85,19 @@ i18n
         common: commonEN,
         navigation: navigationEN,
         home: homeEN,
+        dashboard: dashboardEN,
+        locations: locationsEN,
         cultures: culturesEN,
+        plantingPlans: plantingPlansEN,
         fields: fieldsEN,
-        help: helpEN,
+        beds: bedsEN,
+        hierarchy: hierarchyEN,
+        ganttChart: ganttChartEN,
         yieldOverview: yieldOverviewEN,
+        suppliers: suppliersEN,
+        help: helpEN,
+        auth: authEN,
+        account: accountEN,
         projectInvitations: projectInvitationsEN,
       },
     },

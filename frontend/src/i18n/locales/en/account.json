@@ -1,0 +1,49 @@
+{
+  "title": "Account settings",
+  "email": "Email",
+  "displayName": "Display name",
+  "sections": {
+    "profile": "Profile",
+    "security": "Login & security",
+    "account": "Account"
+  },
+  "actions": {
+    "saveProfile": "Save profile",
+    "requestEmailChange": "Request email change",
+    "changePassword": "Change password",
+    "editDisplayName": "Change display name",
+    "save": "Save",
+    "sendConfirmationLink": "Send confirmation link",
+    "savePassword": "Save password"
+  },
+  "security": {
+    "changeEmailTitle": "Change email address",
+    "newEmail": "New email address",
+    "changePasswordTitle": "Change password",
+    "newPassword": "New password",
+    "repeatNewPassword": "Repeat new password"
+  },
+  "dangerZone": "Danger zone",
+  "deleteDescription": "If you delete your account, it is deactivated immediately and permanently anonymized or deleted after 14 days.",
+  "restoreDescription": "You can undo the deletion within this period.",
+  "deleteButton": "Delete account",
+  "dialogTitle": "Schedule account for deletion",
+  "dialogWarning": "Please confirm with your current password and the text \"DELETE\". Your account will be deactivated and permanently anonymized after 14 days.",
+  "currentPassword": "Current password",
+  "deletePhraseLabel": "Confirmation text",
+  "deletePhraseHelper": "Please enter exactly \"DELETE\" to confirm.",
+  "cancel": "Cancel",
+  "confirmDelete": "Schedule account for deletion",
+  "deletionScheduled": "Your account has been scheduled for deletion. It will be permanently deleted on {{date}}.",
+  "noDisplayName": "—",
+  "errors": {
+    "generic": "The action could not be performed.",
+    "delete": "Failed to schedule the deletion."
+  },
+  "unsavedChangesWarning": "There are unsaved changes. They will be lost when you leave the page.",
+  "emailConfirm": {
+    "title": "Confirm email change",
+    "loading": "Checking confirmation…",
+    "invalid": "The confirmation link is invalid or has expired."
+  }
+}
