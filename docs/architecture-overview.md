@@ -96,9 +96,9 @@ docs/                  # This documentation
   | `ProjectSettingsPage.tsx` | `/app/project-settings` | Rename/delete project, manage members & invitations |
   | `AccountSettingsPage.tsx` | `/app/account-settings` | Account details, email/password change, deletion |
 
-  `pages/InvitationPage.tsx` looks unrouted/superseded by
-  `InvitationAcceptPage.tsx` — **unclear/needs check** before assuming it's
-  dead code.
+  (`pages/InvitationPage.tsx`, an earlier, unrouted invitation-accept
+  implementation superseded by `InvitationAcceptPage.tsx`, was confirmed
+  dead — nothing in `App.tsx`'s router referenced it — and removed.)
 
 - **API layer** (`frontend/src/api/`): `httpClient.ts` is the one shared
   axios instance; a single request interceptor attaches `X-Project-Id`
