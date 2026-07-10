@@ -8,7 +8,7 @@
  * @returns The Cultures page component
  */
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link as RouterLink, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
@@ -23,7 +23,6 @@ import {
   Alert,
   Box,
   Button,
-  ButtonGroup,
   Chip,
   Divider,
   Dialog,
@@ -33,32 +32,19 @@ import {
   List,
   ListItem,
   ListItemText,
-  Menu,
-  MenuItem,
   Paper,
   Snackbar,
-  Tooltip,
   Typography,
   Link,
   Stack,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import ManageSearchIcon from '@mui/icons-material/ManageSearch';
-import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
 import { useCommandContextTag, useRegisterCommands, useRegisterCreateActions } from '../commands/useCommandContext';
 import {
   type SnackbarState,
 } from './culturesPageUtils';
-import {
-  formatEnrichmentWarning,
-  formatSuggestionValue,
-  getEnrichmentFieldLabel,
-} from './culturesEnrichmentUtils';
 import { createCulturesCommandSpecs } from './culturesCommandSpecs';
-import { canRunEnrichmentForCulture } from './culturesAiUtils';
 import { buildCultureSavePayload } from './culturesSaveUtils';
 import {
   formatHistoryChangeValue,
@@ -70,16 +56,13 @@ import {
   type HistoryScope,
 } from './culturesHistoryUtils';
 import { useSelectedCultureSync } from './useSelectedCultureSync';
-import { FEATURES } from '../config/features';
 import { useAuth } from '../auth/useAuth';
 import { usePublicCultureLibrary } from './usePublicCultureLibrary';
-import { useEnrichmentFeature } from './useEnrichmentFeature';
 import { useCultureDelete } from './useCultureDelete';
 import { useCultureImportExport } from './useCultureImportExport';
 import { CulturesImportDialog } from './CulturesImportDialog';
 import { CulturesImportStartDialog } from './CulturesImportStartDialog';
 import { CulturesExportDialog } from './CulturesExportDialog';
-import { EnrichmentLoadingDialog } from './EnrichmentLoadingDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
@@ -116,8 +99,6 @@ function Cultures() {
     searchInputRef.current?.focus();
     searchInputRef.current?.select();
   }, []);
-  const [aiMenuAnchor, setAiMenuAnchor] = useState<null | HTMLElement>(null);
-  const aiEnrichmentEnabled = FEATURES.AI_ENRICHMENT;
   const [hasFields, setHasFields] = useState(false);
   const [hasBeds, setHasBeds] = useState(false);
   const selectedCulture = cultures.find((culture) => culture.id === selectedCultureId);
@@ -262,38 +243,6 @@ function Cultures() {
     setPublishConfirmOpen(false);
     void handlePublishCurrentCulture();
   }, [handlePublishCurrentCulture]);
-
-  const handleAiMenuClose = () => {
-    setAiMenuAnchor(null);
-  };
-
-  const {
-    enrichAllConfirmOpen,
-    setEnrichAllConfirmOpen,
-    enrichableCultureIds,
-    enrichmentLoading,
-    enrichmentActiveStepIndex,
-    enrichmentElapsedSeconds,
-    enrichmentProgressPercent,
-    enrichmentLoadingSteps,
-    enrichmentDialogOpen,
-    setEnrichmentDialogOpen,
-    enrichmentResult,
-    selectedSuggestionFields,
-    dialogCostInfo,
-    enrichmentCostBanner,
-    selectedCultureNeedsCompletion,
-    handleEnrichCurrent,
-    handleEnrichAll,
-    toggleSuggestionField,
-    handleApplySuggestions,
-  } = useEnrichmentFeature({
-    selectedCulture,
-    cultures,
-    onRefreshCultures: fetchCultures,
-    onCloseAiMenu: handleAiMenuClose,
-    showSnackbar,
-  });
 
   // Fetch cultures on mount
   useEffect(() => {
@@ -503,12 +452,6 @@ function Cultures() {
     updateSelectedCultureId(cultures[nextIndex]?.id, 'internal');
   }, [cultures, selectedCultureId, updateSelectedCultureId]);
 
-  const enrichmentDisabledReason = t('ai.researchDisabledReason');
-
-  const handleAiMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAiMenuAnchor(event.currentTarget);
-  };
-
   const contextActions = useMemo<TopbarContextAction[]>(() => ([
     {
       id: 'cultures-open-library',
@@ -548,38 +491,29 @@ function Cultures() {
   useRegisterCreateActions('cultures-page', createActions);
 
   const commandSpecs = useMemo(() => createCulturesCommandSpecs({
-    canRunEnrichmentForCulture,
     cultures,
-    enableAiEnrichment: aiEnrichmentEnabled,
-    enrichmentLoading,
     focusSearch,
     goToRelativeCulture,
     handleCreatePlantingPlan,
     handleDelete,
     handleEdit,
-    handleEnrichCurrent,
     handleExportAllCultures,
     handleExportCurrentCulture,
     handleImportFileTrigger,
     selectedCulture,
     selectedCultureId,
-    setEnrichAllConfirmOpen,
   }), [
-    aiEnrichmentEnabled,
     cultures,
-    enrichmentLoading,
     focusSearch,
     goToRelativeCulture,
     handleCreatePlantingPlan,
     handleDelete,
     handleEdit,
-    handleEnrichCurrent,
     handleExportAllCultures,
     handleExportCurrentCulture,
     handleImportFileTrigger,
     selectedCulture,
     selectedCultureId,
-    setEnrichAllConfirmOpen,
   ]);
 
   useRegisterCommands('cultures-page', commandSpecs);
@@ -597,12 +531,6 @@ function Cultures() {
 
   return (
     <PageContainer variant="xwide">
-
-      {enrichmentCostBanner && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          {enrichmentCostBanner}
-        </Alert>
-      )}
 
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <CultureDetail
@@ -662,50 +590,6 @@ function Cultures() {
               titleSx={{ fontWeight: 500 }}
             />
           ) : null}
-
-          {aiEnrichmentEnabled && (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-              <Tooltip title={!canRunEnrichmentForCulture(selectedCulture) ? enrichmentDisabledReason : ''}><span><ButtonGroup variant="contained" aria-label={t('ai.menuLabel')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
-            <Tooltip title={!selectedCultureNeedsCompletion && selectedCulture ? t('ai.completeDisabledReason') : ''}>
-                <span>
-                  <Button
-                    startIcon={<AutoAwesomeIcon />}
-                    onClick={() => void handleEnrichCurrent('complete')}
-                    aria-label={t('buttons.aiComplete')}
-                    disabled={Boolean(selectedCulture) && !selectedCultureNeedsCompletion}
-                  >
-                    {t('buttons.aiComplete')}
-                  </Button>
-                </span>
-              </Tooltip>
-              <Button
-                size="small"
-                aria-label={t('ai.menuLabel')}
-                aria-controls={aiMenuAnchor ? 'culture-ai-menu' : undefined}
-                aria-haspopup="true"
-                onClick={handleAiMenuOpen}
-                sx={{ minWidth: 32, px: 0.5 }}
-              >
-                <ArrowDropDownIcon />
-              </Button>
-            </ButtonGroup></span></Tooltip>
-            <Menu
-              id="culture-ai-menu"
-              anchorEl={aiMenuAnchor}
-              open={Boolean(aiMenuAnchor)}
-              onClose={handleAiMenuClose}
-            >
-              <MenuItem aria-label={t('buttons.aiReresearch')} onClick={() => void handleEnrichCurrent('reresearch')} disabled={!selectedCulture || enrichmentLoading || !canRunEnrichmentForCulture(selectedCulture)}>
-                <ManageSearchIcon sx={{ mr: 1 }} fontSize="small" />
-                {t('buttons.aiReresearch')}
-              </MenuItem>
-              <MenuItem aria-label={t('buttons.aiCompleteAll')} onClick={() => setEnrichAllConfirmOpen(true)} disabled={cultures.length === 0 || enrichmentLoading || !cultures.some((culture) => canRunEnrichmentForCulture(culture))}>
-                <PlaylistAddCheckIcon sx={{ mr: 1 }} fontSize="small" />
-                {t('buttons.aiCompleteAll')}
-              </MenuItem>
-                </Menu>
-            </Box>
-          )}
 
         </Box>
       )}
@@ -828,87 +712,6 @@ function Cultures() {
         onExport={handleExport}
         t={t}
       />
-
-      {aiEnrichmentEnabled && (<Dialog open={enrichAllConfirmOpen} onClose={() => setEnrichAllConfirmOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>{t('ai.confirmAllTitle')}</DialogTitle>
-        <DialogContent>
-          <Typography>
-            {t('ai.confirmAllText', { count: enrichableCultureIds.length })}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEnrichAllConfirmOpen(false)}>{t('buttons.aiClose')}</Button>
-          <Button variant="contained" onClick={() => void handleEnrichAll()}>{t('buttons.aiCompleteAll')}</Button>
-        </DialogActions>
-      </Dialog>)}
-
-      {aiEnrichmentEnabled && (
-        <EnrichmentLoadingDialog
-          open={enrichmentLoading}
-          elapsedSeconds={enrichmentElapsedSeconds}
-          progressPercent={enrichmentProgressPercent}
-          activeStepIndex={enrichmentActiveStepIndex}
-          steps={enrichmentLoadingSteps}
-          t={t}
-        />
-      )}
-
-      {aiEnrichmentEnabled && (<Dialog open={enrichmentDialogOpen} onClose={() => setEnrichmentDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>{t('ai.suggestionsTitle')}</DialogTitle>
-        <DialogContent>
-          {dialogCostInfo && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              {dialogCostInfo}
-            </Alert>
-          )}
-          {(enrichmentResult?.validation?.warnings || []).length > 0 && (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              {(enrichmentResult?.validation?.warnings || []).map((warning) => (
-                <Typography key={`${warning.field}-${warning.code}`} variant="body2">
-                  • {formatEnrichmentWarning(warning, t)}
-                </Typography>
-              ))}
-            </Alert>
-          )}
-          {!enrichmentResult || Object.keys(enrichmentResult.suggested_fields || {}).length === 0 ? (
-            <Typography>{t('ai.noSuggestions')}</Typography>
-          ) : (
-            <List>
-              {Object.entries(enrichmentResult.suggested_fields).map(([field, suggestion]) => (
-                <ListItem key={field} sx={{ alignItems: 'flex-start', flexDirection: 'column' }}>
-                  <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', gap: 1 }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedSuggestionFields.includes(field)}
-                      onChange={() => toggleSuggestionField(field)}
-                    />
-                    <ListItemText
-                      primary={`${getEnrichmentFieldLabel(field, t)}: ${formatSuggestionValue(field, suggestion.value, t)}`}
-                      secondary={`${t('ai.confidence')}: ${(suggestion.confidence * 100).toFixed(0)}%`}
-                    />
-                  </Box>
-                  {(enrichmentResult.evidence[field] || []).length > 0 && (
-                    <Box sx={{ pl: 4 }}>
-                      <Typography variant="caption">{t('ai.evidence')}:</Typography>
-                      {(enrichmentResult.evidence[field] || []).map((ev) => (
-                        <Typography key={`${field}-${ev.source_url}`} variant="caption" display="block">
-                          • <a href={ev.source_url} target="_blank" rel="noreferrer">{ev.title || ev.source_url}</a>
-                        </Typography>
-                      ))}
-                    </Box>
-                  )}
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEnrichmentDialogOpen(false)}>{t('buttons.aiClose')}</Button>
-          <Button variant="contained" onClick={handleApplySuggestions} disabled={selectedSuggestionFields.length === 0}>
-            {t('buttons.aiApplySelected')}
-          </Button>
-        </DialogActions>
-      </Dialog>)}
 
       {/* Snackbar for notifications */}
 

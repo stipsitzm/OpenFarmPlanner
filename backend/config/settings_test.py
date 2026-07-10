@@ -4,7 +4,6 @@ import os
 
 os.environ['DEBUG'] = 'True'
 os.environ['DJANGO_ENV'] = 'test'
-os.environ['AI_ENRICHMENT_FAIL_FAST'] = 'False'
 os.environ.setdefault('PUBLIC_FRONTEND_URL', 'http://localhost:5173')
 
 from .settings import *  # noqa: F403, F401

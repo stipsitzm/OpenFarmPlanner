@@ -17,8 +17,8 @@ level**, just not as a formalized service/app boundary:
 - **`Culture`** (`backend/farm/models.py`) is project-owned: it has a
   required `project` FK. Every project has its own private copy of every
   variety it grows, with growing parameters, supplier links, seed
-  packages, AI-enrichment results, and revision history
-  (`CultureRevision`). This is Farm Planning data.
+  packages, and revision history (`CultureRevision`). This is Farm
+  Planning data.
 - **`PublicCulture`** (same file) is the shared library: no `project` FK
   of its own, only nullable *provenance* links (`source_project_culture`,
   `source_project`) recording where a published entry came from. This is
@@ -166,7 +166,7 @@ for no functional benefit right now. German UI text (`"Kultur"`,
 | Switching the frontend to actually call `/api/crops` | Not required to "prepare" the architecture, and swapping a working data source is exactly the kind of change to do deliberately and separately, with its own testing pass | Point `Cultures.tsx` at `cropsApi` instead of `publicCultureAPI`, delete the old client, delete `/api/public-cultures/` |
 | A real `/crops` route/page | Explicitly "noch NICHT veröffentlichen" | Add route components under `frontend/src/crops/pages/`, wire the reserved router branch in `App.tsx`, flip `CropViewSet.permission_classes` |
 | Splitting `i18n/locales/*/cultures.json` into a `crops` namespace | Namespace holds both library- and farm-planning-flavored strings today; splitting now is pure churn for zero user-visible benefit | Split when `crops/pages/` gets real UI text to hold |
-| Moving `Culture`/`CultureViewSet`/`CultureSupplierData`/`SeedPackage`/AI enrichment into `crops` | These are genuinely Farm Planning (project-owned, or only meaningful attached to a project-owned `Culture`) — moving them would be the large, risky refactor the task asks to avoid | Not planned; these belong in Farm Planning long-term too |
+| Moving `Culture`/`CultureViewSet`/`CultureSupplierData`/`SeedPackage` into `crops` | These are genuinely Farm Planning (project-owned, or only meaningful attached to a project-owned `Culture`) — moving them would be the large, risky refactor the task asks to avoid | Not planned; these belong in Farm Planning long-term too |
 | Fixing `PublicCultureLibraryDialog.tsx`'s cross-import of `stripCitationMarkers` from `components/data-grid/markdown`, or its two pre-existing `react-hooks/set-state-in-effect` lint errors | Both pre-date this move (confirmed by lint-checking the file at its old path before moving it) — fixing them isn't in scope for an architecture-only pass | A future cleanup could move the markdown helper to a shared, domain-neutral location |
 
 ## 6. Verifying nothing changed for users

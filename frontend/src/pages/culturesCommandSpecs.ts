@@ -2,82 +2,32 @@ import type { Culture } from '../api/api';
 import type { CommandSpec } from '../commands/types';
 
 export type CreateCulturesCommandSpecsOptions = {
-  canRunEnrichmentForCulture: (culture?: Culture | null) => boolean;
   cultures: Culture[];
-  enableAiEnrichment: boolean;
-  enrichmentLoading: boolean;
   focusSearch: () => void;
   goToRelativeCulture: (direction: 'next' | 'previous') => void;
   handleCreatePlantingPlan: () => void;
   handleDelete: (culture: Culture) => void;
   handleEdit: (culture: Culture) => void;
-  handleEnrichCurrent: (mode: 'complete' | 'reresearch') => Promise<void>;
   handleExportAllCultures: () => void;
   handleExportCurrentCulture: () => void;
   handleImportFileTrigger: () => void;
   selectedCulture?: Culture;
   selectedCultureId?: number;
-  setEnrichAllConfirmOpen: (open: boolean) => void;
 };
 
 export function createCulturesCommandSpecs({
-  canRunEnrichmentForCulture,
   cultures,
-  enableAiEnrichment,
-  enrichmentLoading,
   focusSearch,
   goToRelativeCulture,
   handleCreatePlantingPlan,
   handleDelete,
   handleEdit,
-  handleEnrichCurrent,
   handleExportAllCultures,
   handleExportCurrentCulture,
   handleImportFileTrigger,
   selectedCulture,
   selectedCultureId,
-  setEnrichAllConfirmOpen,
 }: CreateCulturesCommandSpecsOptions): CommandSpec[] {
-  const aiCommands: CommandSpec[] = enableAiEnrichment ? [
-    {
-      id: 'culture.aiCompleteCurrent',
-      label: 'Kultur per KI vervollständigen (Alt+U)',
-      group: 'navigation',
-      keywords: ['ki', 'ai', 'vervollständigen', 'complete', 'kultur'],
-      shortcutHint: 'Alt+U',
-      keys: { alt: true, key: 'u' },
-      contextTags: ['cultures'],
-      isEnabled: () => Boolean(selectedCulture) && canRunEnrichmentForCulture(selectedCulture) && !enrichmentLoading,
-      action: () => {
-        void handleEnrichCurrent('complete');
-      },
-    },
-    {
-      id: 'culture.aiReresearchCurrent',
-      label: 'Kultur per KI neu recherchieren (Alt+R)',
-      group: 'navigation',
-      keywords: ['ki', 'ai', 'recherche', 'reresearch', 'kultur'],
-      shortcutHint: 'Alt+R',
-      keys: { alt: true, key: 'r' },
-      contextTags: ['cultures'],
-      isEnabled: () => Boolean(selectedCulture) && canRunEnrichmentForCulture(selectedCulture) && !enrichmentLoading,
-      action: () => {
-        void handleEnrichCurrent('reresearch');
-      },
-    },
-    {
-      id: 'culture.aiCompleteAll',
-      label: 'Alle Kulturen per KI vervollständigen (Alt+A)',
-      group: 'navigation',
-      keywords: ['ki', 'ai', 'alle', 'kulturen', 'vervollständigen'],
-      shortcutHint: 'Alt+A',
-      keys: { alt: true, key: 'a' },
-      contextTags: ['cultures'],
-      isEnabled: () => cultures.some((culture) => canRunEnrichmentForCulture(culture)) && !enrichmentLoading,
-      action: () => setEnrichAllConfirmOpen(true),
-    },
-  ] : [];
-
   return [
     {
       id: 'culture.focusSearch',
@@ -164,7 +114,6 @@ export function createCulturesCommandSpecs({
       isEnabled: () => Boolean(selectedCultureId),
       action: handleCreatePlantingPlan,
     },
-    ...aiCommands,
     {
       id: 'culture.previous',
       label: 'Vorherige Kultur (Alt+Shift+←)',
