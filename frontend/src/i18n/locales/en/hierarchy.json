@@ -1,0 +1,118 @@
+{
+  "title": "Fields & Beds",
+  "addField": "Field",
+  "addBed": "Bed",
+  "addBedToField": "Add bed for this field",
+  "createPlantingPlan": "Add planting plan",
+  "columns": {
+    "name": "Name",
+    "location": "Location",
+    "field": "Field",
+    "bed": "Bed",
+    "area": "Area (m²)",
+    "notes": "Notes",
+    "length": "Length (m)",
+    "width": "Width (m)"
+  },
+  "errors": {
+    "load": "Failed to load data",
+    "save": "Failed to save",
+    "delete": "Failed to delete",
+    "createField": "Failed to create field",
+    "deleteField": "Failed to delete field",
+    "saveBed": "Failed to save bed",
+    "deleteBed": "Failed to delete bed"
+  },
+  "validation": {
+    "nameRequired": "Name is required",
+    "bedAreaExceedsField": "The sum of bed areas ({{sum}} m²) exceeds the field's area ({{max}} m²). Please adjust the areas.",
+    "areaMustBePositive": "The area must be greater than 0.",
+    "areaTooLarge": "The entered area is too large. Please enter a smaller value.",
+    "lengthNonNegative": "Length must be greater than or equal to 0.",
+    "widthNonNegative": "Width must be greater than or equal to 0.",
+    "lengthNotANumber": "Length must be a valid number.",
+    "widthNotANumber": "Width must be a valid number.",
+    "duplicateFieldName": "A field with this name already exists at this location.",
+    "duplicateBedName": "A bed with this name already exists in this field."
+  },
+  "confirmDelete": "Do you really want to delete this entry?",
+  "footer": {
+    "singleLocation": "Expand fields to add beds",
+    "multipleLocations": "Expand locations/fields to add new fields/beds"
+  },
+  "tooltips": {
+    "expand": "Expand entry",
+    "collapse": "Collapse entry",
+    "addField": "Add field",
+    "calculatedArea": "Calculated automatically from length × width. Not directly editable."
+  },
+  "messages": {
+    "createLocationFirst": "Please create a location first.",
+    "singleLocationHint": "Location: {{name}}",
+    "invalidLocationSelection": "Please select a valid location.",
+    "noBedsHintTitle": "There are no beds yet.",
+    "noBedsHintBeforeIcon": "Add beds using the",
+    "noBedsHintAfterIcon": "icon on the respective field. It appears on hover.",
+    "noBedsHintMobile": "Long-press the respective field and select \"Add bed\".",
+    "missingDimensionsHint": "Length and width are important for area calculations, seed demand, and crop planning.",
+    "missingDimensionsHintOptional": "You can add the values later.",
+    "missingDimensionsCellTooltip": "Required for area calculation.",
+    "createLocationError": "Failed to create location.",
+    "locationCreated": "Location was created.",
+    "unsavedMissingName": "Row was not saved because the name is missing.",
+    "unsavedInvalidRowsNavigationWarning": "There is an unsaved row without a name. It will be lost when you leave the page.",
+    "unsavedRowEditNavigationWarning": "A row is currently being edited. The changes will be lost when you leave the page.",
+    "locationDeleted": "Location deleted",
+    "fieldDeleted": "Field deleted",
+    "bedDeleted": "Bed deleted",
+    "locationAndBedsDeleted": "Location and {{count}} beds deleted",
+    "fieldAndBedsDeleted": "Field and {{count}} beds deleted",
+    "locationsNowVisible": "Locations are now shown because multiple locations exist."
+  },
+  "prompts": {
+    "newFieldName": "Name of the new field:",
+    "selectLocationForField": "Please enter the location ID for the new field:\n{{options}}"
+  },
+  "actions": {
+    "addField": "Add field",
+    "addBed": "Add bed",
+    "createLocation": "Add location",
+    "addAdditionalLocation": "Multiple places? Add another location",
+    "undo": "Undo",
+    "addFieldDropdown": "Add field"
+  },
+  "dialogs": {
+    "addField": {
+      "title": "Add field",
+      "nameLabel": "Field name",
+      "submit": "Add"
+    },
+    "addAdditionalLocation": {
+      "title": "Add another location",
+      "description": "Locations help you manage areas at different places separately. For a project with only one place, you don't need to set up anything else.",
+      "nameLabel": "Location name",
+      "submit": "Create location"
+    }
+  },
+  "emptyAreas": {
+    "title": "No growing areas yet",
+    "description": "The main location isn't available for this project yet. Afterwards you can record fields and beds there.",
+    "missingLocationTitle": "Location missing",
+    "missingLocationDescription": "The main location isn't available for this project yet.",
+    "missingFieldTitle": "Field missing",
+    "missingFieldSingleLocationDescription": "Create a field to get started.",
+    "additionalLocationHint": "If you manage areas in multiple places, you can also",
+    "additionalLocationLink": "create additional locations",
+    "missingFieldMultipleLocationsBeforeIcon": "Add a field at the desired location using the",
+    "missingFieldMultipleLocationsAfterIcon": "icon or the context menu.",
+    "actions": {
+      "createLocation": "Add location",
+      "createField": "Add field",
+      "createBed": "Add bed"
+    }
+  },
+  "confirm": {
+    "deleteFieldWithBeds": "Do you really want to delete this field? All associated beds will also be deleted.",
+    "deleteBed": "Do you really want to delete this bed?"
+  }
+}

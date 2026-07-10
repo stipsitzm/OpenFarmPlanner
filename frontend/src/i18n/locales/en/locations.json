@@ -1,0 +1,55 @@
+{
+  "title": "Locations",
+  "errors": {
+    "load": "Failed to load locations",
+    "save": "Failed to save location",
+    "delete": "Failed to delete location"
+  },
+  "validation": {
+    "nameRequired": "Name is required",
+    "latitudeRange": "Latitude must be between -90 and 90.",
+    "longitudeRange": "Longitude must be between -180 and 180.",
+    "coordinateFormat": "Please enter coordinates in the format \"latitude, longitude\"."
+  },
+  "confirmDelete": "Do you really want to delete this location?",
+  "addButton": "Add location",
+  "editTitle": "Edit location",
+  "emptyState": "No locations yet.",
+  "openInGoogleMaps": "Open in Google Maps",
+  "upcomingTasks": "Upcoming tasks",
+  "noUpcomingTasks": "No upcoming tasks",
+  "taskTitles": {
+    "sowing": "Sowing",
+    "planting": "Planting",
+    "propagationStart": "Start propagation",
+    "harvestStart": "Harvest starts"
+  },
+  "columns": {
+    "coordinates": "Coordinates",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "address": "Address",
+    "description": "Description",
+    "soilType": "Soil type",
+    "exposure": "Exposure"
+  },
+  "helpers": {
+    "optionalField": "Optional",
+    "coordinatesExample": "Example: 46.6473, 13.8688"
+  },
+  "soilType": {
+    "sand": "Sand",
+    "loam": "Loam",
+    "clay": "Clay"
+  },
+  "exposure": {
+    "north": "North",
+    "south": "South",
+    "east": "East",
+    "west": "West",
+    "flat": "Flat"
+  },
+  "placeholders": {
+    "coordinates": "e.g. 46.6473, 13.8688"
+  }
+}

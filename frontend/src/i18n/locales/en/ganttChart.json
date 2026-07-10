@@ -1,0 +1,189 @@
+{
+  "title": "Crop calendar",
+  "zoomIn": "Zoom in",
+  "zoomOut": "Zoom out",
+  "viewModes": {
+    "month": "Month view",
+    "week": "Week view"
+  },
+  "months": {
+    "jan": "January",
+    "feb": "February",
+    "mar": "March",
+    "apr": "April",
+    "may": "May",
+    "jun": "June",
+    "jul": "July",
+    "aug": "August",
+    "sep": "September",
+    "oct": "October",
+    "nov": "November",
+    "dec": "December"
+  },
+  "weekShort": "wk",
+  "field": "Field",
+  "bed": "Bed",
+  "area": "Area",
+  "year": "Year",
+  "today": "Today",
+  "previousYear": "Previous year",
+  "nextYear": "Next year",
+  "loading": "Loading...",
+  "errors": {
+    "load": "Failed to load data",
+    "updatePlan": "Failed to update planting plan",
+    "render": "The calendar view could not be loaded."
+  },
+  "tooltip": {
+    "culture": "Culture",
+    "plantingDate": "Planting date",
+    "harvestDate": "Harvest date",
+    "firstHarvest": "First harvest",
+    "lastHarvest": "Last harvest",
+    "areaUsage": "Area",
+    "propagationStart": "Propagation start",
+    "transplantDate": "Transplanting",
+    "propagationDuration": "Propagation duration",
+    "bed": "Bed",
+    "location": "Location",
+    "plantsCount": "Plant count",
+    "totalPlantsCount": "Total plants",
+    "plantingPlanCount": "Number of planting plans",
+    "involvedLocations": "Involved locations",
+    "seedRequirement": "Seed demand",
+    "notes": "Note"
+  },
+  "noData": "No planting plans available",
+  "modeLabel": "Mode",
+  "modeAriaLabel": "Select mode",
+  "modeViewOption": "View",
+  "moveModeOption": "Move period",
+  "moveModeActiveOption": "Move period active",
+  "moveModeCommandActivate": "Activate move period",
+  "moveModeCommandDeactivate": "Deactivate move period",
+  "modeViewTooltip": "View mode: view and navigate the calendar. No changes via drag & drop.",
+  "moveModeTooltipDescription": "Activate move mode to move planting periods via drag-and-drop.",
+  "moveModeActiveTooltipDescription": "Drag a period left or right to shift the entire planting plan in time.",
+  "viewMode": "View mode",
+  "viewSelectorAriaLabel": "Select calendar view",
+  "chartLocaleText": {
+    "titleOccupancy": "Field planning",
+    "titleSeedlings": "Propagation planning",
+    "resources": "Areas",
+    "resourcesSeedlings": "Cultures",
+    "today": "Today",
+    "viewModes": {
+      "minute": "Minute",
+      "hour": "Hour",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "quarter": "Quarter",
+      "year": "Year"
+    }
+  },
+  "days": "days",
+  "yieldDistributionTitle": "Yield distribution",
+  "noYieldData": "No expected yields available for this year.",
+  "modes": {
+    "occupancy": "Field occupancy",
+    "seedlings": "Propagation"
+  },
+  "modeTooltips": {
+    "occupancy": "Shows bed occupancy over the year. The displayed periods are calculated from the planting plans and culture-specific timing (e.g. sowing, planting, and harvest).",
+    "seedlings": "Shows the propagation phase of cultures before planting. The displayed periods are calculated from the planting plans and culture-specific propagation duration data."
+  },
+  "shortcuts": {
+    "today": "Jump to the current period",
+    "previousPeriod": "Previous calendar period",
+    "nextPeriod": "Next calendar period",
+    "previousLargePeriod": "Jump back a large period",
+    "nextLargePeriod": "Jump forward a large period",
+    "dayView": "Show day view",
+    "weekView": "Show week view",
+    "monthView": "Show month view",
+    "quarterView": "Show quarter view",
+    "yearView": "Show year view",
+    "showOccupancy": "Show field occupancy",
+    "showSeedlings": "Show propagation",
+    "focusSearch": "Focus search (/)"
+  },
+  "modeDescriptions": {
+    "occupancy": "Occupancy of fields and beds throughout the year. This view still supports moving existing planting plans.",
+    "seedlings": "Propagation periods by culture. This view is read-only and only shows relevant propagations in the current year."
+  },
+  "seedlings": {
+    "emptyState": "No propagation periods available for this year.",
+    "plantsUnit": "plants"
+  },
+  "requirements": {
+    "field": {
+      "label": "Field",
+      "missing": "Field missing",
+      "done": "Field available"
+    },
+    "culture": {
+      "label": "Culture",
+      "missing": "Culture missing",
+      "done": "Culture available"
+    },
+    "bed": {
+      "label": "Bed",
+      "missing": "Bed missing",
+      "done": "Bed available"
+    },
+    "plan": {
+      "label": "Planting plan",
+      "missing": "Planting plan missing",
+      "done": "Planting plan available"
+    }
+  },
+  "emptyStates": {
+    "requirementsTitle": "No crop planning possible yet",
+    "requirementsDescription": "Open Fields & Beds and add a field to the appropriate location there. Afterwards you can record beds, cultures, and planting plans.",
+    "states": {
+      "cultures": {
+        "title": "No cultures yet",
+        "description": "Create your first culture now or import one from the culture library. Afterwards you can create planting plans."
+      },
+      "plans": {
+        "title": "No planting plans yet",
+        "description": "No planting plans have been created for the existing growing areas yet. Create a planting plan to show cultures and dates in the crop calendar."
+      }
+    },
+    "actions": {
+      "createCulture": "Add culture",
+      "createField": "Add field",
+      "createAreas": "Go to Fields & Beds",
+      "createPlan": "Add planting plan"
+    }
+  },
+  "sidebar": {
+    "resizeHandle": "Widen or narrow the sidebar"
+  },
+  "treeFilters": {
+    "searchPlaceholder": "Search by culture, bed, field, or location…",
+    "searchPlaceholderSeedlings": "Search by culture…",
+    "allLocations": "All locations",
+    "allFields": "All fields",
+    "onlyOccupiedBeds": "Only occupied beds",
+    "filterButton": "Filter",
+    "filterButtonWithCount": "Filter ({{count}})",
+    "locationLabel": "Location",
+    "fieldLabel": "Field",
+    "resetFilters": "Reset filters",
+    "clearSearch": "Clear search"
+  },
+  "contextMenu": {
+    "openPlan": "Open planting plan",
+    "openCulture": "Open culture",
+    "openBed": "Open bed",
+    "openField": "Open field",
+    "openLocation": "Open location",
+    "editBed": "Edit bed",
+    "editField": "Edit field",
+    "editLocation": "Edit location",
+    "addPlan": "Add planting plan",
+    "confirmDeletePlan": "Really delete this planting plan?"
+  }
+}
