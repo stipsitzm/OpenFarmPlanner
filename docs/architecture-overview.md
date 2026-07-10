@@ -67,8 +67,8 @@ docs/                  # This documentation
   living in view methods.
 - Physical measurements (area, spacing, seed rates) are stored in SI units
   internally (m², m, g) and converted only at API/serializer boundaries —
-  see [seed-demand-calculation.md](./seed-demand-calculation.md) for where
-  this convention is and isn't consistently followed.
+  see [seed-demand-calculation.md](./seed-demand-calculation.md) for the
+  seed-amount/package-unit conversion specifically.
 
 ## Frontend structure
 
