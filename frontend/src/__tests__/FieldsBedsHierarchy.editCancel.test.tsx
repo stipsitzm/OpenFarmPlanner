@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { GridColDef } from '@mui/x-data-grid';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -622,11 +622,12 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     fireEvent.contextMenu(locationRow);
 
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-      'Parzelle hinzufügen',
+      'Parzelle hinzufügenEinfg',
       'Löschen',
       'common:actions.copyRow',
       'common:actions.copyTable',
     ]);
+    expect(screen.getByRole('menuitem', { name: /^Parzelle hinzufügen/ })).toBeInTheDocument();
     expect(screen.getAllByRole('separator')).toHaveLength(2);
 
     fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
@@ -636,12 +637,12 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     fireEvent.contextMenu(fieldRow);
 
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-      'Beet hinzufügen',
+      'Beet hinzufügenEinfg',
       'Löschen',
       'common:actions.copyRow',
       'common:actions.copyTable',
     ]);
-    expect(screen.getByRole('menuitem', { name: 'Beet hinzufügen' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /^Beet hinzufügen/ })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Beet' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('separator')).toHaveLength(2);
 
@@ -651,14 +652,54 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     fireEvent.contextMenu(fieldRow);
 
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-      'Beet hinzufügen',
+      'Beet hinzufügenEinfg',
       'Löschen',
       'common:actions.copyRow',
       'common:actions.copyTable',
     ]);
-    expect(screen.getByRole('menuitem', { name: 'Beet hinzufügen' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /^Beet hinzufügen/ })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Beet' })).not.toBeInTheDocument();
     expect(screen.getAllByRole('separator')).toHaveLength(2);
+  });
+
+  it('adds a bed via the Insert key when a field row is focused, mirroring "Beet hinzufügen"', async () => {
+    renderHierarchy();
+
+    const fieldRow = await screen.findByTestId('row-field-10');
+    fireEvent.click(within(fieldRow).getByRole('button', { name: 'Edit field-10' }));
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Insert', bubbles: true }));
+    });
+
+    await waitFor(() => expect(screen.getByTestId('row--1700000000000')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('mode--1700000000000')).toHaveTextContent('edit'));
+  });
+
+  it('adds a field via the Insert key when a location row is focused, mirroring "Parzelle hinzufügen"', async () => {
+    useMultipleLocations();
+    renderHierarchy();
+
+    const locationRow = await screen.findByTestId('row-location-1');
+    fireEvent.click(within(locationRow).getByRole('button', { name: 'Edit location-1' }));
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Insert', bubbles: true }));
+    });
+
+    await waitFor(() => expect(screen.getByTestId('row-field--1700000000000')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('mode-field--1700000000000')).toHaveTextContent('edit'));
+  });
+
+  it('does not add a bed via Insert when no row is focused', async () => {
+    renderHierarchy();
+    await screen.findByTestId('row-field-10');
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Insert', bubbles: true }));
+    });
+
+    expect(screen.queryByTestId('row--1700000000000')).not.toBeInTheDocument();
   });
 
   it('removes a newly created empty bed locally without calling the delete API', async () => {

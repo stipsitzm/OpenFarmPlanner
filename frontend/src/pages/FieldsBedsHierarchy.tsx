@@ -35,8 +35,13 @@ import type {
 } from "@mui/x-data-grid";
 import { Box, Alert, useMediaQuery } from "@mui/material";
 import Divider from "@mui/material/Divider";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
+import Typography from "@mui/material/Typography";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { HierarchyAddIcon } from "../components/hierarchy/HierarchyAddIcon";
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { CALCULATED_COLUMN_CELL_CLASS } from "../components/data-grid/calculatedColumns";
 import { dataGridSx } from "../components/data-grid/styles";
@@ -117,6 +122,9 @@ interface HierarchyRowAction {
   group: "create" | "destructive";
   color?: "default" | "error";
   onClick: () => void;
+  emphasized?: boolean;
+  icon?: React.ReactNode;
+  shortcutHint?: string;
 }
 
 const HIERARCHY_SELECTED_VIEW_ROW_SELECTOR =
@@ -1059,6 +1067,9 @@ function FieldsBedsHierarchy({
         label: t("actions.addField"),
         group: "create",
         onClick: () => handleAddField(row.locationId!),
+        emphasized: true,
+        icon: <HierarchyAddIcon interactive={false} ariaHidden />,
+        shortcutHint: t("actions.addShortcutHint"),
       });
     }
 
@@ -1068,6 +1079,9 @@ function FieldsBedsHierarchy({
         label: t("actions.addBed"),
         group: "create",
         onClick: () => handleAddBed(row.fieldId!),
+        emphasized: true,
+        icon: <HierarchyAddIcon interactive={false} ariaHidden />,
+        shortcutHint: t("actions.addShortcutHint"),
       });
     }
 
@@ -1085,6 +1099,7 @@ function FieldsBedsHierarchy({
       label: t("common:actions.delete"),
       group: "destructive",
       color: "error",
+      icon: <DeleteIcon fontSize="small" sx={{ color: "error.main" }} />,
       onClick: () => {
         void deleteHierarchyRowWithUndo(row);
       },
@@ -1176,6 +1191,7 @@ function FieldsBedsHierarchy({
     toggleExpand,
     discardActiveRowEdit: handleClickOutsideGrid,
     openContextMenuForRow,
+    onInsertShortcut: handleCreateBySelection,
   });
 
   const nameColumnWidth = useMemo(() => {
@@ -1689,7 +1705,29 @@ function FieldsBedsHierarchy({
               }}
               sx={{ color: action.color === "error" ? "error.main" : undefined }}
             >
-              {action.label}
+              {action.icon ? (
+                <>
+                  <ListItemIcon>{action.icon}</ListItemIcon>
+                  <ListItemText
+                    primary={action.label}
+                    slotProps={{
+                      primary: {
+                        sx: {
+                          fontWeight: action.emphasized ? 600 : undefined,
+                          color: action.color === "error" ? "error.main" : undefined,
+                        },
+                      },
+                    }}
+                  />
+                  {action.shortcutHint ? (
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: "auto", pl: 3 }}>
+                      {action.shortcutHint}
+                    </Typography>
+                  ) : null}
+                </>
+              ) : (
+                action.label
+              )}
             </MenuItem>
           );
 

@@ -193,14 +193,22 @@ if db_engine == 'sqlite':
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
             'ATOMIC_REQUESTS': True,
-            # SQLite only allows one writer at a time, and ATOMIC_REQUESTS holds a
-            # write lock for a request's full duration. Django's dev server handles
-            # requests in separate threads, so overlapping requests (e.g. a page
-            # firing several API calls at once) can easily outlast sqlite3's 5s
-            # default busy timeout under CI/e2e load, surfacing as spurious
-            # "database is locked" errors instead of just waiting briefly.
+            # SQLite's default rollback-journal mode takes an exclusive lock on the
+            # whole file for a writer's entire transaction, blocking readers too.
+            # Django's dev server handles requests in separate threads, so a page
+            # firing several concurrent API calls (some of which write) reliably
+            # produces "database is locked" under CI/e2e load even with a generous
+            # busy timeout, because readers queue up behind the writer instead of
+            # proceeding concurrently. WAL mode lets readers proceed while a single
+            # writer is active, which is what actually removes the contention; the
+            # timeout stays as a backstop for the now-rare case of two writers
+            # overlapping.
             'OPTIONS': {
                 'timeout': 20,
+                'init_command': (
+                    'PRAGMA journal_mode=WAL;'
+                    'PRAGMA synchronous=NORMAL;'
+                ),
             },
         }
     }
