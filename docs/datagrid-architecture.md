@@ -145,13 +145,19 @@ Separately, `renderInlineActionCell` overlays icon buttons directly inside
 one cell on row hover — this is the "hover actions" surface distinct from
 the right-click menu.
 
-**`FieldsBedsHierarchy.tsx`'s `useHierarchyContextMenu.ts` is a second,
-hand-rolled implementation of the same right-click/long-press pattern**,
-built directly on the same lower-level shared primitives
-(`contextMenuFocus.ts`, `utils/contextMenu.ts`) but not on
-`useDataGridRowActionMenu.ts` itself, because that page uses a raw
-`<DataGrid>`, not `EditableDataGrid`. Treat a UX fix to one as *not*
-automatically fixing the other.
+**`FieldsBedsHierarchy.tsx`'s `useHierarchyContextMenu.ts` is a separate
+implementation of the same right-click/long-press pattern**, because that
+page uses a raw `<DataGrid>`, not `EditableDataGrid`, and needs different
+data shapes (three row types/APIs, whole-row-object state) that
+`EditableDataGrid` has no concept of. It shares its open/close/reposition
+state machine and long-press timer with `useDataGridRowActionMenu.ts` via
+two small, tree-agnostic hooks
+(`components/contextMenu/useRowContextMenuState.ts`,
+`useLongPressTimer.ts`), but the trigger conditions and row-data wiring
+around that shared core are deliberately separate — treat a UX fix to
+*when/how* the menu opens (or the row-type-specific actions inside it) as
+*not* automatically fixing the other; only a fix to the shared
+open/close/reposition/focus-restore mechanics itself applies to both.
 
 ## Notes / markdown cells
 
@@ -233,9 +239,12 @@ grid," that's new work, not exposing something that already half-exists.
 
 ## What to check before changing this layer
 
-- If you change row-action-menu or keyboard-navigation behavior, check
-  whether `FieldsBedsHierarchy.tsx`'s parallel implementation needs the
-  same change (see above) — it will not pick up the fix automatically.
+- If you change *when/how* the row-action menu opens or keyboard-navigation
+  behavior, check whether `FieldsBedsHierarchy.tsx`'s implementation needs
+  the same change (see above) — only the shared
+  `useRowContextMenuState`/`useLongPressTimer` mechanics are common; a fix
+  to trigger conditions or row-type wiring in one does not apply to the
+  other automatically.
 - Keep new edit cells consistent with the "preserve raw input text, defer
   normalization to save time" pattern used by the existing custom edit
   cells, rather than coercing on every keystroke.

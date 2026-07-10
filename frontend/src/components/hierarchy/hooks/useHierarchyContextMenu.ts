@@ -1,20 +1,17 @@
 // Right-click/long-press row-action menu for FieldsBedsHierarchy's raw MUI
-// DataGrid. This is a parallel, hand-rolled implementation of the same UX as
-// EditableDataGrid's useDataGridRowActionMenu — they share the lower-level
-// contextMenuFocus/utils/contextMenu primitives but not this state machine.
-// See docs/datagrid-architecture.md ("Hover actions / row actions / context
-// menu"). A fix here does not automatically apply to useDataGridRowActionMenu.
-import { useCallback, useRef, useState } from "react";
+// DataGrid. Shares its open/close/reposition state machine with
+// EditableDataGrid's useDataGridRowActionMenu via useRowContextMenuState -
+// see docs/datagrid-architecture.md ("Hover actions / row actions / context
+// menu"). What's NOT shared is deliberate: this hook opens on a right-click
+// anywhere in the row (or the name cell specifically) and stores the whole
+// row object, while EditableDataGrid opens via an explicit inline action
+// icon and stores only a row id looked up separately. Those differences are
+// UX/data-shape choices, not something to unify further.
+import { useCallback, useMemo } from "react";
 import type { HierarchyRow } from "../utils/types";
-import {
-  focusContextMenuOrigin,
-  useContextMenuFocus,
-} from "../../data-grid/contextMenuFocus";
-import {
-  shouldOpenCustomContextMenu,
-  suppressNativeContextMenu,
-  useCloseCustomContextMenuOnNativeContextMenu,
-} from "../../../utils/contextMenu";
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from "../../../utils/contextMenu";
+import { useRowContextMenuState } from "../../contextMenu/useRowContextMenuState";
+import { useLongPressTimer } from "../../contextMenu/useLongPressTimer";
 
 interface ContextMenuState {
   row: HierarchyRow;
@@ -35,10 +32,23 @@ export function useHierarchyContextMenu({
   setSelectedRowId,
   setTreeActive,
 }: UseHierarchyContextMenuParams) {
-  const [contextMenuState, setContextMenuState] =
-    useState<ContextMenuState | null>(null);
-  const contextMenuOriginRef = useRef<HTMLElement | null>(null);
-  const touchLongPressTimeoutRef = useRef<number | null>(null);
+  const isHierarchyContextMenuTarget = useCallback(
+    (target: EventTarget | null): boolean => {
+      if (!shouldOpenCustomContextMenu(target) || !(target instanceof HTMLElement)) {
+        return false;
+      }
+      const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
+      const rowId = rowElement?.dataset.id;
+      return Boolean(rowId && rows.some((row) => String(row.id) === rowId));
+    },
+    [rows],
+  );
+
+  const { state: menuState, listRef: menuListRef, open: menuOpen, close: menuClose } =
+    useRowContextMenuState<HierarchyRow>({ isContextMenuTarget: isHierarchyContextMenuTarget });
+  // Unlike EditableDataGrid's handleGridTouchMove, this page has no
+  // touch-move cancellation today - only handleGridTouchEnd clears the timer.
+  const longPressTimer = useLongPressTimer(550);
 
   const openContextMenuForRow = useCallback(
     (
@@ -53,10 +63,9 @@ export function useHierarchyContextMenu({
       }
       setSelectedRowId(row.id as string | number);
       setTreeActive(true);
-      contextMenuOriginRef.current = origin ?? null;
-      setContextMenuState({ row, mouseX, mouseY });
+      menuOpen(row, mouseX, mouseY, origin ?? null);
     },
-    [markContextMenuHintUsed, setSelectedRowId, setTreeActive],
+    [markContextMenuHintUsed, setSelectedRowId, setTreeActive, menuOpen],
   );
 
   const handleNameCellContextMenu = useCallback(
@@ -82,18 +91,6 @@ export function useHierarchyContextMenu({
       openContextMenuForRow(row, rect.right - 8, rect.top + 12, event.currentTarget);
     },
     [openContextMenuForRow],
-  );
-
-  const isHierarchyContextMenuTarget = useCallback(
-    (target: EventTarget | null): boolean => {
-      if (!shouldOpenCustomContextMenu(target) || !(target instanceof HTMLElement)) {
-        return false;
-      }
-      const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
-      const rowId = rowElement?.dataset.id;
-      return Boolean(rowId && rows.some((row) => String(row.id) === rowId));
-    },
-    [rows],
   );
 
   const handleGridContextMenu = useCallback(
@@ -125,49 +122,22 @@ export function useHierarchyContextMenu({
       const targetRow = rows.find((row) => String(row.id) === rowId);
       const touch = event.touches[0];
       if (!targetRow || !touch) return;
-      touchLongPressTimeoutRef.current = window.setTimeout(() => {
+      longPressTimer.start(() => {
         openContextMenuForRow(targetRow, touch.clientX, touch.clientY, rowElement, {
           markHintUsed: false,
         });
-      }, 550);
+      });
     },
-    [openContextMenuForRow, rows],
+    [longPressTimer, openContextMenuForRow, rows],
   );
 
   const handleGridTouchEnd = useCallback((): void => {
-    if (touchLongPressTimeoutRef.current !== null) {
-      window.clearTimeout(touchLongPressTimeoutRef.current);
-      touchLongPressTimeoutRef.current = null;
-    }
-  }, []);
+    longPressTimer.clear();
+  }, [longPressTimer]);
 
-  const closeContextMenu = useCallback((): void => {
-    setContextMenuState(null);
-    focusContextMenuOrigin(contextMenuOriginRef.current);
-  }, []);
-
-  const repositionOpenContextMenu = useCallback(
-    (event: globalThis.MouseEvent): void => {
-      setContextMenuState((currentState) =>
-        currentState
-          ? { row: currentState.row, mouseX: event.clientX + 2, mouseY: event.clientY - 6 }
-          : currentState,
-      );
-    },
-    [],
-  );
-
-  useCloseCustomContextMenuOnNativeContextMenu(
-    contextMenuState !== null,
-    closeContextMenu,
-    isHierarchyContextMenuTarget,
-    repositionOpenContextMenu,
-  );
-
-  const contextMenuListRef = useContextMenuFocus(
-    contextMenuState !== null,
-    closeContextMenu,
-  );
+  const contextMenuState = useMemo((): ContextMenuState | null => (
+    menuState ? { row: menuState.key, mouseX: menuState.mouseX, mouseY: menuState.mouseY } : null
+  ), [menuState]);
 
   return {
     contextMenuState,
@@ -177,7 +147,7 @@ export function useHierarchyContextMenu({
     handleGridContextMenu,
     handleGridTouchStart,
     handleGridTouchEnd,
-    closeContextMenu,
-    contextMenuListRef,
+    closeContextMenu: menuClose,
+    contextMenuListRef: menuListRef,
   };
 }
