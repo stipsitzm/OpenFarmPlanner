@@ -21,6 +21,24 @@
 - Refactor when repeated patterns appear.
 - Prefer centralized solutions over page-specific fixes.
 
+## Workflow: Before Making a Non-Trivial Change
+
+A pre-flight checklist. Each point is a pointer — the full rule lives in
+exactly one section below; don't restate rules here.
+
+1. Read [`docs/index.md`](docs/index.md) and the deep-dive doc for the area
+   you're touching. Those docs record *why* things work the way they do —
+   re-deriving that from the code risks redoing a decision that was already
+   made deliberately.
+2. Preserve existing UX behavior unless the task explicitly asks to change
+   it — see "Architecture Safety Rules" and "UX Consistency Rules".
+3. Update affected documentation in the same change — see "Documentation
+   Rules".
+4. Don't fold unrelated refactors into the change — see "Refactoring
+   Rules".
+5. Run the relevant tests/lint before considering the task done — see
+   "Testing Rules".
+
 ## Testing Rules
 - Write or update appropriate tests for functional changes.
 - New features should include tests for expected behavior.
@@ -29,6 +47,10 @@
 - Prefer extending existing test files before creating new test structures.
 - Follow existing test patterns used in the repository.
 - Run targeted tests when appropriate unless the user explicitly says not to run tests.
+- Typical commands:
+  - Backend: `cd backend && pdm run test` (plus `pdm run makemigrations` / `pdm run migrate` if models changed).
+  - Frontend: `cd frontend && npm run lint && npm run test` (add `npm run test:e2e` for user-facing flows with existing E2E coverage).
+  - Or `./scripts/quality.sh` from the repo root to run the same gates CI uses.
 - Do NOT execute CI workflows manually.
 
 ## Playwright Screenshot Tests
@@ -42,37 +64,15 @@
 - When creating or changing a screenshot test, document why a screenshot test is appropriate over functional assertions.
 
 ## Documentation Rules
-- Update relevant documentation when behavior changes.
+- Update relevant documentation when behavior changes: if the change touches
+  architecture, the data model, or a documented complex feature, update the
+  corresponding file under `docs/` (or the relevant top-level
+  `*_IMPLEMENTATION.md`/`*_GUIDE.md` doc) in the same change — don't leave
+  documentation describing the old behavior.
 - Keep code comments minimal and useful.
 - Prefer self-explanatory code over comments.
 - Update AGENTS.md only when project architecture or developer workflow changes significantly.
 - Do not update AGENTS.md for small implementation details.
-
-### Before making a non-trivial change
-1. Read [`docs/index.md`](docs/index.md) to find the relevant deep-dive doc
-   (architecture, data model, or a specific complex feature such as the
-   DataGrid layer, keyboard navigation, Gantt/occupancy hierarchy, Crop
-   Library, seed demand calculation, or versioning/history) before touching
-   that area — these docs record *why* something works the way it does,
-   not just what the code does, and re-deriving that from scratch risks
-   redoing a decision that was already made deliberately.
-2. Do not change an existing, working UX behavior (interaction pattern,
-   wording, confirmation flow, keyboard shortcut, etc.) unless the task
-   explicitly asks for that change — see "Architecture Safety Rules" and
-   "UX Consistency Rules" below. If a task's scope is ambiguous about
-   whether a UX change is wanted, ask rather than assume.
-3. If the change touches architecture, the data model, or a documented
-   complex feature's behavior, update the corresponding file under `docs/`
-   (or the relevant top-level `*_IMPLEMENTATION.md`/`*_GUIDE.md` doc) in the
-   same change — don't leave documentation describing the old behavior.
-4. Do not fold an unrelated large-scale refactor into a feature/fix change,
-   even if you notice something that could be improved — see "Refactoring
-   Rules" below; flag it separately instead.
-5. Run the tests/lint relevant to what changed before considering the task
-   done:
-   - Backend: `cd backend && pdm run test` (and `pdm run makemigrations`/`pdm run migrate` if models changed).
-   - Frontend: `cd frontend && npm run lint && npm run test` (add `npm run test:e2e` for user-facing flows with existing E2E coverage).
-   - Or run `./scripts/quality.sh` from the repo root to execute the same gates CI uses.
 
 ## Project Structure
 - `backend/` contains the Django backend. The main apps are `accounts/` and `farm/`, with project settings in `config/`, app-local tests under each app, backend helper scripts in `backend/scripts/`, and generated media under `backend/media/`.
@@ -152,12 +152,18 @@ Deploy scripts, cron/scheduling config, and infra are **not** in this repo — t
   first check whether a similar solution already exists.
 - Avoid parallel implementations of the same concept.
 - Prefer extending existing systems over creating alternatives.
-- Preserve existing UX behavior unless explicitly changing it.
+- Preserve existing UX behavior (interaction patterns, wording, confirmation
+  flows, keyboard shortcuts) unless the task explicitly asks for the change.
+  If a task's scope is ambiguous about whether a UX change is wanted, ask
+  rather than assume.
 
 ## Refactoring Rules
 - If code duplication appears in multiple places, suggest refactoring.
 - Prefer extracting shared components over copy-pasting.
 - Keep refactors incremental and low-risk.
+- Do not fold an unrelated large-scale refactor into a feature/fix change,
+  even if you notice something that could be improved — flag it separately
+  instead.
 
 ## UX Consistency Rules
 - Empty states should guide users toward the next action.
