@@ -7,6 +7,7 @@ for its respective model.
 
 from collections import defaultdict
 import logging
+import time
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 import json
@@ -16,7 +17,7 @@ from django.conf import settings
 from django.contrib.auth import login
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, OperationalError, transaction
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q, Count, Prefetch
 from django.db.models.functions import Coalesce, Ceil, Cast
 from django.http import HttpResponseBadRequest, HttpResponseForbidden
@@ -705,14 +706,34 @@ class ProjectScopedMixin:
             self.ensure_active_project_location()
 
     def ensure_active_project_location(self) -> None:
-        """Create the default location for legacy projects that do not have one."""
-        has_locations = Location.objects.filter(project=self.request.active_project).exists()
-        if has_locations:
-            return
-        Location.objects.create(
-            project=self.request.active_project,
-            name='Hauptstandort',
-        )
+        """Create the default location for legacy projects that do not have one.
+
+        Called from `initial()` on every request of viewsets that opt in via
+        `ensure_default_location`, so a page firing several such requests at
+        once (e.g. locations/fields/beds all loading together for a brand-new
+        project) can have multiple of them race here concurrently. Under
+        SQLite this read-then-write is prone to "database is locked": if
+        another connection commits a write between our `exists()` read and
+        the `create()`, the write can fail immediately rather than merely
+        wait for a lock, regardless of the busy timeout. Each attempt runs in
+        its own savepoint so a failed attempt only rolls back that savepoint
+        (not the whole request), and a short retry gives the other request's
+        transaction time to land — after which our `exists()` check sees its
+        location and we return without creating a duplicate.
+        """
+        project = self.request.active_project
+        attempts = 3
+        for attempt in range(attempts):
+            try:
+                with transaction.atomic():
+                    if Location.objects.filter(project=project).exists():
+                        return
+                    Location.objects.create(project=project, name='Hauptstandort')
+                return
+            except OperationalError as exc:
+                if attempt == attempts - 1 or 'locked' not in str(exc).lower():
+                    raise
+                time.sleep(0.05 * (attempt + 1))
 
     def get_queryset(self):
         queryset = super().get_queryset()
