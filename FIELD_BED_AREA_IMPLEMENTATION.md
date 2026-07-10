@@ -3,6 +3,8 @@
 ## Overview
 This document summarizes the implementation of area-only storage for Field and Bed entities in v1, preparing for future polygon/geometry support.
 
+> **Status note (2026-07):** the model/validation details below are still current (see `backend/farm/models.py`). The frontend section references `frontend/src/pages/Beds.tsx`, which no longer exists as a standalone page — field/bed management now lives in `FieldsBedsPage.tsx`/`FieldsBedsHierarchy.tsx`/`GraphicalFields.tsx`. See [`docs/data-model.md`](./docs/data-model.md#2-farm-structure-locations--fields--beds) for the current farm-structure model overview.
+
 ## Issue Requirements
 - ✅ Only the area (sqm) is stored in v1
 - ✅ Prepare for later support of polygons/geometry

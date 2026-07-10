@@ -1,0 +1,51 @@
+# Optional MkDocs Material configuration for browsing docs/ as a static site.
+#
+# Not currently built or deployed as part of this project — this file only
+# prepares the docs/ structure to be usable with MkDocs Material later,
+# without adding a dependency or a build step today. To try it locally:
+#   pip install mkdocs-material
+#   mkdocs serve
+#
+# Only files under docs/ are included in the nav below. Root-level docs
+# (README.md, AGENTS.md, CONTRIBUTING.md, backend/README.md,
+# frontend/README.md, *_IMPLEMENTATION.md) are intentionally left out of
+# this site config; they remain the canonical, GitHub-browsable entry
+# points and are cross-linked from docs/index.md instead.
+
+site_name: OpenFarmPlanner Technical Documentation
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.sections
+    - content.code.copy
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - tables
+
+nav:
+  - Home: index.md
+  - Architecture:
+      - Overview: architecture-overview.md
+      - Data Model: data-model.md
+  - Features:
+      - DataGrid Architecture: datagrid-architecture.md
+      - Keyboard Navigation: keyboard-architecture.md
+      - Occupancy Tree / Gantt Hierarchy: occupancy-tree-hierarchy.md
+      - Crop Library Architecture: crop-library-architecture.md
+      - Seed Demand Calculation: seed-demand-calculation.md
+      - Versioning and History: versioning-and-history.md
+      - Large-Dataset Rendering: large-dataset-rendering.md
+  - QA / Process:
+      - QA Strategy: qa-strategy.md
+      - Excluded Issues: qa-excluded-issues.md
+      - Keyboard Shortcuts Audit: keyboard-shortcuts-audit.md

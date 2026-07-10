@@ -48,6 +48,32 @@
 - Update AGENTS.md only when project architecture or developer workflow changes significantly.
 - Do not update AGENTS.md for small implementation details.
 
+### Before making a non-trivial change
+1. Read [`docs/index.md`](docs/index.md) to find the relevant deep-dive doc
+   (architecture, data model, or a specific complex feature such as the
+   DataGrid layer, keyboard navigation, Gantt/occupancy hierarchy, Crop
+   Library, seed demand calculation, or versioning/history) before touching
+   that area — these docs record *why* something works the way it does,
+   not just what the code does, and re-deriving that from scratch risks
+   redoing a decision that was already made deliberately.
+2. Do not change an existing, working UX behavior (interaction pattern,
+   wording, confirmation flow, keyboard shortcut, etc.) unless the task
+   explicitly asks for that change — see "Architecture Safety Rules" and
+   "UX Consistency Rules" below. If a task's scope is ambiguous about
+   whether a UX change is wanted, ask rather than assume.
+3. If the change touches architecture, the data model, or a documented
+   complex feature's behavior, update the corresponding file under `docs/`
+   (or the relevant top-level `*_IMPLEMENTATION.md`/`*_GUIDE.md` doc) in the
+   same change — don't leave documentation describing the old behavior.
+4. Do not fold an unrelated large-scale refactor into a feature/fix change,
+   even if you notice something that could be improved — see "Refactoring
+   Rules" below; flag it separately instead.
+5. Run the tests/lint relevant to what changed before considering the task
+   done:
+   - Backend: `cd backend && pdm run test` (and `pdm run makemigrations`/`pdm run migrate` if models changed).
+   - Frontend: `cd frontend && npm run lint && npm run test` (add `npm run test:e2e` for user-facing flows with existing E2E coverage).
+   - Or run `./scripts/quality.sh` from the repo root to execute the same gates CI uses.
+
 ## Project Structure
 - `backend/` contains the Django backend. The main apps are `accounts/` and `farm/`, with project settings in `config/`, app-local tests under each app, backend helper scripts in `backend/scripts/`, and generated media under `backend/media/`.
 - `frontend/` contains the React + TypeScript app. Application code lives in `frontend/src/`, with pages, components, hooks, API clients, i18n resources, and frontend tests following the existing folder layout. Playwright end-to-end tests live in `frontend/e2e/`.

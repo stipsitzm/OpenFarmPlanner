@@ -1,0 +1,98 @@
+# Versioning and History (`EntityRevision`)
+
+OpenFarmPlanner keeps an audit trail and supports restoring cultures and
+whole projects to a past point in time. This is **snapshot-based**, not
+event-sourced: each history row is a full point-in-time copy of one
+entity's fields, not a delta to replay.
+
+## The model
+
+`EntityRevision` (`backend/farm/models.py`) is the current, generic
+mechanism: one row per `(entity_type, object_id)` per mutation
+(`created` / `updated` / `deleted` / `restored`), holding a full JSON
+`snapshot` of the entity's fields at that moment plus a `changed_fields`
+list for diff display. It replaced two now-deprecated models:
+
+- `CultureRevision` — the original culture-only history table.
+- `ProjectRevision` — snapshotted the *entire project* as one JSON blob per
+  mutation, which didn't scale as projects grew.
+
+Both are retained only so existing rows can drain via the `cleanup_history`
+management command — **no new rows are written to either**. If you're
+adding history for a new entity type, extend `EntityRevision`, not the old
+models.
+
+Why per-entity instead of per-project: write cost now scales with the size
+of the single changed entity, not with the size of the whole project, since
+every mutation only writes one small `EntityRevision` row rather than
+re-serializing everything the project contains.
+
+## Writing revisions
+
+`record_entity_revision(...)` (`backend/farm/views.py`) is the single
+write path — it just creates an `EntityRevision` row. It's called:
+
+- **Automatically** inside `Culture.save()` on every create/update, so
+  culture history requires no explicit call from view code.
+- **Explicitly** from view code for other mutation paths (soft-delete,
+  restore, project-level restore) — look for `culture._history_action = ...`
+  assignments before `.save()` calls in `backend/farm/views.py`; this is
+  how a save is tagged as a delete/restore action rather than a plain
+  update for history purposes.
+
+## Reading history
+
+- `GlobalHistoryListView` (`GET`, culture-only) and `ProjectHistoryListView`
+  (`GET`, all entity types) return the last 30 days of revisions for the
+  active project. `GlobalHistoryListView` additionally computes a
+  human-readable diff (`_build_entity_revision_changes`) between each
+  revision's snapshot and the *previous* revision for the same object,
+  skipping internal/denormalized fields (`id`, timestamps, `project_id`,
+  `*_normalized` fields, ...).
+- On the frontend, this only surfaces today as a standalone history
+  **dialog** on `Cultures.tsx` (see
+  [datagrid-architecture.md](./datagrid-architecture.md#row-history--versioning--not-a-grid-feature))
+  — it is not wired into the grid itself.
+
+## Restoring
+
+Two restore paths, both admin-only (`require_project_admin`):
+
+- **`GlobalHistoryRestoreView`** restores a *single culture* from one of its
+  own past revisions: copies every allowed field from that revision's
+  snapshot onto the (possibly soft-deleted — looked up via
+  `Culture.all_objects`, not the default manager) culture row, clears
+  `deleted_at`, and saves with `_history_action = ACTION_RESTORED`.
+- **`ProjectHistoryRestoreView`** restores the *whole project* to a target
+  timestamp (`_restore_project_state_at`): for every restorable entity
+  type, it deletes all current rows of that type in the project and
+  bulk-recreates them from `_entity_states_at(project, entity_type,
+  target_time)` — which, for each `object_id`, takes the most recent
+  revision at or before `target_time` (a `None` snapshot, i.e. the entity
+  was deleted by then, means it's simply not recreated). Entity types are
+  deleted in **reverse** dependency order before being recreated in forward
+  order, to avoid FK constraint errors during the rebuild.
+  `_restore_project_state_at` tolerates schema drift: a snapshot may carry
+  fields the current model no longer has (from before a field was renamed
+  or removed), and those are silently dropped rather than raising.
+
+## What to check before changing this
+
+- If you add a new project-scoped model that should participate in
+  project-wide point-in-time restore, add it to the restorable-entity-type
+  list used by `_restore_project_state_at` and make sure something calls
+  `record_entity_revision` for it — being project-scoped alone does not
+  give a model history for free.
+- Don't write new rows to `CultureRevision`/`ProjectRevision` — they're
+  drain-only.
+- Remember `EntityRevision.object_id` is a plain integer, not a real FK —
+  there's no DB-level referential-integrity guarantee tying a revision back
+  to its live entity table; this is an intentional generic-relation-like
+  pattern, not an oversight.
+
+## Unclear / needs check
+
+- The exact list backing `_RESTORABLE_ENTITY_TYPES` (which models
+  participate in whole-project restore) should be read directly from
+  `backend/farm/views.py` before assuming a given model is or isn't
+  covered — it wasn't fully enumerated in this doc.

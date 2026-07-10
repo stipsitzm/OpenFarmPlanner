@@ -10,6 +10,11 @@ const CITATION_MARKER_RE = /\s*【[^】]*†[^】]*】/g;
 /**
  * Remove AI-generated citation markers (e.g. 【941131680077198†L4162-L4178】) from text.
  * These are internal retrieval references that should not be shown to users.
+ *
+ * Kept even though the AI enrichment feature that used to generate these markers
+ * was removed (see git history: "Remove AI enrichment feature") — existing notes
+ * saved while that feature was active can still contain markers, so this stays a
+ * defensive display-time cleanup rather than dead code.
  */
 export function stripCitationMarkers(text: string): string {
   if (!text) return text;
