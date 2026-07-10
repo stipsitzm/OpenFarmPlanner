@@ -21,12 +21,12 @@ class CropViewSetTest(DRFAPITestCase):
         )
 
     def test_requires_authentication(self):
-        response = self.client.get('/api/crops/')
+        response = self.client.get('/openfarmplanner/api/crops/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_lists_only_published_crops(self):
         self.client.force_authenticate(user=self.user)
-        response = self.client.get('/api/crops/')
+        response = self.client.get('/openfarmplanner/api/crops/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         names = [item['name'] for item in response.data['results']]
@@ -35,7 +35,7 @@ class CropViewSetTest(DRFAPITestCase):
 
     def test_filters_by_free_text_query(self):
         self.client.force_authenticate(user=self.user)
-        response = self.client.get('/api/crops/', {'q': 'lett'})
+        response = self.client.get('/openfarmplanner/api/crops/', {'q': 'lett'})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
@@ -43,7 +43,7 @@ class CropViewSetTest(DRFAPITestCase):
 
     def test_retrieves_a_single_published_crop(self):
         self.client.force_authenticate(user=self.user)
-        response = self.client.get(f'/api/crops/{self.published.id}/')
+        response = self.client.get(f'/openfarmplanner/api/crops/{self.published.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['name'], 'Lettuce')
@@ -55,13 +55,13 @@ class CropViewSetTest(DRFAPITestCase):
 
     def test_retrieving_an_unpublished_crop_404s(self):
         self.client.force_authenticate(user=self.user)
-        response = self.client.get(f'/api/crops/{self.draft.id}/')
+        response = self.client.get(f'/openfarmplanner/api/crops/{self.draft.id}/')
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_match_finds_an_exact_normalized_match(self):
         self.client.force_authenticate(user=self.user)
-        response = self.client.get('/api/crops/match/', {'name': 'lettuce', 'variety': 'bijella'})
+        response = self.client.get('/openfarmplanner/api/crops/match/', {'name': 'lettuce', 'variety': 'bijella'})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['exists'])
@@ -69,7 +69,7 @@ class CropViewSetTest(DRFAPITestCase):
 
     def test_match_reports_no_match(self):
         self.client.force_authenticate(user=self.user)
-        response = self.client.get('/api/crops/match/', {'name': 'Kohlrabi', 'variety': 'Superschmelz'})
+        response = self.client.get('/openfarmplanner/api/crops/match/', {'name': 'Kohlrabi', 'variety': 'Superschmelz'})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.data['exists'])
@@ -77,6 +77,6 @@ class CropViewSetTest(DRFAPITestCase):
 
     def test_write_methods_are_not_allowed(self):
         self.client.force_authenticate(user=self.user)
-        response = self.client.post('/api/crops/', {'name': 'X', 'variety': 'Y'})
+        response = self.client.post('/openfarmplanner/api/crops/', {'name': 'X', 'variety': 'Y'})
 
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
