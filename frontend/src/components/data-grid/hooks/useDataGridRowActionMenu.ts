@@ -1,11 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { GridRowId } from '@mui/x-data-grid';
-import { focusContextMenuOrigin, useContextMenuFocus } from '../contextMenuFocus';
-import {
-  shouldOpenCustomContextMenu,
-  suppressNativeContextMenu,
-  useCloseCustomContextMenuOnNativeContextMenu,
-} from '../../../utils/contextMenu';
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../../../utils/contextMenu';
+import { useRowContextMenuState } from '../../contextMenu/useRowContextMenuState';
+import { useLongPressTimer } from '../../contextMenu/useLongPressTimer';
 
 const ROW_ACTION_LONG_PRESS_MS = 550;
 
@@ -31,22 +28,19 @@ export function useDataGridRowActionMenu({
   setSelectedRowIds,
   getRowIdFromElement,
 }: UseDataGridRowActionMenuParams) {
-  const [rowActionMenuState, setRowActionMenuState] = useState<RowActionMenuState | null>(null);
   const [longPressFeedbackRowId, setLongPressFeedbackRowId] = useState<GridRowId | null>(null);
-  const rowActionMenuOriginRef = useRef<HTMLElement | null>(null);
-  const rowActionLongPressTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
 
-  const clearRowActionLongPressTimer = useCallback((): void => {
-    if (rowActionLongPressTimerRef.current === null) {
-      return;
+  const isRowActionContextMenuTarget = useCallback((target: EventTarget | null): boolean => {
+    if (!hasContextualRowActions || !shouldOpenCustomContextMenu(target)) {
+      return false;
     }
-    window.clearTimeout(rowActionLongPressTimerRef.current);
-    rowActionLongPressTimerRef.current = null;
-  }, []);
+    const rowId = getRowIdFromElement(target);
+    return rowId !== null && rowsById.has(String(rowId));
+  }, [getRowIdFromElement, hasContextualRowActions, rowsById]);
 
-  useEffect(() => () => {
-    clearRowActionLongPressTimer();
-  }, [clearRowActionLongPressTimer]);
+  const { state: menuState, originRef: menuOriginRef, listRef: menuListRef, open: menuOpen, close: menuClose, clearIf: menuClearIf } =
+    useRowContextMenuState<GridRowId>({ isContextMenuTarget: isRowActionContextMenuTarget });
+  const longPressTimer = useLongPressTimer(ROW_ACTION_LONG_PRESS_MS);
 
   const openRowActionMenuAt = useCallback((
     rowId: GridRowId,
@@ -56,9 +50,8 @@ export function useDataGridRowActionMenu({
   ): void => {
     markContextMenuHintUsed();
     setSelectedRowIds([rowId]);
-    rowActionMenuOriginRef.current = originElement;
-    setRowActionMenuState({ rowId, mouseX, mouseY });
-  }, [markContextMenuHintUsed, setSelectedRowIds]);
+    menuOpen(rowId, mouseX, mouseY, originElement);
+  }, [markContextMenuHintUsed, setSelectedRowIds, menuOpen]);
 
   const openRowActionContextMenu = useCallback((rowId: GridRowId, event: React.MouseEvent): void => {
     suppressNativeContextMenu(event);
@@ -72,42 +65,16 @@ export function useDataGridRowActionMenu({
   }, [openRowActionMenuAt]);
 
   const closeRowActionMenu = useCallback((): void => {
-    setRowActionMenuState(null);
+    menuClose();
     setLongPressFeedbackRowId(null);
-    focusContextMenuOrigin(rowActionMenuOriginRef.current);
-  }, []);
-
-  const isRowActionContextMenuTarget = useCallback((target: EventTarget | null): boolean => {
-    if (!hasContextualRowActions || !shouldOpenCustomContextMenu(target)) {
-      return false;
-    }
-    const rowId = getRowIdFromElement(target);
-    return rowId !== null && rowsById.has(String(rowId));
-  }, [getRowIdFromElement, hasContextualRowActions, rowsById]);
-
-  const repositionOpenRowActionMenu = useCallback((event: globalThis.MouseEvent): void => {
-    setRowActionMenuState((currentState) => (
-      currentState
-        ? { rowId: currentState.rowId, mouseX: event.clientX + 2, mouseY: event.clientY - 6 }
-        : currentState
-    ));
-  }, []);
-
-  useCloseCustomContextMenuOnNativeContextMenu(
-    Boolean(rowActionMenuState),
-    closeRowActionMenu,
-    isRowActionContextMenuTarget,
-    repositionOpenRowActionMenu,
-  );
-
-  const rowActionMenuListRef = useContextMenuFocus(Boolean(rowActionMenuState), closeRowActionMenu);
+  }, [menuClose]);
 
   // Used by the parent's clearRowInteractionState when a row is removed.
   const clearRowActionMenuForId = useCallback((rowId: GridRowId): void => {
     const rowKey = String(rowId);
     setLongPressFeedbackRowId((current) => (String(current) === rowKey ? null : current));
-    setRowActionMenuState((current) => (current && String(current.rowId) === rowKey ? null : current));
-  }, []);
+    menuClearIf((key) => String(key) === rowKey);
+  }, [menuClearIf]);
 
   const handleGridTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>): void => {
     if (!hasContextualRowActions || event.touches.length !== 1) {
@@ -124,30 +91,31 @@ export function useDataGridRowActionMenu({
       ? event.target.closest<HTMLElement>('[role="row"][data-id]')
       : null;
     const touch = event.touches[0];
-    clearRowActionLongPressTimer();
-    rowActionLongPressTimerRef.current = window.setTimeout(() => {
+    longPressTimer.start(() => {
       markContextMenuHintUsed();
       setSelectedRowIds([rowId]);
       setLongPressFeedbackRowId(rowId);
-      rowActionMenuOriginRef.current = originElement;
-      setRowActionMenuState({ rowId, mouseX: touch.clientX + 2, mouseY: touch.clientY - 6 });
-      rowActionLongPressTimerRef.current = null;
-    }, ROW_ACTION_LONG_PRESS_MS);
-  }, [clearRowActionLongPressTimer, getRowIdFromElement, hasContextualRowActions, markContextMenuHintUsed, rowsById, setSelectedRowIds]);
+      menuOpen(rowId, touch.clientX + 2, touch.clientY - 6, originElement);
+    });
+  }, [longPressTimer, getRowIdFromElement, hasContextualRowActions, markContextMenuHintUsed, rowsById, setSelectedRowIds, menuOpen]);
 
   const handleGridTouchMove = useCallback((): void => {
-    clearRowActionLongPressTimer();
-  }, [clearRowActionLongPressTimer]);
+    longPressTimer.clear();
+  }, [longPressTimer]);
 
   const handleGridTouchEnd = useCallback((): void => {
-    clearRowActionLongPressTimer();
-  }, [clearRowActionLongPressTimer]);
+    longPressTimer.clear();
+  }, [longPressTimer]);
+
+  const rowActionMenuState = useMemo((): RowActionMenuState | null => (
+    menuState ? { rowId: menuState.key, mouseX: menuState.mouseX, mouseY: menuState.mouseY } : null
+  ), [menuState]);
 
   return {
     rowActionMenuState,
     longPressFeedbackRowId,
-    rowActionMenuOriginRef,
-    rowActionMenuListRef,
+    rowActionMenuOriginRef: menuOriginRef,
+    rowActionMenuListRef: menuListRef,
     openRowActionMenuAt,
     openRowActionContextMenu,
     openRowActionKeyboardContextMenu,
