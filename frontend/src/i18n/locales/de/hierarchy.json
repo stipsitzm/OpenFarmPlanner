@@ -76,6 +76,7 @@
   "actions": {
     "addField": "Parzelle hinzufügen",
     "addBed": "Beet hinzufügen",
+    "addBedShortcutHint": "Einfg",
     "createLocation": "Standort hinzufügen",
     "addAdditionalLocation": "Mehrere Orte? Weiteren Standort hinzufügen",
     "undo": "Rückgängig",

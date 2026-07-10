@@ -35,8 +35,12 @@ import type {
 } from "@mui/x-data-grid";
 import { Box, Alert, useMediaQuery } from "@mui/material";
 import Divider from "@mui/material/Divider";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
+import Typography from "@mui/material/Typography";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
+import { HierarchyAddIcon } from "../components/hierarchy/HierarchyAddIcon";
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { CALCULATED_COLUMN_CELL_CLASS } from "../components/data-grid/calculatedColumns";
 import { dataGridSx } from "../components/data-grid/styles";
@@ -117,6 +121,9 @@ interface HierarchyRowAction {
   group: "create" | "destructive";
   color?: "default" | "error";
   onClick: () => void;
+  emphasized?: boolean;
+  icon?: React.ReactNode;
+  shortcutHint?: string;
 }
 
 const HIERARCHY_SELECTED_VIEW_ROW_SELECTOR =
@@ -1040,6 +1047,19 @@ function FieldsBedsHierarchy({
     }
   }, [handleAddBed, handleAddField, rowsRef, selectedRowIdRef]);
 
+  // Mirrors the "Beet hinzufügen" context menu action (add-bed), reachable via
+  // the Insert key while the table is focused. Only fires for field/bed rows,
+  // matching where "Beet hinzufügen" appears in the context menu.
+  const handleAddBedViaShortcut = useCallback(() => {
+    const row = rowsRef.current.find((r) => r.id === selectedRowIdRef.current);
+    if (!row) return;
+    if (row.type === "field" && row.fieldId) {
+      handleAddBed(row.fieldId);
+    } else if (row.type === "bed" && row.field) {
+      handleAddBed(row.field);
+    }
+  }, [handleAddBed, rowsRef, selectedRowIdRef]);
+
   const handleEditSelected = useCallback(() => {
     const row = rowsRef.current.find((r) => r.id === selectedRowIdRef.current);
     if (!row) return;
@@ -1068,6 +1088,9 @@ function FieldsBedsHierarchy({
         label: t("actions.addBed"),
         group: "create",
         onClick: () => handleAddBed(row.fieldId!),
+        emphasized: true,
+        icon: <HierarchyAddIcon interactive={false} ariaHidden />,
+        shortcutHint: t("actions.addBedShortcutHint"),
       });
     }
 
@@ -1176,6 +1199,7 @@ function FieldsBedsHierarchy({
     toggleExpand,
     discardActiveRowEdit: handleClickOutsideGrid,
     openContextMenuForRow,
+    onAddBedShortcut: handleAddBedViaShortcut,
   });
 
   const nameColumnWidth = useMemo(() => {
@@ -1689,7 +1713,24 @@ function FieldsBedsHierarchy({
               }}
               sx={{ color: action.color === "error" ? "error.main" : undefined }}
             >
-              {action.label}
+              {action.icon ? (
+                <>
+                  <ListItemIcon>{action.icon}</ListItemIcon>
+                  <ListItemText
+                    primary={action.label}
+                    slotProps={{
+                      primary: { sx: { fontWeight: action.emphasized ? 600 : undefined } },
+                    }}
+                  />
+                  {action.shortcutHint ? (
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: "auto", pl: 3 }}>
+                      {action.shortcutHint}
+                    </Typography>
+                  ) : null}
+                </>
+              ) : (
+                action.label
+              )}
             </MenuItem>
           );
 
