@@ -24,9 +24,10 @@ fields/beds/cultures/plans yet.
 
 | Piece | File |
 |---|---|
-| Per-plan requirement + aggregation + supplier/TKG resolution | `backend/farm/views.py`, `SeedDemandListView` (`GET`/`POST /seed-demand/`) |
+| Per-plan requirement + aggregation + supplier/TKG/germination resolution | `backend/farm/services/seed_demand.py`, `build_seed_demand_rows()` |
+| HTTP layer: request parsing, serialization, supplier-selection POST | `backend/farm/views.py`, `SeedDemandListView` (`GET`/`POST /seed-demand/`) |
 | Package-count optimizer | `backend/farm/services/seed_packages.py`, `compute_seed_package_suggestion()` |
-| Unit constants (seed-rate units, package units) | `backend/farm/seed_units.py` |
+| Unit constants + TKG conversion helpers | `backend/farm/seed_units.py` |
 | Read-only response shape | `backend/farm/serializers.py`, `SeedDemandSerializer` |
 | Display + supplier selection UI | `frontend/src/pages/SeedDemand.tsx` |
 
@@ -170,9 +171,9 @@ to cover expected germination loss.
 
 `backend/farm/seed_units.py` defines the reusable TKG conversion helpers
 (`seeds_to_grams`, `grams_to_seeds`, `are_units_convertible`), and
-`SeedDemandListView._convert_requirement_to_unit` calls them directly rather
-than reimplementing the formula — there is one place to change the
-conversion rule if it ever needs to change.
+`farm/services/seed_demand.py`'s `convert_requirement_to_unit` calls them
+directly rather than reimplementing the formula — there is one place to
+change the conversion rule if it ever needs to change.
 
 ## Unclear / needs check
 
