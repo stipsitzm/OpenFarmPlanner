@@ -35,18 +35,28 @@ async function invokeE2EAction(request: APIRequestContext, action: string, paylo
   return (await response.json()) as Record<string, unknown>;
 }
 
-export async function loginWithDeterministicProject(page: Page, request: APIRequestContext, scenarioId: string): Promise<void> {
+export async function loginWithDeterministicProject(
+  page: Page,
+  request: APIRequestContext,
+  scenarioId: string,
+  options: { demoProject?: boolean; loginAsAdmin?: boolean } = {},
+): Promise<void> {
   await invokeE2EAction(request, 'reset', { scenario_id: scenarioId });
-  const fixture = await invokeE2EAction(request, 'setup', { scenario_id: scenarioId, invitation_state: 'pending' }) as {
+  const fixture = await invokeE2EAction(request, options.demoProject ? 'setup_demo' : 'setup', {
+    scenario_id: scenarioId,
+    invitation_state: 'pending',
+  }) as {
     inviteUrl: string;
+    admin: { email: string; password: string };
     invitee: { email: string; password: string };
   };
 
-  await page.goto(fixture.inviteUrl);
-  await page.getByLabel('E-Mail').fill(fixture.invitee.email);
-  await page.locator('input[type="password"]').fill(fixture.invitee.password);
+  const loginUser = options.loginAsAdmin ? fixture.admin : fixture.invitee;
+  await page.goto(options.loginAsAdmin ? '/login' : fixture.inviteUrl);
+  await page.getByLabel('E-Mail').fill(loginUser.email);
+  await page.locator('input[type="password"]').fill(loginUser.password);
   await page.getByRole('button', { name: 'Anmelden' }).click();
-  await expect(page).toHaveURL(/\/app\//);
+  await expect.poll(() => page.evaluate(() => window.location.pathname)).toMatch(/^\/app\//);
 }
 
 // Saves a fields-beds hierarchy row by tabbing through the editable cells, then

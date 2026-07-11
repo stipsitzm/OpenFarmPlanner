@@ -50,3 +50,30 @@ Notes:
 - Viewports covered: `375x800`, `768x900`, `1024x900`, `1440x900`.
 - Route coverage: dashboard, standorte, anbauflaechen, kulturen, anbauplaene, anbaukalender, saatgutbedarf, lieferanten.
 - Helpers are in `e2e/utils.ts` for deterministic login, viewport presets, and stable-page waiting.
+
+## Landing-page product screenshots
+
+The public landing page uses generated screenshots from a deterministic demo
+project. The demo data is created by backend code in
+`farm.services.demo_project` and can be reset locally:
+
+```bash
+cd backend
+pdm run python manage.py seed_demo_project
+```
+
+Regenerate the WebP screenshots used by the landing page:
+
+```bash
+cd frontend
+npm run build
+GENERATE_LANDING_SCREENSHOTS=1 npx playwright test e2e/landing-screenshots.spec.ts
+```
+
+Notes:
+- The viewport is fixed at `1440x900`.
+- The assets are written to `public/landing/screenshots/`.
+- ImageMagick's `magick` command is required for WebP conversion. Set
+  `MAGICK_BINARY=/path/to/magick` if it is not on `PATH`.
+- The spec is skipped during normal `npm run test:e2e` runs unless
+  `GENERATE_LANDING_SCREENSHOTS=1` is set.

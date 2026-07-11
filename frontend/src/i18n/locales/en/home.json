@@ -15,6 +15,32 @@
     "linkLabel": "Open-source project on GitHub",
     "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
   },
+  "productTour": {
+    "title": "A demo project instead of empty tables",
+    "description": "OpenFarmPlanner connects growing areas, crop data, schedules, and summaries into one continuous season plan.",
+    "items": {
+      "areas": {
+        "title": "Structure areas and beds clearly",
+        "description": "Locations, fields, and beds stay visible in a clear hierarchy, including dimensions, area, and notes.",
+        "alt": "Hierarchical demo-project view with locations, fields, and beds"
+      },
+      "calendar": {
+        "title": "Plan bed occupancy in the calendar",
+        "description": "The cultivation calendar shows which crop occupies each bed and when, making overlaps easy to spot early.",
+        "alt": "Cultivation calendar with occupied beds and colored crop periods"
+      },
+      "seedDemand": {
+        "title": "Derive seed demand from plans",
+        "description": "Seed amount and package suggestions are calculated from crop parameters, used area, and supplier data.",
+        "alt": "Seed demand table with crops, suppliers, required amount, and package suggestions"
+      },
+      "cultures": {
+        "title": "Maintain crops centrally",
+        "description": "Varieties, cultivation methods, spacing, expected yield, and seed data live in one place and feed the plan.",
+        "alt": "Crops view with several vegetables and varieties in the demo project"
+      }
+    }
+  },
   "footer": {
     "imprint": "Imprint",
     "privacy": "Privacy policy",

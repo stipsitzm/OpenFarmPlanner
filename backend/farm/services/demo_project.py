@@ -1,0 +1,548 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
+from typing import Any
+
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from accounts.models import UserProjectSettings
+from farm.models import (
+    Bed,
+    BedLayout,
+    Culture,
+    CultureSupplierData,
+    Field,
+    FieldLayout,
+    Location,
+    PlantingPlan,
+    Project,
+    ProjectMembership,
+    SeedPackage,
+    Supplier,
+)
+
+User = get_user_model()
+
+DEMO_PROJECT_NAME = 'Solawi Sonnenacker 2026'
+DEMO_PROJECT_SLUG = 'solawi-sonnenacker-2026'
+DEMO_USER_EMAIL = 'demo-openfarmplanner@example.local'
+DEMO_USERNAME = 'openfarmplanner-demo'
+DEMO_PASSWORD = 'OpenFarmPlannerDemo2026!'
+
+
+@dataclass(frozen=True)
+class DemoProjectResult:
+    project: Project
+    user: Any
+    created_project: bool
+    created_user: bool
+
+
+@dataclass(frozen=True)
+class CultureSpec:
+    key: str
+    name: str
+    variety: str
+    color: str
+    cultivation_types: list[str]
+    growth_days: int
+    harvest_days: int
+    propagation_days: int | None
+    crop_family: str
+    nutrient_demand: str
+    row_spacing_m: float
+    distance_within_row_m: float
+    expected_yield: Decimal
+    harvest_method: str
+    seed_rate_direct_value: float | None = None
+    seed_rate_direct_unit: str | None = None
+    seed_rate_pre_value: float | None = None
+    seed_rate_pre_unit: str | None = None
+    safety_direct: float | None = None
+    safety_pre: float | None = None
+    tkg: Decimal | None = None
+    supplier_key: str = 'bingenheimer'
+    packaging_sizes: list[dict[str, float | str]] | None = None
+    germination_rate: float | None = None
+
+
+@dataclass(frozen=True)
+class PlanSpec:
+    culture_key: str
+    bed_key: str
+    cultivation_type: str
+    planting_date: date
+    area_usage_sqm: Decimal
+    quantity: int | None = None
+    notes: str = ''
+
+
+def reset_project_demo_data(project: Project) -> None:
+    """Remove farm-planning records from one project before recreating the demo."""
+    PlantingPlan.objects.filter(project=project).delete()
+    BedLayout.objects.filter(project=project).delete()
+    FieldLayout.objects.filter(project=project).delete()
+    Bed.objects.filter(project=project).delete()
+    Field.objects.filter(project=project).delete()
+    Location.objects.filter(project=project).delete()
+    CultureSupplierData.objects.filter(project=project).delete()
+    SeedPackage.objects.filter(project=project).delete()
+    Culture.all_objects.filter(project=project).delete()
+    Supplier.objects.filter(project=project).delete()
+
+
+def populate_demo_project(project: Project, *, owner: Any | None = None) -> None:
+    """Create a compact, realistic demo farm for screenshots and local demos."""
+    with transaction.atomic():
+        reset_project_demo_data(project)
+
+        suppliers = _create_suppliers(project)
+        locations, fields, beds = _create_area_hierarchy(project)
+        _create_layouts(project, fields, beds)
+        cultures = _create_cultures(project, suppliers)
+        _create_planting_plans(project, cultures, beds, owner)
+
+
+def create_or_reset_demo_project(
+    *,
+    user_email: str = DEMO_USER_EMAIL,
+    username: str = DEMO_USERNAME,
+    password: str = DEMO_PASSWORD,
+    project_name: str = DEMO_PROJECT_NAME,
+    project_slug: str = DEMO_PROJECT_SLUG,
+) -> DemoProjectResult:
+    """Create a local demo user/project and replace the project's demo data."""
+    with transaction.atomic():
+        user, created_user = User.objects.get_or_create(
+            email=user_email,
+            defaults={
+                'username': username,
+                'is_active': True,
+            },
+        )
+        if created_user:
+            user.set_password(password)
+            user.save(update_fields=['password'])
+        elif password:
+            user.set_password(password)
+            if not user.username:
+                user.username = username
+                user.save(update_fields=['password', 'username'])
+            else:
+                user.save(update_fields=['password'])
+
+        project, created_project = Project.objects.get_or_create(
+            slug=project_slug,
+            defaults={
+                'name': project_name,
+                'description': 'Reproduzierbares Demo-Projekt f\u00fcr Produkt-Screenshots.',
+            },
+        )
+        if not created_project:
+            project.name = project_name
+            project.description = 'Reproduzierbares Demo-Projekt f\u00fcr Produkt-Screenshots.'
+            project.deleted_at = None
+            project.is_active = True
+            project.save(update_fields=['name', 'description', 'deleted_at', 'is_active', 'updated_at'])
+
+        ProjectMembership.objects.update_or_create(
+            user=user,
+            project=project,
+            defaults={'role': ProjectMembership.ROLE_ADMIN},
+        )
+        settings_obj, _ = UserProjectSettings.objects.get_or_create(user=user)
+        settings_obj.default_project = project
+        settings_obj.last_project = project
+        settings_obj.save(update_fields=['default_project', 'last_project', 'updated_at'])
+
+        populate_demo_project(project, owner=user)
+
+    return DemoProjectResult(
+        project=project,
+        user=user,
+        created_project=created_project,
+        created_user=created_user,
+    )
+
+
+def _create_suppliers(project: Project) -> dict[str, Supplier]:
+    specs = {
+        'bingenheimer': ('Bingenheimer Saatgut', 'https://www.bingenheimersaatgut.de'),
+        'sativa': ('Sativa Rheinau', 'https://www.sativa.bio'),
+        'reinsaat': ('Reinsaat', 'https://www.reinsaat.at'),
+    }
+    return {
+        key: Supplier.objects.create(name=name, homepage_url=url, project=project)
+        for key, (name, url) in specs.items()
+    }
+
+
+def _create_area_hierarchy(project: Project) -> tuple[dict[str, Location], dict[str, Field], dict[str, Bed]]:
+    locations = {
+        'hofgarten': Location.objects.create(
+            name='Hofgarten',
+            description='Gesch\u00fctzte Fl\u00e4chen nahe Waschplatz und Jungpflanzenhaus.',
+            soil_type='loam',
+            exposure='south',
+            project=project,
+        ),
+        'bachacker': Location.objects.create(
+            name='Acker am Bach',
+            description='Freilandfl\u00e4che f\u00fcr Wurzelgem\u00fcse und Kohlkulturen.',
+            soil_type='loam',
+            exposure='flat',
+            project=project,
+        ),
+    }
+
+    field_specs = [
+        ('fruehbeete', 'Fr\u00fchbeete Nord', 'hofgarten', 36.0, 7.5),
+        ('tunnel', 'Folientunnel S\u00fcd', 'hofgarten', 30.0, 8.0),
+        ('wurzel', 'Wurzelgem\u00fcse', 'bachacker', 45.0, 6.0),
+        ('kohl', 'Kohlquartier', 'bachacker', 42.0, 6.0),
+    ]
+    fields = {
+        key: Field.objects.create(
+            name=name,
+            location=locations[location_key],
+            length_m=length_m,
+            width_m=width_m,
+            project=project,
+        )
+        for key, name, location_key, length_m, width_m in field_specs
+    }
+
+    bed_specs = [
+        ('salat-1', 'Salat 1', 'fruehbeete', 12.0, 0.75),
+        ('salat-2', 'Salat 2', 'fruehbeete', 12.0, 0.75),
+        ('kraeuter', 'Kr\u00e4uter & Mangold', 'fruehbeete', 12.0, 0.75),
+        ('tomate-1', 'Tomatenreihe 1', 'tunnel', 24.0, 0.80),
+        ('tomate-2', 'Tomatenreihe 2', 'tunnel', 24.0, 0.80),
+        ('gurke', 'Gurkenreihe', 'tunnel', 24.0, 0.80),
+        ('karotte-1', 'Karotten 1', 'wurzel', 25.0, 0.75),
+        ('karotte-2', 'Karotten 2', 'wurzel', 25.0, 0.75),
+        ('rote-bete', 'Rote Bete', 'wurzel', 25.0, 0.75),
+        ('kohlrabi', 'Kohlrabi', 'kohl', 22.0, 0.75),
+        ('zucchini', 'Zucchini', 'kohl', 18.0, 1.20),
+        ('reserve', 'Gr\u00fcnd\u00fcngung Reserve', 'kohl', 18.0, 1.20),
+    ]
+    beds = {
+        key: Bed.objects.create(
+            name=name,
+            field=fields[field_key],
+            length_m=length_m,
+            width_m=width_m,
+            project=project,
+        )
+        for key, name, field_key, length_m, width_m in bed_specs
+    }
+
+    return locations, fields, beds
+
+
+def _create_layouts(
+    project: Project,
+    fields: dict[str, Field],
+    beds: dict[str, Bed],
+) -> None:
+    field_positions = {
+        'fruehbeete': (40, 40),
+        'tunnel': (40, 190),
+        'wurzel': (40, 40),
+        'kohl': (40, 205),
+    }
+    for key, field in fields.items():
+        x, y = field_positions[key]
+        FieldLayout.objects.create(field=field, location=field.location, project=project, x=x, y=y)
+
+    for index, (key, bed) in enumerate(beds.items()):
+        field_layout = bed.field.layout
+        BedLayout.objects.create(
+            bed=bed,
+            location=bed.field.location,
+            project=project,
+            x=field_layout.x + 18 + (index % 3) * 72,
+            y=field_layout.y + 24 + (index % 4) * 34,
+        )
+
+
+def _create_cultures(project: Project, suppliers: dict[str, Supplier]) -> dict[str, Culture]:
+    culture_specs = [
+        CultureSpec(
+            key='karotte',
+            name='Karotte',
+            variety='Nantaise 2',
+            color='#f97316',
+            cultivation_types=['direct_sowing'],
+            growth_days=92,
+            harvest_days=28,
+            propagation_days=None,
+            crop_family='Doldenbl\u00fctler',
+            nutrient_demand='medium',
+            row_spacing_m=0.25,
+            distance_within_row_m=0.04,
+            expected_yield=Decimal('38.00'),
+            harvest_method='per_sqm',
+            seed_rate_direct_value=0.7,
+            seed_rate_direct_unit='g_per_m2',
+            safety_direct=12,
+            tkg=Decimal('1.20'),
+            supplier_key='bingenheimer',
+            packaging_sizes=[{'size_value': 5, 'size_unit': 'g'}, {'size_value': 25, 'size_unit': 'g'}],
+            germination_rate=82,
+        ),
+        CultureSpec(
+            key='salat',
+            name='Salat',
+            variety='Lollo Bionda',
+            color='#65a30d',
+            cultivation_types=['pre_cultivation'],
+            growth_days=42,
+            harvest_days=10,
+            propagation_days=24,
+            crop_family='Korbbl\u00fctler',
+            nutrient_demand='medium',
+            row_spacing_m=0.30,
+            distance_within_row_m=0.30,
+            expected_yield=Decimal('22.00'),
+            harvest_method='per_sqm',
+            seed_rate_pre_value=1.2,
+            seed_rate_pre_unit='seeds_per_plant',
+            safety_pre=20,
+            tkg=Decimal('1.10'),
+            supplier_key='sativa',
+            packaging_sizes=[{'size_value': 250, 'size_unit': 'seeds'}, {'size_value': 1000, 'size_unit': 'seeds'}],
+            germination_rate=88,
+        ),
+        CultureSpec(
+            key='tomate',
+            name='Tomate',
+            variety='Ruthje',
+            color='#dc2626',
+            cultivation_types=['pre_cultivation'],
+            growth_days=70,
+            harvest_days=60,
+            propagation_days=45,
+            crop_family='Nachtschattengew\u00e4chse',
+            nutrient_demand='high',
+            row_spacing_m=0.80,
+            distance_within_row_m=0.50,
+            expected_yield=Decimal('48.00'),
+            harvest_method='per_plant',
+            seed_rate_pre_value=1.2,
+            seed_rate_pre_unit='seeds_per_plant',
+            safety_pre=25,
+            tkg=Decimal('3.20'),
+            supplier_key='reinsaat',
+            packaging_sizes=[{'size_value': 25, 'size_unit': 'seeds'}, {'size_value': 100, 'size_unit': 'seeds'}],
+            germination_rate=85,
+        ),
+        CultureSpec(
+            key='gurke',
+            name='Gurke',
+            variety='Tanja',
+            color='#16a34a',
+            cultivation_types=['pre_cultivation', 'direct_sowing'],
+            growth_days=55,
+            harvest_days=45,
+            propagation_days=28,
+            crop_family='K\u00fcrbisgew\u00e4chse',
+            nutrient_demand='high',
+            row_spacing_m=0.80,
+            distance_within_row_m=0.40,
+            expected_yield=Decimal('36.00'),
+            harvest_method='per_plant',
+            seed_rate_pre_value=1.2,
+            seed_rate_pre_unit='seeds_per_plant',
+            seed_rate_direct_value=2.0,
+            seed_rate_direct_unit='seeds_per_plant',
+            safety_pre=20,
+            safety_direct=10,
+            tkg=Decimal('28.00'),
+            supplier_key='bingenheimer',
+            packaging_sizes=[{'size_value': 20, 'size_unit': 'seeds'}, {'size_value': 100, 'size_unit': 'seeds'}],
+            germination_rate=86,
+        ),
+        CultureSpec(
+            key='mangold',
+            name='Mangold',
+            variety='Bright Lights',
+            color='#7c3aed',
+            cultivation_types=['pre_cultivation', 'direct_sowing'],
+            growth_days=58,
+            harvest_days=70,
+            propagation_days=30,
+            crop_family='Fuchsschwanzgew\u00e4chse',
+            nutrient_demand='medium',
+            row_spacing_m=0.35,
+            distance_within_row_m=0.30,
+            expected_yield=Decimal('18.00'),
+            harvest_method='per_sqm',
+            seed_rate_pre_value=1.5,
+            seed_rate_pre_unit='seeds_per_plant',
+            seed_rate_direct_value=1.2,
+            seed_rate_direct_unit='g_per_m2',
+            safety_pre=18,
+            safety_direct=10,
+            tkg=Decimal('15.00'),
+            supplier_key='sativa',
+            packaging_sizes=[{'size_value': 5, 'size_unit': 'g'}, {'size_value': 25, 'size_unit': 'g'}],
+            germination_rate=80,
+        ),
+        CultureSpec(
+            key='rote-bete',
+            name='Rote Bete',
+            variety='Robuschka',
+            color='#be123c',
+            cultivation_types=['direct_sowing'],
+            growth_days=85,
+            harvest_days=35,
+            propagation_days=None,
+            crop_family='Fuchsschwanzgew\u00e4chse',
+            nutrient_demand='medium',
+            row_spacing_m=0.30,
+            distance_within_row_m=0.08,
+            expected_yield=Decimal('30.00'),
+            harvest_method='per_sqm',
+            seed_rate_direct_value=1.1,
+            seed_rate_direct_unit='g_per_m2',
+            safety_direct=10,
+            tkg=Decimal('13.00'),
+            supplier_key='reinsaat',
+            packaging_sizes=[{'size_value': 10, 'size_unit': 'g'}, {'size_value': 50, 'size_unit': 'g'}],
+            germination_rate=84,
+        ),
+        CultureSpec(
+            key='kohlrabi',
+            name='Kohlrabi',
+            variety='Azur Star',
+            color='#2563eb',
+            cultivation_types=['pre_cultivation'],
+            growth_days=48,
+            harvest_days=14,
+            propagation_days=28,
+            crop_family='Kreuzbl\u00fctler',
+            nutrient_demand='medium',
+            row_spacing_m=0.30,
+            distance_within_row_m=0.25,
+            expected_yield=Decimal('24.00'),
+            harvest_method='per_sqm',
+            seed_rate_pre_value=1.2,
+            seed_rate_pre_unit='seeds_per_plant',
+            safety_pre=18,
+            tkg=Decimal('4.20'),
+            supplier_key='bingenheimer',
+            packaging_sizes=[{'size_value': 250, 'size_unit': 'seeds'}, {'size_value': 1000, 'size_unit': 'seeds'}],
+            germination_rate=90,
+        ),
+        CultureSpec(
+            key='zucchini',
+            name='Zucchini',
+            variety='Costata Romanesco',
+            color='#0f766e',
+            cultivation_types=['pre_cultivation'],
+            growth_days=45,
+            harvest_days=70,
+            propagation_days=24,
+            crop_family='K\u00fcrbisgew\u00e4chse',
+            nutrient_demand='high',
+            row_spacing_m=1.20,
+            distance_within_row_m=0.80,
+            expected_yield=Decimal('42.00'),
+            harvest_method='per_plant',
+            seed_rate_pre_value=1.2,
+            seed_rate_pre_unit='seeds_per_plant',
+            safety_pre=20,
+            tkg=Decimal('120.00'),
+            supplier_key='reinsaat',
+            packaging_sizes=[{'size_value': 10, 'size_unit': 'seeds'}, {'size_value': 50, 'size_unit': 'seeds'}],
+            germination_rate=88,
+        ),
+    ]
+
+    cultures: dict[str, Culture] = {}
+    for spec in culture_specs:
+        supplier = suppliers[spec.supplier_key]
+        culture = Culture.objects.create(
+            name=spec.name,
+            variety=spec.variety,
+            crop_family=spec.crop_family,
+            nutrient_demand=spec.nutrient_demand,
+            cultivation_types=spec.cultivation_types,
+            cultivation_type=spec.cultivation_types[0],
+            growth_duration_days=spec.growth_days,
+            harvest_duration_days=spec.harvest_days,
+            propagation_duration_days=spec.propagation_days,
+            harvest_method=spec.harvest_method,
+            expected_yield=spec.expected_yield,
+            row_spacing_m=spec.row_spacing_m,
+            distance_within_row_m=spec.distance_within_row_m,
+            seed_rate_direct_value=spec.seed_rate_direct_value,
+            seed_rate_direct_unit=spec.seed_rate_direct_unit,
+            seed_rate_pre_cultivation_value=spec.seed_rate_pre_value,
+            seed_rate_pre_cultivation_unit=spec.seed_rate_pre_unit,
+            sowing_calculation_safety_percent_direct=spec.safety_direct,
+            sowing_calculation_safety_percent_pre_cultivation=spec.safety_pre,
+            thousand_kernel_weight_g=spec.tkg,
+            supplier=supplier,
+            selected_seed_demand_supplier=supplier,
+            display_color=spec.color,
+            project=project,
+        )
+        CultureSupplierData.objects.create(
+            culture=culture,
+            supplier=supplier,
+            supplier_name=supplier.name,
+            packaging_sizes=spec.packaging_sizes or [],
+            thousand_kernel_weight_g=spec.tkg,
+            germination_rate=spec.germination_rate,
+            project=project,
+        )
+        for package in spec.packaging_sizes or []:
+            SeedPackage.objects.create(
+                culture=culture,
+                project=project,
+                size_value=Decimal(str(package['size_value'])),
+                size_unit=str(package['size_unit']),
+            )
+        cultures[spec.key] = culture
+
+    return cultures
+
+
+def _create_planting_plans(
+    project: Project,
+    cultures: dict[str, Culture],
+    beds: dict[str, Bed],
+    owner: Any | None,
+) -> None:
+    plan_specs = [
+        PlanSpec('salat', 'salat-1', 'pre_cultivation', date(2026, 2, 18), Decimal('8.5'), 95, 'Fr\u00fcher Satz f\u00fcr die erste Abo-Kiste.'),
+        PlanSpec('salat', 'salat-2', 'pre_cultivation', date(2026, 3, 22), Decimal('8.5'), 95),
+        PlanSpec('mangold', 'kraeuter', 'pre_cultivation', date(2026, 4, 6), Decimal('7.5'), 72),
+        PlanSpec('tomate', 'tomate-1', 'pre_cultivation', date(2026, 4, 25), Decimal('14.0'), 35, 'Stabtomaten nach Jungpflanzenanzucht.'),
+        PlanSpec('tomate', 'tomate-2', 'pre_cultivation', date(2026, 5, 2), Decimal('14.0'), 35),
+        PlanSpec('gurke', 'gurke', 'pre_cultivation', date(2026, 5, 10), Decimal('12.0'), 38),
+        PlanSpec('karotte', 'karotte-1', 'direct_sowing', date(2026, 3, 12), Decimal('16.0')),
+        PlanSpec('karotte', 'karotte-2', 'direct_sowing', date(2026, 5, 18), Decimal('16.0')),
+        PlanSpec('rote-bete', 'rote-bete', 'direct_sowing', date(2026, 4, 10), Decimal('15.0')),
+        PlanSpec('kohlrabi', 'kohlrabi', 'pre_cultivation', date(2026, 3, 28), Decimal('14.0'), 180),
+        PlanSpec('zucchini', 'zucchini', 'pre_cultivation', date(2026, 5, 18), Decimal('18.0'), 18),
+        PlanSpec('salat', 'salat-1', 'pre_cultivation', date(2026, 8, 25), Decimal('8.5'), 95, 'Herbstsatz nach der Sommerpause.'),
+    ]
+
+    for spec in plan_specs:
+        PlantingPlan.objects.create(
+            culture=cultures[spec.culture_key],
+            bed=beds[spec.bed_key],
+            cultivation_type=spec.cultivation_type,
+            planting_date=spec.planting_date,
+            area_usage_sqm=spec.area_usage_sqm,
+            quantity=spec.quantity,
+            notes=spec.notes,
+            created_by=owner if owner and getattr(owner, 'pk', None) else None,
+            updated_by=owner if owner and getattr(owner, 'pk', None) else None,
+            project=project,
+        )
