@@ -29,9 +29,9 @@ class SeedAmount:
     unit: str
 
 
-# These are the single source of truth for TKG conversion — SeedDemandListView
-# (backend/farm/views.py, _convert_requirement_to_unit) calls them rather than
-# reimplementing the formula. See docs/seed-demand-calculation.md.
+# These are the single source of truth for TKG conversion — the seed demand
+# service (farm/services/seed_demand.py, convert_requirement_to_unit) calls
+# them rather than reimplementing the formula. See docs/seed-demand-calculation.md.
 def seeds_to_grams(seeds: Decimal, thousand_kernel_weight_g: Decimal) -> Decimal:
     """
     Convert seed count to grams using TKG.
