@@ -3,12 +3,18 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { projectAPI, type InvitationPublicStatus } from '../../api/api';
+import type { AuthUser } from '../../auth/types';
 import { useAuth } from '../../auth/useAuth';
 import { AuthApiError } from '../../auth/authApi';
 import { useTranslation } from '../../i18n';
 import PasswordVisibilityToggle from '../../components/inputs/PasswordVisibilityToggle';
 import LegalLinks from '../../components/legal/LegalLinks';
 import { getNextFromSearch } from '../invitationAcceptance';
+
+function getAuthenticatedAppDestination(user: AuthUser): string {
+  const hasProjects = (user.memberships?.length ?? 0) > 0;
+  return user.needs_project_selection || !hasProjects ? '/app/project-selection' : '/app';
+}
 
 export default function LoginPage() {
   const { user, login, restoreAccount } = useAuth();
@@ -25,7 +31,7 @@ export default function LoginPage() {
   const nextPath = getNextFromSearch(location.search);
   const from = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
   const authenticatedDestination =
-    nextPath ?? (from?.pathname ? `${from.pathname}${from.search ?? ''}` : '/app');
+    nextPath ?? (from?.pathname ? `${from.pathname}${from.search ?? ''}` : (user ? getAuthenticatedAppDestination(user) : '/app'));
 
   useEffect(() => {
     const loadPendingInvitation = async (): Promise<void> => {
@@ -51,8 +57,7 @@ export default function LoginPage() {
 
     try {
       const me = await login(email.trim().toLowerCase(), password);
-      const hasProjects = (me.memberships?.length ?? 0) > 0;
-      const target = me.needs_project_selection || !hasProjects ? '/app/project-selection' : '/app';
+      const target = getAuthenticatedAppDestination(me);
       const destination = nextPath ?? (from?.pathname ? `${from.pathname}${from.search ?? ''}` : target);
       navigate(destination, { replace: true });
     } catch (err) {
@@ -72,8 +77,7 @@ export default function LoginPage() {
     setError(null);
     try {
       const me = await restoreAccount(email.trim().toLowerCase(), password);
-      const hasProjects = (me.memberships?.length ?? 0) > 0;
-      navigate(nextPath ?? (hasProjects ? '/app' : '/app/project-selection'), { replace: true });
+      navigate(nextPath ?? getAuthenticatedAppDestination(me), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : t('auth:login.restoreFailed'));
     } finally {

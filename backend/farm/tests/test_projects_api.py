@@ -9,7 +9,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProjectSettings
-from farm.models import Project, ProjectInvitation, ProjectMembership, Location
+from farm.models import Bed, Culture, PlantingPlan, Project, ProjectInvitation, ProjectMembership, Location
+from farm.services.demo_project import DEMO_PROJECT_NAME
 
 User = get_user_model()
 
@@ -139,6 +140,56 @@ class ProjectsApiTests(APITestCase):
         self.client.post('/openfarmplanner/api/auth/logout/')
 
         response = self.client.post('/openfarmplanner/api/projects/', {'name': 'Denied', 'description': ''}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_authenticated_user_can_create_personal_demo_project(self) -> None:
+        response = self.client.post('/openfarmplanner/api/projects/create-demo/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['name'], DEMO_PROJECT_NAME)
+        project = Project.objects.get(id=response.data['id'])
+        self.assertTrue(ProjectMembership.objects.filter(user=self.user, project=project, role='admin').exists())
+        settings_obj = UserProjectSettings.objects.get(user=self.user)
+        self.assertEqual(settings_obj.last_project_id, project.id)
+        self.assertEqual(Location.objects.filter(project=project).count(), 2)
+        self.assertEqual(Bed.objects.filter(project=project).count(), 12)
+        self.assertEqual(Culture.objects.filter(project=project).count(), 8)
+        self.assertEqual(PlantingPlan.objects.filter(project=project).count(), 12)
+
+    def test_demo_project_creation_is_idempotent_for_repeated_requests(self) -> None:
+        first = self.client.post('/openfarmplanner/api/projects/create-demo/', {}, format='json')
+        second = self.client.post('/openfarmplanner/api/projects/create-demo/', {}, format='json')
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(second.data['id'], first.data['id'])
+        self.assertEqual(Project.objects.filter(memberships__user=self.user, name=DEMO_PROJECT_NAME).count(), 1)
+
+    def test_two_users_get_separate_demo_projects_from_api(self) -> None:
+        first = self.client.post('/openfarmplanner/api/projects/create-demo/', {}, format='json')
+        self.client.post('/openfarmplanner/api/auth/logout/')
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': 'u2@example.com', 'password': 'pass12345'}, format='json')
+        second = self.client.post('/openfarmplanner/api/projects/create-demo/', {}, format='json')
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
+        self.assertNotEqual(first.data['id'], second.data['id'])
+        self.assertFalse(ProjectMembership.objects.filter(user=self.user, project_id=second.data['id']).exists())
+        self.assertTrue(ProjectMembership.objects.filter(user=self.other, project_id=second.data['id'], role='admin').exists())
+
+    @patch('farm.services.demo_project.populate_demo_project', side_effect=RuntimeError('boom'))
+    def test_demo_project_creation_error_leaves_no_partial_project(self, _mocked_populate) -> None:
+        response = self.client.post('/openfarmplanner/api/projects/create-demo/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data['detail'], 'Demo project could not be created.')
+        self.assertFalse(Project.objects.filter(memberships__user=self.user, name=DEMO_PROJECT_NAME).exists())
+
+    def test_unauthenticated_user_cannot_create_demo_project(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/logout/')
+
+        response = self.client.post('/openfarmplanner/api/projects/create-demo/', {}, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 

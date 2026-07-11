@@ -1,4 +1,18 @@
-import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, List, ListItem, ListItemText, Stack, Typography } from '@mui/material';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemText,
+  Paper,
+  Stack,
+  Typography,
+} from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +29,8 @@ export default function ProjectSelectionPage() {
   const memberships = user?.memberships ?? [];
   const [deletedProjects, setDeletedProjects] = useState<ProjectPayload[]>([]);
   const [trashError, setTrashError] = useState<string | null>(null);
+  const [demoError, setDemoError] = useState<string | null>(null);
+  const [isCreatingDemoProject, setIsCreatingDemoProject] = useState(false);
   const [renderedAt] = useState(() => Date.now());
   const isMountedRef = useRef(false);
 
@@ -62,6 +78,27 @@ export default function ProjectSelectionPage() {
     window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
       detail: { message, severity },
     }));
+  };
+
+  const createDemoProject = async (): Promise<void> => {
+    if (isCreatingDemoProject) {
+      return;
+    }
+    setIsCreatingDemoProject(true);
+    setDemoError(null);
+    try {
+      const response = await projectAPI.createDemo();
+      await switchActiveProject(response.data.id);
+      showSnackbar(t('common:projectOnboarding.demoCreatedHint'), 'success');
+      navigate('/app/fields-beds', { replace: true });
+    } catch (error) {
+      console.error('Error creating demo project:', error);
+      setDemoError(t('common:projectOnboarding.demoCreateError'));
+    } finally {
+      if (isMountedRef.current) {
+        setIsCreatingDemoProject(false);
+      }
+    }
   };
 
   const getDeletedAgeLabel = (deletedAt: string | null): string => {
@@ -114,11 +151,54 @@ export default function ProjectSelectionPage() {
               <Typography variant="body2">
                 {t('common:projectRequired.noProjectsSelectionDescription')}
               </Typography>
-              <Box>
-                <Button variant="contained" onClick={() => openProjectCreationFlow()}>
-                  {t('common:projectRequired.createFirstProjectAction')}
-                </Button>
-              </Box>
+              {demoError ? <Alert severity="error">{demoError}</Alert> : null}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <Paper
+                  variant="outlined"
+                  sx={{ flex: 1, p: 1.5, bgcolor: 'background.paper', borderRadius: 1 }}
+                >
+                  <Stack spacing={1.25} sx={{ height: '100%' }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        {t('common:projectOnboarding.emptyTitle')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {t('common:projectOnboarding.emptyDescription')}
+                      </Typography>
+                    </Box>
+                    <Button variant="outlined" onClick={() => openProjectCreationFlow()} disabled={isCreatingDemoProject}>
+                      {t('common:projectOnboarding.emptyAction')}
+                    </Button>
+                  </Stack>
+                </Paper>
+                <Paper
+                  variant="outlined"
+                  sx={{ flex: 1, p: 1.5, bgcolor: 'background.paper', borderRadius: 1 }}
+                >
+                  <Stack spacing={1.25} sx={{ height: '100%' }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        {t('common:projectOnboarding.demoTitle')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                        {t('common:projectOnboarding.demoDescription')}
+                      </Typography>
+                    </Box>
+                    <Button
+                      variant="contained"
+                      onClick={() => {
+                        void createDemoProject();
+                      }}
+                      disabled={isCreatingDemoProject}
+                      startIcon={isCreatingDemoProject ? <CircularProgress color="inherit" size={16} /> : undefined}
+                    >
+                      {isCreatingDemoProject
+                        ? t('common:projectOnboarding.demoCreating')
+                        : t('common:projectOnboarding.demoAction')}
+                    </Button>
+                  </Stack>
+                </Paper>
+              </Stack>
             </Stack>
           </Alert>
         ) : (

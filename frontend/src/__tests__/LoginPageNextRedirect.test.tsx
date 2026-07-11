@@ -2,12 +2,14 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import LoginPage from '../pages/auth/LoginPage';
+import type { AuthUser } from '../auth/types';
 
 const loginMock = vi.fn();
+let authUser: AuthUser | null = null;
 
 vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({
-    user: null,
+    user: authUser,
     login: loginMock,
     restoreAccount: vi.fn(),
   }),
@@ -27,6 +29,7 @@ vi.mock('../api/api', async () => {
 describe('LoginPage next redirect', () => {
   beforeEach(() => {
     loginMock.mockReset();
+    authUser = null;
   });
 
   it('redirects to the next URL after successful login', async () => {
@@ -51,5 +54,34 @@ describe('LoginPage next redirect', () => {
     await waitFor(() => {
       expect(screen.getByText('Accept route')).toBeInTheDocument();
     });
+  });
+
+  it('redirects already authenticated users without projects to project selection', async () => {
+    authUser = {
+      id: 1,
+      email: 'starter@example.com',
+      display_name: '',
+      display_label: 'starter@example.com',
+      is_active: true,
+      default_project_id: null,
+      last_project_id: null,
+      resolved_project_id: null,
+      needs_project_selection: true,
+      memberships: [],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+      pending_consents: [],
+    };
+
+    render(
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/app/project-selection" element={<div>Project selection route</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Project selection route')).toBeInTheDocument();
   });
 });

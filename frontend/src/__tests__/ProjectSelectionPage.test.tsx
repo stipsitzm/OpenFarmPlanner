@@ -1,7 +1,23 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ProjectSelectionPage from '../pages/ProjectSelectionPage';
+
+const projectApiMocks = vi.hoisted(() => ({
+  createDemo: vi.fn(async () => ({
+    data: {
+      id: 9,
+      name: 'Solawi Sonnenacker 2026',
+      slug: 'solawi-sonnenacker-2026',
+      description: '',
+      is_active: true,
+      deleted_at: null,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    },
+  })),
+  listDeleted: vi.fn(async () => ({ data: [] })),
+}));
 
 const authState = vi.hoisted(() => ({
   user: {
@@ -11,15 +27,44 @@ const authState = vi.hoisted(() => ({
     ],
   },
   switchActiveProject: vi.fn(async () => {}),
+  refreshUser: vi.fn(async () => null),
 }));
 
 vi.mock('../auth/useAuth', () => ({
   useAuth: () => authState,
 }));
 
+vi.mock('../api/api', async () => {
+  const actual = await vi.importActual<typeof import('../api/api')>('../api/api');
+  return {
+    ...actual,
+    projectAPI: {
+      ...actual.projectAPI,
+      createDemo: projectApiMocks.createDemo,
+      listDeleted: projectApiMocks.listDeleted,
+    },
+  };
+});
+
 describe('ProjectSelectionPage', () => {
   beforeEach(() => {
     authState.switchActiveProject.mockClear();
+    authState.refreshUser.mockClear();
+    projectApiMocks.createDemo.mockClear();
+    projectApiMocks.createDemo.mockResolvedValue({
+      data: {
+        id: 9,
+        name: 'Solawi Sonnenacker 2026',
+        slug: 'solawi-sonnenacker-2026',
+        description: '',
+        is_active: true,
+        deleted_at: null,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    });
+    projectApiMocks.listDeleted.mockClear();
+    projectApiMocks.listDeleted.mockResolvedValue({ data: [] });
     authState.user = {
       memberships: [
         { project_id: 1, project_name: 'Alpha', role: 'admin' },
@@ -36,7 +81,7 @@ describe('ProjectSelectionPage', () => {
     expect(screen.getByRole('button', { name: 'Neues Projekt' })).toBeInTheDocument();
   });
 
-  it('shows a proper empty state and create CTA when no projects exist', () => {
+  it('shows empty and demo start options when no projects exist', () => {
     authState.user = {
       memberships: [],
     };
@@ -46,8 +91,75 @@ describe('ProjectSelectionPage', () => {
 
     expect(screen.getByText('Du hast noch kein Projekt.')).toBeInTheDocument();
     expect(screen.getByText('Lege dein erstes Projekt an, um mit der Planung zu starten.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Erstes Projekt anlegen' }));
+    expect(screen.getByText('Demo-Projekt ausprobieren')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Leeres Projekt anlegen' }));
     expect(dispatchSpy).toHaveBeenCalled();
     dispatchSpy.mockRestore();
+  });
+
+  it('creates and opens a demo project from onboarding', async () => {
+    authState.user = {
+      memberships: [],
+    };
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+
+    render(<MemoryRouter><ProjectSelectionPage /></MemoryRouter>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Demo-Projekt erstellen' }));
+
+    await waitFor(() => {
+      expect(projectApiMocks.createDemo).toHaveBeenCalledTimes(1);
+      expect(authState.switchActiveProject).toHaveBeenCalledWith(9);
+    });
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'ofp:show-snackbar',
+    }));
+    dispatchSpy.mockRestore();
+  });
+
+  it('prevents duplicate demo creation while a request is running', async () => {
+    authState.user = {
+      memberships: [],
+    };
+    let resolveRequest: (value: Awaited<ReturnType<typeof projectApiMocks.createDemo>>) => void = () => {};
+    projectApiMocks.createDemo.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveRequest = resolve;
+    }));
+
+    render(<MemoryRouter><ProjectSelectionPage /></MemoryRouter>);
+
+    const button = screen.getByRole('button', { name: 'Demo-Projekt erstellen' });
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    expect(projectApiMocks.createDemo).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole('button', { name: 'Demo-Projekt wird erstellt…' })).toBeDisabled();
+    resolveRequest({
+      data: {
+        id: 9,
+        name: 'Solawi Sonnenacker 2026',
+        slug: 'solawi-sonnenacker-2026',
+        description: '',
+        is_active: true,
+        deleted_at: null,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    });
+    await waitFor(() => expect(authState.switchActiveProject).toHaveBeenCalledWith(9));
+  });
+
+  it('shows a readable error when demo creation fails', async () => {
+    authState.user = {
+      memberships: [],
+    };
+    projectApiMocks.createDemo.mockRejectedValueOnce(new Error('boom'));
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<MemoryRouter><ProjectSelectionPage /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'Demo-Projekt erstellen' }));
+
+    expect(await screen.findByText('Demo-Projekt konnte nicht erstellt werden. Bitte versuche es erneut.')).toBeInTheDocument();
+    consoleSpy.mockRestore();
   });
 });

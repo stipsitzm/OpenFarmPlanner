@@ -7,6 +7,9 @@ from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.utils.crypto import get_random_string
+from django.utils.text import slugify
+
 from accounts.models import UserProjectSettings
 from farm.models import (
     Bed,
@@ -27,6 +30,7 @@ User = get_user_model()
 
 DEMO_PROJECT_NAME = 'Solawi Sonnenacker 2026'
 DEMO_PROJECT_SLUG = 'solawi-sonnenacker-2026'
+DEMO_PROJECT_DESCRIPTION = 'Pers\u00f6nliches Demo-Projekt mit realistischen Beispieldaten.'
 DEMO_USER_EMAIL = 'demo-openfarmplanner@example.local'
 DEMO_USERNAME = 'openfarmplanner-demo'
 DEMO_PASSWORD = 'OpenFarmPlannerDemo2026!'
@@ -165,6 +169,72 @@ def create_or_reset_demo_project(
         created_project=created_project,
         created_user=created_user,
     )
+
+
+def create_personal_demo_project(*, user: Any, project_name: str = DEMO_PROJECT_NAME) -> DemoProjectResult:
+    """Create or return one editable demo project owned by the given user."""
+    with transaction.atomic():
+        locked_user = User.objects.select_for_update().get(pk=user.pk)
+        existing_project = (
+            Project.objects.select_for_update()
+            .filter(
+                memberships__user=locked_user,
+                name=project_name,
+                description=DEMO_PROJECT_DESCRIPTION,
+                is_active=True,
+                deleted_at__isnull=True,
+            )
+            .order_by('id')
+            .first()
+        )
+        if existing_project is not None:
+            _apply_project_settings(user=locked_user, project=existing_project)
+            return DemoProjectResult(
+                project=existing_project,
+                user=locked_user,
+                created_project=False,
+                created_user=False,
+            )
+
+        project = Project.objects.create(
+            name=project_name,
+            slug=_build_unique_demo_project_slug(project_name),
+            description=DEMO_PROJECT_DESCRIPTION,
+        )
+        ProjectMembership.objects.create(
+            user=locked_user,
+            project=project,
+            role=ProjectMembership.ROLE_ADMIN,
+        )
+        _apply_project_settings(user=locked_user, project=project)
+        populate_demo_project(project, owner=locked_user)
+
+    return DemoProjectResult(
+        project=project,
+        user=locked_user,
+        created_project=True,
+        created_user=False,
+    )
+
+
+def _apply_project_settings(*, user: Any, project: Project) -> None:
+    settings_obj, _ = UserProjectSettings.objects.get_or_create(user=user)
+    update_fields = ['last_project', 'updated_at']
+    if settings_obj.default_project_id is None:
+        settings_obj.default_project = project
+        update_fields.append('default_project')
+    settings_obj.last_project = project
+    settings_obj.save(update_fields=update_fields)
+
+
+def _build_unique_demo_project_slug(project_name: str) -> str:
+    base_slug = slugify(project_name) or get_random_string(8).lower()
+    candidate = base_slug
+    suffix = 2
+    while Project.objects.filter(slug=candidate).exists():
+        candidate = f'{base_slug}-{suffix}'
+        suffix += 1
+    return candidate
 
 
 def _create_suppliers(project: Project) -> dict[str, Supplier]:

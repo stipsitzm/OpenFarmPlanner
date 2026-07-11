@@ -35,6 +35,17 @@ async function invokeE2EAction(request: APIRequestContext, action: string, paylo
   return (await response.json()) as Record<string, unknown>;
 }
 
+export async function setupUserWithoutProjects(
+  request: APIRequestContext,
+  scenarioId: string,
+): Promise<{ email: string; password: string }> {
+  await invokeE2EAction(request, 'reset', { scenario_id: scenarioId });
+  const fixture = await invokeE2EAction(request, 'setup_empty_user', { scenario_id: scenarioId }) as {
+    user: { email: string; password: string };
+  };
+  return fixture.user;
+}
+
 export async function loginWithDeterministicProject(
   page: Page,
   request: APIRequestContext,

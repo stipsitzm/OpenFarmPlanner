@@ -61,6 +61,8 @@ class E2EInvitationFixtureView(APIView):
             return Response(self._setup(request, scenario))
         if action == 'setup_demo':
             return Response(self._setup(request, scenario, demo_project=True))
+        if action == 'setup_empty_user':
+            return Response(self._setup_empty_user(scenario))
         if action == 'remove_member':
             return Response(self._remove_member(scenario))
         if action == 'revoke_invitation':
@@ -75,7 +77,19 @@ class E2EInvitationFixtureView(APIView):
             _user_email(scenario, 'admin'),
             _user_email(scenario, 'invitee'),
             _user_email(scenario, 'outsider'),
+            _user_email(scenario, 'starter'),
         ]).delete()
+
+    def _setup_empty_user(self, scenario: str) -> dict[str, object]:
+        self._reset(scenario)
+        user = User.objects.create_user(
+            username=f'{scenario}-starter',
+            email=_user_email(scenario, 'starter'),
+            password=E2E_PASSWORD,
+            is_active=True,
+        )
+        record_acceptance(user, DocumentConsent.DOCUMENT_TERMS)
+        return {'user': {'email': user.email, 'password': E2E_PASSWORD}}
 
     def _setup(self, request: Request, scenario: str, *, demo_project: bool = False) -> dict[str, object]:
         self._reset(scenario)
