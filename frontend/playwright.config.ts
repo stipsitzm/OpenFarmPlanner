@@ -39,6 +39,15 @@ export default defineConfig({
         CORS_ALLOWED_ORIGINS: `http://127.0.0.1:${frontendPort}`,
         CSRF_TRUSTED_ORIGINS: `http://127.0.0.1:${frontendPort}`,
         E2E_TEST_TOKEN: e2eToken,
+        // The whole suite logs in from one IP (127.0.0.1) at roughly one login
+        // per test, which sits right at the production default of 10/minute -
+        // whenever tests run fast enough, the shared per-IP bucket overflows and
+        // a login gets a 429, leaving the page stuck on /login (a long-standing
+        // e2e flake). Raise the auth rates for the e2e server only; production
+        // defaults in config/settings.py are unchanged.
+        THROTTLE_AUTH_LOGIN: '1000/minute',
+        THROTTLE_AUTH_REGISTER: '1000/minute',
+        THROTTLE_INVITATION_ACCEPT: '1000/hour',
       },
     },
     {

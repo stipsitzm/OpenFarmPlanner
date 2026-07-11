@@ -203,8 +203,21 @@ if db_engine == 'sqlite':
             # writer is active, which is what actually removes the contention; the
             # timeout stays as a backstop for the now-rare case of two writers
             # overlapping.
+            #
+            # transaction_mode=IMMEDIATE is the second half of the fix: with the
+            # default DEFERRED transactions, an ATOMIC_REQUESTS request that reads
+            # first and writes later (e.g. login: read user -> write session +
+            # last_login) starts on a read snapshot and then cannot upgrade to a
+            # write lock if any other writer committed in between - SQLite reports
+            # "database is locked" for that upgrade IMMEDIATELY, without consulting
+            # the busy timeout, because retrying on a stale snapshot could never
+            # succeed. BEGIN IMMEDIATE takes the write lock up front, so concurrent
+            # writers queue on the busy timeout instead of failing mid-request.
+            # Reproduced locally with concurrent logins + parallel GETs; see the
+            # e2e "database is locked" flake history (git log around this block).
             'OPTIONS': {
                 'timeout': 20,
+                'transaction_mode': 'IMMEDIATE',
                 'init_command': (
                     'PRAGMA journal_mode=WAL;'
                     'PRAGMA synchronous=NORMAL;'
