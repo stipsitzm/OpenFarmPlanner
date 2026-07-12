@@ -18,23 +18,28 @@
   "productTour": {
     "title": "Ein Demo-Projekt statt leerer Tabellen",
     "description": "OpenFarmPlanner verbindet Anbauflächen, Kulturdaten, Termine und Auswertungen zu einer durchgängigen Saisonplanung.",
+    "tabsLabel": "Produktführung",
     "items": {
       "areas": {
+        "tab": "Flächen",
         "title": "Flächen und Beete strukturiert erfassen",
         "description": "Standorte, Parzellen und Beete bleiben in einer klaren Hierarchie sichtbar, inklusive Maßen, Flächen und Notizen.",
         "alt": "Hierarchische Ansicht eines Demo-Projekts mit Standorten, Parzellen und Beeten"
       },
       "calendar": {
+        "tab": "Kalender",
         "title": "Belegung im Kalender planen",
         "description": "Der Anbaukalender zeigt, wann welche Kultur auf welchem Beet steht, und macht Überschneidungen früh erkennbar.",
         "alt": "Anbaukalender mit belegten Beeten und farbigen Kulturzeiträumen"
       },
       "seedDemand": {
+        "tab": "Saatgut",
         "title": "Saatgutbedarf aus den Plänen ableiten",
         "description": "Saatgutmenge und passende Packungsgrößen werden aus Kulturparametern, Flächennutzung und Lieferantendaten berechnet.",
         "alt": "Saatgutbedarf-Tabelle mit Kulturen, Lieferanten, benötigter Menge und Packungsvorschlägen"
       },
       "cultures": {
+        "tab": "Kulturen",
         "title": "Kulturen zentral pflegen",
         "description": "Sorten, Anbauarten, Abstände, Ernteerwartung und Saatgutdaten liegen an einem Ort und speisen die Planung.",
         "alt": "Kulturen-Ansicht mit mehreren Gemüsearten und Sorten im Demo-Projekt"

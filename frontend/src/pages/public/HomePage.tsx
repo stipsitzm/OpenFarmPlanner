@@ -5,11 +5,36 @@ import {
   Container,
   Link,
   Stack,
+  Tab,
+  Tabs,
   Typography,
 } from '@mui/material';
+import { useState } from 'react';
+import type { SyntheticEvent } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
 import LegalLinks from '../../components/legal/LegalLinks';
+
+const PRODUCT_TOUR_ITEMS = [
+  {
+    key: 'areas',
+    image: '/landing/screenshots/demo-areas.webp',
+  },
+  {
+    key: 'calendar',
+    image: '/landing/screenshots/demo-calendar.webp',
+  },
+  {
+    key: 'seedDemand',
+    image: '/landing/screenshots/demo-seed-demand.webp',
+  },
+  {
+    key: 'cultures',
+    image: '/landing/screenshots/demo-cultures.webp',
+  },
+] as const;
+
+type ProductTourKey = (typeof PRODUCT_TOUR_ITEMS)[number]['key'];
 
 /**
  * Public landing page with refined spacing and modern visual hierarchy.
@@ -18,24 +43,12 @@ import LegalLinks from '../../components/legal/LegalLinks';
  */
 export default function HomePage() {
   const { t } = useTranslation('home');
-  const productTourItems = [
-    {
-      key: 'areas',
-      image: '/landing/screenshots/demo-areas.webp',
-    },
-    {
-      key: 'calendar',
-      image: '/landing/screenshots/demo-calendar.webp',
-    },
-    {
-      key: 'seedDemand',
-      image: '/landing/screenshots/demo-seed-demand.webp',
-    },
-    {
-      key: 'cultures',
-      image: '/landing/screenshots/demo-cultures.webp',
-    },
-  ];
+  const [activeTourKey, setActiveTourKey] = useState<ProductTourKey>('areas');
+  const activeTourItem = PRODUCT_TOUR_ITEMS.find((item) => item.key === activeTourKey) ?? PRODUCT_TOUR_ITEMS[0];
+
+  const handleTourChange = (_event: SyntheticEvent, value: ProductTourKey): void => {
+    setActiveTourKey(value);
+  };
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
@@ -163,8 +176,17 @@ export default function HomePage() {
               </Stack>
             </Stack>
 
-            <Box component="section" aria-labelledby="product-tour-title" sx={{ width: '100%' }}>
-              <Stack spacing={{ xs: 3, md: 4 }}>
+            <Box
+              component="section"
+              aria-labelledby="product-tour-title"
+              sx={{
+                width: '100%',
+                pt: { xs: 3.5, md: 4.5 },
+                borderTop: 1,
+                borderColor: 'divider',
+              }}
+            >
+              <Stack spacing={{ xs: 2.5, md: 3.5 }}>
                 <Stack spacing={1.25} alignItems="center" textAlign="center">
                   <Typography id="product-tour-title" variant="h4" component="h2" sx={{ fontWeight: 600 }}>
                     {t('productTour.title')}
@@ -174,17 +196,47 @@ export default function HomePage() {
                   </Typography>
                 </Stack>
 
-                <Stack spacing={{ xs: 4.5, md: 6 }}>
-                  {productTourItems.map((item, index) => (
-                    <Stack
-                      key={item.key}
-                      direction={{ xs: 'column', md: index % 2 === 0 ? 'row' : 'row-reverse' }}
-                      spacing={{ xs: 2, md: 4 }}
-                      alignItems="center"
-                    >
+                <Box>
+                  <Tabs
+                    value={activeTourKey}
+                    onChange={handleTourChange}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
+                    aria-label={t('productTour.tabsLabel')}
+                    sx={{
+                      minHeight: 44,
+                      borderBottom: 1,
+                      borderColor: 'divider',
+                      '& .MuiTab-root': {
+                        minHeight: 44,
+                        px: { xs: 1.25, sm: 2 },
+                        textTransform: 'none',
+                        fontWeight: 600,
+                      },
+                    }}
+                  >
+                    {PRODUCT_TOUR_ITEMS.map((item) => (
+                      <Tab
+                        key={item.key}
+                        label={t(`productTour.items.${item.key}.tab`)}
+                        value={item.key}
+                      />
+                    ))}
+                  </Tabs>
+
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 320px' },
+                      gap: { xs: 2, md: 4 },
+                      alignItems: 'center',
+                      pt: { xs: 2, md: 3 },
+                    }}
+                  >
+                    <Box sx={{ minWidth: 0 }}>
                       <Box
                         sx={{
-                          flex: '1 1 62%',
                           minWidth: 0,
                           width: '100%',
                           border: 1,
@@ -197,9 +249,9 @@ export default function HomePage() {
                       >
                         <Box
                           component="img"
-                          src={item.image}
-                          alt={t(`productTour.items.${item.key}.alt`)}
-                          loading={index === 0 ? 'eager' : 'lazy'}
+                          src={activeTourItem.image}
+                          alt={t(`productTour.items.${activeTourItem.key}.alt`)}
+                          loading="eager"
                           decoding="async"
                           width={1280}
                           height={800}
@@ -210,25 +262,25 @@ export default function HomePage() {
                           }}
                         />
                       </Box>
-                      <Stack
-                        spacing={1}
-                        sx={{
-                          flex: '1 1 38%',
-                          minWidth: 0,
-                          width: '100%',
-                          maxWidth: { xs: '100%', md: 360 },
-                        }}
-                      >
-                        <Typography variant="h5" component="h3" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-                          {t(`productTour.items.${item.key}.title`)}
-                        </Typography>
-                        <Typography color="text.secondary" sx={{ lineHeight: 1.65 }}>
-                          {t(`productTour.items.${item.key}.description`)}
-                        </Typography>
-                      </Stack>
+                    </Box>
+
+                    <Stack
+                      spacing={1}
+                      sx={{
+                        minWidth: 0,
+                        width: '100%',
+                        alignSelf: { xs: 'start', md: 'center' },
+                      }}
+                    >
+                      <Typography variant="h5" component="h3" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
+                        {t(`productTour.items.${activeTourItem.key}.title`)}
+                      </Typography>
+                      <Typography color="text.secondary" sx={{ lineHeight: 1.65 }}>
+                        {t(`productTour.items.${activeTourItem.key}.description`)}
+                      </Typography>
                     </Stack>
-                  ))}
-                </Stack>
+                  </Box>
+                </Box>
               </Stack>
             </Box>
           </Stack>

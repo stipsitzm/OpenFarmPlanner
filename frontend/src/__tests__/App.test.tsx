@@ -90,6 +90,25 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'Datenschutzerklärung' })).toBeInTheDocument();
   });
 
+  it('switches the public landing page product tour screenshot by tab', async () => {
+    const user = userEvent.setup();
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    expect(await screen.findByRole('tab', { name: 'Flächen' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('img', {
+      name: 'Hierarchische Ansicht eines Demo-Projekts mit Standorten, Parzellen und Beeten',
+    })).toHaveAttribute('src', '/landing/screenshots/demo-areas.webp');
+
+    await user.click(screen.getByRole('tab', { name: 'Saatgut' }));
+
+    expect(screen.getByRole('tab', { name: 'Saatgut' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'Saatgutbedarf aus den Plänen ableiten' })).toBeInTheDocument();
+    expect(screen.getByRole('img', {
+      name: 'Saatgutbedarf-Tabelle mit Kulturen, Lieferanten, benötigter Menge und Packungsvorschlägen',
+    })).toHaveAttribute('src', '/landing/screenshots/demo-seed-demand.webp');
+  });
+
   it('renders imprint route', async () => {
     window.history.pushState({}, '', '/impressum');
 
