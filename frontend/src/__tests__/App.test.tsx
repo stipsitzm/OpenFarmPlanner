@@ -98,13 +98,14 @@ describe('App', () => {
     expect(await screen.findByRole('tab', { name: 'Flächen' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
       'Flächen',
+      'Anbaupläne',
       'Kulturen',
       'Kalender',
       'Erträge',
       'Saatgut',
     ]);
     expect(screen.getByRole('img', {
-      name: 'Hierarchische Ansicht eines Demo-Projekts mit Standorten, Parzellen und Beeten',
+      name: 'Tabellenansicht der Anbauflächen mit editierbaren Zellen für Standorte, Parzellen und Beete',
     })).toHaveAttribute('src', '/landing/screenshots/demo-areas.webp');
 
     await user.click(screen.getByRole('tab', { name: 'Saatgut' }));

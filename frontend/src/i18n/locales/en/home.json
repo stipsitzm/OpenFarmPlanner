@@ -23,9 +23,15 @@
     "items": {
       "areas": {
         "tab": "Areas",
-        "title": "Structure areas and beds clearly",
-        "description": "Locations, fields, and beds stay visible in a clear hierarchy, including dimensions, area, and notes.",
-        "alt": "Hierarchical demo-project view with locations, fields, and beds"
+        "title": "Edit areas and beds directly",
+        "description": "Locations, fields, and beds stay visible in a clear hierarchy. Changes happen right in the table – no separate forms or page switches.",
+        "alt": "Table view of growing areas with editable cells for locations, fields, and beds"
+      },
+      "plantingPlans": {
+        "tab": "Planting plans",
+        "title": "Edit planting plans directly",
+        "description": "Sowing, planting, and harvest dates, as well as quantities and crops, can be edited right in the table. Changes show up immediately, making season planning fast.",
+        "alt": "Planting-plan table with a planting-date cell open in edit mode"
       },
       "calendar": {
         "tab": "Calendar",

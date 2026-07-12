@@ -21,6 +21,10 @@ const PRODUCT_TOUR_ITEMS = [
     image: '/landing/screenshots/demo-areas.webp',
   },
   {
+    key: 'plantingPlans',
+    image: '/landing/screenshots/demo-planting-plans.webp',
+  },
+  {
     key: 'cultures',
     image: '/landing/screenshots/demo-cultures.webp',
   },
@@ -163,9 +167,7 @@ export default function HomePage() {
                 {t('landing.description')}
               </Typography>
 
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={1.2}
+              <Box
                 sx={{
                   width: '100%',
                   maxWidth: 420,
@@ -173,48 +175,50 @@ export default function HomePage() {
                   ...heroTextPanelSx('-34px', '-48px', '32px'),
                 }}
               >
-                <Button
-                  component={RouterLink}
-                  to="/login"
-                  variant="contained"
-                  size="large"
-                  sx={{
-                    flex: 1,
-                    minHeight: 46,
-                    borderRadius: 2.5,
-                    boxShadow: (theme) => theme.shadows[2],
-                    transition: 'transform 160ms ease, box-shadow 160ms ease',
-                    '&:hover': {
-                      transform: 'translateY(-1px)',
-                      boxShadow: (theme) => theme.shadows[5],
-                    },
-                  }}
-                >
-                  {t('landing.actions.openApp')}
-                </Button>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2}>
+                  <Button
+                    component={RouterLink}
+                    to="/login"
+                    variant="contained"
+                    size="large"
+                    sx={{
+                      flex: 1,
+                      minHeight: 46,
+                      borderRadius: 2.5,
+                      boxShadow: (theme) => theme.shadows[2],
+                      transition: 'transform 160ms ease, box-shadow 160ms ease',
+                      '&:hover': {
+                        transform: 'translateY(-1px)',
+                        boxShadow: (theme) => theme.shadows[5],
+                      },
+                    }}
+                  >
+                    {t('landing.actions.openApp')}
+                  </Button>
 
-                <Button
-                  component={RouterLink}
-                  to="/register"
-                  variant="outlined"
-                  size="large"
-                  sx={{
-                    flex: 1,
-                    minHeight: 46,
-                    borderRadius: 2.5,
-                    bgcolor: '#fff',
-                    boxShadow: (theme) => theme.shadows[2],
-                    transition: 'transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease',
-                    '&:hover': {
+                  <Button
+                    component={RouterLink}
+                    to="/register"
+                    variant="outlined"
+                    size="large"
+                    sx={{
+                      flex: 1,
+                      minHeight: 46,
+                      borderRadius: 2.5,
                       bgcolor: '#fff',
-                      transform: 'translateY(-1px)',
-                      boxShadow: (theme) => theme.shadows[5],
-                    },
-                  }}
-                >
-                  {t('landing.actions.register')}
-                </Button>
-              </Stack>
+                      boxShadow: (theme) => theme.shadows[2],
+                      transition: 'transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease',
+                      '&:hover': {
+                        bgcolor: '#fff',
+                        transform: 'translateY(-1px)',
+                        boxShadow: (theme) => theme.shadows[5],
+                      },
+                    }}
+                  >
+                    {t('landing.actions.register')}
+                  </Button>
+                </Stack>
+              </Box>
 
               <Stack spacing={0.8} alignItems="center" textAlign="center" sx={{ pt: { xs: 0.6, md: 0.9 } }}>
                 <Typography
@@ -279,7 +283,7 @@ export default function HomePage() {
           </Container>
         </Box>
 
-        <Container maxWidth="lg" sx={{ width: '100%', py: { xs: 5, md: 7 } }}>
+        <Container maxWidth="xl" sx={{ width: '100%', py: { xs: 5, md: 7 } }}>
           <Stack spacing={{ xs: 5.5, md: 7 }} alignItems="center">
             <Box
               component="section"
@@ -340,7 +344,7 @@ export default function HomePage() {
                   <Box
                     sx={{
                       display: 'grid',
-                      gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 320px' },
+                      gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 300px' },
                       gap: { xs: 2, md: 4 },
                       alignItems: 'center',
                       pt: { xs: 2, md: 3 },

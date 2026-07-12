@@ -23,9 +23,15 @@
     "items": {
       "areas": {
         "tab": "Flächen",
-        "title": "Flächen und Beete strukturiert erfassen",
-        "description": "Standorte, Parzellen und Beete bleiben in einer klaren Hierarchie sichtbar, inklusive Maßen, Flächen und Notizen.",
-        "alt": "Hierarchische Ansicht eines Demo-Projekts mit Standorten, Parzellen und Beeten"
+        "title": "Flächen und Beete direkt bearbeiten",
+        "description": "Standorte, Parzellen und Beete bleiben in einer klaren Hierarchie sichtbar. Änderungen erfolgen direkt in der Tabelle – ohne separate Formulare oder Seitenwechsel.",
+        "alt": "Tabellenansicht der Anbauflächen mit editierbaren Zellen für Standorte, Parzellen und Beete"
+      },
+      "plantingPlans": {
+        "tab": "Anbaupläne",
+        "title": "Anbaupläne direkt bearbeiten",
+        "description": "Aussaat-, Pflanz- und Erntetermine sowie Mengen und Kulturen lassen sich direkt in der Tabelle bearbeiten. Änderungen sind sofort sichtbar und ermöglichen eine schnelle Saisonplanung.",
+        "alt": "Anbauplan-Tabelle mit einem im Bearbeitungsmodus geöffneten Pflanzdatum"
       },
       "calendar": {
         "tab": "Kalender",

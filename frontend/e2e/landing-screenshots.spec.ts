@@ -15,7 +15,7 @@ const screenshots = [
     path: '/app/fields-beds',
     ready: /Hofgarten|Acker am Bach/i,
     filename: 'demo-areas.webp',
-    fieldsViewMode: 'graphical',
+    fieldsViewMode: 'table',
   },
   {
     key: 'cultures',
@@ -40,6 +40,12 @@ const screenshots = [
     path: '/app/seed-demand',
     ready: /Saatgutbedarf|Karotte/i,
     filename: 'demo-seed-demand.webp',
+  },
+  {
+    key: 'planting-plans',
+    path: '/app/anbauplaene',
+    ready: /Anbaupläne|Anbauplan/i,
+    filename: 'demo-planting-plans.webp',
   },
 ] as const;
 
@@ -113,8 +119,7 @@ test.describe('landing page product screenshots', () => {
       await page.mouse.move(0, 0);
 
       if (item.key === 'areas') {
-        await expect(page.getByRole('button', { name: 'Grafik', pressed: true })).toBeVisible();
-        await expect(page.locator('canvas').first()).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Liste', pressed: true })).toBeVisible();
       }
 
       if (item.key === 'calendar') {
@@ -122,6 +127,15 @@ test.describe('landing page product screenshots', () => {
         await page.locator('.gantt-container-wrapper .rmg-container').evaluate((element) => {
           element.scrollLeft = 0;
         });
+      }
+
+      if (item.key === 'planting-plans') {
+        // Open the first row's planting-date cell in edit mode so the screenshot
+        // makes the grid's inline editing affordance obvious at a glance.
+        const dateCell = page.locator('[role="gridcell"][data-field="planting_date"]').first();
+        await expect(dateCell).toBeVisible();
+        await dateCell.dblclick();
+        await expect(page.locator('.MuiDataGrid-cell--editing input').first()).toBeVisible();
       }
 
       const pngPath = path.join(tempDir, `${item.key}.png`);
