@@ -120,6 +120,14 @@ test.describe('landing page product screenshots', () => {
 
       if (item.key === 'areas') {
         await expect(page.getByRole('button', { name: 'Liste', pressed: true })).toBeVisible();
+        // Open a field row's length cell in edit mode so the screenshot makes the
+        // grid's inline editing affordance obvious at a glance (locations themselves
+        // aren't editable for this column, so target a field/bed row by name).
+        const lengthCell = page.locator('[role="row"]', { hasText: 'Kohlquartier' })
+          .locator('[role="gridcell"][data-field="length_m"]');
+        await expect(lengthCell).toBeVisible();
+        await lengthCell.dblclick();
+        await expect(page.locator('.MuiDataGrid-cell--editing input').first()).toBeVisible();
       }
 
       if (item.key === 'calendar') {

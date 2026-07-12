@@ -46,30 +46,39 @@ type ProductTourKey = (typeof PRODUCT_TOUR_ITEMS)[number]['key'];
 
 const HERO_TEXT_SHADOW = '0 1px 3px rgba(0,0,0,0.7), 0 2px 12px rgba(0,0,0,0.5)';
 
-// Soft backdrop-blur patch shaped to hug a single text block, applied via ::before
-// so it sits behind the block's own text (see stacking note on the calling element:
-// position: 'relative' + non-positioned text paints above a negative-z-index
-// ::before automatically). The mask is rectangular (not oval) - two linear-gradient
-// fades, one per axis, intersected - so it follows the text's actual (rectangular)
-// shape. Each fade completes with margin before the box's real edge, otherwise
-// backdrop-filter's hard sampling boundary shows through as a visible seam even
-// though the mask alpha is fading.
-function heroTextPanelSx(insetY: string, insetX: string, borderRadius = '10px') {
+// Soft backdrop-blur patch shaped to hug a block of content. The mask is
+// rectangular (not oval) - two linear-gradient fades, one per axis,
+// intersected - so it follows the content's actual (rectangular) shape. Each
+// fade completes with margin before the box's real edge, otherwise
+// backdrop-filter's hard sampling boundary shows through as a visible seam
+// even though the mask alpha is fading.
+const HERO_PANEL_BLUR_PX = 18;
+
+function heroPanelLayerSx(insetY: string, insetX: string, borderRadius: string) {
   const fadeX = 'linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)';
   const fadeY = 'linear-gradient(to bottom, transparent 0%, black 26%, black 74%, transparent 100%)';
+  return {
+    position: 'absolute' as const,
+    inset: `${insetY} ${insetX}`,
+    borderRadius,
+    backdropFilter: `blur(${HERO_PANEL_BLUR_PX}px)`,
+    WebkitBackdropFilter: `blur(${HERO_PANEL_BLUR_PX}px)`,
+    backgroundColor: 'rgba(5,14,8,0.66)',
+    maskImage: `${fadeX}, ${fadeY}`,
+    maskComposite: 'intersect',
+    WebkitMaskImage: `${fadeX}, ${fadeY}`,
+  };
+}
+
+// Applied via ::before so the panel sits behind the calling element's own
+// content (see stacking note: position: 'relative' + non-positioned content
+// paints above a negative-z-index ::before automatically).
+function heroTextPanelSx(insetY: string, insetX: string, borderRadius = '10px') {
   return {
     position: 'relative' as const,
     '&::before': {
       content: '""',
-      position: 'absolute' as const,
-      inset: `${insetY} ${insetX}`,
-      borderRadius,
-      backdropFilter: 'blur(24px)',
-      WebkitBackdropFilter: 'blur(24px)',
-      backgroundColor: 'rgba(5,14,8,0.66)',
-      maskImage: `${fadeX}, ${fadeY}`,
-      maskComposite: 'intersect',
-      WebkitMaskImage: `${fadeX}, ${fadeY}`,
+      ...heroPanelLayerSx(insetY, insetX, borderRadius),
       zIndex: -1,
     },
   };
@@ -148,7 +157,7 @@ export default function HomePage() {
                   color: '#fff',
                   textShadow: HERO_TEXT_SHADOW,
                   px: 1,
-                  ...heroTextPanelSx('-30px', '-64px'),
+                  ...heroTextPanelSx('-30px', '-78px'),
                 }}
               >
                 {t('landing.subtitle')}
@@ -161,7 +170,7 @@ export default function HomePage() {
                   color: 'rgba(255,255,255,0.94)',
                   textShadow: HERO_TEXT_SHADOW,
                   px: 1,
-                  ...heroTextPanelSx('-30px', '-64px'),
+                  ...heroTextPanelSx('-30px', '-78px'),
                 }}
               >
                 {t('landing.description')}
@@ -169,13 +178,20 @@ export default function HomePage() {
 
               <Box
                 sx={{
+                  position: 'relative',
                   width: '100%',
                   maxWidth: 420,
                   pt: 0.5,
-                  ...heroTextPanelSx('-34px', '-48px', '32px'),
                 }}
               >
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2}>
+                <Box
+                  aria-hidden
+                  sx={{
+                    ...heroPanelLayerSx('-34px', '-62px', '32px'),
+                    zIndex: 0,
+                  }}
+                />
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} sx={{ position: 'relative', zIndex: 1 }}>
                   <Button
                     component={RouterLink}
                     to="/login"
@@ -227,7 +243,7 @@ export default function HomePage() {
                     color: '#fff',
                     textShadow: HERO_TEXT_SHADOW,
                     px: 1,
-                    ...heroTextPanelSx('-26px', '-56px'),
+                    ...heroTextPanelSx('-26px', '-70px'),
                   }}
                 >
                   {t('statusNote')}
@@ -239,7 +255,7 @@ export default function HomePage() {
                     color: 'rgba(255,255,255,0.92)',
                     textShadow: HERO_TEXT_SHADOW,
                     px: 1,
-                    ...heroTextPanelSx('-24px', '-54px'),
+                    ...heroTextPanelSx('-24px', '-68px'),
                   }}
                 >
                   {t('statusOpenSource.text')}
