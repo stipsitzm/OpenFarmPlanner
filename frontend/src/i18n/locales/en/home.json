@@ -2,6 +2,7 @@
   "landing": {
     "title": "OpenFarmPlanner",
     "betaBadge": "Beta",
+    "heroImageAlt": "Vegetable garden beds in front of a wooded mountainside",
     "subtitle": "Simple crop planning as a vegetable planning tool for CSA, solidarity farming, and market gardening.",
     "description": "OpenFarmPlanner helps small-scale vegetable production with clear planning for crops, beds, growing areas, cultivation periods, and sowing dates.",
     "actions": {

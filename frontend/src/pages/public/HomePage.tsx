@@ -40,6 +40,36 @@ const PRODUCT_TOUR_ITEMS = [
 
 type ProductTourKey = (typeof PRODUCT_TOUR_ITEMS)[number]['key'];
 
+const HERO_TEXT_SHADOW = '0 1px 3px rgba(0,0,0,0.7), 0 2px 12px rgba(0,0,0,0.5)';
+
+// Soft backdrop-blur patch shaped to hug a single text block, applied via ::before
+// so it sits behind the block's own text (see stacking note on the calling element:
+// position: 'relative' + non-positioned text paints above a negative-z-index
+// ::before automatically). The mask is rectangular (not oval) - two linear-gradient
+// fades, one per axis, intersected - so it follows the text's actual (rectangular)
+// shape. Each fade completes with margin before the box's real edge, otherwise
+// backdrop-filter's hard sampling boundary shows through as a visible seam even
+// though the mask alpha is fading.
+function heroTextPanelSx(insetY: string, insetX: string) {
+  const fadeX = 'linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)';
+  const fadeY = 'linear-gradient(to bottom, transparent 0%, black 26%, black 74%, transparent 100%)';
+  return {
+    position: 'relative' as const,
+    '&::before': {
+      content: '""',
+      position: 'absolute' as const,
+      inset: `${insetY} ${insetX}`,
+      backdropFilter: 'blur(24px)',
+      WebkitBackdropFilter: 'blur(24px)',
+      backgroundColor: 'rgba(5,14,8,0.66)',
+      maskImage: `${fadeX}, ${fadeY}`,
+      maskComposite: 'intersect',
+      WebkitMaskImage: `${fadeX}, ${fadeY}`,
+      zIndex: -1,
+    },
+  };
+}
+
 /**
  * Public landing page with refined spacing and modern visual hierarchy.
  *
@@ -57,49 +87,98 @@ export default function HomePage() {
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
       <Box component="main" sx={{ flex: 1 }}>
-        <Container maxWidth="lg" sx={{ width: '100%', py: { xs: 5, md: 7 } }}>
-          <Stack spacing={{ xs: 5.5, md: 7 }} alignItems="center">
-            <Stack spacing={{ xs: 2.25, md: 2.6 }} alignItems="center" textAlign="center">
-              <Stack spacing={1.1} sx={{ width: '100%' }}>
-                <Box
-                  component="img"
-                  src="/favicon.png"
-                  alt=""
-                  aria-hidden
-                  sx={{
-                    width: { xs: 46, md: 56 },
-                    height: 'auto',
-                    alignSelf: 'center',
-                    opacity: 0.95,
-                  }}
-                />
-                <Typography
-                  variant="h2"
-                  component="h1"
-                  sx={{
-                    fontSize: { xs: '2rem', md: '2.75rem' },
-                    fontWeight: 600,
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {t('landing.title')}
-                </Typography>
-                <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 500, lineHeight: 1.35 }}>
-                  {t('landing.subtitle')}
-                </Typography>
-              </Stack>
-              <Typography color="text.secondary" sx={{ maxWidth: 700, fontSize: { xs: '0.98rem', md: '1rem' }, lineHeight: 1.65 }}>
+        <Container maxWidth="lg" sx={{ width: '100%', pt: { xs: 4, md: 5.5 }, pb: { xs: 2.5, md: 3 } }}>
+          <Stack direction="row" spacing={1.4} alignItems="center" justifyContent="center">
+            <Box
+              component="img"
+              src="/favicon.png"
+              alt=""
+              aria-hidden
+              sx={{
+                width: { xs: 40, md: 48 },
+                height: 'auto',
+                opacity: 0.95,
+              }}
+            />
+            <Typography
+              variant="h2"
+              component="h1"
+              sx={{
+                fontSize: { xs: '1.9rem', md: '2.5rem' },
+                fontWeight: 600,
+                lineHeight: 1.1,
+              }}
+            >
+              {t('landing.title')}
+            </Typography>
+          </Stack>
+        </Container>
+
+        <Box
+          component="section"
+          role="img"
+          aria-label={t('landing.heroImageAlt')}
+          sx={{
+            position: 'relative',
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            px: 2,
+            py: { xs: 4.5, md: 6 },
+            overflow: 'hidden',
+            backgroundImage: 'url(/landing/hero-field.webp)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
+            <Stack spacing={2.4} alignItems="center">
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 500,
+                  lineHeight: 1.35,
+                  color: '#fff',
+                  textShadow: HERO_TEXT_SHADOW,
+                  px: 1,
+                  ...heroTextPanelSx('-28px', '-52px'),
+                }}
+              >
+                {t('landing.subtitle')}
+              </Typography>
+              <Typography
+                sx={{
+                  maxWidth: 620,
+                  fontSize: { xs: '0.98rem', md: '1rem' },
+                  lineHeight: 1.65,
+                  color: 'rgba(255,255,255,0.94)',
+                  textShadow: HERO_TEXT_SHADOW,
+                  px: 1,
+                  ...heroTextPanelSx('-28px', '-52px'),
+                }}
+              >
                 {t('landing.description')}
               </Typography>
 
-              <Stack spacing={1.2} sx={{ width: '100%', maxWidth: 320 }}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1.2}
+                sx={{
+                  width: '100%',
+                  maxWidth: 420,
+                  pt: 0.5,
+                  ...heroTextPanelSx('-20px', '-34px'),
+                }}
+              >
                 <Button
                   component={RouterLink}
                   to="/login"
                   variant="contained"
                   size="large"
                   sx={{
-                    width: '100%',
+                    flex: 1,
                     minHeight: 46,
                     borderRadius: 2.5,
                     boxShadow: (theme) => theme.shadows[2],
@@ -119,16 +198,16 @@ export default function HomePage() {
                   variant="outlined"
                   size="large"
                   sx={{
-                    width: '100%',
+                    flex: 1,
                     minHeight: 46,
                     borderRadius: 2.5,
-                    borderColor: 'divider',
-                    color: 'text.primary',
-                    transition: 'transform 160ms ease, border-color 160ms ease, background-color 160ms ease',
+                    bgcolor: '#fff',
+                    boxShadow: (theme) => theme.shadows[2],
+                    transition: 'transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease',
                     '&:hover': {
+                      bgcolor: '#fff',
                       transform: 'translateY(-1px)',
-                      borderColor: 'text.secondary',
-                      bgcolor: 'action.hover',
+                      boxShadow: (theme) => theme.shadows[5],
                     },
                   }}
                 >
@@ -136,41 +215,58 @@ export default function HomePage() {
                 </Button>
               </Stack>
 
-              <Stack spacing={0.4} alignItems="center" textAlign="center" sx={{ pt: { xs: 0.2, md: 0.4 } }}>
-                <Typography color="text.secondary" sx={{ lineHeight: 1.5 }}>
+              <Stack spacing={0.8} alignItems="center" textAlign="center" sx={{ pt: { xs: 0.6, md: 0.9 } }}>
+                <Typography
+                  sx={{
+                    lineHeight: 1.5,
+                    color: '#fff',
+                    textShadow: HERO_TEXT_SHADOW,
+                    px: 1,
+                    ...heroTextPanelSx('-24px', '-44px'),
+                  }}
+                >
                   {t('statusNote')}
                 </Typography>
-                <Typography color="text.secondary" sx={{ fontSize: { xs: '0.84rem', md: '0.9rem' }, lineHeight: 1.45 }}>
+                <Typography
+                  sx={{
+                    fontSize: { xs: '0.84rem', md: '0.9rem' },
+                    lineHeight: 1.45,
+                    color: 'rgba(255,255,255,0.92)',
+                    textShadow: HERO_TEXT_SHADOW,
+                    px: 1,
+                    ...heroTextPanelSx('-22px', '-42px'),
+                  }}
+                >
                   {t('statusOpenSource.text')}
                 </Typography>
                 <Link
                   href={t('statusOpenSource.githubUrl')}
                   target="_blank"
                   rel="noopener noreferrer"
-                  underline="hover"
+                  underline="none"
                   color="primary"
                   sx={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 0.55,
-                    px: 0.9,
-                    py: 0.45,
-                    mt: 0.25,
-                        borderRadius: 1,
-                    border: 1,
-                    borderColor: 'divider',
-                    bgcolor: 'background.paper',
+                    px: 1.1,
+                    py: 0.5,
+                    mt: 0.5,
+                    borderRadius: 1,
+                    border: 2,
+                    borderColor: 'primary.main',
+                    bgcolor: '#fff',
                     cursor: 'pointer',
                     fontSize: { xs: '0.86rem', md: '0.92rem' },
                     fontWeight: 600,
                     lineHeight: 1.4,
-                    textDecorationColor: 'rgba(25, 118, 210, 0.5)',
-                    transition: 'color 180ms ease, text-decoration-color 180ms ease, background-color 180ms ease',
+                    boxShadow: (theme) => theme.shadows[1],
+                    transition: 'color 180ms ease, border-color 180ms ease, background-color 180ms ease',
                     '&:hover': {
                       color: 'primary.dark',
-                      textDecorationColor: 'currentColor',
-                      bgcolor: 'action.hover',
+                      borderColor: 'primary.dark',
+                      bgcolor: '#fff',
                     },
                   }}
                 >
@@ -179,16 +275,15 @@ export default function HomePage() {
                 </Link>
               </Stack>
             </Stack>
+          </Container>
+        </Box>
 
+        <Container maxWidth="lg" sx={{ width: '100%', py: { xs: 5, md: 7 } }}>
+          <Stack spacing={{ xs: 5.5, md: 7 }} alignItems="center">
             <Box
               component="section"
               aria-labelledby="product-tour-title"
-              sx={{
-                width: '100%',
-                pt: { xs: 3.5, md: 4.5 },
-                borderTop: 1,
-                borderColor: 'divider',
-              }}
+              sx={{ width: '100%' }}
             >
               <Stack spacing={{ xs: 2.5, md: 3.5 }}>
                 <Stack spacing={1.25} alignItems="center" textAlign="center">

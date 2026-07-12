@@ -2,6 +2,7 @@
   "landing": {
     "title": "OpenFarmPlanner",
     "betaBadge": "Beta",
+    "heroImageAlt": "Gemüsebeete vor einem bewaldeten Berghang",
     "subtitle": "Open-Source-Anbauplaner für den Gemüsebau.",
     "description": "Speziell entwickelt für Marktgärtnereien, Solidarische Landwirtschaft und andere Betriebe mit vielen Kulturen und kleinteiligen Anbauflächen.",
     "actions": {
