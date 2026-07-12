@@ -24,7 +24,7 @@ frontend onboarding choice is covered in
 `frontend/e2e/onboarding-demo-project.spec.ts`.
 
 Landing-page screenshots are generated from this same template and currently
-cover areas, calendar planning, seed demand, yield overview, and crops.
+cover areas, crops, calendar planning, yield overview, and seed demand.
 
 Local checks:
 

@@ -17,16 +17,16 @@ const screenshots = [
     filename: 'demo-areas.webp',
   },
   {
+    key: 'cultures',
+    path: '/app/cultures',
+    ready: /Kulturen|Karotte/i,
+    filename: 'demo-cultures.webp',
+  },
+  {
     key: 'calendar',
     path: '/app/gantt-chart?view=occupancy',
     ready: /Anbaukalender|Anbauflächen/i,
     filename: 'demo-calendar.webp',
-  },
-  {
-    key: 'seed-demand',
-    path: '/app/seed-demand',
-    ready: /Saatgutbedarf|Karotte/i,
-    filename: 'demo-seed-demand.webp',
   },
   {
     key: 'yield-overview',
@@ -35,10 +35,10 @@ const screenshots = [
     filename: 'demo-yield-overview.webp',
   },
   {
-    key: 'cultures',
-    path: '/app/cultures',
-    ready: /Kulturen|Karotte/i,
-    filename: 'demo-cultures.webp',
+    key: 'seed-demand',
+    path: '/app/seed-demand',
+    ready: /Saatgutbedarf|Karotte/i,
+    filename: 'demo-seed-demand.webp',
   },
 ] as const;
 

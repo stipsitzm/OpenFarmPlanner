@@ -73,7 +73,7 @@ GENERATE_LANDING_SCREENSHOTS=1 npx playwright test e2e/landing-screenshots.spec.
 Notes:
 - The viewport is fixed at `1440x900`.
 - The assets are written to `public/landing/screenshots/` and currently cover
-  areas, calendar, seed demand, yield overview, and crops.
+  areas, crops, calendar, yield overview, and seed demand.
 - ImageMagick's `magick` command is required for WebP conversion. Set
   `MAGICK_BINARY=/path/to/magick` if it is not on `PATH`.
 - The spec is skipped during normal `npm run test:e2e` runs unless

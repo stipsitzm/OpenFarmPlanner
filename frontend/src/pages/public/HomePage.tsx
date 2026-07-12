@@ -21,20 +21,20 @@ const PRODUCT_TOUR_ITEMS = [
     image: '/landing/screenshots/demo-areas.webp',
   },
   {
-    key: 'calendar',
-    image: '/landing/screenshots/demo-calendar.webp',
+    key: 'cultures',
+    image: '/landing/screenshots/demo-cultures.webp',
   },
   {
-    key: 'seedDemand',
-    image: '/landing/screenshots/demo-seed-demand.webp',
+    key: 'calendar',
+    image: '/landing/screenshots/demo-calendar.webp',
   },
   {
     key: 'yieldOverview',
     image: '/landing/screenshots/demo-yield-overview.webp',
   },
   {
-    key: 'cultures',
-    image: '/landing/screenshots/demo-cultures.webp',
+    key: 'seedDemand',
+    image: '/landing/screenshots/demo-seed-demand.webp',
   },
 ] as const;
 

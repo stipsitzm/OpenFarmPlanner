@@ -96,6 +96,13 @@ describe('App', () => {
     render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
 
     expect(await screen.findByRole('tab', { name: 'Flächen' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Flächen',
+      'Kulturen',
+      'Kalender',
+      'Erträge',
+      'Saatgut',
+    ]);
     expect(screen.getByRole('img', {
       name: 'Hierarchische Ansicht eines Demo-Projekts mit Standorten, Parzellen und Beeten',
     })).toHaveAttribute('src', '/landing/screenshots/demo-areas.webp');
