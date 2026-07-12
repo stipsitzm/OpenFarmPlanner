@@ -17,7 +17,7 @@
     "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
   },
   "productTour": {
-    "title": "This is what season planning looks like in OpenFarmPlanner",
+    "title": "Season planning at a glance",
     "description": "A realistic demo project shows how growing areas, crops, schedules, and summaries work together in practice.",
     "tabsLabel": "Product tour",
     "items": {

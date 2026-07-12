@@ -17,7 +17,7 @@
     "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
   },
   "productTour": {
-    "title": "So sieht Saisonplanung mit OpenFarmPlanner aus",
+    "title": "Saisonplanung im Überblick",
     "description": "Ein realistisches Demo-Projekt zeigt, wie Anbauflächen, Kulturen, Termine und Auswertungen in der Praxis zusammenspielen.",
     "tabsLabel": "Produktführung",
     "items": {

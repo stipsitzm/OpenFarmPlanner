@@ -144,7 +144,7 @@ export default function HomePage() {
                   color: '#fff',
                   textShadow: HERO_TEXT_SHADOW,
                   px: 1,
-                  ...heroTextPanelSx('-28px', '-52px'),
+                  ...heroTextPanelSx('-30px', '-64px'),
                 }}
               >
                 {t('landing.subtitle')}
@@ -157,7 +157,7 @@ export default function HomePage() {
                   color: 'rgba(255,255,255,0.94)',
                   textShadow: HERO_TEXT_SHADOW,
                   px: 1,
-                  ...heroTextPanelSx('-28px', '-52px'),
+                  ...heroTextPanelSx('-30px', '-64px'),
                 }}
               >
                 {t('landing.description')}
@@ -223,7 +223,7 @@ export default function HomePage() {
                     color: '#fff',
                     textShadow: HERO_TEXT_SHADOW,
                     px: 1,
-                    ...heroTextPanelSx('-24px', '-44px'),
+                    ...heroTextPanelSx('-26px', '-56px'),
                   }}
                 >
                   {t('statusNote')}
@@ -235,7 +235,7 @@ export default function HomePage() {
                     color: 'rgba(255,255,255,0.92)',
                     textShadow: HERO_TEXT_SHADOW,
                     px: 1,
-                    ...heroTextPanelSx('-22px', '-42px'),
+                    ...heroTextPanelSx('-24px', '-54px'),
                   }}
                 >
                   {t('statusOpenSource.text')}
