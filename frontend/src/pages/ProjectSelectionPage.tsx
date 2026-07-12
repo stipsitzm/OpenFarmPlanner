@@ -71,6 +71,8 @@ export default function ProjectSelectionPage() {
     [deletedProjects],
   );
   const visibleMemberships = isDevOnboardingPreview ? [] : memberships;
+  const isOnboardingState = visibleMemberships.length === 0;
+  const shouldShowProjectTrash = !isOnboardingState || deletedProjectsByName.length > 0 || Boolean(trashError);
 
   const stopDevOnboardingPreview = (): void => {
     clearDevOnboardingPreview();
@@ -148,89 +150,84 @@ export default function ProjectSelectionPage() {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 720 }}>
-      <Stack spacing={2}>
-        <Typography variant="h5">{t('project.switch')}</Typography>
-
-        {isDevOnboardingPreview ? (
-          <Alert
-            severity="info"
-            action={(
-              <Button color="inherit" size="small" onClick={stopDevOnboardingPreview}>
-                {t('common:projectOnboarding.devPreviewEndAction')}
-              </Button>
-            )}
-          >
-            {t('common:projectOnboarding.devPreviewNotice')}
-          </Alert>
-        ) : null}
-
-        {visibleMemberships.length === 0 ? (
-          <Alert severity="info">
-            <Stack spacing={1.5}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                {t('common:projectRequired.noProjectsTitle')}
+    <Box sx={{ p: 3, maxWidth: isOnboardingState ? 780 : 720 }}>
+      <Stack spacing={2.5}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'flex-start' }}>
+          <Box>
+            <Typography variant="h5">
+              {isOnboardingState ? t('common:projectOnboarding.pageTitle') : t('project.switch')}
+            </Typography>
+            {isOnboardingState ? (
+              <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 620, lineHeight: 1.6 }}>
+                {t('common:projectOnboarding.pageDescription')}
               </Typography>
-              <Typography variant="body2">
-                {t('common:projectRequired.noProjectsSelectionDescription')}
-              </Typography>
-              {demoError ? <Alert severity="error">{demoError}</Alert> : null}
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                <Paper
-                  variant="outlined"
-                  sx={{ flex: 1, p: 1.5, bgcolor: 'background.paper', borderRadius: 1 }}
-                >
-                  <Stack spacing={1.25} sx={{ height: '100%' }}>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        {t('common:projectOnboarding.emptyTitle')}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {t('common:projectOnboarding.emptyDescription')}
-                      </Typography>
-                    </Box>
-                    <Button
-                      variant="outlined"
-                      onClick={() => {
-                        stopDevOnboardingPreview();
-                        openProjectCreationFlow();
-                      }}
-                      disabled={isCreatingDemoProject}
-                    >
-                      {t('common:projectOnboarding.emptyAction')}
-                    </Button>
-                  </Stack>
-                </Paper>
-                <Paper
-                  variant="outlined"
-                  sx={{ flex: 1, p: 1.5, bgcolor: 'background.paper', borderRadius: 1 }}
-                >
-                  <Stack spacing={1.25} sx={{ height: '100%' }}>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                        {t('common:projectOnboarding.demoTitle')}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {t('common:projectOnboarding.demoDescription')}
-                      </Typography>
-                    </Box>
-                    <Button
-                      variant="contained"
-                      onClick={() => {
-                        void createDemoProject();
-                      }}
-                      disabled={isCreatingDemoProject}
-                      startIcon={isCreatingDemoProject ? <CircularProgress color="inherit" size={16} /> : undefined}
-                    >
-                      {isCreatingDemoProject
-                        ? t('common:projectOnboarding.demoCreating')
-                        : t('common:projectOnboarding.demoAction')}
-                    </Button>
-                  </Stack>
-                </Paper>
-              </Stack>
+            ) : null}
+          </Box>
+          {isDevOnboardingPreview ? (
+            <Button variant="text" size="small" onClick={stopDevOnboardingPreview} sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}>
+              {t('common:projectOnboarding.devPreviewEndAction')}
+            </Button>
+          ) : null}
+        </Stack>
+
+        {isOnboardingState ? (
+          <Stack spacing={2}>
+            {demoError ? <Alert severity="error">{demoError}</Alert> : null}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <Paper
+                variant="outlined"
+                sx={{ flex: 1, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}
+              >
+                <Stack spacing={1.5} sx={{ height: '100%' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      {t('common:projectOnboarding.emptyTitle')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, lineHeight: 1.55 }}>
+                      {t('common:projectOnboarding.emptyDescription')}
+                    </Typography>
+                  </Box>
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      stopDevOnboardingPreview();
+                      openProjectCreationFlow();
+                    }}
+                    disabled={isCreatingDemoProject}
+                  >
+                    {t('common:projectOnboarding.emptyAction')}
+                  </Button>
+                </Stack>
+              </Paper>
+              <Paper
+                variant="outlined"
+                sx={{ flex: 1, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}
+              >
+                <Stack spacing={1.5} sx={{ height: '100%' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      {t('common:projectOnboarding.demoTitle')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, lineHeight: 1.55 }}>
+                      {t('common:projectOnboarding.demoDescription')}
+                    </Typography>
+                  </Box>
+                  <Button
+                    variant="contained"
+                    onClick={() => {
+                      void createDemoProject();
+                    }}
+                    disabled={isCreatingDemoProject}
+                    startIcon={isCreatingDemoProject ? <CircularProgress color="inherit" size={16} /> : undefined}
+                  >
+                    {isCreatingDemoProject
+                      ? t('common:projectOnboarding.demoCreating')
+                      : t('common:projectOnboarding.demoAction')}
+                  </Button>
+                </Stack>
+              </Paper>
             </Stack>
-          </Alert>
+          </Stack>
         ) : (
           <>
             <Box>
@@ -263,7 +260,8 @@ export default function ProjectSelectionPage() {
           </>
         )}
 
-        <Accordion>
+        {shouldShowProjectTrash ? (
+          <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               {t('projectTrash.title')}
@@ -313,7 +311,8 @@ export default function ProjectSelectionPage() {
               ) : null}
             </Stack>
           </AccordionDetails>
-        </Accordion>
+          </Accordion>
+        ) : null}
       </Stack>
     </Box>
   );

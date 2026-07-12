@@ -91,9 +91,10 @@ describe('ProjectSelectionPage', () => {
 
     render(<MemoryRouter><ProjectSelectionPage /></MemoryRouter>);
 
-    expect(screen.getByText('Du hast noch kein Projekt.')).toBeInTheDocument();
-    expect(screen.getByText('Lege dein erstes Projekt an, um mit der Planung zu starten.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Erstes Projekt starten' })).toBeInTheDocument();
+    expect(screen.getByText('Wähle, ob du mit einem eigenen leeren Projekt beginnst oder OpenFarmPlanner zuerst mit realistischen Beispieldaten ausprobierst.')).toBeInTheDocument();
     expect(screen.getByText('Demo-Projekt ausprobieren')).toBeInTheDocument();
+    expect(screen.queryByText('Papierkorb')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Leeres Projekt anlegen' }));
     expect(dispatchSpy).toHaveBeenCalled();
     dispatchSpy.mockRestore();
@@ -104,7 +105,7 @@ describe('ProjectSelectionPage', () => {
 
     render(<MemoryRouter><ProjectSelectionPage /></MemoryRouter>);
 
-    expect(screen.getByText('Entwickler-Vorschau: Bestehende Projekte werden nur auf dieser Seite ausgeblendet, damit du das First-Project-Onboarding prüfen kannst. Es werden keine Daten gelöscht.')).toBeInTheDocument();
+    expect(screen.queryByText(/Entwickler-Vorschau/)).not.toBeInTheDocument();
     expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
     expect(screen.getByText('Demo-Projekt ausprobieren')).toBeInTheDocument();
 

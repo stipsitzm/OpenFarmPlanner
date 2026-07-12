@@ -149,6 +149,8 @@
     "selectProjectAction": "Projekt auswählen"
   },
   "projectOnboarding": {
+    "pageTitle": "Erstes Projekt starten",
+    "pageDescription": "Wähle, ob du mit einem eigenen leeren Projekt beginnst oder OpenFarmPlanner zuerst mit realistischen Beispieldaten ausprobierst.",
     "emptyTitle": "Mit leerem Projekt starten",
     "emptyDescription": "Lege ein eigenes Projekt an und erfasse Standorte, Kulturen und Anbaupläne Schritt für Schritt.",
     "emptyAction": "Leeres Projekt anlegen",
@@ -158,7 +160,6 @@
     "demoCreating": "Demo-Projekt wird erstellt…",
     "demoCreatedHint": "Dieses Projekt enthält Beispieldaten. Du kannst alles frei bearbeiten oder das Projekt jederzeit löschen.",
     "demoCreateError": "Demo-Projekt konnte nicht erstellt werden. Bitte versuche es erneut.",
-    "devPreviewNotice": "Entwickler-Vorschau: Bestehende Projekte werden nur auf dieser Seite ausgeblendet, damit du das First-Project-Onboarding prüfen kannst. Es werden keine Daten gelöscht.",
     "devPreviewEndAction": "Vorschau beenden"
   },
   "runtime": {

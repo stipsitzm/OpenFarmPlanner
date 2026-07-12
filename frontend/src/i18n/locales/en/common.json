@@ -19,6 +19,8 @@
     "cultureProjectMismatch": "The culture does not belong to the active project."
   },
   "projectOnboarding": {
+    "pageTitle": "Start your first project",
+    "pageDescription": "Choose whether to begin with your own empty project or explore OpenFarmPlanner first with realistic sample data.",
     "emptyTitle": "Start with an empty project",
     "emptyDescription": "Create your own project and add locations, crops, and planting plans step by step.",
     "emptyAction": "Create empty project",
@@ -28,7 +30,6 @@
     "demoCreating": "Creating demo project...",
     "demoCreatedHint": "This project contains sample data. You can edit everything freely or delete the project at any time.",
     "demoCreateError": "Demo project could not be created. Please try again.",
-    "devPreviewNotice": "Developer preview: existing projects are hidden only on this page so you can review the first-project onboarding. No data is deleted.",
     "devPreviewEndAction": "End preview"
   },
   "runtime": {
