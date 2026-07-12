@@ -188,7 +188,16 @@ export default function HomePage() {
             >
               <Stack spacing={{ xs: 2.5, md: 3.5 }}>
                 <Stack spacing={1.25} alignItems="center" textAlign="center">
-                  <Typography id="product-tour-title" variant="h4" component="h2" sx={{ fontWeight: 600 }}>
+                  <Typography
+                    id="product-tour-title"
+                    variant="h4"
+                    component="h2"
+                    sx={{
+                      fontSize: { xs: '1.8rem', md: '2.125rem' },
+                      fontWeight: 600,
+                      lineHeight: 1.18,
+                    }}
+                  >
                     {t('productTour.title')}
                   </Typography>
                   <Typography color="text.secondary" sx={{ maxWidth: 720, lineHeight: 1.6 }}>

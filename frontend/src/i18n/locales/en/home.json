@@ -16,8 +16,8 @@
     "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
   },
   "productTour": {
-    "title": "A demo project instead of empty tables",
-    "description": "OpenFarmPlanner connects growing areas, crop data, schedules, and summaries into one continuous season plan.",
+    "title": "This is what season planning looks like in OpenFarmPlanner",
+    "description": "A realistic demo project shows how growing areas, crops, schedules, and summaries work together in practice.",
     "tabsLabel": "Product tour",
     "items": {
       "areas": {
