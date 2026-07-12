@@ -10,7 +10,7 @@ The service has two entry points:
 - `create_or_reset_demo_project(...)` recreates the local screenshot/demo
   fixture used by the management command and landing-page screenshot workflow.
 
-The template currently creates the `Solawi Sonnenacker 2026` project with two
+The template currently creates the `Solawi Sonnenacker` project with two
 locations, four fields, twelve beds, three suppliers, eight vegetable cultures,
 seed package data, and twelve planting plans for the 2026 season. All created
 records are project-scoped and owned by the receiving user through a regular

@@ -57,7 +57,7 @@ class DemoProjectServiceTests(TestCase):
 
         project = Project.objects.get(slug='command-demo')
         user = User.objects.get(email='command-demo@example.local')
-        self.assertEqual(project.name, 'Solawi Sonnenacker 2026')
+        self.assertEqual(project.name, 'Solawi Sonnenacker')
         self.assertTrue(ProjectMembership.objects.filter(project=project, user=user, role='admin').exists())
         self.assertEqual(PlantingPlan.objects.filter(project=project).count(), 12)
 

@@ -21,7 +21,7 @@ test.describe('first-project onboarding', () => {
 
     await expect(page).toHaveURL(/\/app\/fields-beds/);
     await expect(page.getByText('Dieses Projekt enthält Beispieldaten.')).toBeVisible();
-    await expect(page.locator('.project-switcher-label', { hasText: 'Solawi Sonnenacker 2026' })).toBeVisible();
+    await expect(page.locator('.project-switcher-label', { hasText: 'Solawi Sonnenacker' })).toBeVisible();
     await expect(page.getByText('Acker am Bach')).toBeVisible();
     await expect(page.getByText('Karotten 1')).toBeVisible();
 

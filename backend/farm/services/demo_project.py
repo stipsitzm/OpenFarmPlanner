@@ -28,8 +28,8 @@ from farm.models import (
 
 User = get_user_model()
 
-DEMO_PROJECT_NAME = 'Solawi Sonnenacker 2026'
-DEMO_PROJECT_SLUG = 'solawi-sonnenacker-2026'
+DEMO_PROJECT_NAME = 'Solawi Sonnenacker'
+DEMO_PROJECT_SLUG = 'solawi-sonnenacker'
 DEMO_PROJECT_DESCRIPTION = 'Pers\u00f6nliches Demo-Projekt mit realistischen Beispieldaten.'
 DEMO_USER_EMAIL = 'demo-openfarmplanner@example.local'
 DEMO_USERNAME = 'openfarmplanner-demo'

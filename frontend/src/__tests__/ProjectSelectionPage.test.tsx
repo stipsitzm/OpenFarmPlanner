@@ -8,8 +8,8 @@ const projectApiMocks = vi.hoisted(() => ({
   createDemo: vi.fn(async () => ({
     data: {
       id: 9,
-      name: 'Solawi Sonnenacker 2026',
-      slug: 'solawi-sonnenacker-2026',
+      name: 'Solawi Sonnenacker',
+      slug: 'solawi-sonnenacker',
       description: '',
       is_active: true,
       deleted_at: null,
@@ -56,8 +56,8 @@ describe('ProjectSelectionPage', () => {
     projectApiMocks.createDemo.mockResolvedValue({
       data: {
         id: 9,
-        name: 'Solawi Sonnenacker 2026',
-        slug: 'solawi-sonnenacker-2026',
+        name: 'Solawi Sonnenacker',
+        slug: 'solawi-sonnenacker',
         description: '',
         is_active: true,
         deleted_at: null,
@@ -156,8 +156,8 @@ describe('ProjectSelectionPage', () => {
     resolveRequest({
       data: {
         id: 9,
-        name: 'Solawi Sonnenacker 2026',
-        slug: 'solawi-sonnenacker-2026',
+        name: 'Solawi Sonnenacker',
+        slug: 'solawi-sonnenacker',
         description: '',
         is_active: true,
         deleted_at: null,
