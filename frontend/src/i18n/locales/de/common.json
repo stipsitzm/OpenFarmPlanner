@@ -157,7 +157,9 @@
     "demoAction": "Demo-Projekt erstellen",
     "demoCreating": "Demo-Projekt wird erstellt…",
     "demoCreatedHint": "Dieses Projekt enthält Beispieldaten. Du kannst alles frei bearbeiten oder das Projekt jederzeit löschen.",
-    "demoCreateError": "Demo-Projekt konnte nicht erstellt werden. Bitte versuche es erneut."
+    "demoCreateError": "Demo-Projekt konnte nicht erstellt werden. Bitte versuche es erneut.",
+    "devPreviewNotice": "Entwickler-Vorschau: Bestehende Projekte werden nur auf dieser Seite ausgeblendet, damit du das First-Project-Onboarding prüfen kannst. Es werden keine Daten gelöscht.",
+    "devPreviewEndAction": "Vorschau beenden"
   },
   "runtime": {
     "applicationUpdatedFallback": "Die Anwendung konnte nicht automatisch aktualisiert werden. Bitte versuche es später erneut.",

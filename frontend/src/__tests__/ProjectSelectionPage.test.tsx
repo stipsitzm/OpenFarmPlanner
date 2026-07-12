@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ProjectSelectionPage from '../pages/ProjectSelectionPage';
+import { DEV_ONBOARDING_PREVIEW_STORAGE_KEY } from '../projects/devOnboardingPreview';
 
 const projectApiMocks = vi.hoisted(() => ({
   createDemo: vi.fn(async () => ({
@@ -48,6 +49,7 @@ vi.mock('../api/api', async () => {
 
 describe('ProjectSelectionPage', () => {
   beforeEach(() => {
+    localStorage.clear();
     authState.switchActiveProject.mockClear();
     authState.refreshUser.mockClear();
     projectApiMocks.createDemo.mockClear();
@@ -95,6 +97,22 @@ describe('ProjectSelectionPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Leeres Projekt anlegen' }));
     expect(dispatchSpy).toHaveBeenCalled();
     dispatchSpy.mockRestore();
+  });
+
+  it('shows first-project onboarding as a developer preview without hiding projects permanently', () => {
+    localStorage.setItem(DEV_ONBOARDING_PREVIEW_STORAGE_KEY, '1');
+
+    render(<MemoryRouter><ProjectSelectionPage /></MemoryRouter>);
+
+    expect(screen.getByText('Entwickler-Vorschau: Bestehende Projekte werden nur auf dieser Seite ausgeblendet, damit du das First-Project-Onboarding prüfen kannst. Es werden keine Daten gelöscht.')).toBeInTheDocument();
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
+    expect(screen.getByText('Demo-Projekt ausprobieren')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Vorschau beenden' }));
+
+    expect(localStorage.getItem(DEV_ONBOARDING_PREVIEW_STORAGE_KEY)).toBeNull();
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.queryByText('Demo-Projekt ausprobieren')).not.toBeInTheDocument();
   });
 
   it('creates and opens a demo project from onboarding', async () => {

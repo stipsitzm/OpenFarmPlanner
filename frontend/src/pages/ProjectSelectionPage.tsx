@@ -19,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { projectAPI, type ProjectPayload } from '../api/api';
 import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
+import { clearDevOnboardingPreview, isDevOnboardingPreviewEnabled } from '../projects/devOnboardingPreview';
 import { openProjectCreationFlow } from '../projects/projectCreationFlow';
 import { confirmAction } from '../utils/confirmAction';
 
@@ -27,6 +28,7 @@ export default function ProjectSelectionPage() {
   const navigate = useNavigate();
   const { t } = useTranslation(['navigation', 'common']);
   const memberships = user?.memberships ?? [];
+  const [isDevOnboardingPreview, setIsDevOnboardingPreview] = useState(() => isDevOnboardingPreviewEnabled());
   const [deletedProjects, setDeletedProjects] = useState<ProjectPayload[]>([]);
   const [trashError, setTrashError] = useState<string | null>(null);
   const [demoError, setDemoError] = useState<string | null>(null);
@@ -68,8 +70,15 @@ export default function ProjectSelectionPage() {
     () => [...deletedProjects].sort((left, right) => left.name.localeCompare(right.name, 'de')),
     [deletedProjects],
   );
+  const visibleMemberships = isDevOnboardingPreview ? [] : memberships;
+
+  const stopDevOnboardingPreview = (): void => {
+    clearDevOnboardingPreview();
+    setIsDevOnboardingPreview(false);
+  };
 
   const openProject = async (projectId: number): Promise<void> => {
+    stopDevOnboardingPreview();
     await switchActiveProject(projectId);
     navigate('/app/fields-beds', { replace: true });
   };
@@ -88,6 +97,7 @@ export default function ProjectSelectionPage() {
     setDemoError(null);
     try {
       const response = await projectAPI.createDemo();
+      stopDevOnboardingPreview();
       await switchActiveProject(response.data.id);
       showSnackbar(t('common:projectOnboarding.demoCreatedHint'), 'success');
       navigate('/app/fields-beds', { replace: true });
@@ -142,7 +152,20 @@ export default function ProjectSelectionPage() {
       <Stack spacing={2}>
         <Typography variant="h5">{t('project.switch')}</Typography>
 
-        {memberships.length === 0 ? (
+        {isDevOnboardingPreview ? (
+          <Alert
+            severity="info"
+            action={(
+              <Button color="inherit" size="small" onClick={stopDevOnboardingPreview}>
+                {t('common:projectOnboarding.devPreviewEndAction')}
+              </Button>
+            )}
+          >
+            {t('common:projectOnboarding.devPreviewNotice')}
+          </Alert>
+        ) : null}
+
+        {visibleMemberships.length === 0 ? (
           <Alert severity="info">
             <Stack spacing={1.5}>
               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
@@ -166,7 +189,14 @@ export default function ProjectSelectionPage() {
                         {t('common:projectOnboarding.emptyDescription')}
                       </Typography>
                     </Box>
-                    <Button variant="outlined" onClick={() => openProjectCreationFlow()} disabled={isCreatingDemoProject}>
+                    <Button
+                      variant="outlined"
+                      onClick={() => {
+                        stopDevOnboardingPreview();
+                        openProjectCreationFlow();
+                      }}
+                      disabled={isCreatingDemoProject}
+                    >
                       {t('common:projectOnboarding.emptyAction')}
                     </Button>
                   </Stack>
@@ -209,7 +239,7 @@ export default function ProjectSelectionPage() {
               </Button>
             </Box>
             <List>
-              {memberships.map((membership) => (
+              {visibleMemberships.map((membership) => (
                 <ListItem
                   key={membership.project_id}
                   secondaryAction={(

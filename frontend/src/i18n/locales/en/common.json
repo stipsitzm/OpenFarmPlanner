@@ -27,7 +27,9 @@
     "demoAction": "Create demo project",
     "demoCreating": "Creating demo project...",
     "demoCreatedHint": "This project contains sample data. You can edit everything freely or delete the project at any time.",
-    "demoCreateError": "Demo project could not be created. Please try again."
+    "demoCreateError": "Demo project could not be created. Please try again.",
+    "devPreviewNotice": "Developer preview: existing projects are hidden only on this page so you can review the first-project onboarding. No data is deleted.",
+    "devPreviewEndAction": "End preview"
   },
   "runtime": {
     "applicationUpdatedFallback": "The application could not be updated automatically. Please try again later.",
