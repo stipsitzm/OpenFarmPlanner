@@ -7,7 +7,7 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from accounts.models import UserProjectSettings
-from farm.models import Bed, Culture, Location, PlantingPlan, Project, ProjectMembership, Supplier
+from farm.models import Bed, BedLayout, Culture, FieldLayout, Location, PlantingPlan, Project, ProjectMembership, Supplier
 from farm.services.demo_project import (
     DEMO_PROJECT_DESCRIPTION,
     DEMO_PROJECT_NAME,
@@ -30,6 +30,8 @@ class DemoProjectServiceTests(TestCase):
         self.assertEqual(Culture.objects.filter(project=result.project).count(), 8)
         self.assertEqual(PlantingPlan.objects.filter(project=result.project).count(), 12)
         self.assertEqual(Supplier.objects.filter(project=result.project).count(), 3)
+        self.assertEqual(FieldLayout.objects.filter(project=result.project).count(), 4)
+        self.assertEqual(BedLayout.objects.filter(project=result.project).count(), 12)
         self.assertTrue(
             Culture.objects.filter(
                 project=result.project,
@@ -45,6 +47,42 @@ class DemoProjectServiceTests(TestCase):
         self.assertEqual(second_result.project.id, result.project.id)
         self.assertFalse(Location.objects.filter(project=result.project, name='Temporary Location').exists())
         self.assertEqual(Location.objects.filter(project=result.project).count(), 2)
+
+    def test_demo_project_layout_places_beds_inside_their_fields(self) -> None:
+        result = create_or_reset_demo_project()
+
+        expected_field_positions = {
+            'Fr\u00fchbeete Nord': (40, 40),
+            'Folientunnel S\u00fcd': (240, 40),
+            'Wurzelgem\u00fcse': (40, 40),
+            'Kohlquartier': (220, 40),
+        }
+        expected_positions = {
+            'Salat 1': (12, 12),
+            'Salat 2': (52, 12),
+            'Kr\u00e4uter & Mangold': (92, 12),
+            'Tomatenreihe 1': (14, 18),
+            'Tomatenreihe 2': (54, 18),
+            'Gurkenreihe': (94, 18),
+            'Karotten 1': (8, 20),
+            'Karotten 2': (38, 20),
+            'Rote Bete': (68, 20),
+            'Kohlrabi': (8, 24),
+            'Zucchini': (36, 24),
+            'Gr\u00fcnd\u00fcngung Reserve': (64, 24),
+        }
+
+        layouts_by_name = {
+            layout.bed.name: (layout.x, layout.y)
+            for layout in BedLayout.objects.filter(project=result.project).select_related('bed')
+        }
+        field_layouts_by_name = {
+            layout.field.name: (layout.x, layout.y)
+            for layout in FieldLayout.objects.filter(project=result.project).select_related('field')
+        }
+
+        self.assertEqual(field_layouts_by_name, expected_field_positions)
+        self.assertEqual(layouts_by_name, expected_positions)
 
     def test_management_command_seeds_requested_demo_project(self) -> None:
         call_command(

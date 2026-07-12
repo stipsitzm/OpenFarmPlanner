@@ -15,6 +15,7 @@ const screenshots = [
     path: '/app/fields-beds',
     ready: /Hofgarten|Acker am Bach/i,
     filename: 'demo-areas.webp',
+    fieldsViewMode: 'graphical',
   },
   {
     key: 'cultures',
@@ -89,7 +90,6 @@ test.describe('landing page product screenshots', () => {
       loginAsAdmin: true,
     });
     await page.evaluate(() => {
-      window.localStorage.setItem('fieldsBedsViewMode', 'table');
       window.localStorage.setItem('ofp.contextMenuHintDismissed', '1');
     });
     const currentUserId = await page.evaluate(async () => {
@@ -104,10 +104,18 @@ test.describe('landing page product screenshots', () => {
     }
 
     for (const item of screenshots) {
+      await page.evaluate((fieldsViewMode) => {
+        window.localStorage.setItem('fieldsBedsViewMode', fieldsViewMode ?? 'table');
+      }, 'fieldsViewMode' in item ? item.fieldsViewMode : undefined);
       await page.goto(item.path);
       await disableTransientUi(page);
       await waitForPageStable(page, item.ready);
       await page.mouse.move(0, 0);
+
+      if (item.key === 'areas') {
+        await expect(page.getByRole('button', { name: 'Grafik', pressed: true })).toBeVisible();
+        await expect(page.locator('canvas').first()).toBeVisible();
+      }
 
       if (item.key === 'calendar') {
         await expect(page.locator('[data-testid="gantt-virtual-viewport"]')).toBeVisible();

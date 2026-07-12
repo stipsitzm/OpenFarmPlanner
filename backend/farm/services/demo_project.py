@@ -319,22 +319,36 @@ def _create_layouts(
 ) -> None:
     field_positions = {
         'fruehbeete': (40, 40),
-        'tunnel': (40, 190),
+        'tunnel': (240, 40),
         'wurzel': (40, 40),
-        'kohl': (40, 205),
+        'kohl': (220, 40),
     }
     for key, field in fields.items():
         x, y = field_positions[key]
         FieldLayout.objects.create(field=field, location=field.location, project=project, x=x, y=y)
 
-    for index, (key, bed) in enumerate(beds.items()):
-        field_layout = bed.field.layout
+    bed_positions = {
+        'salat-1': (12, 12),
+        'salat-2': (52, 12),
+        'kraeuter': (92, 12),
+        'tomate-1': (14, 18),
+        'tomate-2': (54, 18),
+        'gurke': (94, 18),
+        'karotte-1': (8, 20),
+        'karotte-2': (38, 20),
+        'rote-bete': (68, 20),
+        'kohlrabi': (8, 24),
+        'zucchini': (36, 24),
+        'reserve': (64, 24),
+    }
+    for key, bed in beds.items():
+        x, y = bed_positions[key]
         BedLayout.objects.create(
             bed=bed,
             location=bed.field.location,
             project=project,
-            x=field_layout.x + 18 + (index % 3) * 72,
-            y=field_layout.y + 24 + (index % 4) * 34,
+            x=x,
+            y=y,
         )
 
 
