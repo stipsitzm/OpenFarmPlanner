@@ -22,6 +22,8 @@ const updateMemberMock = vi.fn(async () => ({ data: { id: 11, role: 'admin' } })
 const removeMemberMock = vi.fn(async () => ({}));
 const revokeInvitationMock = vi.fn();
 const updateProjectMock = vi.fn(async () => ({ data: { id: 1, name: 'Beta' } }));
+const deleteProjectMock = vi.fn(async () => ({}));
+const restoreProjectMock = vi.fn(async () => ({ data: { id: 1, name: 'Alpha' } }));
 const refreshUserMock = vi.fn(async () => null);
 
 const authState = {
@@ -49,6 +51,8 @@ vi.mock('../api/api', async () => {
       removeMember: (...args: unknown[]) => removeMemberMock(...args),
       revokeInvitation: (...args: unknown[]) => revokeInvitationMock(...args),
       update: (...args: unknown[]) => updateProjectMock(...args),
+      delete: (...args: unknown[]) => deleteProjectMock(...args),
+      restore: (...args: unknown[]) => restoreProjectMock(...args),
     },
   };
 });
@@ -67,6 +71,8 @@ describe('ProjectSettingsPage', () => {
     removeMemberMock.mockClear();
     revokeInvitationMock.mockClear();
     updateProjectMock.mockClear();
+    deleteProjectMock.mockClear();
+    restoreProjectMock.mockClear();
     refreshUserMock.mockClear();
     listMock.mockResolvedValue({ data: [] });
     listMembersMock.mockResolvedValue({
@@ -286,5 +292,14 @@ describe('ProjectSettingsPage', () => {
     expect(updateProjectMock).not.toHaveBeenCalled();
     expect(screen.getByLabelText('Projekt umbenennen')).toBeInTheDocument();
     expect(screen.getByText('Alpha')).toBeInTheDocument();
+  });
+
+  it('offers a developer shortcut to delete the active project without typing its name', async () => {
+    render(<MemoryRouter><ProjectSettingsPage /></MemoryRouter>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Dev: ohne Namensbestätigung löschen' }));
+
+    await waitFor(() => expect(deleteProjectMock).toHaveBeenCalledWith(1));
+    await waitFor(() => expect(refreshUserMock).toHaveBeenCalled());
   });
 });

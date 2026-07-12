@@ -41,6 +41,7 @@ export default function ProjectSettingsPage() {
   const canManageMembers = isProjectAdmin;
   const normalizedProjectName = projectNameDraft.trim();
   const canDeleteProject = deleteConfirmationText === (activeMembership?.project_name ?? '');
+  const canQuickDeleteProjectInDev = import.meta.env.DEV && isProjectAdmin;
   const canSaveProjectName = isProjectAdmin
     && normalizedProjectName.length >= 2
     && normalizedProjectName !== (activeMembership?.project_name ?? '');
@@ -192,8 +193,9 @@ export default function ProjectSettingsPage() {
     setDeleteConfirmationText('');
   };
 
-  const handleProjectDelete = async (): Promise<void> => {
-    if (!activeMembership || !isProjectAdmin || !canDeleteProject) {
+  const handleProjectDelete = async (options: { skipNameConfirmation?: boolean } = {}): Promise<void> => {
+    const skipNameConfirmation = options.skipNameConfirmation === true;
+    if (!activeMembership || !isProjectAdmin || (!skipNameConfirmation && !canDeleteProject)) {
       return;
     }
 
@@ -485,6 +487,22 @@ export default function ProjectSettingsPage() {
           >
             {t('projectDelete.openButton')}
           </Button>
+          {canQuickDeleteProjectInDev ? (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                {t('projectDelete.devQuickDescription')}
+              </Typography>
+              <Button
+                color="error"
+                variant="outlined"
+                startIcon={<DeleteOutlineIcon />}
+                onClick={() => void handleProjectDelete({ skipNameConfirmation: true })}
+                disabled={isDeletingProject}
+              >
+                {t('projectDelete.devQuickButton')}
+              </Button>
+            </Box>
+          ) : null}
         </Box>
       ) : null}
 
