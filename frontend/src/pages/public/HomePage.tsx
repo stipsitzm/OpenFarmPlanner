@@ -48,18 +48,22 @@ const HERO_TEXT_SHADOW = '0 1px 3px rgba(0,0,0,0.7), 0 2px 12px rgba(0,0,0,0.5)'
 
 // Soft backdrop-blur patch shaped to hug a block of content. The mask is
 // rectangular (not oval) - two linear-gradient fades, one per axis,
-// intersected - so it follows the content's actual (rectangular) shape. Each
-// fade completes with margin before the box's real edge, otherwise
-// backdrop-filter's hard sampling boundary shows through as a visible seam
-// even though the mask alpha is fading.
-const HERO_PANEL_BLUR_PX = 18;
+// intersected - so it follows the content's actual (rectangular) shape.
+// Fade stops are fixed pixel widths (not percentages), so the fade distance
+// stays constant regardless of the panel's size - which means `spreadPx`
+// alone (how far the opaque blur extends past the content's edge, on all
+// four sides, before it starts fading out) fully controls the panel's
+// width/height. No separate X/Y tuning needed.
+const HERO_PANEL_BLUR_PX = 0;
+const HERO_PANEL_FADE_PX = 22;
 
-function heroPanelLayerSx(insetY: string, insetX: string, borderRadius: string) {
-  const fadeX = 'linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)';
-  const fadeY = 'linear-gradient(to bottom, transparent 0%, black 26%, black 74%, transparent 100%)';
+function heroPanelLayerSx(spreadPx: number, borderRadius: string) {
+  const inset = `-${spreadPx + HERO_PANEL_FADE_PX}px`;
+  const fadeX = `linear-gradient(to right, transparent 0, black ${HERO_PANEL_FADE_PX}px, black calc(100% - ${HERO_PANEL_FADE_PX}px), transparent 100%)`;
+  const fadeY = `linear-gradient(to bottom, transparent 0, black ${HERO_PANEL_FADE_PX}px, black calc(100% - ${HERO_PANEL_FADE_PX}px), transparent 100%)`;
   return {
     position: 'absolute' as const,
-    inset: `${insetY} ${insetX}`,
+    inset,
     borderRadius,
     backdropFilter: `blur(${HERO_PANEL_BLUR_PX}px)`,
     WebkitBackdropFilter: `blur(${HERO_PANEL_BLUR_PX}px)`,
@@ -73,12 +77,12 @@ function heroPanelLayerSx(insetY: string, insetX: string, borderRadius: string) 
 // Applied via ::before so the panel sits behind the calling element's own
 // content (see stacking note: position: 'relative' + non-positioned content
 // paints above a negative-z-index ::before automatically).
-function heroTextPanelSx(insetY: string, insetX: string, borderRadius = '10px') {
+function heroTextPanelSx(spreadPx: number, borderRadius = '10px') {
   return {
     position: 'relative' as const,
     '&::before': {
       content: '""',
-      ...heroPanelLayerSx(insetY, insetX, borderRadius),
+      ...heroPanelLayerSx(spreadPx, borderRadius),
       zIndex: -1,
     },
   };
@@ -157,7 +161,7 @@ export default function HomePage() {
                   color: '#fff',
                   textShadow: HERO_TEXT_SHADOW,
                   px: 1,
-                  ...heroTextPanelSx('-30px', '-78px'),
+                  ...heroTextPanelSx(14),
                 }}
               >
                 {t('landing.subtitle')}
@@ -170,7 +174,7 @@ export default function HomePage() {
                   color: 'rgba(255,255,255,0.94)',
                   textShadow: HERO_TEXT_SHADOW,
                   px: 1,
-                  ...heroTextPanelSx('-30px', '-78px'),
+                  ...heroTextPanelSx(14),
                 }}
               >
                 {t('landing.description')}
@@ -187,7 +191,7 @@ export default function HomePage() {
                 <Box
                   aria-hidden
                   sx={{
-                    ...heroPanelLayerSx('-34px', '-62px', '32px'),
+                    ...heroPanelLayerSx(16, '32px'),
                     zIndex: 0,
                   }}
                 />
@@ -243,7 +247,7 @@ export default function HomePage() {
                     color: '#fff',
                     textShadow: HERO_TEXT_SHADOW,
                     px: 1,
-                    ...heroTextPanelSx('-26px', '-70px'),
+                    ...heroTextPanelSx(12),
                   }}
                 >
                   {t('statusNote')}
@@ -255,7 +259,7 @@ export default function HomePage() {
                     color: 'rgba(255,255,255,0.92)',
                     textShadow: HERO_TEXT_SHADOW,
                     px: 1,
-                    ...heroTextPanelSx('-24px', '-68px'),
+                    ...heroTextPanelSx(10),
                   }}
                 >
                   {t('statusOpenSource.text')}
