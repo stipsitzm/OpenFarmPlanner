@@ -46,52 +46,25 @@ type ProductTourKey = (typeof PRODUCT_TOUR_ITEMS)[number]['key'];
 
 const HERO_TEXT_SHADOW = '0 1px 3px rgba(0,0,0,0.7), 0 2px 12px rgba(0,0,0,0.5)';
 
-// ---------------------------------------------------------------------------
-// Hero blur styling - all tunable values live here in one place.
-const HERO_PANEL = {
-  // backdrop-filter strength in px. 0 disables the blur itself but keeps the
-  // darkened fill (see heroHighlightSx/heroPanelLayerSx below).
-  blurPx: 0,
-  // how far the buttons' shared backdrop panel extends past the button
-  // group's edge, in px, before fading out.
-  buttonsSpreadPx: 16,
-} as const;
-// ---------------------------------------------------------------------------
-
-// A "highlighter pen" effect for wrapped text: box-decoration-break: clone
-// makes an inline element's background/padding/border-radius apply
-// separately to each line fragment instead of once to the whole (multi-line)
-// bounding box. So instead of one rectangle sized to the longest line, each
-// line gets its own independently-rounded blur patch that hugs just that
-// line's width - narrower lines get a narrower patch, automatically, with no
-// manual measuring. Padding/radius are in `em` so they scale with whichever
-// text size this is applied to.
-function heroHighlightSx(borderRadius = '0.4em') {
-  return {
-    display: 'inline' as const,
-    boxDecorationBreak: 'clone' as const,
-    WebkitBoxDecorationBreak: 'clone' as const,
-    backgroundColor: 'rgba(5,14,8,0.66)',
-    backdropFilter: `blur(${HERO_PANEL.blurPx}px)`,
-    WebkitBackdropFilter: `blur(${HERO_PANEL.blurPx}px)`,
-    borderRadius,
-    px: '0.45em',
-    py: '0.3em',
-  };
-}
-
-// Soft backdrop-blur patch for a discrete (non-wrapping) block of content
-// like the button row, applied as an absolutely-positioned sibling behind it.
-function heroPanelLayerSx(spreadPx: number, borderRadius: string) {
-  return {
-    position: 'absolute' as const,
-    inset: `-${spreadPx}px`,
-    borderRadius,
-    backdropFilter: `blur(${HERO_PANEL.blurPx}px)`,
-    WebkitBackdropFilter: `blur(${HERO_PANEL.blurPx}px)`,
-    backgroundColor: 'rgba(5,14,8,0.66)',
-  };
-}
+// Single glassmorphism card behind all hero content (heading, description,
+// buttons, beta note, GitHub link) - one clearly-bounded, semi-transparent
+// panel instead of separate backgrounds per line/element, so there's no risk
+// of overlapping panels double-darkening the gaps between them.
+const HERO_CARD_SX = {
+  position: 'relative' as const,
+  zIndex: 1,
+  width: '100%',
+  maxWidth: 640,
+  mx: 'auto',
+  px: { xs: 3, sm: 4, md: 5 },
+  py: { xs: 3.5, sm: 4, md: 5 },
+  borderRadius: { xs: 4, md: 6 },
+  border: '1px solid rgba(255,255,255,0.28)',
+  backgroundColor: 'rgba(8,24,14,0.5)',
+  backdropFilter: 'blur(18px)',
+  WebkitBackdropFilter: 'blur(18px)',
+  boxShadow: '0 12px 40px rgba(0,0,0,0.28)',
+};
 
 /**
  * Public landing page with refined spacing and modern visual hierarchy.
@@ -156,118 +129,88 @@ export default function HomePage() {
             backgroundPosition: 'center',
           }}
         >
-          <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
+          <Box sx={HERO_CARD_SX}>
             <Stack spacing={2.4} alignItems="center">
               <Typography
                 variant="h6"
                 sx={{
                   fontWeight: 500,
-                  lineHeight: 1.5,
+                  lineHeight: 1.35,
                   color: '#fff',
                   textShadow: HERO_TEXT_SHADOW,
                 }}
               >
-                <Box component="span" sx={heroHighlightSx()}>
-                  {t('landing.subtitle')}
-                </Box>
+                {t('landing.subtitle')}
               </Typography>
               <Typography
                 sx={{
-                  maxWidth: 620,
+                  maxWidth: 560,
                   fontSize: { xs: '0.98rem', md: '1rem' },
-                  lineHeight: 1.7,
+                  lineHeight: 1.65,
                   color: 'rgba(255,255,255,0.94)',
                   textShadow: HERO_TEXT_SHADOW,
                 }}
               >
-                <Box component="span" sx={heroHighlightSx()}>
-                  {t('landing.description')}
-                </Box>
+                {t('landing.description')}
               </Typography>
 
-              <Box
-                sx={{
-                  position: 'relative',
-                  width: '100%',
-                  maxWidth: 420,
-                  pt: 0.5,
-                }}
-              >
-                <Box
-                  aria-hidden
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} sx={{ width: '100%', maxWidth: 380, pt: 0.5 }}>
+                <Button
+                  component={RouterLink}
+                  to="/login"
+                  variant="contained"
+                  size="large"
                   sx={{
-                    ...heroPanelLayerSx(HERO_PANEL.buttonsSpreadPx, '32px'),
-                    zIndex: 0,
-                  }}
-                />
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} sx={{ position: 'relative', zIndex: 1 }}>
-                  <Button
-                    component={RouterLink}
-                    to="/login"
-                    variant="contained"
-                    size="large"
-                    sx={{
-                      flex: 1,
-                      minHeight: 46,
-                      borderRadius: 2.5,
-                      boxShadow: (theme) => theme.shadows[2],
-                      transition: 'transform 160ms ease, box-shadow 160ms ease',
-                      '&:hover': {
-                        transform: 'translateY(-1px)',
-                        boxShadow: (theme) => theme.shadows[5],
-                      },
-                    }}
-                  >
-                    {t('landing.actions.openApp')}
-                  </Button>
-
-                  <Button
-                    component={RouterLink}
-                    to="/register"
-                    variant="outlined"
-                    size="large"
-                    sx={{
-                      flex: 1,
-                      minHeight: 46,
-                      borderRadius: 2.5,
-                      bgcolor: '#fff',
-                      boxShadow: (theme) => theme.shadows[2],
-                      transition: 'transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease',
-                      '&:hover': {
-                        bgcolor: '#fff',
-                        transform: 'translateY(-1px)',
-                        boxShadow: (theme) => theme.shadows[5],
-                      },
-                    }}
-                  >
-                    {t('landing.actions.register')}
-                  </Button>
-                </Stack>
-              </Box>
-
-              <Stack spacing={0.8} alignItems="center" textAlign="center" sx={{ pt: { xs: 0.6, md: 0.9 } }}>
-                <Typography
-                  sx={{
-                    lineHeight: 1.55,
-                    color: '#fff',
-                    textShadow: HERO_TEXT_SHADOW,
+                    flex: 1,
+                    minHeight: 46,
+                    borderRadius: 2.5,
+                    boxShadow: (theme) => theme.shadows[2],
+                    transition: 'transform 160ms ease, box-shadow 160ms ease',
+                    '&:hover': {
+                      transform: 'translateY(-1px)',
+                      boxShadow: (theme) => theme.shadows[5],
+                    },
                   }}
                 >
-                  <Box component="span" sx={heroHighlightSx()}>
-                    {t('statusNote')}
-                  </Box>
+                  {t('landing.actions.openApp')}
+                </Button>
+
+                <Button
+                  component={RouterLink}
+                  to="/register"
+                  variant="outlined"
+                  size="large"
+                  sx={{
+                    flex: 1,
+                    minHeight: 46,
+                    borderRadius: 2.5,
+                    bgcolor: '#fff',
+                    boxShadow: (theme) => theme.shadows[2],
+                    transition: 'transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease',
+                    '&:hover': {
+                      bgcolor: '#fff',
+                      transform: 'translateY(-1px)',
+                      boxShadow: (theme) => theme.shadows[5],
+                    },
+                  }}
+                >
+                  {t('landing.actions.register')}
+                </Button>
+              </Stack>
+
+              <Stack spacing={0.8} alignItems="center" textAlign="center" sx={{ pt: { xs: 0.6, md: 0.9 } }}>
+                <Typography sx={{ lineHeight: 1.5, color: '#fff', textShadow: HERO_TEXT_SHADOW }}>
+                  {t('statusNote')}
                 </Typography>
                 <Typography
                   sx={{
                     fontSize: { xs: '0.84rem', md: '0.9rem' },
-                    lineHeight: 1.65,
+                    lineHeight: 1.45,
                     color: 'rgba(255,255,255,0.92)',
                     textShadow: HERO_TEXT_SHADOW,
                   }}
                 >
-                  <Box component="span" sx={heroHighlightSx()}>
-                    {t('statusOpenSource.text')}
-                  </Box>
+                  {t('statusOpenSource.text')}
                 </Typography>
                 <Link
                   href={t('statusOpenSource.githubUrl')}
@@ -305,7 +248,7 @@ export default function HomePage() {
                 </Link>
               </Stack>
             </Stack>
-          </Container>
+          </Box>
         </Box>
 
         <Container maxWidth="xl" sx={{ width: '100%', py: { xs: 5, md: 7 } }}>
