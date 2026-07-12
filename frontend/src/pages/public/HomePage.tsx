@@ -46,27 +46,57 @@ type ProductTourKey = (typeof PRODUCT_TOUR_ITEMS)[number]['key'];
 
 const HERO_TEXT_SHADOW = '0 1px 3px rgba(0,0,0,0.7), 0 2px 12px rgba(0,0,0,0.5)';
 
+// ---------------------------------------------------------------------------
+// Hero blur panels - all tunable values live here in one place.
+//
 // Soft backdrop-blur patch shaped to hug a block of content. The mask is
 // rectangular (not oval) - two linear-gradient fades, one per axis,
 // intersected - so it follows the content's actual (rectangular) shape.
 // Fade stops are fixed pixel widths (not percentages), so the fade distance
-// stays constant regardless of the panel's size - which means `spreadPx`
-// alone (how far the opaque blur extends past the content's edge, on all
-// four sides, before it starts fading out) fully controls the panel's
-// width/height. No separate X/Y tuning needed.
-const HERO_PANEL_BLUR_PX = 0;
-const HERO_PANEL_FADE_PX = 22;
+// stays constant regardless of the panel's size.
+//
+// Horizontal reach (`spread`, below) is configurable per element - it's how
+// far the opaque blur extends past the content's left/right edge before
+// fading out. Vertical reach is deliberately NOT configurable per element:
+// it's kept small and shared (`verticalSpreadPx` + `verticalFadePx`) so that
+// stacked panels never grow tall enough to overlap their neighbor above/below
+// and double-darken the gap between them. If you add a new panel and it
+// starts overlapping the next one, shrink the vertical constants below
+// rather than that panel's spread value.
+const HERO_PANEL = {
+  // backdrop-filter strength in px. 0 disables the blur itself but keeps the
+  // darkened fill + soft fade (see heroPanelLayerSx below).
+  blurPx: 0,
+  // horizontal fade-out width at each panel's left/right edge, in px.
+  fadePx: 22,
+  // vertical fade-out width at each panel's top/bottom edge, in px - kept
+  // small on purpose, see note above.
+  verticalFadePx: 6,
+  // vertical reach past the content's top/bottom edge, in px, before it
+  // starts fading out - kept small on purpose, see note above.
+  verticalSpreadPx: 2,
+  // horizontal reach past each element's content edge, in px, before it
+  // starts fading out.
+  spread: {
+    subtitle: 14,
+    description: 14,
+    buttons: 16,
+    statusGroup: 12,
+  },
+} as const;
+// ---------------------------------------------------------------------------
 
 function heroPanelLayerSx(spreadPx: number, borderRadius: string) {
-  const inset = `-${spreadPx + HERO_PANEL_FADE_PX}px`;
-  const fadeX = `linear-gradient(to right, transparent 0, black ${HERO_PANEL_FADE_PX}px, black calc(100% - ${HERO_PANEL_FADE_PX}px), transparent 100%)`;
-  const fadeY = `linear-gradient(to bottom, transparent 0, black ${HERO_PANEL_FADE_PX}px, black calc(100% - ${HERO_PANEL_FADE_PX}px), transparent 100%)`;
+  const insetX = `-${spreadPx + HERO_PANEL.fadePx}px`;
+  const insetY = `-${HERO_PANEL.verticalSpreadPx + HERO_PANEL.verticalFadePx}px`;
+  const fadeX = `linear-gradient(to right, transparent 0, black ${HERO_PANEL.fadePx}px, black calc(100% - ${HERO_PANEL.fadePx}px), transparent 100%)`;
+  const fadeY = `linear-gradient(to bottom, transparent 0, black ${HERO_PANEL.verticalFadePx}px, black calc(100% - ${HERO_PANEL.verticalFadePx}px), transparent 100%)`;
   return {
     position: 'absolute' as const,
-    inset,
+    inset: `${insetY} ${insetX}`,
     borderRadius,
-    backdropFilter: `blur(${HERO_PANEL_BLUR_PX}px)`,
-    WebkitBackdropFilter: `blur(${HERO_PANEL_BLUR_PX}px)`,
+    backdropFilter: `blur(${HERO_PANEL.blurPx}px)`,
+    WebkitBackdropFilter: `blur(${HERO_PANEL.blurPx}px)`,
     backgroundColor: 'rgba(5,14,8,0.66)',
     maskImage: `${fadeX}, ${fadeY}`,
     maskComposite: 'intersect',
@@ -161,7 +191,7 @@ export default function HomePage() {
                   color: '#fff',
                   textShadow: HERO_TEXT_SHADOW,
                   px: 1,
-                  ...heroTextPanelSx(14),
+                  ...heroTextPanelSx(HERO_PANEL.spread.subtitle),
                 }}
               >
                 {t('landing.subtitle')}
@@ -174,7 +204,7 @@ export default function HomePage() {
                   color: 'rgba(255,255,255,0.94)',
                   textShadow: HERO_TEXT_SHADOW,
                   px: 1,
-                  ...heroTextPanelSx(14),
+                  ...heroTextPanelSx(HERO_PANEL.spread.description),
                 }}
               >
                 {t('landing.description')}
@@ -191,7 +221,7 @@ export default function HomePage() {
                 <Box
                   aria-hidden
                   sx={{
-                    ...heroPanelLayerSx(16, '32px'),
+                    ...heroPanelLayerSx(HERO_PANEL.spread.buttons, '32px'),
                     zIndex: 0,
                   }}
                 />
@@ -240,65 +270,76 @@ export default function HomePage() {
                 </Stack>
               </Box>
 
-              <Stack spacing={0.8} alignItems="center" textAlign="center" sx={{ pt: { xs: 0.6, md: 0.9 } }}>
-                <Typography
+              <Box sx={{ position: 'relative', pt: { xs: 0.6, md: 0.9 } }}>
+                {/* statusNote, statusOpenSource and the GitHub link sit close together
+                    (Stack spacing 0.8), so they share a single blur panel instead of
+                    each getting their own - individual panels here would overlap and
+                    double-darken the small gaps between them. */}
+                <Box
+                  aria-hidden
                   sx={{
-                    lineHeight: 1.5,
-                    color: '#fff',
-                    textShadow: HERO_TEXT_SHADOW,
-                    px: 1,
-                    ...heroTextPanelSx(12),
+                    ...heroPanelLayerSx(HERO_PANEL.spread.statusGroup, '24px'),
+                    zIndex: 0,
                   }}
-                >
-                  {t('statusNote')}
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: { xs: '0.84rem', md: '0.9rem' },
-                    lineHeight: 1.45,
-                    color: 'rgba(255,255,255,0.92)',
-                    textShadow: HERO_TEXT_SHADOW,
-                    px: 1,
-                    ...heroTextPanelSx(10),
-                  }}
-                >
-                  {t('statusOpenSource.text')}
-                </Typography>
-                <Link
-                  href={t('statusOpenSource.githubUrl')}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  underline="none"
-                  color="primary"
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 0.55,
-                    px: 1.1,
-                    py: 0.5,
-                    mt: 0.5,
-                    borderRadius: 1,
-                    border: 2,
-                    borderColor: 'primary.main',
-                    bgcolor: '#fff',
-                    cursor: 'pointer',
-                    fontSize: { xs: '0.86rem', md: '0.92rem' },
-                    fontWeight: 600,
-                    lineHeight: 1.4,
-                    boxShadow: (theme) => theme.shadows[1],
-                    transition: 'color 180ms ease, border-color 180ms ease, background-color 180ms ease',
-                    '&:hover': {
-                      color: 'primary.dark',
-                      borderColor: 'primary.dark',
+                />
+                <Stack spacing={0.8} alignItems="center" textAlign="center" sx={{ position: 'relative', zIndex: 1 }}>
+                  <Typography
+                    sx={{
+                      lineHeight: 1.5,
+                      color: '#fff',
+                      textShadow: HERO_TEXT_SHADOW,
+                      px: 1,
+                    }}
+                  >
+                    {t('statusNote')}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: { xs: '0.84rem', md: '0.9rem' },
+                      lineHeight: 1.45,
+                      color: 'rgba(255,255,255,0.92)',
+                      textShadow: HERO_TEXT_SHADOW,
+                      px: 1,
+                    }}
+                  >
+                    {t('statusOpenSource.text')}
+                  </Typography>
+                  <Link
+                    href={t('statusOpenSource.githubUrl')}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    underline="none"
+                    color="primary"
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 0.55,
+                      px: 1.1,
+                      py: 0.5,
+                      mt: 0.5,
+                      borderRadius: 1,
+                      border: 2,
+                      borderColor: 'primary.main',
                       bgcolor: '#fff',
-                    },
-                  }}
-                >
-                  <GitHubIcon sx={{ fontSize: { xs: '0.95rem', md: '1rem' }, flexShrink: 0 }} />
-                  {t('statusOpenSource.linkLabel')}
-                </Link>
-              </Stack>
+                      cursor: 'pointer',
+                      fontSize: { xs: '0.86rem', md: '0.92rem' },
+                      fontWeight: 600,
+                      lineHeight: 1.4,
+                      boxShadow: (theme) => theme.shadows[1],
+                      transition: 'color 180ms ease, border-color 180ms ease, background-color 180ms ease',
+                      '&:hover': {
+                        color: 'primary.dark',
+                        borderColor: 'primary.dark',
+                        bgcolor: '#fff',
+                      },
+                    }}
+                  >
+                    <GitHubIcon sx={{ fontSize: { xs: '0.95rem', md: '1rem' }, flexShrink: 0 }} />
+                    {t('statusOpenSource.linkLabel')}
+                  </Link>
+                </Stack>
+              </Box>
             </Stack>
           </Container>
         </Box>
