@@ -50,7 +50,7 @@ const HERO_TEXT_SHADOW = '0 1px 3px rgba(0,0,0,0.7), 0 2px 12px rgba(0,0,0,0.5)'
 // shape. Each fade completes with margin before the box's real edge, otherwise
 // backdrop-filter's hard sampling boundary shows through as a visible seam even
 // though the mask alpha is fading.
-function heroTextPanelSx(insetY: string, insetX: string) {
+function heroTextPanelSx(insetY: string, insetX: string, borderRadius = '10px') {
   const fadeX = 'linear-gradient(to right, transparent 0%, black 22%, black 78%, transparent 100%)';
   const fadeY = 'linear-gradient(to bottom, transparent 0%, black 26%, black 74%, transparent 100%)';
   return {
@@ -59,6 +59,7 @@ function heroTextPanelSx(insetY: string, insetX: string) {
       content: '""',
       position: 'absolute' as const,
       inset: `${insetY} ${insetX}`,
+      borderRadius,
       backdropFilter: 'blur(24px)',
       WebkitBackdropFilter: 'blur(24px)',
       backgroundColor: 'rgba(5,14,8,0.66)',
@@ -169,7 +170,7 @@ export default function HomePage() {
                   width: '100%',
                   maxWidth: 420,
                   pt: 0.5,
-                  ...heroTextPanelSx('-20px', '-34px'),
+                  ...heroTextPanelSx('-34px', '-48px', '32px'),
                 }}
               >
                 <Button
