@@ -29,6 +29,10 @@ const PRODUCT_TOUR_ITEMS = [
     image: '/landing/screenshots/demo-seed-demand.webp',
   },
   {
+    key: 'yieldOverview',
+    image: '/landing/screenshots/demo-yield-overview.webp',
+  },
+  {
     key: 'cultures',
     image: '/landing/screenshots/demo-cultures.webp',
   },
@@ -222,6 +226,9 @@ export default function HomePage() {
                         px: { xs: 1.25, sm: 2 },
                         textTransform: 'none',
                         fontWeight: 600,
+                      },
+                      '& .MuiTabs-indicator': {
+                        transition: 'none',
                       },
                     }}
                   >

@@ -107,6 +107,14 @@ describe('App', () => {
     expect(screen.getByRole('img', {
       name: 'Saatgutbedarf-Tabelle mit Kulturen, Lieferanten, benötigter Menge und Packungsvorschlägen',
     })).toHaveAttribute('src', '/landing/screenshots/demo-seed-demand.webp');
+
+    await user.click(screen.getByRole('tab', { name: 'Erträge' }));
+
+    expect(screen.getByRole('tab', { name: 'Erträge' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'Erwartete Ernten im Blick behalten' })).toBeInTheDocument();
+    expect(screen.getByRole('img', {
+      name: 'Ertragsübersicht mit erwarteten Erntemengen nach Kalenderwochen und Kulturen',
+    })).toHaveAttribute('src', '/landing/screenshots/demo-yield-overview.webp');
   });
 
   it('renders imprint route', async () => {

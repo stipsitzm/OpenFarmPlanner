@@ -29,6 +29,12 @@ const screenshots = [
     filename: 'demo-seed-demand.webp',
   },
   {
+    key: 'yield-overview',
+    path: '/app/yield-overview',
+    ready: /Ertragsübersicht|Ertragsverteilung|Ertragsprognose/i,
+    filename: 'demo-yield-overview.webp',
+  },
+  {
     key: 'cultures',
     path: '/app/cultures',
     ready: /Kulturen|Karotte/i,

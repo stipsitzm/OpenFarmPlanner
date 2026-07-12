@@ -38,6 +38,12 @@
         "description": "Saatgutmenge und passende Packungsgrößen werden aus Kulturparametern, Flächennutzung und Lieferantendaten berechnet.",
         "alt": "Saatgutbedarf-Tabelle mit Kulturen, Lieferanten, benötigter Menge und Packungsvorschlägen"
       },
+      "yieldOverview": {
+        "tab": "Erträge",
+        "title": "Erwartete Ernten im Blick behalten",
+        "description": "Die Ertragsübersicht bündelt geplante Erntemengen nach Zeitraum und Kultur, damit Arbeitsspitzen und Verteilung früh sichtbar werden.",
+        "alt": "Ertragsübersicht mit erwarteten Erntemengen nach Kalenderwochen und Kulturen"
+      },
       "cultures": {
         "tab": "Kulturen",
         "title": "Kulturen zentral pflegen",

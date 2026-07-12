@@ -38,6 +38,12 @@
         "description": "Seed amount and package suggestions are calculated from crop parameters, used area, and supplier data.",
         "alt": "Seed demand table with crops, suppliers, required amount, and package suggestions"
       },
+      "yieldOverview": {
+        "tab": "Yields",
+        "title": "Keep expected harvests in view",
+        "description": "The yield overview groups planned harvest quantities by period and crop, making peaks and distribution visible early.",
+        "alt": "Yield overview with expected harvest quantities by calendar week and crop"
+      },
       "cultures": {
         "tab": "Crops",
         "title": "Maintain crops centrally",
