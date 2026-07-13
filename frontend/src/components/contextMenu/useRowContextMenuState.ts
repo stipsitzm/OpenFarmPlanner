@@ -1,12 +1,11 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
 import { focusContextMenuOrigin, useContextMenuFocus } from '../data-grid/contextMenuFocus';
-import { useCloseCustomContextMenuOnNativeContextMenu } from '../../utils/contextMenu';
+import {
+  useContextMenuPositionState,
+  type ContextMenuPositionState,
+} from './useContextMenuPositionState';
 
-export interface RowContextMenuState<TKey> {
-  key: TKey;
-  mouseX: number;
-  mouseY: number;
-}
+export type RowContextMenuState<TKey> = ContextMenuPositionState<TKey>;
 
 export interface UseRowContextMenuStateParams {
   /** Whether an event target belongs to a row this menu can open for. Gates
@@ -27,8 +26,21 @@ export interface UseRowContextMenuStateParams {
 export function useRowContextMenuState<TKey>({
   isContextMenuTarget,
 }: UseRowContextMenuStateParams) {
-  const [state, setState] = useState<RowContextMenuState<TKey> | null>(null);
   const originRef = useRef<HTMLElement | null>(null);
+
+  const restoreFocusToOrigin = useCallback((): void => {
+    focusContextMenuOrigin(originRef.current);
+  }, []);
+
+  const {
+    state,
+    open: openAtPosition,
+    close,
+    clearIf,
+  } = useContextMenuPositionState<TKey>({
+    isContextMenuTarget,
+    onClose: restoreFocusToOrigin,
+  });
 
   const open = useCallback((
     key: TKey,
@@ -37,34 +49,8 @@ export function useRowContextMenuState<TKey>({
     origin?: HTMLElement | null,
   ): void => {
     originRef.current = origin ?? null;
-    setState({ key, mouseX, mouseY });
-  }, []);
-
-  const close = useCallback((): void => {
-    setState(null);
-    focusContextMenuOrigin(originRef.current);
-  }, []);
-
-  /** Clears the menu without restoring focus, only if it's currently showing
-   * a key matching `predicate` — for silently dropping the menu when its
-   * underlying row disappears (e.g. deleted), as opposed to a user-driven
-   * close which should return focus to whatever opened the menu. */
-  const clearIf = useCallback((predicate: (key: TKey) => boolean): void => {
-    setState((current) => (current && predicate(current.key) ? null : current));
-  }, []);
-
-  const reposition = useCallback((event: globalThis.MouseEvent): void => {
-    setState((current) => (
-      current ? { key: current.key, mouseX: event.clientX + 2, mouseY: event.clientY - 6 } : current
-    ));
-  }, []);
-
-  useCloseCustomContextMenuOnNativeContextMenu(
-    state !== null,
-    close,
-    isContextMenuTarget,
-    reposition,
-  );
+    openAtPosition(key, mouseX, mouseY);
+  }, [openAtPosition]);
 
   const listRef = useContextMenuFocus(state !== null, close);
 

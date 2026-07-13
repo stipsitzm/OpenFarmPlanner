@@ -9,7 +9,6 @@ import {
   CardContent,
   Divider,
   FormControl,
-  Menu,
   MenuItem,
   Select,
   Stack,
@@ -38,11 +37,12 @@ import { useTranslation } from "../i18n";
 import {
   shouldOpenCustomContextMenu,
   suppressNativeContextMenu,
-  useCloseCustomContextMenuOnNativeContextMenu,
   useLongPress,
 } from "../utils/contextMenu";
 import { ContextMenuIndicator } from "../components/contextMenu/ContextMenuIndicator";
 import { contextMenuIndicatorHostSx } from "../components/contextMenu/contextMenuIndicatorStyles";
+import { CustomContextMenu } from "../components/contextMenu/CustomContextMenu";
+import { useContextMenuPositionState } from "../components/contextMenu/useContextMenuPositionState";
 import { useFocusRegion } from "../focus/useFocusManager";
 import { parseDateString } from "./ganttChartUtils";
 import {
@@ -69,6 +69,13 @@ interface YieldChartColumn {
   secondaryLabel: string;
   cultures: YieldCalendarCulture[];
   totalYield: number;
+}
+
+interface YieldContextMenuPayload {
+  cultureId: number;
+  cultureName: string;
+  periodLabel: string;
+  yieldValue: number;
 }
 
 const ALL_CULTURES = "all";
@@ -461,20 +468,20 @@ function YieldDistributionChart({
   const tooltipYieldLabel = t("chart.tooltipYield");
   const actionsLabel = t("common:actions.actions");
 
-  const [contextMenuState, setContextMenuState] = useState<{
-    cultureId: number;
-    cultureName: string;
-    periodLabel: string;
-    yieldValue: number;
-    mouseX: number;
-    mouseY: number;
-  } | null>(null);
-
-  const closeContextMenu = useCallback(() => setContextMenuState(null), []);
+  const isYieldContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
+    shouldOpenCustomContextMenu(target)
+    && target instanceof HTMLElement
+    && target.closest('[data-rmg-component="yield-segment"]') !== null
+  ), []);
+  const {
+    state: contextMenuState,
+    open: openContextMenuState,
+    close: closeContextMenu,
+  } = useContextMenuPositionState<YieldContextMenuPayload>({ isContextMenuTarget: isYieldContextMenuTarget });
 
   const openContextMenu = useCallback((
     event: React.MouseEvent | React.TouchEvent,
-    payload: { cultureId: number; cultureName: string; periodLabel: string; yieldValue: number },
+    payload: YieldContextMenuPayload,
   ) => {
     if (!shouldOpenCustomContextMenu(event.target)) return;
     suppressNativeContextMenu(event);
@@ -482,29 +489,14 @@ function YieldDistributionChart({
       ? event.changedTouches[0] ?? event.touches[0]
       : event;
     if (!point) return;
-    setContextMenuState({ ...payload, mouseX: point.clientX + 2, mouseY: point.clientY - 6 });
-  }, []);
-
-  const isYieldContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
-    shouldOpenCustomContextMenu(target)
-    && target instanceof HTMLElement
-    && target.closest('[data-rmg-component="yield-segment"]') !== null
-  ), []);
-
-  useCloseCustomContextMenuOnNativeContextMenu(
-    contextMenuState !== null,
-    closeContextMenu,
-    isYieldContextMenuTarget,
-    (event) => setContextMenuState((current) => (
-      current ? { ...current, mouseX: event.clientX + 2, mouseY: event.clientY - 6 } : current
-    )),
-  );
+    openContextMenuState(payload, point.clientX + 2, point.clientY - 6);
+  }, [openContextMenuState]);
 
   const openCulture = useCallback((cultureId: number) => {
     navigate(`/app/cultures?cultureId=${cultureId}`);
   }, [navigate]);
 
-  const copySegmentSummary = useCallback((payload: { cultureName: string; periodLabel: string; yieldValue: number }) => {
+  const copySegmentSummary = useCallback((payload: YieldContextMenuPayload) => {
     const summary = `${payload.cultureName} · ${payload.periodLabel} · ${payload.yieldValue.toFixed(2)} kg`;
     copyTextToClipboardSilently(summary);
   }, []);
@@ -579,16 +571,14 @@ function YieldDistributionChart({
     if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
       event.preventDefault();
       const rect = event.currentTarget.getBoundingClientRect();
-      setContextMenuState({ ...payload, mouseX: rect.left + 2, mouseY: rect.bottom - 6 });
+      openContextMenuState(payload, rect.left + 2, rect.bottom - 6);
     }
-  }, [chartData, focusSegment, getSegmentKey, openCulture]);
+  }, [chartData, focusSegment, getSegmentKey, openContextMenuState, openCulture]);
 
   // Only one segment can be pressed at a time, so a single long-press timer
   // (keyed by the currently pressed segment's payload) covers every bar.
   const [pressedSegmentKey, setPressedSegmentKey] = useState<string | null>(null);
-  const pressedSegmentPayloadRef = useRef<
-    { cultureId: number; cultureName: string; periodLabel: string; yieldValue: number } | null
-  >(null);
+  const pressedSegmentPayloadRef = useRef<YieldContextMenuPayload | null>(null);
   const { onTouchStart: startSegmentLongPress, onTouchEnd: clearSegmentLongPressBase, isLongPressing } = useLongPress(
     (event) => {
       const payload = pressedSegmentPayloadRef.current;
@@ -597,7 +587,7 @@ function YieldDistributionChart({
   );
   const handleSegmentTouchStart = useCallback((
     event: React.TouchEvent,
-    payload: { cultureId: number; cultureName: string; periodLabel: string; yieldValue: number },
+    payload: YieldContextMenuPayload,
     segmentKey: string,
   ) => {
     pressedSegmentPayloadRef.current = payload;
@@ -953,29 +943,18 @@ function YieldDistributionChart({
         </Box>
       </CardContent>
     </Card>
-    <Menu
+    <CustomContextMenu
       open={contextMenuState !== null}
       onClose={closeContextMenu}
-      hideBackdrop
-      sx={{ pointerEvents: "none" }}
-      slotProps={{
-        paper: {
-          className: "ofp-custom-context-menu",
-          sx: { pointerEvents: "auto" },
-        },
-      }}
-      anchorReference="anchorPosition"
-      anchorPosition={
-        contextMenuState !== null
-          ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
-          : undefined
-      }
+      mouseX={contextMenuState?.mouseX}
+      mouseY={contextMenuState?.mouseY}
     >
       <MenuItem
         onClick={() => {
           if (!contextMenuState) return;
+          const { key: payload } = contextMenuState;
           closeContextMenu();
-          openCulture(contextMenuState.cultureId);
+          openCulture(payload.cultureId);
         }}
       >
         {t("contextMenu.openCulture")}
@@ -984,13 +963,14 @@ function YieldDistributionChart({
       <MenuItem
         onClick={() => {
           if (!contextMenuState) return;
+          const { key: payload } = contextMenuState;
           closeContextMenu();
-          copySegmentSummary(contextMenuState);
+          copySegmentSummary(payload);
         }}
       >
         {t("common:actions.copyRow")}
       </MenuItem>
-    </Menu>
+    </CustomContextMenu>
     </>
   );
 }

@@ -13,7 +13,6 @@ import {
   Link,
   ListItemIcon,
   ListItemText,
-  Menu,
   MenuItem,
   Table,
   TableBody,
@@ -32,6 +31,7 @@ import PageContainer from '../components/layout/PageContainer';
 import PageSurface from '../components/layout/PageSurface';
 import { ContextMenuIndicator } from '../components/contextMenu/ContextMenuIndicator';
 import { contextMenuActionsOverlaySx } from '../components/contextMenu/contextMenuIndicatorStyles';
+import { CustomContextMenu } from '../components/contextMenu/CustomContextMenu';
 import TableSurface from '../components/layout/TableSurface';
 import type { Supplier, SupplierDeleteUndoPayload, SupplierDeleteUsage } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -680,31 +680,16 @@ export default function Suppliers() {
         ) : null}
       </PageSurface>
 
-      <Menu
+      <CustomContextMenu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
-        hideBackdrop
-        sx={{ pointerEvents: 'none' }}
         autoFocus
         disableAutoFocusItem={false}
-        slotProps={{
-          paper: {
-            className: 'ofp-custom-context-menu',
-            sx: { pointerEvents: 'auto' },
-          },
-          list: {
-            autoFocus: true,
-            ref: contextMenuListRef,
-            onKeyDown: (event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
-          },
-        }}
+        listRef={contextMenuListRef}
+        onListKeyDown={(event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
         onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
-        anchorReference="anchorPosition"
-        anchorPosition={
-          contextMenuState !== null
-            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
-            : undefined
-        }
+        mouseX={contextMenuState?.mouseX}
+        mouseY={contextMenuState?.mouseY}
       >
         <MenuItem onClick={handleContextMenuEdit}>
           <ListItemIcon>
@@ -732,7 +717,7 @@ export default function Suppliers() {
           includeDivider
           onClose={closeContextMenu}
         />
-      </Menu>
+      </CustomContextMenu>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <Box component="form" onSubmit={handleSupplierSubmit}>

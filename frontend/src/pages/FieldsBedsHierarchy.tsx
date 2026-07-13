@@ -38,9 +38,9 @@ import Divider from "@mui/material/Divider";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
-import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { CustomContextMenu } from "../components/contextMenu/CustomContextMenu";
 import { HierarchyAddIcon } from "../components/hierarchy/HierarchyAddIcon";
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { CALCULATED_COLUMN_CELL_CLASS } from "../components/data-grid/calculatedColumns";
@@ -1667,31 +1667,16 @@ function FieldsBedsHierarchy({
         )}
         loading={notesEditor.isSaving}
       />
-      <Menu
+      <CustomContextMenu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
-        hideBackdrop
-        sx={{ pointerEvents: "none" }}
         autoFocus
         disableAutoFocusItem={false}
-        slotProps={{
-          paper: {
-            className: "ofp-custom-context-menu",
-            sx: { pointerEvents: "auto" },
-          },
-          list: {
-            autoFocus: true,
-            ref: contextMenuListRef,
-            onKeyDown: (event: React.KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
-          },
-        }}
+        listRef={contextMenuListRef}
+        onListKeyDown={(event: React.KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
         onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
-        anchorReference="anchorPosition"
-        anchorPosition={
-          contextMenuState !== null
-            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
-            : undefined
-        }
+        mouseX={contextMenuState?.mouseX}
+        mouseY={contextMenuState?.mouseY}
       >
         {contextMenuActions.flatMap((action, index) => {
           const previousAction = contextMenuActions[index - 1];
@@ -1746,7 +1731,7 @@ function FieldsBedsHierarchy({
           includeDivider={contextMenuActions.length > 0}
           onClose={closeContextMenu}
         />
-      </Menu>
+      </CustomContextMenu>
       {pendingDeletions.map((deletion, index) => (
         <DeleteUndoSnackbar
           key={deletion.id}

@@ -8,7 +8,6 @@ import {
   Link,
   ListItemIcon,
   ListItemText,
-  Menu,
   MenuItem,
   Select,
   Table,
@@ -29,6 +28,7 @@ import type { SeedDemand } from '../api/types';
 import { useTranslation } from '../i18n';
 import { ContextMenuIndicator } from '../components/contextMenu/ContextMenuIndicator';
 import { contextMenuActionsOverlaySx } from '../components/contextMenu/contextMenuIndicatorStyles';
+import { CustomContextMenu } from '../components/contextMenu/CustomContextMenu';
 import { useRowContextMenuState } from '../components/contextMenu/useRowContextMenuState';
 import { useCommandContextTag } from '../commands/useCommandContext';
 import PageContainer from '../components/layout/PageContainer';
@@ -582,31 +582,16 @@ export default function SeedDemandPage() {
         )}
       </PageSurface>
 
-      <Menu
+      <CustomContextMenu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
-        hideBackdrop
-        sx={{ pointerEvents: 'none' }}
         autoFocus
         disableAutoFocusItem={false}
-        slotProps={{
-          paper: {
-            className: 'ofp-custom-context-menu',
-            sx: { pointerEvents: 'auto' },
-          },
-          list: {
-            autoFocus: true,
-            ref: contextMenuListRef,
-            onKeyDown: (event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
-          },
-        }}
+        listRef={contextMenuListRef}
+        onListKeyDown={(event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
         onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
-        anchorReference="anchorPosition"
-        anchorPosition={
-          contextMenuState !== null
-            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
-            : undefined
-        }
+        mouseX={contextMenuState?.mouseX}
+        mouseY={contextMenuState?.mouseY}
       >
         <MenuItem onClick={handleContextMenuOpenCulture}>
           <ListItemIcon>
@@ -631,7 +616,7 @@ export default function SeedDemandPage() {
           includeDivider
           onClose={closeContextMenu}
         />
-      </Menu>
+      </CustomContextMenu>
     </PageContainer>
   );
 }
