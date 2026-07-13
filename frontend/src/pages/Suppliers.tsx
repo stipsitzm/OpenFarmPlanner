@@ -11,9 +11,6 @@ import {
   DialogTitle,
   IconButton,
   Link,
-  ListItemIcon,
-  ListItemText,
-  MenuItem,
   Table,
   TableBody,
   TableCell,
@@ -29,6 +26,7 @@ import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
 import PageSurface from '../components/layout/PageSurface';
+import { ContextMenuActionItem } from '../components/contextMenu/ContextMenuActionItem';
 import { ContextMenuIndicator } from '../components/contextMenu/ContextMenuIndicator';
 import { contextMenuActionsOverlaySx } from '../components/contextMenu/contextMenuIndicatorStyles';
 import { CustomContextMenu } from '../components/contextMenu/CustomContextMenu';
@@ -691,21 +689,17 @@ export default function Suppliers() {
         mouseX={contextMenuState?.mouseX}
         mouseY={contextMenuState?.mouseY}
       >
-        <MenuItem onClick={handleContextMenuEdit}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary={t('editAction')} />
-        </MenuItem>
-        <MenuItem onClick={handleContextMenuDelete}>
-          <ListItemIcon sx={{ color: 'error.main' }}>
-            <DeleteIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText
-            primary={t('deleteAction')}
-            primaryTypographyProps={{ color: 'error.main' }}
-          />
-        </MenuItem>
+        <ContextMenuActionItem
+          label={t('editAction')}
+          icon={<EditIcon fontSize="small" />}
+          onClick={handleContextMenuEdit}
+        />
+        <ContextMenuActionItem
+          label={t('deleteAction')}
+          icon={<DeleteIcon fontSize="small" />}
+          color="error"
+          onClick={handleContextMenuDelete}
+        />
         <TableCopyMenuItems
           rowValues={contextMenuState ? getSupplierRowClipboardValues(contextMenuState.key) : null}
           tableRows={getSupplierTableClipboardRows()}

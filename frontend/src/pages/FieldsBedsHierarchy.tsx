@@ -35,11 +35,8 @@ import type {
 } from "@mui/x-data-grid";
 import { Box, Alert, useMediaQuery } from "@mui/material";
 import Divider from "@mui/material/Divider";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import ListItemText from "@mui/material/ListItemText";
-import Typography from "@mui/material/Typography";
-import MenuItem from "@mui/material/MenuItem";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { ContextMenuActionItem } from "../components/contextMenu/ContextMenuActionItem";
 import { CustomContextMenu } from "../components/contextMenu/CustomContextMenu";
 import { HierarchyAddIcon } from "../components/hierarchy/HierarchyAddIcon";
 import EmptyStateCard from '../components/project/EmptyStateCard';
@@ -1682,38 +1679,19 @@ function FieldsBedsHierarchy({
           const previousAction = contextMenuActions[index - 1];
           const shouldSeparateGroup = previousAction !== undefined && previousAction.group !== action.group;
           const menuItem = (
-            <MenuItem
+            <ContextMenuActionItem
               key={action.id}
+              label={action.label}
+              icon={action.icon}
+              color={action.color === "error" ? "error" : undefined}
+              emphasized={action.emphasized}
+              shortcutHint={action.shortcutHint}
+              renderPlainWhenUnadorned
               onClick={() => {
                 closeContextMenu();
                 action.onClick();
               }}
-              sx={{ color: action.color === "error" ? "error.main" : undefined }}
-            >
-              {action.icon ? (
-                <>
-                  <ListItemIcon>{action.icon}</ListItemIcon>
-                  <ListItemText
-                    primary={action.label}
-                    slotProps={{
-                      primary: {
-                        sx: {
-                          fontWeight: action.emphasized ? 600 : undefined,
-                          color: action.color === "error" ? "error.main" : undefined,
-                        },
-                      },
-                    }}
-                  />
-                  {action.shortcutHint ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: "auto", pl: 3 }}>
-                      {action.shortcutHint}
-                    </Typography>
-                  ) : null}
-                </>
-              ) : (
-                action.label
-              )}
-            </MenuItem>
+            />
           );
 
           return shouldSeparateGroup

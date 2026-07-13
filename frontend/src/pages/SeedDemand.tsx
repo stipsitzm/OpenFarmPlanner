@@ -6,8 +6,6 @@ import {
   CircularProgress,
   FormControl,
   Link,
-  ListItemIcon,
-  ListItemText,
   MenuItem,
   Select,
   Table,
@@ -26,6 +24,7 @@ import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, seedDemandAPI } from '../api/api';
 import type { SeedDemand } from '../api/types';
 import { useTranslation } from '../i18n';
+import { ContextMenuActionItem } from '../components/contextMenu/ContextMenuActionItem';
 import { ContextMenuIndicator } from '../components/contextMenu/ContextMenuIndicator';
 import { contextMenuActionsOverlaySx } from '../components/contextMenu/contextMenuIndicatorStyles';
 import { CustomContextMenu } from '../components/contextMenu/CustomContextMenu';
@@ -593,18 +592,16 @@ export default function SeedDemandPage() {
         mouseX={contextMenuState?.mouseX}
         mouseY={contextMenuState?.mouseY}
       >
-        <MenuItem onClick={handleContextMenuOpenCulture}>
-          <ListItemIcon>
-            <OpenInNewIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary={t('seedDemand.contextMenu.openCulture')} />
-        </MenuItem>
-        <MenuItem onClick={handleContextMenuEditCulture}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary={t('seedDemand.contextMenu.editCulture')} />
-        </MenuItem>
+        <ContextMenuActionItem
+          label={t('seedDemand.contextMenu.openCulture')}
+          icon={<OpenInNewIcon fontSize="small" />}
+          onClick={handleContextMenuOpenCulture}
+        />
+        <ContextMenuActionItem
+          label={t('seedDemand.contextMenu.editCulture')}
+          icon={<EditIcon fontSize="small" />}
+          onClick={handleContextMenuEditCulture}
+        />
         <TableCopyMenuItems
           rowValues={contextMenuState ? getRowClipboardValues(contextMenuState.key) : null}
           tableRows={getTableClipboardRows()}

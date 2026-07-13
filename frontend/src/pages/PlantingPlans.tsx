@@ -29,8 +29,6 @@ import {
   FormControl,
   IconButton,
   InputLabel,
-  ListItemIcon,
-  ListItemText,
   Menu,
   MenuItem,
   Select,
@@ -58,6 +56,7 @@ import {
 import { usePlantingPlanHierarchy, type CultivationTypeSelectOption } from "./usePlantingPlanHierarchy";
 import PageContainer from "../components/layout/PageContainer";
 import PageSurface from "../components/layout/PageSurface";
+import { ContextMenuActionItem } from "../components/contextMenu/ContextMenuActionItem";
 import { AlertSnackbar } from "../components/feedback/AlertSnackbar";
 import {
   plantingPlanAPI,
@@ -1870,62 +1869,48 @@ function PlantingPlans() {
               open={Boolean(mobileActionMenuAnchor)}
               onClose={closeMobileActionMenu}
             >
-              <MenuItem
+              <ContextMenuActionItem
+                label={t("common:actions.edit")}
+                icon={<EditIcon fontSize="small" />}
                 onClick={() => {
                   if (mobileActionMenuRow) {
                     openMobileEditDialog(mobileActionMenuRow);
                   }
                   closeMobileActionMenu();
                 }}
-              >
-                <ListItemIcon>
-                  <EditIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary={t("common:actions.edit")} />
-              </MenuItem>
-              <MenuItem
+              />
+              <ContextMenuActionItem
+                label={t("common:actions.duplicate")}
+                icon={<ContentCopyIcon fontSize="small" />}
                 onClick={() => {
                   if (mobileActionMenuRow) {
                     openMobileDuplicateDialog(mobileActionMenuRow);
                   }
                   closeMobileActionMenu();
                 }}
-              >
-                <ListItemIcon>
-                  <ContentCopyIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary={t("common:actions.duplicate")} />
-              </MenuItem>
-              <MenuItem
+              />
+              <ContextMenuActionItem
+                label={t("plantingPlans:actions.copyPlantingPlan")}
+                icon={<ContentCopyIcon fontSize="small" />}
                 onClick={() => {
                   if (mobileActionMenuRow) {
                     handleCopyPlantingPlan(mobileActionMenuRow);
                   }
                   closeMobileActionMenu();
                 }}
-              >
-                <ListItemIcon>
-                  <ContentCopyIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary={t("plantingPlans:actions.copyPlantingPlan")} />
-              </MenuItem>
+              />
               <Divider role="separator" />
-              <MenuItem
+              <ContextMenuActionItem
+                label={t("common:actions.delete")}
+                icon={<DeleteIcon fontSize="small" />}
+                color="error"
                 onClick={() => {
                   if (mobileActionMenuRow) {
                     gridCommandApiRef.current?.deleteRow(mobileActionMenuRow.id);
                   }
                   closeMobileActionMenu();
                 }}
-              >
-                <ListItemIcon sx={{ color: "error.main" }}>
-                  <DeleteIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText
-                  primary={t("common:actions.delete")}
-                  primaryTypographyProps={{ color: "error.main" }}
-                />
-              </MenuItem>
+              />
             </Menu>
           </Box>
         ) : null}
