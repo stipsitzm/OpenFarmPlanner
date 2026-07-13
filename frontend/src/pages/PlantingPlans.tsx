@@ -34,7 +34,6 @@ import {
   Menu,
   MenuItem,
   Select,
-  Snackbar,
   Stack,
   TextField,
   Tooltip,
@@ -59,6 +58,7 @@ import {
 import { usePlantingPlanHierarchy, type CultivationTypeSelectOption } from "./usePlantingPlanHierarchy";
 import PageContainer from "../components/layout/PageContainer";
 import PageSurface from "../components/layout/PageSurface";
+import { AlertSnackbar } from "../components/feedback/AlertSnackbar";
 import {
   plantingPlanAPI,
   type PlantingPlan,
@@ -1753,20 +1753,14 @@ function PlantingPlans() {
   return (
     <PageContainer variant="workspacePage">
 
-      <Snackbar
+      <AlertSnackbar
         open={areaNotice !== null}
-        autoHideDuration={5000}
         onClose={() => setAreaNotice(null)}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          severity={areaNotice?.severity ?? "info"}
-          variant="filled"
-          onClose={() => setAreaNotice(null)}
-        >
-          {areaNotice?.message}
-        </Alert>
-      </Snackbar>
+        message={areaNotice?.message}
+        severity={areaNotice?.severity ?? "info"}
+        variant="filled"
+      />
 
       <Box sx={{ width: "100%" }}>
         {isInitialLoading ? (

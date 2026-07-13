@@ -20,7 +20,6 @@ import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
 import { PublicCultureLibraryDialog } from '../crops/components/PublicCultureLibraryDialog';
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -33,7 +32,6 @@ import {
   ListItem,
   ListItemText,
   Paper,
-  Snackbar,
   Typography,
   Link,
   Stack,
@@ -65,6 +63,7 @@ import { useCultureImportExport } from './useCultureImportExport';
 import { CulturesImportDialog } from './CulturesImportDialog';
 import { CulturesImportStartDialog } from './CulturesImportStartDialog';
 import { CulturesExportDialog } from './CulturesExportDialog';
+import { AlertSnackbar } from '../components/feedback/AlertSnackbar';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
@@ -912,31 +911,25 @@ function Cultures() {
 
 
 
-      <Snackbar
+      <AlertSnackbar
         open={snackbar.open}
         autoHideDuration={4200}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        sx={{
+        message={snackbar.message}
+        severity={snackbar.severity}
+        variant="filled"
+        snackbarSx={{
           '& .MuiAlert-root': {
             borderRadius: 2,
             boxShadow: '0 6px 20px rgba(15, 23, 42, 0.12)',
           },
         }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{
-            width: '100%',
-            alignItems: 'center',
-            fontWeight: 500,
-          }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+        alertSx={{
+          width: '100%',
+          alignItems: 'center',
+          fontWeight: 500,
+        }}
+      />
       {pendingCultureDeletions.map((deletion, index) => (
         <DeleteUndoSnackbar
           key={deletion.id}

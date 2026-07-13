@@ -10,7 +10,6 @@
 
 import { createBrowserRouter, RouterProvider, Outlet, Link as RouterLink, redirect, useLocation, useNavigate, Navigate, useRouteError } from 'react-router-dom';
 import {
-  Alert,
   AppBar,
   Button,
   ButtonGroup,
@@ -28,7 +27,6 @@ import {
   Menu,
   MenuItem,
   Paper,
-  Snackbar,
   Stack,
   SvgIcon,
   type SvgIconProps,
@@ -80,6 +78,7 @@ import './App.css';
 import { useAuth } from './auth/useAuth';
 import ProtectedRoute from './auth/ProtectedRoute';
 import AppLogo from './components/layout/AppLogo';
+import { AlertSnackbar } from './components/feedback/AlertSnackbar';
 import { HelpDialog } from './components/help/HelpDialog';
 import PageHelp from './components/help/PageHelp';
 import {
@@ -2081,33 +2080,26 @@ function RootLayout() {
         </Box>
       </Dialog>
 
-      <Snackbar
+      <AlertSnackbar
         open={snackbar.open}
-        autoHideDuration={5000}
         onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          closeText={t('common:actions.close')}
-          sx={{ width: '100%' }}
-          action={snackbar.actionLabel && snackbar.onAction ? (
-            <Button
-              color="inherit"
-              size="small"
-              onClick={() => {
-                setSnackbar((prev) => ({ ...prev, open: false }));
-                void snackbar.onAction?.();
-              }}
-            >
-              {snackbar.actionLabel}
-            </Button>
-          ) : undefined}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+        message={snackbar.message}
+        severity={snackbar.severity}
+        closeText={t('common:actions.close')}
+        alertSx={{ width: '100%' }}
+        action={snackbar.actionLabel && snackbar.onAction ? (
+          <Button
+            color="inherit"
+            size="small"
+            onClick={() => {
+              setSnackbar((prev) => ({ ...prev, open: false }));
+              void snackbar.onAction?.();
+            }}
+          >
+            {snackbar.actionLabel}
+          </Button>
+        ) : undefined}
+      />
     </Box>
   );
 }
