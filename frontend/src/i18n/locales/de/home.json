@@ -87,7 +87,7 @@
     },
     "privacy": {
       "title": "Datenschutzerklärung",
-      "version": "Stand: 7. Juli 2026",
+      "version": "Stand: 13. Juli 2026",
       "sections": {
         "controller": {
           "title": "Verantwortlicher",
@@ -113,7 +113,7 @@
           "title": "Registrierung und Benutzerkonto",
           "content": "Für die Nutzung von OpenFarmPlanner legen Sie ein Benutzerkonto an. Dabei verarbeiten wir:",
           "bullets": {
-            "emailAddress": "E-Mail-Adresse",
+            "emailAddress": "E-Mail-Adresse (kann für andere Mitglieder desselben Projekts sichtbar sein, soweit dies für die Zusammenarbeit im Projekt erforderlich ist; eine öffentliche Veröffentlichung erfolgt nicht)",
             "nameOptional": "Name (optional)",
             "encryptedPassword": "Passwort (sicher gehasht gespeichert – für uns im Klartext nicht einsehbar)"
           },
@@ -154,7 +154,7 @@
             "accountActivation": "Kontoaktivierung",
             "passwordReset": "Passwort-Reset",
             "projectInvitations": "Projekt-Einladungen",
-            "systemNotifications": "Systembenachrichtigungen"
+            "systemNotifications": "sonstige Kommunikation im Zusammenhang mit Ihrem Benutzerkonto, etwa Systembenachrichtigungen"
           },
           "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Erfüllung des Nutzungsvertrags)."
         },
@@ -187,7 +187,7 @@
         },
         "storageDuration": {
           "title": "Speicherdauer",
-          "content": "Ihre Kontodaten werden gespeichert, solange Ihr Benutzerkonto besteht. Wenn Sie Ihr Konto löschen lassen, wird es zunächst für 14 Tage als „zur Löschung vorgemerkt“ geführt; in diesem Zeitraum können Sie die Löschung rückgängig machen. Nach Ablauf dieser Frist anonymisieren wir Ihr Konto (E-Mail-Adresse und Name werden entfernt, das Konto wird deaktiviert), anstatt es vollständig zu löschen, damit die Projekt- und Bibliotheksdaten anderer Nutzer konsistent bleiben.\n\nProjektdaten, Anbaupläne und der zugehörige Änderungsverlauf bleiben – sofern das jeweilige Projekt weiterbesteht und nicht separat gelöscht wird – auch nach der Anonymisierung Ihres Kontos bestehen, ebenso von Ihnen bereits veröffentlichte Einträge in der öffentlichen Kulturbibliothek (siehe Abschnitte „Projekt- und Anwendungsdaten“ und „Öffentliche Kulturbibliothek“). Darüber hinausgehende gesetzliche Aufbewahrungspflichten bestehen für die von uns verarbeiteten Daten derzeit nicht, da OpenFarmPlanner keine abrechnungs- oder steuerrelevanten Daten verarbeitet."
+          "content": "Ihre Kontodaten werden gespeichert, solange Ihr Benutzerkonto besteht. Wenn Sie Ihr Konto löschen lassen, wird es zunächst für 14 Tage als „zur Löschung vorgemerkt“ geführt; in diesem Zeitraum können Sie die Löschung rückgängig machen. Nach Ablauf dieser Frist anonymisieren wir Ihr Konto (E-Mail-Adresse und Name werden entfernt, das Konto wird deaktiviert), anstatt es vollständig zu löschen, damit die Projekt- und Bibliotheksdaten anderer Nutzer konsistent bleiben – soweit dem keine gesetzlichen Pflichten oder sonstige zwingende Gründe entgegenstehen.\n\nProjektdaten, Anbaupläne und der zugehörige Änderungsverlauf bleiben – sofern das jeweilige Projekt weiterbesteht und nicht separat gelöscht wird – auch nach der Anonymisierung Ihres Kontos bestehen, ebenso von Ihnen bereits veröffentlichte Einträge in der öffentlichen Kulturbibliothek (siehe Abschnitte „Projekt- und Anwendungsdaten“ und „Öffentliche Kulturbibliothek“). Darüber hinausgehende gesetzliche Aufbewahrungspflichten bestehen für die von uns verarbeiteten Daten derzeit nicht, da OpenFarmPlanner keine abrechnungs- oder steuerrelevanten Daten verarbeitet."
         },
         "rights": {
           "title": "Ihre Rechte",
@@ -215,7 +215,7 @@
     },
     "terms": {
       "title": "Nutzungsbedingungen",
-      "version": "Stand: 7. Juli 2026",
+      "version": "Stand: 13. Juli 2026",
       "sections": {
         "scope": {
           "title": "Geltungsbereich und Nutzung der Plattform",
@@ -235,7 +235,7 @@
         },
         "contributionLicense": {
           "title": "Nutzungsrechte an veröffentlichten Kulturdaten",
-          "content": "Wenn Sie einen Kultur-Datensatz in die öffentliche Kulturbibliothek veröffentlichen, räumen Sie OpenFarmPlanner ein einfaches, zeitlich und räumlich unbeschränktes Recht ein, diese Angaben allen angemeldeten Nutzern anzuzeigen, deren Übernahme (Import) in eigene Projekte zu ermöglichen und die Angaben dafür technisch zu speichern und zu verarbeiten.\n\nSie bleiben Inhaber Ihrer Rechte an den Daten. Sie können die genannte Nutzung jederzeit mit Wirkung für die Zukunft widerrufen (siehe Abschnitt „Entfernung von Inhalten“); Kopien, die andere Nutzer bereits vor dem Widerruf in ihr eigenes Projekt importiert haben, sind davon nicht betroffen, da diese eigenständig im jeweiligen Projekt bestehen bleiben."
+          "content": "Wenn Sie einen Kultur-Datensatz in die öffentliche Kulturbibliothek veröffentlichen, räumen Sie OpenFarmPlanner ein einfaches, zeitlich und räumlich unbeschränktes Recht ein, diese Angaben allen angemeldeten Nutzern anzuzeigen, deren Übernahme (Import) in eigene Projekte zu ermöglichen und die Angaben dafür technisch zu speichern und zu verarbeiten.\n\nSie bleiben Inhaber Ihrer Rechte an den Daten. Sie können die genannte Nutzung jederzeit mit Wirkung für die Zukunft widerrufen (siehe Abschnitt „Entfernung von Inhalten“); Kopien, die andere Nutzer bereits vor einem Widerruf oder einer Entfernung des Eintrags in ihr eigenes Projekt importiert haben, sind davon nicht betroffen, da diese eigenständig im jeweiligen Projekt bestehen bleiben und dort unabhängig weiterbearbeitet werden können."
         },
         "prohibitedContent": {
           "title": "Verbotene Inhalte und Verhalten",
@@ -253,7 +253,7 @@
         },
         "contentRemoval": {
           "title": "Entfernung von Inhalten",
-          "content": "Wir behalten uns vor, veröffentlichte Inhalte der öffentlichen Kulturbibliothek ganz oder teilweise zu entfernen oder zu sperren, wenn konkrete Anhaltspunkte für einen Verstoß gegen diese Nutzungsbedingungen oder geltendes Recht vorliegen, etwa nach einem Hinweis im Sinne des Art. 16 der EU-Verordnung über digitale Dienste (Digital Services Act). Zu einer anlasslosen, allgemeinen Überwachung veröffentlichter Inhalte sind wir nicht verpflichtet.\n\nSie können die Entfernung eines von Ihnen veröffentlichten Eintrags jederzeit unter info@openfarmplanner.org verlangen."
+          "content": "Wir behalten uns vor, veröffentlichte Inhalte der öffentlichen Kulturbibliothek ganz oder teilweise zu entfernen oder zu sperren, wenn konkrete Anhaltspunkte für einen Verstoß gegen diese Nutzungsbedingungen oder geltendes Recht vorliegen, etwa nach einem Hinweis im Sinne des Art. 16 der EU-Verordnung über digitale Dienste (Digital Services Act). Hinweise auf mutmaßlich rechtswidrige Inhalte können Sie jederzeit an info@openfarmplanner.org richten. Zu einer anlasslosen, allgemeinen Überwachung veröffentlichter Inhalte sind wir nicht verpflichtet.\n\nSie können die Entfernung eines von Ihnen veröffentlichten Eintrags jederzeit unter info@openfarmplanner.org verlangen."
         },
         "accountSuspension": {
           "title": "Sperrung von Benutzerkonten",
@@ -261,11 +261,11 @@
         },
         "liability": {
           "title": "Haftung",
-          "content": "OpenFarmPlanner wird mit großer Sorgfalt entwickelt und betrieben. Eine jederzeit fehlerfreie oder unterbrechungsfreie Verfügbarkeit können wir dennoch nicht garantieren, etwa bei Wartungsarbeiten, technischen Störungen oder Ereignissen außerhalb unseres Einflussbereichs.\n\nDie öffentliche Kulturbibliothek enthält Inhalte, die von Nutzern selbst erstellt wurden. Für deren Richtigkeit sind die jeweils veröffentlichenden Nutzer verantwortlich, nicht OpenFarmPlanner (siehe Abschnitt „Ihre Inhalte in OpenFarmPlanner“).\n\nLandwirtschaftliche und gärtnerische Informationen in OpenFarmPlanner, etwa zu Wachstums- und Erntedauer, Pflanzabständen oder Saatgutmengen, dienen ausschließlich der Unterstützung Ihrer eigenen Anbauplanung und ersetzen keine fachliche Beratung.\n\nSoweit gesetzlich zulässig, ist unsere Haftung beschränkt. Zwingende gesetzliche Haftungsregelungen bleiben davon selbstverständlich unberührt."
+          "content": "OpenFarmPlanner wird mit großer Sorgfalt entwickelt und betrieben. Eine jederzeit fehlerfreie oder unterbrechungsfreie Verfügbarkeit können wir dennoch nicht garantieren, etwa bei Wartungsarbeiten, technischen Störungen oder Ereignissen außerhalb unseres Einflussbereichs.\n\nDie öffentliche Kulturbibliothek enthält Inhalte, die von Nutzern selbst erstellt wurden. Für deren Richtigkeit sind die jeweils veröffentlichenden Nutzer verantwortlich, nicht OpenFarmPlanner (siehe Abschnitt „Ihre Inhalte in OpenFarmPlanner“).\n\nLandwirtschaftliche und gärtnerische Informationen in OpenFarmPlanner, etwa zu Wachstums- und Erntedauer, Pflanzabständen oder Saatgutmengen, dienen ausschließlich der Unterstützung Ihrer eigenen Anbauplanung und ersetzen keine fachliche Beratung.\n\nFür Schäden aus leicht fahrlässigen Pflichtverletzungen haften wir nur eingeschränkt. Unsere Haftung bei Vorsatz und grober Fahrlässigkeit sowie für Schäden aus der Verletzung des Lebens, des Körpers oder der Gesundheit bleibt davon ebenso unberührt wie sonstige zwingende gesetzliche Haftungsregelungen."
         },
         "openSource": {
           "title": "Open-Source-Software",
-          "content": "Der Quellcode von OpenFarmPlanner ist als Open-Source-Software unter der GNU Affero General Public License Version 3 (AGPLv3) veröffentlicht und kann im GitHub-Repository von OpenFarmPlanner eingesehen, weiterverwendet und verändert werden. Die Lizenz regelt die Rechte an der Software selbst und schließt, wie bei Open-Source-Software üblich, jede Gewährleistung für die Software aus.\n\nDavon zu unterscheiden ist die Nutzung der unter openfarmplanner.org gehosteten Anwendung: Diese richtet sich nach den vorliegenden Nutzungsbedingungen."
+          "content": "Der Quellcode von OpenFarmPlanner ist als Open-Source-Software unter der GNU Affero General Public License Version 3 (AGPLv3) veröffentlicht und kann im GitHub-Repository von OpenFarmPlanner (https://github.com/stipsitzm/OpenFarmPlanner) eingesehen, weiterverwendet und verändert werden. Die Lizenz regelt ausschließlich die Rechte an der Software selbst und schließt, wie bei Open-Source-Software üblich, jede Gewährleistung für die Software aus.\n\nDavon zu unterscheiden ist die Nutzung der unter openfarmplanner.org gehosteten Anwendung: Diese richtet sich nach den vorliegenden Nutzungsbedingungen."
         },
         "futureFeatures": {
           "title": "Weiterentwicklung der Plattform",
