@@ -2,6 +2,7 @@
   "landing": {
     "title": "OpenFarmPlanner",
     "betaBadge": "Beta",
+    "heroImageAlt": "Vegetable garden beds in front of a wooded mountainside",
     "subtitle": "Simple crop planning as a vegetable planning tool for CSA, solidarity farming, and market gardening.",
     "description": "OpenFarmPlanner helps small-scale vegetable production with clear planning for crops, beds, growing areas, cultivation periods, and sowing dates.",
     "actions": {
@@ -14,6 +15,49 @@
     "text": "OpenFarmPlanner is open source: contribute on GitHub or self-host the software.",
     "linkLabel": "Open-source project on GitHub",
     "githubUrl": "https://github.com/stipsitzm/OpenFarmPlanner"
+  },
+  "productTour": {
+    "title": "Season planning at a glance",
+    "description": "A realistic demo project shows how growing areas, crops, schedules, and summaries work together in practice.",
+    "tabsLabel": "Product tour",
+    "items": {
+      "areas": {
+        "tab": "Areas",
+        "title": "Edit areas and beds directly",
+        "description": "Locations, fields, and beds stay visible in a clear hierarchy. Changes happen right in the table – no separate forms or page switches.",
+        "alt": "Table view of growing areas with editable cells for locations, fields, and beds"
+      },
+      "plantingPlans": {
+        "tab": "Planting plans",
+        "title": "Edit planting plans directly",
+        "description": "Sowing, planting, and harvest dates, as well as quantities and crops, can be edited right in the table. Changes show up immediately, making season planning fast.",
+        "alt": "Planting-plan table with a planting-date cell open in edit mode"
+      },
+      "calendar": {
+        "tab": "Calendar",
+        "title": "Plan bed occupancy in the calendar",
+        "description": "The cultivation calendar shows which crop occupies each bed and when, making overlaps easy to spot early.",
+        "alt": "Cultivation calendar with occupied beds and colored crop periods"
+      },
+      "seedDemand": {
+        "tab": "Seeds",
+        "title": "Derive seed demand from plans",
+        "description": "Seed amount and package suggestions are calculated from crop parameters, used area, and supplier data.",
+        "alt": "Seed demand table with crops, suppliers, required amount, and package suggestions"
+      },
+      "yieldOverview": {
+        "tab": "Yields",
+        "title": "Keep expected harvests in view",
+        "description": "The yield overview groups planned harvest quantities by period and crop, making peaks and distribution visible early.",
+        "alt": "Yield overview with expected harvest quantities by calendar week and crop"
+      },
+      "cultures": {
+        "tab": "Crops",
+        "title": "Maintain crops centrally",
+        "description": "Varieties, cultivation methods, spacing, expected yield, and seed data live in one place and feed the plan.",
+        "alt": "Crops view with several vegetables and varieties in the demo project"
+      }
+    }
   },
   "footer": {
     "imprint": "Imprint",

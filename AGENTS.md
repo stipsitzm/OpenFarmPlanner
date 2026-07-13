@@ -71,6 +71,9 @@ exactly one section below; don't restate rules here.
   documentation describing the old behavior.
 - Keep code comments minimal and useful.
 - Prefer self-explanatory code over comments.
+- Do not add routine file header comments. Add a short top-level comment only
+  when a file's purpose, constraints, or domain assumptions are not obvious
+  from its name and surrounding code.
 - Update AGENTS.md only when project architecture or developer workflow changes significantly.
 - Do not update AGENTS.md for small implementation details.
 

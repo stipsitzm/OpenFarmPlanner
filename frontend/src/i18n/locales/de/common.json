@@ -148,6 +148,19 @@
     "createFirstProjectAction": "Erstes Projekt anlegen",
     "selectProjectAction": "Projekt auswählen"
   },
+  "projectOnboarding": {
+    "pageTitle": "Erstes Projekt starten",
+    "pageDescription": "Wähle, ob du mit einem eigenen leeren Projekt beginnst oder OpenFarmPlanner zuerst mit realistischen Beispieldaten ausprobierst.",
+    "emptyTitle": "Mit leerem Projekt starten",
+    "emptyDescription": "Lege ein eigenes Projekt an und erfasse Standorte, Kulturen und Anbaupläne Schritt für Schritt.",
+    "emptyAction": "Leeres Projekt anlegen",
+    "demoTitle": "Demo-Projekt ausprobieren",
+    "demoDescription": "Starte mit einem vorbereiteten Anbauprojekt und entdecke die wichtigsten Funktionen direkt mit realistischen Beispieldaten.",
+    "demoAction": "Demo-Projekt erstellen",
+    "demoCreating": "Demo-Projekt wird erstellt…",
+    "demoCreatedHint": "Dieses Projekt enthält Beispieldaten. Du kannst alles frei bearbeiten oder das Projekt jederzeit löschen.",
+    "demoCreateError": "Demo-Projekt konnte nicht erstellt werden. Bitte versuche es erneut."
+  },
   "runtime": {
     "applicationUpdatedFallback": "Die Anwendung konnte nicht automatisch aktualisiert werden. Bitte versuche es später erneut.",
     "routeErrorFallback": "Die Seite konnte nicht automatisch wiederhergestellt werden. Bitte versuche es später erneut."

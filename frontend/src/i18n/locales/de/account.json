@@ -45,5 +45,12 @@
     "title": "E-Mail-Änderung bestätigen",
     "loading": "Bestätigung wird geprüft …",
     "invalid": "Der Bestätigungslink ist ungültig oder abgelaufen."
+  },
+  "developer": {
+    "title": "Entwickler",
+    "hintsDescription": "Setzt lokale Entwicklungshilfen zurück oder zeigt das First-Project-Onboarding erneut an. Dabei werden keine Projekte oder Kontodaten gelöscht.",
+    "hintsResetDone": "Hinweise zurückgesetzt.",
+    "resetHintsAction": "Hinweise zurücksetzen",
+    "showOnboardingAction": "Onboarding erneut anzeigen"
   }
 }

@@ -20,6 +20,7 @@ import { changePassword, requestEmailChange, updateProfile } from '../auth/authA
 import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
 import { useNavigationBlocker } from '../hooks/useNavigationBlocker';
+import { enableDevOnboardingPreview } from '../projects/devOnboardingPreview';
 
 export default function AccountSettingsPage() {
   const { user, requestAccountDeletion, refreshUser } = useAuth();
@@ -136,6 +137,12 @@ export default function AccountSettingsPage() {
     localStorage.removeItem(`ofp.contextMenuHintDismissed:user:${user?.id}`);
     localStorage.removeItem('ofp.contextMenuHintDismissed');
     setHintsResetDone(true);
+  };
+
+  const handleShowOnboardingPreview = (): void => {
+    enableDevOnboardingPreview();
+    localStorage.removeItem('activeProjectId');
+    navigate('/app/project-selection');
   };
 
   const handleDelete = async (): Promise<void> => {
@@ -343,15 +350,20 @@ export default function AccountSettingsPage() {
         {import.meta.env.DEV ? (
           <Card>
             <CardContent>
-              <Typography variant="h6" sx={{ mb: 1 }}>Entwickler</Typography>
+              <Typography variant="h6" sx={{ mb: 1 }}>{t('developer.title')}</Typography>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Setzt localStorage-Hinweise zurück, sodass sie beim nächsten Seitenaufruf wieder angezeigt werden (Rechtsklick-Hinweis, Tastenkürzel-Hinweis).
+                {t('developer.hintsDescription')}
               </Typography>
-              {hintsResetDone ? <Alert severity="success" sx={{ mb: 2 }}>Hinweise zurückgesetzt.</Alert> : null}
-              <Button variant="outlined" onClick={handleResetHints}>
-                Hinweise zurücksetzen
-              </Button>
+              {hintsResetDone ? <Alert severity="success" sx={{ mb: 2 }}>{t('developer.hintsResetDone')}</Alert> : null}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <Button variant="outlined" onClick={handleResetHints}>
+                  {t('developer.resetHintsAction')}
+                </Button>
+                <Button variant="outlined" onClick={handleShowOnboardingPreview}>
+                  {t('developer.showOnboardingAction')}
+                </Button>
+              </Stack>
             </CardContent>
           </Card>
         ) : null}

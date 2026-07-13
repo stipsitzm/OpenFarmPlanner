@@ -19,6 +19,8 @@ For rules AI agents must follow when changing code, see [`AGENTS.md`](../AGENTS.
 - **[DataGrid Architecture](./datagrid-architecture.md)** — the custom
   layer OpenFarmPlanner built on top of MUI X DataGrid: inline editing,
   row actions, notes/markdown cells, copy/paste, column visibility.
+- **[Demo Project Template](./demo-project.md)** — the reusable realistic
+  demo dataset used by first-project onboarding and landing screenshots.
 - **[Keyboard Navigation Architecture](./keyboard-architecture.md)** — the
   focus-region model and the shortcut/command system.
 - **[Occupancy Tree / Gantt Hierarchy](./occupancy-tree-hierarchy.md)** —

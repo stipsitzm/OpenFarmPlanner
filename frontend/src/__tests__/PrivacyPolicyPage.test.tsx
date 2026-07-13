@@ -86,6 +86,6 @@ describe('PrivacyPolicyPage', () => {
   it('uses a concrete revision date instead of a generic month/year stamp', () => {
     renderPrivacyPolicyPage();
 
-    expect(screen.getByText(/Stand: 7\. Juli 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Stand: 13\. Juli 2026/)).toBeInTheDocument();
   });
 });

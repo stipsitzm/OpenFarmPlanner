@@ -89,6 +89,7 @@ from .services.public_cultures import (
     import_public_culture_into_project,
     publish_culture_to_public_library,
 )
+from .services.demo_project import create_personal_demo_project
 from config.version import get_version
 from config.frontend_urls import build_public_frontend_url
 
@@ -2370,6 +2371,20 @@ class ProjectViewSet(viewsets.ModelViewSet):
             settings_obj.default_project = project
         settings_obj.last_project = project
         settings_obj.save()
+
+    @action(detail=False, methods=['post'], url_path='create-demo')
+    def create_demo(self, request: Request) -> Response:
+        try:
+            result = create_personal_demo_project(user=request.user)
+        except Exception:  # noqa: BLE001
+            logger.exception('Personal demo project creation failed', extra={'user_id': request.user.id})
+            return Response(
+                {'detail': 'Demo project could not be created.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        response_status = status.HTTP_201_CREATED if result.created_project else status.HTTP_200_OK
+        return Response(ProjectSerializer(result.project).data, status=response_status)
 
     def destroy(self, request: Request, *args: object, **kwargs: object) -> Response:
         project = self.get_object()

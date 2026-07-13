@@ -90,6 +90,41 @@ describe('App', () => {
     expect(screen.getByRole('link', { name: 'Datenschutzerklärung' })).toBeInTheDocument();
   });
 
+  it('switches the public landing page product tour screenshot by tab', async () => {
+    const user = userEvent.setup();
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    expect(await screen.findByRole('tab', { name: 'Flächen' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Flächen',
+      'Kulturen',
+      'Anbaupläne',
+      'Kalender',
+      'Erträge',
+      'Saatgut',
+    ]);
+    expect(screen.getByRole('img', {
+      name: 'Tabellenansicht der Anbauflächen mit editierbaren Zellen für Standorte, Parzellen und Beete',
+    })).toHaveAttribute('src', '/landing/screenshots/demo-areas.webp');
+
+    await user.click(screen.getByRole('tab', { name: 'Saatgut' }));
+
+    expect(screen.getByRole('tab', { name: 'Saatgut' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'Saatgutbedarf aus den Plänen ableiten' })).toBeInTheDocument();
+    expect(screen.getByRole('img', {
+      name: 'Saatgutbedarf-Tabelle mit Kulturen, Lieferanten, benötigter Menge und Packungsvorschlägen',
+    })).toHaveAttribute('src', '/landing/screenshots/demo-seed-demand.webp');
+
+    await user.click(screen.getByRole('tab', { name: 'Erträge' }));
+
+    expect(screen.getByRole('tab', { name: 'Erträge' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'Erwartete Ernten im Blick behalten' })).toBeInTheDocument();
+    expect(screen.getByRole('img', {
+      name: 'Ertragsübersicht mit erwarteten Erntemengen nach Kalenderwochen und Kulturen',
+    })).toHaveAttribute('src', '/landing/screenshots/demo-yield-overview.webp');
+  });
+
   it('renders imprint route', async () => {
     window.history.pushState({}, '', '/impressum');
 

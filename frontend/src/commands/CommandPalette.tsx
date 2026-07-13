@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,7 @@ export function CommandPalette({ open, commands, onClose }: CommandPaletteProps)
   const { t } = useTranslation('navigation');
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const filteredCommands = useMemo(() => filterCommands(commands, query), [commands, query]);
   const groupedCommands = useMemo(() => groupCommands(filteredCommands), [filteredCommands]);
@@ -106,6 +107,7 @@ export function CommandPalette({ open, commands, onClose }: CommandPaletteProps)
       onClose={onClose}
       fullWidth
       maxWidth="sm"
+      TransitionProps={{ onEntered: () => { inputRef.current?.focus(); } }}
       slotProps={{
         backdrop: {
           sx: { backgroundColor: 'rgba(10, 18, 30, 0.22)' },
@@ -115,6 +117,7 @@ export function CommandPalette({ open, commands, onClose }: CommandPaletteProps)
       <DialogContent>
         <TextField
           autoFocus
+          inputRef={inputRef}
           fullWidth
           label={t('commandPalette.label')}
           placeholder={t('commandPalette.placeholder')}

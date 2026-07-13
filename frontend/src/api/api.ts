@@ -300,6 +300,8 @@ export interface VersionResponse {
 export const projectAPI = {
   create: (data: { name: string; description?: string }) =>
     http.post<ProjectPayload>('/projects/', data),
+  createDemo: () =>
+    http.post<ProjectPayload>('/projects/create-demo/', {}),
   update: (projectId: number, data: { name: string }) =>
     http.patch<ProjectPayload>(`/projects/${projectId}/`, data),
   delete: (projectId: number) =>

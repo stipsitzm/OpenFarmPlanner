@@ -18,6 +18,19 @@
     "selectedSupplierProjectMismatch": "The selected seed supplier does not belong to the active project.",
     "cultureProjectMismatch": "The culture does not belong to the active project."
   },
+  "projectOnboarding": {
+    "pageTitle": "Start your first project",
+    "pageDescription": "Choose whether to begin with your own empty project or explore OpenFarmPlanner first with realistic sample data.",
+    "emptyTitle": "Start with an empty project",
+    "emptyDescription": "Create your own project and add locations, crops, and planting plans step by step.",
+    "emptyAction": "Create empty project",
+    "demoTitle": "Try a demo project",
+    "demoDescription": "Start with a prepared growing project and explore the core features directly with realistic sample data.",
+    "demoAction": "Create demo project",
+    "demoCreating": "Creating demo project...",
+    "demoCreatedHint": "This project contains sample data. You can edit everything freely or delete the project at any time.",
+    "demoCreateError": "Demo project could not be created. Please try again."
+  },
   "runtime": {
     "applicationUpdatedFallback": "The application could not be updated automatically. Please try again later.",
     "routeErrorFallback": "The page could not be restored automatically. Please try again later."

@@ -366,10 +366,13 @@ const theme = createTheme({
       styleOverrides: {
         filledInfo: ({ theme }) => createPositiveFilledAlertStyles(theme),
         filledSuccess: ({ theme }) => createPositiveFilledAlertStyles(theme),
-        standardInfo: {
-          backgroundColor: 'rgba(33, 150, 243, 0.08)',
-          color: '#24435f',
-        },
+        standardInfo: ({ theme }) => ({
+          backgroundColor: alpha(theme.palette.primary.main, 0.08),
+          color: theme.palette.primary.dark,
+          '& .MuiAlert-icon': {
+            color: theme.palette.primary.main,
+          },
+        }),
         standardSuccess: {
           backgroundColor: 'rgba(76, 175, 80, 0.10)',
           color: '#2f5a35',

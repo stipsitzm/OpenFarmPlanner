@@ -45,5 +45,12 @@
     "title": "Confirm email change",
     "loading": "Checking confirmation…",
     "invalid": "The confirmation link is invalid or has expired."
+  },
+  "developer": {
+    "title": "Developer",
+    "hintsDescription": "Reset local development hints or show the first-project onboarding again. This does not delete projects or account data.",
+    "hintsResetDone": "Hints reset.",
+    "resetHintsAction": "Reset hints",
+    "showOnboardingAction": "Show onboarding again"
   }
 }

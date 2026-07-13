@@ -44,7 +44,9 @@ describe('TermsOfServicePage', () => {
     expect(screen.getByText(/nicht garantieren/)).toBeInTheDocument();
     expect(screen.getByText(/verantwortlich, nicht OpenFarmPlanner/)).toBeInTheDocument();
     expect(screen.getByText(/ersetzen keine fachliche Beratung/)).toBeInTheDocument();
-    expect(screen.getByText(/Soweit gesetzlich zulässig, ist unsere Haftung beschränkt/)).toBeInTheDocument();
+    expect(screen.getByText(/haften wir nur eingeschränkt/)).toBeInTheDocument();
+    expect(screen.getByText(/Vorsatz und grober Fahrlässigkeit/)).toBeInTheDocument();
+    expect(screen.getByText(/Verletzung des Lebens, des Körpers oder der Gesundheit/)).toBeInTheDocument();
     expect(screen.queryByText(/Konsumentenschutzgesetz/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Produkthaftungsgesetz/)).not.toBeInTheDocument();
   });
@@ -64,6 +66,6 @@ describe('TermsOfServicePage', () => {
   it('uses a concrete revision date instead of a generic month/year stamp', () => {
     renderTermsOfServicePage();
 
-    expect(screen.getByText(/Stand: 7\. Juli 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Stand: 13\. Juli 2026/)).toBeInTheDocument();
   });
 });

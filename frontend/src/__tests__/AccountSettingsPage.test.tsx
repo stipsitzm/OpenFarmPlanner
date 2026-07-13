@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import AccountSettingsPage from '../pages/AccountSettingsPage';
+import { DEV_ONBOARDING_PREVIEW_STORAGE_KEY } from '../projects/devOnboardingPreview';
 
 const authState = {
   user: {
@@ -36,7 +37,16 @@ vi.mock('../auth/authApi', () => ({
   changePassword: vi.fn(async () => ({ detail: 'Passwort geändert.' })),
 }));
 
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{location.pathname}</div>;
+}
+
 describe('AccountSettingsPage', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it('renders compact sections and keeps delete disabled until confirmation phrase is present', async () => {
     render(<MemoryRouter><AccountSettingsPage /></MemoryRouter>);
 
@@ -57,5 +67,24 @@ describe('AccountSettingsPage', () => {
     fireEvent.change(within(dialog).getByLabelText('Aktuelles Passwort'), { target: { value: 'secret' } });
     fireEvent.change(within(dialog).getByLabelText('Bestätigungstext'), { target: { value: 'LÖSCHEN' } });
     expect(confirmButton).toBeEnabled();
+  });
+
+  it('starts the developer onboarding preview without deleting data', () => {
+    localStorage.setItem('activeProjectId', '1');
+
+    render(
+      <MemoryRouter initialEntries={['/app/account-settings']}>
+        <Routes>
+          <Route path="/app/account-settings" element={<><AccountSettingsPage /><LocationProbe /></>} />
+          <Route path="/app/project-selection" element={<LocationProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Onboarding erneut anzeigen' }));
+
+    expect(localStorage.getItem(DEV_ONBOARDING_PREVIEW_STORAGE_KEY)).toBe('1');
+    expect(localStorage.getItem('activeProjectId')).toBeNull();
+    expect(screen.getByTestId('location')).toHaveTextContent('/app/project-selection');
   });
 });

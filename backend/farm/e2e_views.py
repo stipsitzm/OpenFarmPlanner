@@ -17,6 +17,7 @@ from config.frontend_urls import build_public_frontend_url
 from accounts.consent import record_acceptance
 from accounts.models import DocumentConsent
 from farm.models import Project, ProjectInvitation, ProjectMembership
+from farm.services.demo_project import DEMO_PROJECT_NAME, populate_demo_project
 
 User = get_user_model()
 E2E_PASSWORD = 'Pass12345!'
@@ -58,6 +59,10 @@ class E2EInvitationFixtureView(APIView):
             return Response({'ok': True})
         if action == 'setup':
             return Response(self._setup(request, scenario))
+        if action == 'setup_demo':
+            return Response(self._setup(request, scenario, demo_project=True))
+        if action == 'setup_empty_user':
+            return Response(self._setup_empty_user(scenario))
         if action == 'remove_member':
             return Response(self._remove_member(scenario))
         if action == 'revoke_invitation':
@@ -72,12 +77,25 @@ class E2EInvitationFixtureView(APIView):
             _user_email(scenario, 'admin'),
             _user_email(scenario, 'invitee'),
             _user_email(scenario, 'outsider'),
+            _user_email(scenario, 'starter'),
         ]).delete()
 
-    def _setup(self, request: Request, scenario: str) -> dict[str, object]:
+    def _setup_empty_user(self, scenario: str) -> dict[str, object]:
+        self._reset(scenario)
+        user = User.objects.create_user(
+            username=f'{scenario}-starter',
+            email=_user_email(scenario, 'starter'),
+            password=E2E_PASSWORD,
+            is_active=True,
+        )
+        record_acceptance(user, DocumentConsent.DOCUMENT_TERMS)
+        return {'user': {'email': user.email, 'password': E2E_PASSWORD}}
+
+    def _setup(self, request: Request, scenario: str, *, demo_project: bool = False) -> dict[str, object]:
         self._reset(scenario)
         invitation_state = str(request.data.get('invitation_state', 'pending')).strip().lower() or 'pending'
-        project = Project.objects.create(name=f'E2E Project {scenario}', slug=scenario)
+        project_name = DEMO_PROJECT_NAME if demo_project else f'E2E Project {scenario}'
+        project = Project.objects.create(name=project_name, slug=scenario)
 
         admin = User.objects.create_user(
             username=f'{scenario}-admin',
@@ -103,6 +121,8 @@ class E2EInvitationFixtureView(APIView):
         for fixture_user in (admin, invitee, outsider):
             record_acceptance(fixture_user, DocumentConsent.DOCUMENT_TERMS)
         ProjectMembership.objects.create(user=admin, project=project, role=ProjectMembership.ROLE_ADMIN)
+        if demo_project:
+            populate_demo_project(project, owner=admin)
 
         invitation = ProjectInvitation.objects.create(
             project=project,

@@ -1,20 +1,43 @@
-import { Accordion, AccordionDetails, AccordionSummary, Alert, Box, Button, List, ListItem, ListItemText, Stack, Typography } from '@mui/material';
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemText,
+  Paper,
+  Stack,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { projectAPI, type ProjectPayload } from '../api/api';
 import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
+import { clearDevOnboardingPreview, isDevOnboardingPreviewEnabled } from '../projects/devOnboardingPreview';
 import { openProjectCreationFlow } from '../projects/projectCreationFlow';
 import { confirmAction } from '../utils/confirmAction';
+
+const isDevQuickDeleteEnabled = import.meta.env.DEV;
 
 export default function ProjectSelectionPage() {
   const { user, switchActiveProject, refreshUser } = useAuth();
   const navigate = useNavigate();
-  const { t } = useTranslation(['navigation', 'common']);
+  const { t } = useTranslation(['navigation', 'common', 'projectInvitations']);
   const memberships = user?.memberships ?? [];
+  const [isDevOnboardingPreview, setIsDevOnboardingPreview] = useState(() => isDevOnboardingPreviewEnabled());
   const [deletedProjects, setDeletedProjects] = useState<ProjectPayload[]>([]);
   const [trashError, setTrashError] = useState<string | null>(null);
+  const [demoError, setDemoError] = useState<string | null>(null);
+  const [isCreatingDemoProject, setIsCreatingDemoProject] = useState(false);
+  const [quickDeletingProjectId, setQuickDeletingProjectId] = useState<number | null>(null);
   const [renderedAt] = useState(() => Date.now());
   const isMountedRef = useRef(false);
 
@@ -52,8 +75,17 @@ export default function ProjectSelectionPage() {
     () => [...deletedProjects].sort((left, right) => left.name.localeCompare(right.name, 'de')),
     [deletedProjects],
   );
+  const visibleMemberships = isDevOnboardingPreview ? [] : memberships;
+  const isOnboardingState = visibleMemberships.length === 0;
+  const shouldShowProjectTrash = !isOnboardingState || deletedProjectsByName.length > 0 || Boolean(trashError);
+
+  const stopDevOnboardingPreview = (): void => {
+    clearDevOnboardingPreview();
+    setIsDevOnboardingPreview(false);
+  };
 
   const openProject = async (projectId: number): Promise<void> => {
+    stopDevOnboardingPreview();
     await switchActiveProject(projectId);
     navigate('/app/fields-beds', { replace: true });
   };
@@ -62,6 +94,28 @@ export default function ProjectSelectionPage() {
     window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
       detail: { message, severity },
     }));
+  };
+
+  const createDemoProject = async (): Promise<void> => {
+    if (isCreatingDemoProject) {
+      return;
+    }
+    setIsCreatingDemoProject(true);
+    setDemoError(null);
+    try {
+      const response = await projectAPI.createDemo();
+      stopDevOnboardingPreview();
+      await switchActiveProject(response.data.id);
+      showSnackbar(t('common:projectOnboarding.demoCreatedHint'), 'success');
+      navigate('/app/fields-beds', { replace: true });
+    } catch (error) {
+      console.error('Error creating demo project:', error);
+      setDemoError(t('common:projectOnboarding.demoCreateError'));
+    } finally {
+      if (isMountedRef.current) {
+        setIsCreatingDemoProject(false);
+      }
+    }
   };
 
   const getDeletedAgeLabel = (deletedAt: string | null): string => {
@@ -87,6 +141,43 @@ export default function ProjectSelectionPage() {
     }
   };
 
+  const quickDeleteProject = async (membership: { project_id: number; project_name: string }): Promise<void> => {
+    if (!isDevQuickDeleteEnabled || quickDeletingProjectId !== null) {
+      return;
+    }
+    if (!confirmAction(t('projectInvitations:projectDelete.devQuickDeleteFromListConfirm', { name: membership.project_name }))) {
+      return;
+    }
+    setQuickDeletingProjectId(membership.project_id);
+    try {
+      const { project_id: projectId } = membership;
+      await projectAPI.delete(projectId);
+      await refreshUser();
+      window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
+        detail: {
+          message: t('projectInvitations:projectDelete.success'),
+          severity: 'success',
+          actionLabel: t('projectInvitations:projectDelete.undo'),
+          onAction: async (): Promise<void> => {
+            try {
+              await projectAPI.restore(projectId);
+              await refreshUser();
+              showSnackbar(t('projectInvitations:projectDelete.restoreSuccess'), 'success');
+            } catch {
+              showSnackbar(t('projectInvitations:projectDelete.restoreError'), 'error');
+            }
+          },
+        },
+      }));
+    } catch {
+      showSnackbar(t('projectInvitations:projectDelete.error'), 'error');
+    } finally {
+      if (isMountedRef.current) {
+        setQuickDeletingProjectId(null);
+      }
+    }
+  };
+
   const permanentlyDeleteProject = async (project: ProjectPayload): Promise<void> => {
     if (!confirmAction(t('projectTrash.permanentConfirm', { name: project.name }))) {
       return;
@@ -101,26 +192,79 @@ export default function ProjectSelectionPage() {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 720 }}>
-      <Stack spacing={2}>
-        <Typography variant="h5">{t('project.switch')}</Typography>
+    <Box sx={{ p: 3, maxWidth: isOnboardingState ? 780 : 720 }}>
+      <Stack spacing={2.5}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'flex-start' }}>
+          <Box>
+            <Typography variant="h5">
+              {isOnboardingState ? t('common:projectOnboarding.pageTitle') : t('project.switch')}
+            </Typography>
+            {isOnboardingState ? (
+              <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 620, lineHeight: 1.6 }}>
+                {t('common:projectOnboarding.pageDescription')}
+              </Typography>
+            ) : null}
+          </Box>
+        </Stack>
 
-        {memberships.length === 0 ? (
-          <Alert severity="info">
-            <Stack spacing={1.5}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                {t('common:projectRequired.noProjectsTitle')}
-              </Typography>
-              <Typography variant="body2">
-                {t('common:projectRequired.noProjectsSelectionDescription')}
-              </Typography>
-              <Box>
-                <Button variant="contained" onClick={() => openProjectCreationFlow()}>
-                  {t('common:projectRequired.createFirstProjectAction')}
-                </Button>
-              </Box>
+        {isOnboardingState ? (
+          <Stack spacing={2}>
+            {demoError ? <Alert severity="error">{demoError}</Alert> : null}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <Paper
+                variant="outlined"
+                sx={{ flex: 1, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}
+              >
+                <Stack spacing={1.5} sx={{ height: '100%' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      {t('common:projectOnboarding.emptyTitle')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, lineHeight: 1.55 }}>
+                      {t('common:projectOnboarding.emptyDescription')}
+                    </Typography>
+                  </Box>
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      stopDevOnboardingPreview();
+                      openProjectCreationFlow();
+                    }}
+                    disabled={isCreatingDemoProject}
+                  >
+                    {t('common:projectOnboarding.emptyAction')}
+                  </Button>
+                </Stack>
+              </Paper>
+              <Paper
+                variant="outlined"
+                sx={{ flex: 1, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}
+              >
+                <Stack spacing={1.5} sx={{ height: '100%' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                      {t('common:projectOnboarding.demoTitle')}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75, lineHeight: 1.55 }}>
+                      {t('common:projectOnboarding.demoDescription')}
+                    </Typography>
+                  </Box>
+                  <Button
+                    variant="contained"
+                    onClick={() => {
+                      void createDemoProject();
+                    }}
+                    disabled={isCreatingDemoProject}
+                    startIcon={isCreatingDemoProject ? <CircularProgress color="inherit" size={16} /> : undefined}
+                  >
+                    {isCreatingDemoProject
+                      ? t('common:projectOnboarding.demoCreating')
+                      : t('common:projectOnboarding.demoAction')}
+                  </Button>
+                </Stack>
+              </Paper>
             </Stack>
-          </Alert>
+          </Stack>
         ) : (
           <>
             <Box>
@@ -129,18 +273,39 @@ export default function ProjectSelectionPage() {
               </Button>
             </Box>
             <List>
-              {memberships.map((membership) => (
+              {visibleMemberships.map((membership) => (
                 <ListItem
                   key={membership.project_id}
                   secondaryAction={(
-                    <Button
-                      variant="contained"
-                      onClick={() => {
-                        void openProject(membership.project_id);
-                      }}
-                    >
-                      {t('projectSwitcher.openProjectAction')}
-                    </Button>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Button
+                        variant="contained"
+                        onClick={() => {
+                          void openProject(membership.project_id);
+                        }}
+                      >
+                        {t('projectSwitcher.openProjectAction')}
+                      </Button>
+                      {isDevQuickDeleteEnabled ? (
+                        <Tooltip title={t('projectInvitations:projectDelete.devQuickHint')}>
+                          <span>
+                            <Button
+                              size="small"
+                              color="error"
+                              variant="text"
+                              disabled={quickDeletingProjectId === membership.project_id}
+                              onClick={() => {
+                                void quickDeleteProject(membership);
+                              }}
+                              aria-label={t('projectInvitations:projectDelete.devQuickButton')}
+                              sx={{ minWidth: 0, px: 0.5 }}
+                            >
+                              <DeleteOutlineIcon fontSize="small" />
+                            </Button>
+                          </span>
+                        </Tooltip>
+                      ) : null}
+                    </Stack>
                   )}
                 >
                   <ListItemText
@@ -153,7 +318,8 @@ export default function ProjectSelectionPage() {
           </>
         )}
 
-        <Accordion>
+        {shouldShowProjectTrash ? (
+          <Accordion>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               {t('projectTrash.title')}
@@ -203,7 +369,8 @@ export default function ProjectSelectionPage() {
               ) : null}
             </Stack>
           </AccordionDetails>
-        </Accordion>
+          </Accordion>
+        ) : null}
       </Stack>
     </Box>
   );
