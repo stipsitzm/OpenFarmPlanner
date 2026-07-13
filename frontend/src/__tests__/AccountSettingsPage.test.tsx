@@ -69,6 +69,8 @@ describe('AccountSettingsPage', () => {
     expect(confirmButton).toBeDisabled();
 
     fireEvent.change(within(dialog).getByLabelText('Aktuelles Passwort'), { target: { value: 'secret' } });
+    fireEvent.change(within(dialog).getByLabelText('Bestätigungstext'), { target: { value: 'DELETE' } });
+    expect(confirmButton).toBeDisabled();
     fireEvent.change(within(dialog).getByLabelText('Bestätigungstext'), { target: { value: 'LÖSCHEN' } });
     expect(confirmButton).toBeEnabled();
   });

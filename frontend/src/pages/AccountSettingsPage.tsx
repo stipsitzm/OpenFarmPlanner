@@ -58,7 +58,8 @@ export default function AccountSettingsPage() {
   const [activeEditor, setActiveEditor] = useState<'displayName' | 'publicDisplayName' | 'email' | 'password' | null>(null);
   const [hintsResetDone, setHintsResetDone] = useState(false);
 
-  const requiresDeletePhrase = deleteConfirmationText.trim() === 'LÖSCHEN';
+  const deletePhrase = t('deletePhrase');
+  const requiresDeletePhrase = deleteConfirmationText.trim() === deletePhrase;
   const canDelete = deletePassword.trim().length > 0 && requiresDeletePhrase;
 
   const hasUnsavedChanges = useMemo(() => {
@@ -472,7 +473,7 @@ export default function AccountSettingsPage() {
         <DialogTitle>{t('dialogTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <Alert severity="warning">{t('dialogWarning')}</Alert>
+            <Alert severity="warning">{t('dialogWarning', { phrase: deletePhrase })}</Alert>
             <Typography>{t('deleteDescription')}</Typography>
             <Typography>{t('restoreDescription')}</Typography>
             <TextField
@@ -487,7 +488,7 @@ export default function AccountSettingsPage() {
               label={t('deletePhraseLabel')}
               value={deleteConfirmationText}
               onChange={(event) => setDeleteConfirmationText(event.target.value)}
-              helperText={t('deletePhraseHelper')}
+              helperText={t('deletePhraseHelper', { phrase: deletePhrase })}
             />
             {deleteError ? <Alert severity="error">{deleteError}</Alert> : null}
           </Stack>
