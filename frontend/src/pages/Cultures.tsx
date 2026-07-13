@@ -64,6 +64,7 @@ import { CulturesImportDialog } from './CulturesImportDialog';
 import { CulturesImportStartDialog } from './CulturesImportStartDialog';
 import { CulturesExportDialog } from './CulturesExportDialog';
 import { AlertSnackbar } from '../components/feedback/AlertSnackbar';
+import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
@@ -611,29 +612,22 @@ function Cultures() {
         }}
       />
 
-      <Dialog
+      <ConfirmationDialog
         open={Boolean(deleteDialogCulture)}
-        onClose={() => setDeleteDialogCulture(null)}
         fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle sx={{ pb: 1 }}>
-          {t('deleteDialog.title')}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <Typography color="text.secondary">
-            {t('deleteDialog.confirmation', { name: deleteDialogCulture?.name ?? '' })}
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-          <Button variant="outlined" onClick={() => setDeleteDialogCulture(null)}>
-            {t('common:actions.cancel')}
-          </Button>
-          <Button color="error" variant="contained" onClick={handleDeleteConfirm}>
-            {t('buttons.delete')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        title={t('deleteDialog.title')}
+        message={t('deleteDialog.confirmation', { name: deleteDialogCulture?.name ?? '' })}
+        cancelLabel={t('common:actions.cancel')}
+        confirmLabel={t('buttons.delete')}
+        onCancel={() => setDeleteDialogCulture(null)}
+        onConfirm={handleDeleteConfirm}
+        titleSx={{ pb: 1 }}
+        contentSx={{ pt: 1 }}
+        messageTypographyProps={{ variant: 'body1', color: 'text.secondary' }}
+        actionsSx={{ px: 3, pb: 2.5, pt: 1 }}
+        cancelButtonProps={{ variant: 'outlined' }}
+        confirmButtonProps={{ color: 'error', variant: 'contained' }}
+      />
 
       <Dialog
         open={publishConfirmOpen}

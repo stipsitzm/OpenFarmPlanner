@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { projectAPI, type ProjectInvitationPayload, type ProjectMemberPayload } from '../api/api';
 import { useAuth } from '../auth/useAuth';
+import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
 import { useTranslation } from '../i18n';
 import { showProjectDeleteUndoSnackbar } from '../projects/projectDeletionFeedback';
 
@@ -489,27 +490,25 @@ export default function ProjectSettingsPage() {
         </Box>
       ) : null}
 
-      <Dialog open={pendingRemovalMember !== null} onClose={() => setPendingRemovalMember(null)} fullWidth maxWidth="xs">
-        <DialogTitle>{t('removeDialogTitle')}</DialogTitle>
-        <DialogContent>
-          <Typography>
-            {t('removeDialogText', {
-              email: pendingRemovalMember?.user_email ?? '',
-              name: pendingRemovalMember?.user_display_name || t('memberDisplayFallback'),
-            })}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPendingRemovalMember(null)}>{t('removeDialogCancel')}</Button>
-          <Button
-            color="error"
-            variant="contained"
-            onClick={() => pendingRemovalMember ? void handleRemoveMember(pendingRemovalMember.id, pendingRemovalMember.user === user?.id) : undefined}
-          >
-            {t('removeDialogConfirm')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmationDialog
+        open={pendingRemovalMember !== null}
+        fullWidth
+        title={t('removeDialogTitle')}
+        message={t('removeDialogText', {
+          email: pendingRemovalMember?.user_email ?? '',
+          name: pendingRemovalMember?.user_display_name || t('memberDisplayFallback'),
+        })}
+        cancelLabel={t('removeDialogCancel')}
+        confirmLabel={t('removeDialogConfirm')}
+        onCancel={() => setPendingRemovalMember(null)}
+        onConfirm={() => {
+          if (pendingRemovalMember) {
+            void handleRemoveMember(pendingRemovalMember.id, pendingRemovalMember.user === user?.id);
+          }
+        }}
+        messageTypographyProps={{ variant: 'body1' }}
+        confirmButtonProps={{ color: 'error', variant: 'contained' }}
+      />
 
       <Dialog open={deleteDialogOpen} onClose={handleDeleteDialogClose} fullWidth maxWidth="sm">
         <DialogTitle>{t('projectDelete.dialogTitle')}</DialogTitle>

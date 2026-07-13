@@ -27,6 +27,7 @@ import { MarkdownToolbar, type MarkdownFormat } from './MarkdownToolbar';
 import { noteAttachmentAPI } from '../../api/api';
 import type { NoteAttachment } from '../../api/types';
 import { useTranslation } from '../../i18n';
+import { ConfirmationDialog } from '../feedback/ConfirmationDialog';
 import { invalidateNoteAttachmentsCache } from './noteAttachmentsCache';
 
 export interface NotesDrawerProps {
@@ -512,29 +513,21 @@ export function NotesDrawer({ open, title, value, onChange, onSave, onClose, has
         </DialogActions>
       </Dialog>
 
-      <Dialog open={confirmDiscardOpen} onClose={() => setConfirmDiscardOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>{t('notesDrawer.unsavedDialog.title')}</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2">
-            {t('notesDrawer.unsavedDialog.message')}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button autoFocus color="success" variant="contained" onClick={() => setConfirmDiscardOpen(false)}>
-            {t('notesDrawer.unsavedDialog.continueEditing')}
-          </Button>
-          <Button
-            color="error"
-            variant="contained"
-            onClick={() => {
-              setConfirmDiscardOpen(false);
-              onClose();
-            }}
-          >
-            {t('notesDrawer.unsavedDialog.discardAndClose')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmationDialog
+        open={confirmDiscardOpen}
+        fullWidth
+        title={t('notesDrawer.unsavedDialog.title')}
+        message={t('notesDrawer.unsavedDialog.message')}
+        cancelLabel={t('notesDrawer.unsavedDialog.continueEditing')}
+        confirmLabel={t('notesDrawer.unsavedDialog.discardAndClose')}
+        onCancel={() => setConfirmDiscardOpen(false)}
+        onConfirm={() => {
+          setConfirmDiscardOpen(false);
+          onClose();
+        }}
+        cancelButtonProps={{ autoFocus: true, color: 'success', variant: 'contained' }}
+        confirmButtonProps={{ color: 'error', variant: 'contained' }}
+      />
     </Drawer>
   );
 }
