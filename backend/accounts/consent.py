@@ -12,7 +12,7 @@ User = get_user_model()
 # on the document's page (e.g. frontend/src/i18n/locales/de/home.json,
 # legal.terms.version for DOCUMENT_TERMS).
 CURRENT_VERSIONS: dict[str, str] = {
-    DocumentConsent.DOCUMENT_TERMS: '2026-07-07',
+    DocumentConsent.DOCUMENT_TERMS: '2026-07-13',
 }
 
 # Documents a user currently must have accepted the current version of to

@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { changePassword, requestEmailChange, updateProfile } from '../auth/authApi';
+import { changePassword, requestEmailChange, updateProfile, updatePublicDisplayName } from '../auth/authApi';
 import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
 import { useNavigationBlocker } from '../hooks/useNavigationBlocker';
@@ -31,6 +31,11 @@ export default function AccountSettingsPage() {
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSubmitting, setProfileSubmitting] = useState(false);
+
+  const [publicDisplayName, setPublicDisplayName] = useState(user?.public_display_name ?? '');
+  const [publicProfileMessage, setPublicProfileMessage] = useState<string | null>(null);
+  const [publicProfileError, setPublicProfileError] = useState<string | null>(null);
+  const [publicProfileSubmitting, setPublicProfileSubmitting] = useState(false);
 
   const [newEmail, setNewEmail] = useState('');
   const [emailPassword, setEmailPassword] = useState('');
@@ -50,7 +55,7 @@ export default function AccountSettingsPage() {
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
-  const [activeEditor, setActiveEditor] = useState<'displayName' | 'email' | 'password' | null>(null);
+  const [activeEditor, setActiveEditor] = useState<'displayName' | 'publicDisplayName' | 'email' | 'password' | null>(null);
   const [hintsResetDone, setHintsResetDone] = useState(false);
 
   const requiresDeletePhrase = deleteConfirmationText.trim() === 'LÖSCHEN';
@@ -58,10 +63,22 @@ export default function AccountSettingsPage() {
 
   const hasUnsavedChanges = useMemo(() => {
     if (activeEditor === 'displayName') return displayName !== (user?.display_name ?? '');
+    if (activeEditor === 'publicDisplayName') return publicDisplayName !== (user?.public_display_name ?? '');
     if (activeEditor === 'email') return !!newEmail || !!emailPassword;
     if (activeEditor === 'password') return !!currentPassword || !!newPassword || !!repeatPassword;
     return false;
-  }, [activeEditor, currentPassword, displayName, emailPassword, newEmail, newPassword, repeatPassword, user?.display_name]);
+  }, [
+    activeEditor,
+    currentPassword,
+    displayName,
+    emailPassword,
+    newEmail,
+    newPassword,
+    publicDisplayName,
+    repeatPassword,
+    user?.display_name,
+    user?.public_display_name,
+  ]);
 
   useNavigationBlocker(hasUnsavedChanges, t('unsavedChangesWarning'));
 
@@ -69,6 +86,12 @@ export default function AccountSettingsPage() {
     setActiveEditor(null);
     setDisplayName(user?.display_name ?? '');
     setProfileError(null);
+  };
+
+  const closePublicDisplayNameEditor = (): void => {
+    setActiveEditor(null);
+    setPublicDisplayName(user?.public_display_name ?? '');
+    setPublicProfileError(null);
   };
 
   const closeEmailEditor = (): void => {
@@ -99,6 +122,22 @@ export default function AccountSettingsPage() {
       setProfileError(error instanceof Error ? error.message : t('errors.generic'));
     } finally {
       setProfileSubmitting(false);
+    }
+  };
+
+  const handlePublicProfileSave = async (): Promise<void> => {
+    setPublicProfileSubmitting(true);
+    setPublicProfileMessage(null);
+    setPublicProfileError(null);
+    try {
+      const response = await updatePublicDisplayName(publicDisplayName);
+      setPublicProfileMessage(response.detail);
+      await refreshUser();
+      setActiveEditor(null);
+    } catch (error) {
+      setPublicProfileError(error instanceof Error ? error.message : t('errors.generic'));
+    } finally {
+      setPublicProfileSubmitting(false);
     }
   };
 
@@ -213,6 +252,66 @@ export default function AccountSettingsPage() {
                       variant="text"
                       onClick={closeDisplayNameEditor}
                       disabled={profileSubmitting}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
+                    >
+                      {t('cancel')}
+                    </Button>
+                  </Stack>
+                </Stack>
+              </Collapse>
+            </Stack>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              {t('sections.publicProfile')}
+            </Typography>
+            <Stack spacing={2}>
+              <Typography variant="body2" color="text.secondary">
+                {t('publicProfile.description')}
+              </Typography>
+              <Typography>
+                <strong>{t('publicProfile.publicDisplayName')}:</strong>{' '}
+                {user?.public_display_name || t('publicProfile.noPublicDisplayName')}
+              </Typography>
+              {publicProfileMessage ? <Alert severity="success">{publicProfileMessage}</Alert> : null}
+              {publicProfileError ? <Alert severity="error">{publicProfileError}</Alert> : null}
+              <Box>
+                {activeEditor !== 'publicDisplayName' ? (
+                  <Button
+                    variant="outlined"
+                    onClick={() => setActiveEditor('publicDisplayName')}
+                    sx={{ width: { xs: '100%', sm: 'auto' } }}
+                  >
+                    {t('publicProfile.actions.editPublicDisplayName')}
+                  </Button>
+                ) : null}
+              </Box>
+              <Collapse in={activeEditor === 'publicDisplayName'} unmountOnExit>
+                <Stack spacing={2}>
+                  <TextField
+                    label={t('publicProfile.publicDisplayName')}
+                    value={publicDisplayName}
+                    onChange={(event) => setPublicDisplayName(event.target.value)}
+                    fullWidth
+                    helperText={t('publicProfile.helperText')}
+                    slotProps={{ htmlInput: { maxLength: 255 } }}
+                  />
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                    <Button
+                      variant="contained"
+                      onClick={() => void handlePublicProfileSave()}
+                      disabled={publicProfileSubmitting}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
+                    >
+                      {t('actions.save')}
+                    </Button>
+                    <Button
+                      variant="text"
+                      onClick={closePublicDisplayNameEditor}
+                      disabled={publicProfileSubmitting}
                       sx={{ width: { xs: '100%', sm: 'auto' } }}
                     >
                       {t('cancel')}

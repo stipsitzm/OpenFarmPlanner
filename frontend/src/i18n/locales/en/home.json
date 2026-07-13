@@ -121,14 +121,7 @@
         },
         "projectData": {
           "title": "Project and application data",
-          "content": "Within the application, users can store the following data:",
-          "bullets": {
-            "projectData": "Project data",
-            "cultureData": "Crop data",
-            "cultivationPlanning": "Cultivation planning",
-            "fieldData": "Field and area data",
-            "tasks": "Tasks"
-          },
+          "content": "Within your projects, we process the project-related data entered by you and other project members. This includes, in particular, master data of the project (e.g. project name, memberships and locations), operational planning and management data for the features in use (e.g. relating to fields, crops, cultivation planning or tasks), and supplementary information such as notes, uploaded files, and the change history, including the display name of the person who made the change. This data is generally visible only to you and the other members of the respective project.",
           "legalBasis": "Legal basis: Art. 6(1)(b) GDPR"
         },
         "emailCommunication": {

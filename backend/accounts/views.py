@@ -24,13 +24,14 @@ from rest_framework.views import APIView
 from config.frontend_urls import build_public_frontend_url
 
 from .consent import record_acceptance
-from .models import AccountDeletionRequest, AccountEmailChangeRequest, PendingActivation
+from .models import AccountDeletionRequest, AccountEmailChangeRequest, PendingActivation, PublicProfile
 from .serializers import (
     AccountEmailChangeConfirmSerializer,
     AccountEmailChangeRequestSerializer,
     AccountDeleteRequestSerializer,
     AccountPasswordChangeSerializer,
     AccountProfileSerializer,
+    AccountPublicProfileSerializer,
     AccountRestoreSerializer,
     ActivateSerializer,
     ConsentAcceptSerializer,
@@ -354,6 +355,15 @@ class AccountProfileView(APIView):
         display_name = serializer.validated_data['display_name'].strip()
         request.user.first_name = display_name
         request.user.save(update_fields=['first_name'])
+        return Response({'detail': PROFILE_UPDATED_MESSAGE, 'user': UserSerializer(request.user).data})
+
+
+class AccountPublicProfileView(APIView):
+    def patch(self, request: Request) -> Response:
+        serializer = AccountPublicProfileSerializer(data=request.data)
+        _validate_serializer_in_german(serializer)
+        public_display_name = serializer.validated_data['public_display_name'].strip()
+        PublicProfile.objects.update_or_create(user=request.user, defaults={'public_display_name': public_display_name})
         return Response({'detail': PROFILE_UPDATED_MESSAGE, 'user': UserSerializer(request.user).data})
 
 

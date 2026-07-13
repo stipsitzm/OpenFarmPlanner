@@ -425,14 +425,12 @@ export function PublicCultureLibraryDialog({
                     label={`${t('library.versionLabel')} ${selectedCulture.version}`}
                     sx={previewBadgeSx}
                   />
-                  {selectedCulture.created_by_label ? (
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      label={`${t('library.createdByLabel')} ${selectedCulture.created_by_label}`}
-                      sx={previewBadgeSx}
-                    />
-                  ) : null}
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={`${t('library.createdByLabel')} ${selectedCulture.created_by_label || t('library.anonymousAuthor')}`}
+                    sx={previewBadgeSx}
+                  />
                 </Box>
                 <Box sx={{ display: 'grid', gap: 0.5, mb: selectedCulture.notes ? 1.5 : 0.75 }}>
                   <Typography variant="body2" sx={{ lineHeight: 1.35 }}>

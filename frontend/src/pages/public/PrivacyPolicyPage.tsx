@@ -23,7 +23,6 @@ const privacySections = [
 const privacySectionBulletKeys: Partial<Record<(typeof privacySections)[number], readonly string[]>> = {
   hosting: ['ipAddress', 'requestTime', 'browser', 'operatingSystem', 'referrerUrl'],
   registration: ['emailAddress', 'nameOptional', 'encryptedPassword'],
-  projectData: ['projectData', 'fieldData', 'cultureData', 'cultivationPlanning', 'tasks', 'noteAttachments', 'versionHistory'],
   publicLibrary: ['publicContent', 'attribution', 'noReview', 'persistence', 'removal', 'futureOutlook'],
   emailCommunication: ['registration', 'accountActivation', 'passwordReset', 'projectInvitations', 'systemNotifications'],
   logFiles: ['ipAddress', 'errorMessages', 'accessData', 'timestamps'],

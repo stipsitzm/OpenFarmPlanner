@@ -4,8 +4,18 @@
   "displayName": "Anzeigename",
   "sections": {
     "profile": "Profil",
+    "publicProfile": "Öffentliches Profil",
     "security": "Login & Sicherheit",
     "account": "Konto"
+  },
+  "publicProfile": {
+    "description": "Der öffentliche Anzeigename wird als Urheber:in angezeigt, wenn du einen Eintrag in der öffentlichen Kulturbibliothek veröffentlichst. Ohne gesetzten Namen erfolgt die Veröffentlichung anonym.",
+    "publicDisplayName": "Öffentlicher Anzeigename",
+    "noPublicDisplayName": "— (Veröffentlichungen erfolgen anonym)",
+    "helperText": "Sichtbar für alle Besucher:innen der öffentlichen Kulturbibliothek. Leer lassen, um anonym zu veröffentlichen.",
+    "actions": {
+      "editPublicDisplayName": "Öffentlichen Anzeigenamen ändern"
+    }
   },
   "actions": {
     "saveProfile": "Profil speichern",

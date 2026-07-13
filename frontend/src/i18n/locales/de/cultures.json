@@ -477,6 +477,7 @@
     "loadError": "Die Kulturbibliothek konnte nicht geladen werden.",
     "versionLabel": "Version",
     "createdByLabel": "Von",
+    "anonymousAuthor": "Anonym",
     "publishConfirm": {
       "title": "Kultur veröffentlichen?",
       "intro": "„{{name}}“ wird in die öffentliche Kulturbibliothek veröffentlicht und ist danach für alle angemeldeten Nutzer sichtbar und importierbar.",

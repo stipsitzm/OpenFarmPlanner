@@ -95,7 +95,7 @@
         },
         "generalNotice": {
           "title": "Allgemeine Hinweise",
-          "content": "Wir verarbeiten Ihre personenbezogenen Daten vertraulich und entsprechend der gesetzlichen Datenschutzvorschriften sowie dieser Datenschutzerklärung. Diese Datenschutzerklärung ergänzt die Nutzungsbedingungen von OpenFarmPlanner; im Zweifel gilt für datenschutzrechtliche Fragen diese Datenschutzerklärung.\n\nDie Nutzung der Startseite von OpenFarmPlanner ist ohne Angabe personenbezogener Daten möglich. Sobald Sie ein Benutzerkonto anlegen und die Anwendung nutzen, verarbeiten wir die in den folgenden Abschnitten beschriebenen Daten. Für jede Verarbeitung ist die jeweils angegebene Rechtsgrundlage nach Art. 6 Abs. 1 DSGVO maßgeblich."
+          "content": "Wir verarbeiten Ihre personenbezogenen Daten vertraulich und entsprechend der gesetzlichen Datenschutzvorschriften sowie dieser Datenschutzerklärung. Diese Datenschutzerklärung ergänzt die Nutzungsbedingungen von OpenFarmPlanner. Für Fragen zur Verarbeitung personenbezogener Daten ist ausschließlich diese Datenschutzerklärung maßgeblich.\n\nDie Nutzung der Startseite von OpenFarmPlanner ist ohne Angabe personenbezogener Daten möglich. Sobald Sie ein Benutzerkonto anlegen und die Anwendung nutzen, verarbeiten wir die in den folgenden Abschnitten beschriebenen Daten. Für jede Verarbeitung ist die jeweils angegebene Rechtsgrundlage nach Art. 6 Abs. 1 DSGVO maßgeblich."
         },
         "hosting": {
           "title": "Hosting",
@@ -121,16 +121,7 @@
         },
         "projectData": {
           "title": "Projekt- und Anwendungsdaten",
-          "content": "Innerhalb Ihrer Projekte können Sie folgende Daten anlegen. Sie sind grundsätzlich nur für Sie und die übrigen Mitglieder des jeweiligen Projekts sichtbar:",
-          "bullets": {
-            "projectData": "Projekt- und Standortdaten (z. B. Projektname, Mitgliedschaften, Standorte)",
-            "fieldData": "Flächendaten (Parzellen und Beete)",
-            "cultureData": "Kulturdaten (angebaute Sorten und deren Eigenschaften)",
-            "cultivationPlanning": "Anbauplanung (Anbaupläne mit Aussaat- und Erntezeiträumen)",
-            "tasks": "Aufgaben und deren Erledigungsstatus",
-            "noteAttachments": "Notizen sowie optional dazu hochgeladene Fotos (z. B. zu Anbauplänen)",
-            "versionHistory": "Änderungsverlauf (Versionshistorie) inklusive des Anzeigenamens der Person, die eine Änderung vorgenommen hat"
-          },
+          "content": "Innerhalb Ihrer Projekte verarbeiten wir die von Ihnen und den übrigen Projektmitgliedern eingegebenen projektbezogenen Daten. Dazu zählen insbesondere Stammdaten des Projekts (z. B. Projektname, Mitgliedschaften und Standorte), fachliche Planungs- und Verwaltungsdaten der jeweils genutzten Funktionen (z. B. zu Flächen, Kulturen, Anbauplanung oder Aufgaben) sowie ergänzende Angaben wie Notizen, hochgeladene Dateien und der Änderungsverlauf einschließlich des Anzeigenamens der handelnden Person. Diese Daten sind grundsätzlich nur für Sie und die übrigen Mitglieder des jeweiligen Projekts sichtbar.",
           "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Erfüllung des Nutzungsvertrags: Bereitstellung der Planungsfunktionen)."
         },
         "publicLibrary": {
@@ -138,7 +129,7 @@
           "content": "Sie können einzelne Kultur-Datensätze (z. B. Anbauinformationen zu einer Gemüsesorte) aus einem privaten Projekt eigenständig in eine öffentliche Kulturbibliothek veröffentlichen. Diese Bibliothek kann von allen angemeldeten Nutzern eingesehen und in ein eigenes Projekt importiert werden. Die Veröffentlichung ist freiwillig und für die Nutzung von OpenFarmPlanner nicht erforderlich. Welche Nutzungsrechte Sie OpenFarmPlanner damit einräumen, regeln die Nutzungsbedingungen, Abschnitt „Nutzungsrechte an veröffentlichten Kulturdaten“.",
           "bullets": {
             "publicContent": "Veröffentlicht werden ausschließlich die landwirtschaftlichen Anbaudaten der Kultur (z. B. Name, Sorte, Wachstums- und Erntedauer, Pflanzabstände, Saatgutmenge, Lieferantenname). Notizen aus dem privaten Projekt werden nicht mitveröffentlicht.",
-            "attribution": "Als Urheber eines veröffentlichten Eintrags wird ausschließlich Ihr öffentlicher Benutzername angezeigt (künftig soll dieser durch einen frei wählbaren öffentlichen Anzeigenamen ersetzbar sein). Ihre E-Mail-Adresse ist zu keinem Zeitpunkt Bestandteil eines öffentlichen Eintrags; sie dient ausschließlich der Kontoverwaltung und unserer Kommunikation mit Ihnen (siehe Abschnitt „E-Mail-Kommunikation“).",
+            "attribution": "Als Urheber eines veröffentlichten Eintrags wird der von Ihnen in den Kontoeinstellungen frei wählbare öffentliche Anzeigename angezeigt. Haben Sie keinen öffentlichen Anzeigenamen festgelegt, erfolgt die Veröffentlichung anonym, ohne Namensangabe. Ihr Benutzername und Ihre E-Mail-Adresse sind zu keinem Zeitpunkt Bestandteil eines öffentlichen Eintrags; die E-Mail-Adresse dient ausschließlich der Kontoverwaltung und unserer Kommunikation mit Ihnen (siehe Abschnitt „E-Mail-Kommunikation“).",
             "noReview": "Die Veröffentlichung erfolgt unmittelbar durch Sie selbst; es findet aktuell keine inhaltliche Prüfung oder Freigabe durch uns statt.",
             "persistence": "Ein veröffentlichter Eintrag bleibt in der öffentlichen Bibliothek bestehen, auch wenn Sie die ursprüngliche Kultur in Ihrem privaten Projekt später ändern oder löschen.",
             "removal": "Da die Veröffentlichung auf Ihrer Einwilligung beruht, können Sie diese jederzeit mit Wirkung für die Zukunft widerrufen. Eine eigenständige Rücknahme über die Anwendung ist derzeit nicht möglich; melden Sie sich dazu bitte unter info@openfarmplanner.org, wir entfernen den Eintrag dann für Sie.",
@@ -183,7 +174,7 @@
         },
         "dataSharing": {
           "title": "Weitergabe von Daten",
-          "content": "Über die in Auftragsverarbeitung erfolgende Zusammenarbeit mit unserem Hosting-Anbieter (siehe Abschnitt „Hosting“) hinaus geben wir Ihre personenbezogenen Daten nur weiter, wenn:\n\n– Sie durch das aktive Veröffentlichen einer Kultur in der öffentlichen Kulturbibliothek deren Sichtbarkeit unter Ihrem öffentlichen Benutzernamen für alle angemeldeten Nutzer wählen (siehe Abschnitt „Öffentliche Kulturbibliothek“), oder\n– wir gesetzlich dazu verpflichtet sind, etwa gegenüber Behörden."
+          "content": "Über die in Auftragsverarbeitung erfolgende Zusammenarbeit mit unserem Hosting-Anbieter (siehe Abschnitt „Hosting“) hinaus geben wir Ihre personenbezogenen Daten nur weiter, wenn:\n\n– Sie durch das aktive Veröffentlichen einer Kultur in der öffentlichen Kulturbibliothek deren Sichtbarkeit für alle angemeldeten Nutzer wählen, gegebenenfalls einschließlich Ihres öffentlichen Anzeigenamens, sofern Sie einen solchen festgelegt haben (siehe Abschnitt „Öffentliche Kulturbibliothek“), oder\n– wir gesetzlich dazu verpflichtet sind, etwa gegenüber Behörden."
         },
         "storageDuration": {
           "title": "Speicherdauer",
@@ -231,7 +222,7 @@
         },
         "publicLibrary": {
           "title": "Öffentliche Kulturbibliothek",
-          "content": "Sie können einzelne Kultur-Datensätze freiwillig aus einem privaten Projekt in die öffentliche Kulturbibliothek veröffentlichen. Diese ist für alle angemeldeten Nutzer sichtbar und in eigene Projekte importierbar. Welche Daten dabei veröffentlicht werden, dass nur Ihr öffentlicher Benutzername als Urheber angezeigt wird und wie Sie eine Veröffentlichung rückgängig machen können, erfahren Sie in der Datenschutzerklärung, Abschnitt „Öffentliche Kulturbibliothek“.\n\nMit der Veröffentlichung bestätigen Sie, dass die veröffentlichten Angaben nach bestem Wissen zutreffend sind und Sie berechtigt sind, diese zu veröffentlichen."
+          "content": "Sie können einzelne Kultur-Datensätze freiwillig aus einem privaten Projekt in die öffentliche Kulturbibliothek veröffentlichen. Diese ist für alle angemeldeten Nutzer sichtbar und in eigene Projekte importierbar. Welche Daten dabei veröffentlicht werden, dass als Urheber nur Ihr frei wählbarer öffentlicher Anzeigename oder – falls nicht gesetzt – keine Namensangabe (anonym) erscheint, und wie Sie eine Veröffentlichung rückgängig machen können, erfahren Sie in der Datenschutzerklärung, Abschnitt „Öffentliche Kulturbibliothek“.\n\nMit der Veröffentlichung bestätigen Sie, dass die veröffentlichten Angaben nach bestem Wissen zutreffend sind und Sie berechtigt sind, diese zu veröffentlichen."
         },
         "contributionLicense": {
           "title": "Nutzungsrechte an veröffentlichten Kulturdaten",
@@ -269,7 +260,7 @@
         },
         "futureFeatures": {
           "title": "Weiterentwicklung der Plattform",
-          "content": "OpenFarmPlanner wird kontinuierlich weiterentwickelt. Diese Nutzungsbedingungen gelten sinngemäß auch für künftige Funktionen rund um von Nutzern bereitgestellte Inhalte, etwa Kommentare, Bewertungen oder Versionshistorien zu Einträgen der öffentlichen Kulturbibliothek, sowie für einen künftig frei wählbaren öffentlichen Anzeigenamen anstelle des öffentlichen Benutzernamens. Bei wesentlichen neuen Funktionen dieser Art passen wir diese Nutzungsbedingungen bei Bedarf an (siehe Abschnitt „Änderungen dieser Nutzungsbedingungen“)."
+          "content": "OpenFarmPlanner wird kontinuierlich weiterentwickelt. Diese Nutzungsbedingungen gelten sinngemäß auch für künftige Funktionen rund um von Nutzern bereitgestellte Inhalte, etwa Kommentare, Bewertungen oder Versionshistorien zu Einträgen der öffentlichen Kulturbibliothek. Bei wesentlichen neuen Funktionen dieser Art passen wir diese Nutzungsbedingungen bei Bedarf an (siehe Abschnitt „Änderungen dieser Nutzungsbedingungen“)."
         },
         "changes": {
           "title": "Änderungen dieser Nutzungsbedingungen",
