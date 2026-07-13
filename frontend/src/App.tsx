@@ -180,6 +180,7 @@ interface ProjectMenuProps {
   onClose: () => void;
   onSwitchProject: (projectId: number) => Promise<void>;
   onOpenProjectSettings: () => void;
+  onOpenProjectSelection: () => void;
   onOpenCreateProject: () => void;
   t: (key: string) => string;
 }
@@ -194,6 +195,7 @@ function ProjectMenu(props: ProjectMenuProps) {
     onClose,
     onSwitchProject,
     onOpenProjectSettings,
+    onOpenProjectSelection,
     onOpenCreateProject,
     t,
   } = props;
@@ -223,6 +225,10 @@ function ProjectMenu(props: ProjectMenuProps) {
         ))
       )}
       <Divider />
+      <MenuItem onClick={onOpenProjectSelection}>
+        <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SwapHorizIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
+        {t('project.switch')}
+      </MenuItem>
       <MenuItem onClick={onOpenProjectSettings}>
         <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
         {t('project.settings')}
@@ -588,9 +594,14 @@ function RootLayout() {
     navigate('/app/project-settings');
   }, [handleProjectMenuClose, navigate]);
 
+  const handleOpenProjectSelectionPage = useCallback((): void => {
+    handleProjectMenuClose();
+    navigate('/app/project-selection');
+  }, [handleProjectMenuClose, navigate]);
+
   const applyProjectContextChange = useCallback(async (projectId: number): Promise<void> => {
     await switchActiveProject(projectId);
-    window.location.reload();
+    window.location.href = '/app/dashboard';
   }, [switchActiveProject]);
 
   const closeCreateProjectDialog = (): void => {
@@ -1330,6 +1341,7 @@ function RootLayout() {
             onClose={handleProjectMenuClose}
             onSwitchProject={handleSwitchProject}
             onOpenProjectSettings={handleOpenProjectSettings}
+            onOpenProjectSelection={handleOpenProjectSelectionPage}
             onOpenCreateProject={handleOpenCreateProject}
             t={t}
           />

@@ -29,8 +29,7 @@
     "demoAction": "Create demo project",
     "demoCreating": "Creating demo project...",
     "demoCreatedHint": "This project contains sample data. You can edit everything freely or delete the project at any time.",
-    "demoCreateError": "Demo project could not be created. Please try again.",
-    "devPreviewEndAction": "End preview"
+    "demoCreateError": "Demo project could not be created. Please try again."
   },
   "runtime": {
     "applicationUpdatedFallback": "The application could not be updated automatically. Please try again later.",

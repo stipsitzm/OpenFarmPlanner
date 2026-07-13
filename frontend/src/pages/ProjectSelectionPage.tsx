@@ -11,9 +11,11 @@ import {
   ListItemText,
   Paper,
   Stack,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { projectAPI, type ProjectPayload } from '../api/api';
@@ -23,16 +25,19 @@ import { clearDevOnboardingPreview, isDevOnboardingPreviewEnabled } from '../pro
 import { openProjectCreationFlow } from '../projects/projectCreationFlow';
 import { confirmAction } from '../utils/confirmAction';
 
+const isDevQuickDeleteEnabled = import.meta.env.DEV;
+
 export default function ProjectSelectionPage() {
   const { user, switchActiveProject, refreshUser } = useAuth();
   const navigate = useNavigate();
-  const { t } = useTranslation(['navigation', 'common']);
+  const { t } = useTranslation(['navigation', 'common', 'projectInvitations']);
   const memberships = user?.memberships ?? [];
   const [isDevOnboardingPreview, setIsDevOnboardingPreview] = useState(() => isDevOnboardingPreviewEnabled());
   const [deletedProjects, setDeletedProjects] = useState<ProjectPayload[]>([]);
   const [trashError, setTrashError] = useState<string | null>(null);
   const [demoError, setDemoError] = useState<string | null>(null);
   const [isCreatingDemoProject, setIsCreatingDemoProject] = useState(false);
+  const [quickDeletingProjectId, setQuickDeletingProjectId] = useState<number | null>(null);
   const [renderedAt] = useState(() => Date.now());
   const isMountedRef = useRef(false);
 
@@ -136,6 +141,43 @@ export default function ProjectSelectionPage() {
     }
   };
 
+  const quickDeleteProject = async (membership: { project_id: number; project_name: string }): Promise<void> => {
+    if (!isDevQuickDeleteEnabled || quickDeletingProjectId !== null) {
+      return;
+    }
+    if (!confirmAction(t('projectInvitations:projectDelete.devQuickDeleteFromListConfirm', { name: membership.project_name }))) {
+      return;
+    }
+    setQuickDeletingProjectId(membership.project_id);
+    try {
+      const { project_id: projectId } = membership;
+      await projectAPI.delete(projectId);
+      await refreshUser();
+      window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
+        detail: {
+          message: t('projectInvitations:projectDelete.success'),
+          severity: 'success',
+          actionLabel: t('projectInvitations:projectDelete.undo'),
+          onAction: async (): Promise<void> => {
+            try {
+              await projectAPI.restore(projectId);
+              await refreshUser();
+              showSnackbar(t('projectInvitations:projectDelete.restoreSuccess'), 'success');
+            } catch {
+              showSnackbar(t('projectInvitations:projectDelete.restoreError'), 'error');
+            }
+          },
+        },
+      }));
+    } catch {
+      showSnackbar(t('projectInvitations:projectDelete.error'), 'error');
+    } finally {
+      if (isMountedRef.current) {
+        setQuickDeletingProjectId(null);
+      }
+    }
+  };
+
   const permanentlyDeleteProject = async (project: ProjectPayload): Promise<void> => {
     if (!confirmAction(t('projectTrash.permanentConfirm', { name: project.name }))) {
       return;
@@ -163,11 +205,6 @@ export default function ProjectSelectionPage() {
               </Typography>
             ) : null}
           </Box>
-          {isDevOnboardingPreview ? (
-            <Button variant="text" size="small" onClick={stopDevOnboardingPreview} sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}>
-              {t('common:projectOnboarding.devPreviewEndAction')}
-            </Button>
-          ) : null}
         </Stack>
 
         {isOnboardingState ? (
@@ -240,14 +277,35 @@ export default function ProjectSelectionPage() {
                 <ListItem
                   key={membership.project_id}
                   secondaryAction={(
-                    <Button
-                      variant="contained"
-                      onClick={() => {
-                        void openProject(membership.project_id);
-                      }}
-                    >
-                      {t('projectSwitcher.openProjectAction')}
-                    </Button>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Button
+                        variant="contained"
+                        onClick={() => {
+                          void openProject(membership.project_id);
+                        }}
+                      >
+                        {t('projectSwitcher.openProjectAction')}
+                      </Button>
+                      {isDevQuickDeleteEnabled ? (
+                        <Tooltip title={t('projectInvitations:projectDelete.devQuickHint')}>
+                          <span>
+                            <Button
+                              size="small"
+                              color="error"
+                              variant="text"
+                              disabled={quickDeletingProjectId === membership.project_id}
+                              onClick={() => {
+                                void quickDeleteProject(membership);
+                              }}
+                              aria-label={t('projectInvitations:projectDelete.devQuickButton')}
+                              sx={{ minWidth: 0, px: 0.5 }}
+                            >
+                              <DeleteOutlineIcon fontSize="small" />
+                            </Button>
+                          </span>
+                        </Tooltip>
+                      ) : null}
+                    </Stack>
                   )}
                 >
                   <ListItemText

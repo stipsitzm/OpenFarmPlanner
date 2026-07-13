@@ -18,6 +18,8 @@ const projectApiMocks = vi.hoisted(() => ({
     },
   })),
   listDeleted: vi.fn(async () => ({ data: [] })),
+  delete: vi.fn(async () => ({ data: {} })),
+  restore: vi.fn(async () => ({ data: {} })),
 }));
 
 const authState = vi.hoisted(() => ({
@@ -43,6 +45,8 @@ vi.mock('../api/api', async () => {
       ...actual.projectAPI,
       createDemo: projectApiMocks.createDemo,
       listDeleted: projectApiMocks.listDeleted,
+      delete: projectApiMocks.delete,
+      restore: projectApiMocks.restore,
     },
   };
 });
@@ -53,6 +57,10 @@ describe('ProjectSelectionPage', () => {
     authState.switchActiveProject.mockClear();
     authState.refreshUser.mockClear();
     projectApiMocks.createDemo.mockClear();
+    projectApiMocks.delete.mockClear();
+    projectApiMocks.delete.mockResolvedValue({ data: {} });
+    projectApiMocks.restore.mockClear();
+    projectApiMocks.restore.mockResolvedValue({ data: {} });
     projectApiMocks.createDemo.mockResolvedValue({
       data: {
         id: 9,
@@ -100,20 +108,13 @@ describe('ProjectSelectionPage', () => {
     dispatchSpy.mockRestore();
   });
 
-  it('shows first-project onboarding as a developer preview without hiding projects permanently', () => {
+  it('shows first-project onboarding as a developer preview even with existing projects', () => {
     localStorage.setItem(DEV_ONBOARDING_PREVIEW_STORAGE_KEY, '1');
 
     render(<MemoryRouter><ProjectSelectionPage /></MemoryRouter>);
 
-    expect(screen.queryByText(/Entwickler-Vorschau/)).not.toBeInTheDocument();
     expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
     expect(screen.getByText('Demo-Projekt ausprobieren')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Vorschau beenden' }));
-
-    expect(localStorage.getItem(DEV_ONBOARDING_PREVIEW_STORAGE_KEY)).toBeNull();
-    expect(screen.getByText('Alpha')).toBeInTheDocument();
-    expect(screen.queryByText('Demo-Projekt ausprobieren')).not.toBeInTheDocument();
   });
 
   it('creates and opens a demo project from onboarding', async () => {
@@ -166,6 +167,35 @@ describe('ProjectSelectionPage', () => {
       },
     });
     await waitFor(() => expect(authState.switchActiveProject).toHaveBeenCalledWith(9));
+  });
+
+  it('quick-deletes a project from the list after dev confirmation', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(<MemoryRouter><ProjectSelectionPage /></MemoryRouter>);
+
+    const deleteButtons = screen.getAllByRole('button', { name: 'Dev: ohne Namensbestätigung löschen' });
+    fireEvent.click(deleteButtons[0]);
+
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Alpha'));
+    await waitFor(() => {
+      expect(projectApiMocks.delete).toHaveBeenCalledWith(1);
+      expect(authState.refreshUser).toHaveBeenCalled();
+    });
+    confirmSpy.mockRestore();
+  });
+
+  it('does not delete when the dev confirmation is cancelled', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+
+    render(<MemoryRouter><ProjectSelectionPage /></MemoryRouter>);
+
+    const deleteButtons = screen.getAllByRole('button', { name: 'Dev: ohne Namensbestätigung löschen' });
+    fireEvent.click(deleteButtons[0]);
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(projectApiMocks.delete).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
   });
 
   it('shows a readable error when demo creation fails', async () => {
