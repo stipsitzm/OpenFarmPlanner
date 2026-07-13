@@ -44,6 +44,7 @@ import {
   suppressNativeContextMenu,
   useCloseCustomContextMenuOnNativeContextMenu,
 } from '../utils/contextMenu';
+import { confirmAction } from '../utils/confirmAction';
 import {
   bedAPI,
   cultureAPI,
@@ -1082,7 +1083,7 @@ function GanttChartPage() {
 
   const deletePlantingPlanFromTask = useCallback(async (task: GanttTask) => {
     if (!task.plantingPlanId) return;
-    const confirmed = window.confirm(t('ganttChart:contextMenu.confirmDeletePlan'));
+    const confirmed = confirmAction(t('ganttChart:contextMenu.confirmDeletePlan'));
     if (!confirmed) return;
     try {
       await plantingPlanAPI.delete(task.plantingPlanId);

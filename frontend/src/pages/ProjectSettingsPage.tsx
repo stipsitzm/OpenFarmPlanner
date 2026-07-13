@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { projectAPI, type ProjectInvitationPayload, type ProjectMemberPayload } from '../api/api';
 import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
+import { showProjectDeleteUndoSnackbar } from '../projects/projectDeletionFeedback';
 
 interface InviteFeedback {
   severity: 'success' | 'warning' | 'error';
@@ -207,32 +208,14 @@ export default function ProjectSettingsPage() {
       setDeleteDialogOpen(false);
       setDeleteConfirmationText('');
       await refreshUser();
-      window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
-        detail: {
-          message: t('projectDelete.success'),
-          severity: 'success',
-          actionLabel: t('projectDelete.undo'),
-          onAction: async (): Promise<void> => {
-            try {
-              await projectAPI.restore(deletedProjectId);
-              await refreshUser();
-              window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
-                detail: {
-                  message: t('projectDelete.restoreSuccess'),
-                  severity: 'success',
-                },
-              }));
-            } catch {
-              window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
-                detail: {
-                  message: t('projectDelete.restoreError'),
-                  severity: 'error',
-                },
-              }));
-            }
-          },
-        },
-      }));
+      showProjectDeleteUndoSnackbar({
+        projectId: deletedProjectId,
+        deletedMessage: t('projectDelete.success'),
+        undoLabel: t('projectDelete.undo'),
+        restoreSuccessMessage: t('projectDelete.restoreSuccess'),
+        restoreErrorMessage: t('projectDelete.restoreError'),
+        refreshUser,
+      });
       navigate('/app/project-selection', { replace: true });
     } catch {
       setFeedback({ severity: 'error', text: t('projectDelete.error') });

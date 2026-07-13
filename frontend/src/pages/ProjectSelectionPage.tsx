@@ -23,7 +23,9 @@ import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
 import { clearDevOnboardingPreview, isDevOnboardingPreviewEnabled } from '../projects/devOnboardingPreview';
 import { openProjectCreationFlow } from '../projects/projectCreationFlow';
+import { showProjectDeleteUndoSnackbar } from '../projects/projectDeletionFeedback';
 import { confirmAction } from '../utils/confirmAction';
+import { showGlobalSnackbar } from '../utils/globalSnackbar';
 
 const isDevQuickDeleteEnabled = import.meta.env.DEV;
 
@@ -91,9 +93,7 @@ export default function ProjectSelectionPage() {
   };
 
   const showSnackbar = (message: string, severity: 'success' | 'error'): void => {
-    window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
-      detail: { message, severity },
-    }));
+    showGlobalSnackbar({ message, severity });
   };
 
   const createDemoProject = async (): Promise<void> => {
@@ -153,22 +153,14 @@ export default function ProjectSelectionPage() {
       const { project_id: projectId } = membership;
       await projectAPI.delete(projectId);
       await refreshUser();
-      window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
-        detail: {
-          message: t('projectInvitations:projectDelete.success'),
-          severity: 'success',
-          actionLabel: t('projectInvitations:projectDelete.undo'),
-          onAction: async (): Promise<void> => {
-            try {
-              await projectAPI.restore(projectId);
-              await refreshUser();
-              showSnackbar(t('projectInvitations:projectDelete.restoreSuccess'), 'success');
-            } catch {
-              showSnackbar(t('projectInvitations:projectDelete.restoreError'), 'error');
-            }
-          },
-        },
-      }));
+      showProjectDeleteUndoSnackbar({
+        projectId,
+        deletedMessage: t('projectInvitations:projectDelete.success'),
+        undoLabel: t('projectInvitations:projectDelete.undo'),
+        restoreSuccessMessage: t('projectInvitations:projectDelete.restoreSuccess'),
+        restoreErrorMessage: t('projectInvitations:projectDelete.restoreError'),
+        refreshUser,
+      });
     } catch {
       showSnackbar(t('projectInvitations:projectDelete.error'), 'error');
     } finally {

@@ -1,8 +1,17 @@
+import { showGlobalSnackbar, type GlobalSnackbarSeverity } from '../../utils/globalSnackbar';
+
 export type TableClipboardRow = readonly string[];
 
 interface ClipboardSnackbarDetail {
   message: string;
-  severity?: 'success' | 'error';
+  severity?: GlobalSnackbarSeverity;
+}
+
+interface CopyRowsToClipboardOptions {
+  rows: readonly TableClipboardRow[];
+  successMessage: string;
+  errorMessage: string;
+  errorLogMessage?: string;
 }
 
 const sanitizeTsvCell = (value: string): string => value.replace(/\t/g, ' ').replace(/\r?\n/g, ' ').trim();
@@ -39,6 +48,21 @@ export async function copyTextToClipboard(text: string): Promise<void> {
   await navigator.clipboard.writeText(text);
 }
 
-export function showClipboardSnackbar(detail: ClipboardSnackbarDetail): void {
-  window.dispatchEvent(new CustomEvent('ofp:show-snackbar', { detail }));
+function showClipboardSnackbar(detail: ClipboardSnackbarDetail): void {
+  showGlobalSnackbar(detail);
+}
+
+export async function copyRowsToClipboard({
+  rows,
+  successMessage,
+  errorMessage,
+  errorLogMessage = 'Error copying table data',
+}: CopyRowsToClipboardOptions): Promise<void> {
+  try {
+    await copyTextToClipboard(buildTsv(rows));
+    showClipboardSnackbar({ message: successMessage, severity: 'success' });
+  } catch (error) {
+    console.error(errorLogMessage, error);
+    showClipboardSnackbar({ message: errorMessage, severity: 'error' });
+  }
 }

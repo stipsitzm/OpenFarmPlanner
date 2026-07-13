@@ -37,6 +37,8 @@ import {
   Typography,
   Link,
   Stack,
+  type SxProps,
+  type Theme,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -72,6 +74,18 @@ import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import {
   DeleteUndoSnackbar,
 } from '../components/data-grid';
+
+const PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_CONTAINER_SX: SxProps<Theme> = {
+  backgroundColor: 'rgba(76, 175, 80, 0.06)',
+  borderLeft: '3px solid',
+  borderLeftColor: 'success.main',
+  py: 1.25,
+  px: 1.5,
+};
+
+const PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_TITLE_SX: SxProps<Theme> = {
+  fontWeight: 500,
+};
 
 function Cultures() {
   const { t } = useTranslation(['cultures', 'common']);
@@ -253,7 +267,6 @@ function Cultures() {
       setHasBeds(false);
       return;
     }
-    // eslint-disable-next-line -- Data fetching on mount is intentional
     fetchCultures();
   }, [fetchCultures, shouldShowProjectRequiredState]);
 
@@ -420,11 +433,11 @@ function Cultures() {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  const handleCreatePlantingPlan = () => {
+  const handleCreatePlantingPlan = useCallback(() => {
     if (selectedCultureId) {
       navigate(`/app/planting-plans?cultureId=${selectedCultureId}`);
     }
-  };
+  }, [navigate, selectedCultureId]);
 
   const firstMissingPlanRequirement = getFirstMissingCultivationPlanRequirement({
     hasFields,
@@ -435,6 +448,17 @@ function Cultures() {
     ? getProjectSetupAction(firstMissingPlanRequirement)
     : null;
   const canCreatePlantingPlan = Boolean(selectedCulture) && firstMissingPlanRequirement === null;
+  const planRequirementEmptyState = firstMissingPlanRequirement === 'fields'
+    ? {
+      title: t('buttons.createPlantingPlanMissingFieldsTitle'),
+      description: t('buttons.createPlantingPlanDisabled.fields'),
+    }
+    : firstMissingPlanRequirement === 'beds'
+      ? {
+        title: t('buttons.createPlantingPlanMissingBedsTitle'),
+        description: t('buttons.createPlantingPlanDisabled.beds'),
+      }
+      : null;
   useCommandContextTag('cultures');
 
   const goToRelativeCulture = useCallback((direction: 'next' | 'previous') => {
@@ -559,38 +583,15 @@ function Cultures() {
       </Box>
       {cultures.length > 0 && (
         <Box sx={{ mb: 2 }}>
-          {firstMissingPlanRequirement === 'fields' ? (
+          {planRequirementEmptyState ? (
             <EmptyStateCard
-              title={t('buttons.createPlantingPlanMissingFieldsTitle')}
-              description={t('buttons.createPlantingPlanDisabled.fields')}
+              title={planRequirementEmptyState.title}
+              description={planRequirementEmptyState.description}
               actions={firstMissingPlanAction ? [{ label: t(firstMissingPlanAction.labelKey), to: firstMissingPlanAction.to }] : []}
-              containerSx={{
-                backgroundColor: 'rgba(76, 175, 80, 0.06)',
-                borderLeft: '3px solid',
-                borderLeftColor: 'success.main',
-                py: 1.25,
-                px: 1.5,
-              }}
-              titleSx={{ fontWeight: 500 }}
+              containerSx={PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_CONTAINER_SX}
+              titleSx={PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_TITLE_SX}
             />
           ) : null}
-
-          {firstMissingPlanRequirement === 'beds' ? (
-            <EmptyStateCard
-              title={t('buttons.createPlantingPlanMissingBedsTitle')}
-              description={t('buttons.createPlantingPlanDisabled.beds')}
-              actions={firstMissingPlanAction ? [{ label: t(firstMissingPlanAction.labelKey), to: firstMissingPlanAction.to }] : []}
-              containerSx={{
-                backgroundColor: 'rgba(76, 175, 80, 0.06)',
-                borderLeft: '3px solid',
-                borderLeftColor: 'success.main',
-                py: 1.25,
-                px: 1.5,
-              }}
-              titleSx={{ fontWeight: 500 }}
-            />
-          ) : null}
-
         </Box>
       )}
 

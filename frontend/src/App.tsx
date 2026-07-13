@@ -88,6 +88,7 @@ import {
 } from './components/buttons/segmentedControlStyles';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryTarget, getHistoryEntryTitle, isCurrentHistoryEntry } from './pages/culturesHistoryUtils';
+import { GLOBAL_SNACKBAR_EVENT, type GlobalSnackbarDetail } from './utils/globalSnackbar';
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { useGlobalOverlayKeyboardScroll } from './hooks/useDialogKeyboardScroll';
@@ -161,14 +162,7 @@ interface SnackbarState {
   message: string;
   severity: 'success' | 'error';
   actionLabel?: string;
-  onAction?: () => void;
-}
-
-interface GlobalSnackbarEventDetail {
-  message: string;
-  severity: 'success' | 'error';
-  actionLabel?: string;
-  onAction?: () => void;
+  onAction?: () => void | Promise<void>;
 }
 
 interface ProjectMenuProps {
@@ -497,21 +491,21 @@ function RootLayout() {
     message: '',
     severity: 'success',
   });
-  const showSnackbar = useCallback((message: string, severity: 'success' | 'error', actionLabel?: string, onAction?: () => void) => {
+  const showSnackbar = useCallback((message: string, severity: 'success' | 'error', actionLabel?: string, onAction?: () => void | Promise<void>) => {
     setSnackbar({ open: true, message, severity, actionLabel, onAction });
   }, []);
 
   useEffect(() => {
     const handleGlobalSnackbar = (event: Event): void => {
-      const detail = (event as CustomEvent<GlobalSnackbarEventDetail>).detail;
+      const detail = (event as CustomEvent<GlobalSnackbarDetail>).detail;
       if (!detail?.message) {
         return;
       }
       showSnackbar(detail.message, detail.severity ?? 'success', detail.actionLabel, detail.onAction);
     };
 
-    window.addEventListener('ofp:show-snackbar', handleGlobalSnackbar);
-    return () => window.removeEventListener('ofp:show-snackbar', handleGlobalSnackbar);
+    window.addEventListener(GLOBAL_SNACKBAR_EVENT, handleGlobalSnackbar);
+    return () => window.removeEventListener(GLOBAL_SNACKBAR_EVENT, handleGlobalSnackbar);
   }, [showSnackbar]);
 
   const handleOpenProjectHistory = useCallback(async () => {
@@ -2104,7 +2098,7 @@ function RootLayout() {
               size="small"
               onClick={() => {
                 setSnackbar((prev) => ({ ...prev, open: false }));
-                snackbar.onAction?.();
+                void snackbar.onAction?.();
               }}
             >
               {snackbar.actionLabel}

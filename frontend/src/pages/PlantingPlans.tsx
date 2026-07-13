@@ -79,11 +79,9 @@ import {
   type EditableRow,
   type DataGridAPI,
   type EditableDataGridCommandApi,
-  buildTsv,
-  copyTextToClipboard,
+  copyRowsToClipboard,
   formatClipboardValue,
   getPlainExcerpt,
-  showClipboardSnackbar,
   toIsoDateString,
   parseGermanDateText,
   formatDateAsGerman,
@@ -1216,16 +1214,12 @@ function PlantingPlans() {
     rows: readonly string[][],
     successMessage: string,
   ): Promise<void> => {
-    try {
-      await copyTextToClipboard(buildTsv(rows));
-      showClipboardSnackbar({ message: successMessage, severity: "success" });
-    } catch (error) {
-      console.error("Error copying planting plan data", error);
-      showClipboardSnackbar({
-        message: t("common:messages.copyError"),
-        severity: "error",
-      });
-    }
+    await copyRowsToClipboard({
+      rows,
+      successMessage,
+      errorMessage: t("common:messages.copyError"),
+      errorLogMessage: "Error copying planting plan data",
+    });
   }, [t]);
 
   const handleCopyPlantingPlan = useCallback((row: PlantingPlanRow): void => {

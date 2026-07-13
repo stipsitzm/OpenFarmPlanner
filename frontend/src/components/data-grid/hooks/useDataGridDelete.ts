@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import type { GridRowId, GridRowModesModel, GridRowsProp } from '@mui/x-data-grid';
 import { extractApiErrorMessage } from '../../../api/errors';
 import { confirmAction } from '../../../utils/confirmAction';
+import { createTransientId } from '../../../utils/transientId';
 import { DELETE_UNDO_DURATION_MS } from '../DeleteUndoSnackbar';
 import { isUnsavedDraftRow } from '../dataGridUtils';
 import type { TFunction } from 'i18next';
@@ -166,7 +167,7 @@ export function useDataGridDelete<T extends EditableRow>({
     }
 
     if (deleteUndoOptions) {
-      const deletionId = `${rowKey}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const deletionId = createTransientId(rowKey);
       const pendingDeletion: PendingDeleteWithUndo<T> = {
         id: deletionId,
         rowId: id,

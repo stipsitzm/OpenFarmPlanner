@@ -43,6 +43,8 @@ import { ContextMenuHint, DELETE_UNDO_DURATION_MS, DeleteUndoSnackbar, TableCopy
 import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from '../components/data-grid/contextMenuFocus';
 import { extractApiErrorMessage } from '../api/errors';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu, useCloseCustomContextMenuOnNativeContextMenu } from '../utils/contextMenu';
+import { showGlobalSnackbar } from '../utils/globalSnackbar';
+import { createTransientId } from '../utils/transientId';
 
 interface SupplierDraft {
   id?: number;
@@ -263,12 +265,7 @@ export default function Suppliers() {
   };
 
   const showDeleteError = useCallback((message: string): void => {
-    window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
-      detail: {
-        message,
-        severity: 'error',
-      },
-    }));
+    showGlobalSnackbar({ message, severity: 'error' });
   }, []);
 
   const removePendingSupplierDeletion = useCallback((deletionId: string): void => {
@@ -370,9 +367,10 @@ export default function Suppliers() {
   }, []);
 
   useEffect(() => {
+    const pendingSupplierDeleteTimers = pendingSupplierDeleteTimersRef.current;
     return () => {
-      pendingSupplierDeleteTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
-      pendingSupplierDeleteTimersRef.current.clear();
+      pendingSupplierDeleteTimers.forEach((timerId) => window.clearTimeout(timerId));
+      pendingSupplierDeleteTimers.clear();
     };
   }, []);
 
@@ -394,7 +392,7 @@ export default function Suppliers() {
       return;
     }
 
-    const deletionId = `supplier-${supplier.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const deletionId = createTransientId('supplier', supplier.id);
     const pendingDeletion: PendingSupplierDeletion = {
       id: deletionId,
       supplierId: supplier.id,
@@ -432,7 +430,7 @@ export default function Suppliers() {
     try {
       setError('');
       const response = await supplierAPI.unlinkAndDelete(supplierId);
-      const deletionId = `supplier-unlink-${supplierId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const deletionId = createTransientId('supplier-unlink', supplierId);
       const pendingDeletion: PendingSupplierDeletion = {
         id: deletionId,
         supplierId,

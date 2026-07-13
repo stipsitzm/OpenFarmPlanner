@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 import type { GridRowModesModel } from '@mui/x-data-grid';
 import { bedAPI, fieldAPI, locationAPI, type Bed, type Field, type Location as FarmLocation } from '../../../api/api';
 import { extractApiErrorMessage } from '../../../api/errors';
+import { createTransientId } from '../../../utils/transientId';
 import type { HierarchyRow } from '../utils/types';
 import { hasPersistedEntityId } from '../utils/hierarchyUtils';
 
@@ -46,6 +47,41 @@ interface UseHierarchyDeleteResult {
   closePendingDeletionSnackbar: (deletionId: string) => void;
 }
 
+function buildLocationRestorePayload(location: FarmLocation): FarmLocation {
+  return {
+    name: location.name,
+    address: location.address,
+    description: location.description,
+    soil_type: location.soil_type,
+    exposure: location.exposure,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    notes: location.notes,
+  };
+}
+
+function buildFieldRestorePayload(field: Field, location: number): Field {
+  return {
+    name: field.name,
+    location,
+    area_sqm: field.area_sqm,
+    length_m: field.length_m,
+    width_m: field.width_m,
+    notes: field.notes,
+  };
+}
+
+function buildBedRestorePayload(bed: Bed, field: number): Bed {
+  return {
+    name: bed.name,
+    field,
+    area_sqm: bed.area_sqm,
+    length_m: bed.length_m,
+    width_m: bed.width_m,
+    notes: bed.notes,
+  };
+}
+
 export function useHierarchyDelete({
   locations,
   fields,
@@ -71,41 +107,35 @@ export function useHierarchyDelete({
     const fieldIdMap = new Map<number, number>();
 
     for (const locationItem of deletion.locations) {
-      const { id, created_at, updated_at, ...locationPayload } = locationItem;
+      const { id } = locationItem;
       if (typeof id !== 'number') {
         continue;
       }
-      const restoredLocation = await locationAPI.create(locationPayload);
+      const restoredLocation = await locationAPI.create(buildLocationRestorePayload(locationItem));
       if (typeof restoredLocation.data.id === 'number') {
         locationIdMap.set(id, restoredLocation.data.id);
       }
     }
 
     for (const field of deletion.fields) {
-      const { id, location_name, created_at, updated_at, ...fieldPayload } = field;
+      const { id } = field;
       if (typeof id !== 'number') {
         continue;
       }
       const restoredLocationId = locationIdMap.get(field.location) ?? field.location;
-      const restoredField = await fieldAPI.create({
-        ...fieldPayload,
-        location: restoredLocationId,
-      });
+      const restoredField = await fieldAPI.create(buildFieldRestorePayload(field, restoredLocationId));
       if (typeof restoredField.data.id === 'number') {
         fieldIdMap.set(id, restoredField.data.id);
       }
     }
 
     for (const bed of deletion.beds) {
-      const { id, field_name, created_at, updated_at, ...bedPayload } = bed;
+      const { id } = bed;
       if (typeof id !== 'number') {
         continue;
       }
       const restoredFieldId = fieldIdMap.get(bed.field) ?? bed.field;
-      await bedAPI.create({
-        ...bedPayload,
-        field: restoredFieldId,
-      });
+      await bedAPI.create(buildBedRestorePayload(bed, restoredFieldId));
     }
 
     await fetchData();
@@ -158,7 +188,7 @@ export function useHierarchyDelete({
   }, [t]);
 
   const deleteHierarchyRowWithUndo = useCallback(async (row: HierarchyRow): Promise<void> => {
-    const deletionId = `${row.type}-${String(row.id)}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const deletionId = createTransientId(row.type, row.id);
     let deletionType: PendingHierarchyDeletionType;
     let targetId: number | undefined;
     let deletedLocations: FarmLocation[] = [];
