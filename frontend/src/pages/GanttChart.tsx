@@ -87,11 +87,12 @@ import {
   type GanttTaskGroup,
   type OccupancyHierarchyNode,
 } from './ganttChartUtils';
-import { getFirstMissingCultivationPlanRequirement, getProjectSetupActions } from './requirementFlow';
+import { getFirstMissingCultivationPlanRequirement, getTranslatedProjectSetupActions } from './requirementFlow';
 import {
   getSegmentedActionButtonSx,
   segmentedButtonGroupSx,
 } from '../components/buttons/segmentedControlStyles';
+import { copyTextToClipboardSilently } from '../components/data-grid';
 import { getGanttRenderWindow } from './ganttRenderWindow';
 import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState';
 import { collectVisibleIdsWithAncestors, flattenTreeRows } from '../components/hierarchy/utils/treeRows';
@@ -1078,7 +1079,7 @@ function GanttChartPage() {
       group.name,
       `${formatGanttDate(task.startDate)} – ${formatGanttDate(task.endDate)}`,
     ].filter(Boolean);
-    void navigator.clipboard?.writeText(parts.join(' · ')).catch(() => undefined);
+    copyTextToClipboardSilently(parts.join(' · '));
   }, []);
 
   const deletePlantingPlanFromTask = useCallback(async (task: GanttTask) => {
@@ -1796,7 +1797,7 @@ function GanttChartPage() {
   const firstMissingRequirement = firstMissingPrerequisite ?? (hasPlantingPlans ? null : 'plans');
   const hasCalendarRequirements = firstMissingRequirement === null;
   const requirementActions = firstMissingRequirement
-    ? getProjectSetupActions(firstMissingRequirement)
+    ? getTranslatedProjectSetupActions(firstMissingRequirement, t)
     : [];
   const calendarCommands = useMemo<CommandSpec[]>(() => [
     {
@@ -2422,7 +2423,7 @@ function GanttChartPage() {
                   ...(firstMissingRequirement === 'beds' ? [{ label: t('ganttChart:requirements.bed.label'), done: false, missingLabel: t('ganttChart:requirements.bed.missing') }] : []),
                   ...(firstMissingRequirement === 'cultures' ? [{ label: t('ganttChart:requirements.culture.label'), done: false, missingLabel: t('ganttChart:requirements.culture.missing') }] : []),
                 ]}
-                actions={requirementActions.map((action) => ({ label: t(action.labelKey), to: action.to }))}
+                actions={requirementActions}
               />
             </Box>
           </Box>

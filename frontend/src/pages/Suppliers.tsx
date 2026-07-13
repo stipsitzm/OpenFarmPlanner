@@ -40,9 +40,10 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { useRegisterCreateActions } from '../commands/useCommandContext';
 import { ContextMenuHint, DELETE_UNDO_DURATION_MS, DeleteUndoSnackbar, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
-import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from '../components/data-grid/contextMenuFocus';
+import { handleContextMenuKeyboardNavigation } from '../components/data-grid/contextMenuFocus';
+import { useRowContextMenuState } from '../components/contextMenu/useRowContextMenuState';
 import { extractApiErrorMessage } from '../api/errors';
-import { shouldOpenCustomContextMenu, suppressNativeContextMenu, useCloseCustomContextMenuOnNativeContextMenu } from '../utils/contextMenu';
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
 import { showGlobalSnackbar } from '../utils/globalSnackbar';
 import { createTransientId } from '../utils/transientId';
 
@@ -108,12 +109,6 @@ export default function Suppliers() {
   const [loadError, setLoadError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<SupplierFieldErrors>({});
   const [draft, setDraft] = useState<SupplierDraft>({ name: '', homepage_url: '' });
-  const [contextMenuState, setContextMenuState] = useState<{
-    supplier: Supplier;
-    mouseX: number;
-    mouseY: number;
-  } | null>(null);
-  const contextMenuOriginRef = useRef<HTMLElement | null>(null);
   const [pendingSupplierDeletions, setPendingSupplierDeletions] = useState<PendingSupplierDeletion[]>([]);
   const [deleteUsageDialog, setDeleteUsageDialog] = useState<SupplierDeleteUsageDialogState | null>(null);
   const [unlinkDeletingSupplierId, setUnlinkDeletingSupplierId] = useState<number | null>(null);
@@ -454,30 +449,17 @@ export default function Suppliers() {
     }
   }, [deleteUsageDialog, showDeleteError, suppliers, t]);
 
-  const closeContextMenu = useCallback((): void => {
-    setContextMenuState(null);
-    focusContextMenuOrigin(contextMenuOriginRef.current);
-  }, []);
-  const contextMenuListRef = useContextMenuFocus(contextMenuState !== null, closeContextMenu);
-
   const isSupplierContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
     shouldOpenCustomContextMenu(target) &&
     target instanceof HTMLElement &&
     target.closest('tr[data-supplier-id]') !== null
   ), []);
-  const repositionOpenSupplierContextMenu = useCallback((event: globalThis.MouseEvent): void => {
-    setContextMenuState((currentState) => (
-      currentState
-        ? { supplier: currentState.supplier, mouseX: event.clientX + 2, mouseY: event.clientY - 6 }
-        : currentState
-    ));
-  }, []);
-  useCloseCustomContextMenuOnNativeContextMenu(
-    contextMenuState !== null,
-    closeContextMenu,
-    isSupplierContextMenuTarget,
-    repositionOpenSupplierContextMenu,
-  );
+  const {
+    state: contextMenuState,
+    listRef: contextMenuListRef,
+    open: openContextMenuState,
+    close: closeContextMenu,
+  } = useRowContextMenuState<Supplier>({ isContextMenuTarget: isSupplierContextMenuTarget });
 
   const openSupplierContextMenu = useCallback((
     event: MouseEvent<HTMLTableRowElement>,
@@ -488,13 +470,8 @@ export default function Suppliers() {
     }
     suppressNativeContextMenu(event);
     markContextMenuHintUsed();
-    contextMenuOriginRef.current = event.currentTarget;
-    setContextMenuState({
-      supplier,
-      mouseX: event.clientX + 2,
-      mouseY: event.clientY - 6,
-    });
-  }, [isSupplierContextMenuTarget, markContextMenuHintUsed]);
+    openContextMenuState(supplier, event.clientX + 2, event.clientY - 6, event.currentTarget);
+  }, [isSupplierContextMenuTarget, markContextMenuHintUsed, openContextMenuState]);
 
   const openSupplierKeyboardContextMenu = useCallback((
     event: KeyboardEvent<HTMLTableRowElement>,
@@ -507,20 +484,20 @@ export default function Suppliers() {
 
     suppressNativeContextMenu(event);
     markContextMenuHintUsed();
-    contextMenuOriginRef.current = event.currentTarget;
     const rowRect = event.currentTarget.getBoundingClientRect();
-    setContextMenuState({
+    openContextMenuState(
       supplier,
-      mouseX: rowRect.left + Math.min(240, rowRect.width),
-      mouseY: rowRect.top + 12,
-    });
-  }, [markContextMenuHintUsed]);
+      rowRect.left + Math.min(240, rowRect.width),
+      rowRect.top + 12,
+      event.currentTarget,
+    );
+  }, [markContextMenuHintUsed, openContextMenuState]);
 
   const handleContextMenuDelete = useCallback((): void => {
     if (!contextMenuState) {
       return;
     }
-    const { supplier } = contextMenuState;
+    const { key: supplier } = contextMenuState;
     closeContextMenu();
     void deleteSupplier(supplier);
   }, [closeContextMenu, contextMenuState, deleteSupplier]);
@@ -529,7 +506,7 @@ export default function Suppliers() {
     if (!contextMenuState) {
       return;
     }
-    const { supplier } = contextMenuState;
+    const { key: supplier } = contextMenuState;
     closeContextMenu();
     openEdit(supplier);
   }, [closeContextMenu, contextMenuState, openEdit]);
@@ -538,14 +515,9 @@ export default function Suppliers() {
     event.preventDefault();
     event.stopPropagation();
     markContextMenuHintUsed();
-    contextMenuOriginRef.current = event.currentTarget;
     const rect = event.currentTarget.getBoundingClientRect();
-    setContextMenuState({
-      supplier,
-      mouseX: rect.right - 8,
-      mouseY: rect.top + 12,
-    });
-  }, [markContextMenuHintUsed]);
+    openContextMenuState(supplier, rect.right - 8, rect.top + 12, event.currentTarget);
+  }, [markContextMenuHintUsed, openContextMenuState]);
 
   const getSupplierRowClipboardValues = useCallback((supplier: Supplier): string[] => [
     supplier.name,
@@ -750,7 +722,7 @@ export default function Suppliers() {
           />
         </MenuItem>
         <TableCopyMenuItems
-          rowValues={contextMenuState ? getSupplierRowClipboardValues(contextMenuState.supplier) : null}
+          rowValues={contextMenuState ? getSupplierRowClipboardValues(contextMenuState.key) : null}
           tableRows={getSupplierTableClipboardRows()}
           copyRowLabel={t('common:actions.copyRow')}
           copyTableLabel={t('common:actions.copyTable')}

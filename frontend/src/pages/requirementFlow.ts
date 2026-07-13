@@ -6,6 +6,13 @@ export interface ProjectSetupAction {
   to: string;
 }
 
+export interface TranslatedProjectSetupAction {
+  label: string;
+  to: string;
+}
+
+type Translate = (key: string) => string;
+
 const PROJECT_SETUP_ACTIONS: Record<ProjectSetupStep, ProjectSetupAction> = {
   fields: { labelKey: 'common:setupActions.createField', to: '/app/fields-beds?action=add-parcel' },
   beds: { labelKey: 'common:setupActions.openAreas', to: '/app/fields-beds' },
@@ -48,6 +55,24 @@ export function getProjectSetupActions(step: ProjectSetupStep): ProjectSetupActi
     return CULTURE_SETUP_ACTIONS;
   }
   return [getProjectSetupAction(step)];
+}
+
+export function getTranslatedProjectSetupAction(
+  step: ProjectSetupStep,
+  translate: Translate,
+): TranslatedProjectSetupAction {
+  const action = getProjectSetupAction(step);
+  return { label: translate(action.labelKey), to: action.to };
+}
+
+export function getTranslatedProjectSetupActions(
+  step: ProjectSetupStep,
+  translate: Translate,
+): TranslatedProjectSetupAction[] {
+  return getProjectSetupActions(step).map((action) => ({
+    label: translate(action.labelKey),
+    to: action.to,
+  }));
 }
 
 export function getFirstMissingCultivationPlanRequirement(

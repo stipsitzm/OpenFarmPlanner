@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildTsv, copyRowsToClipboard } from '../components/data-grid/tableClipboard';
+import { buildTsv, copyRowsToClipboard, copyTextToClipboardSilently } from '../components/data-grid/tableClipboard';
 import { GLOBAL_SNACKBAR_EVENT } from '../utils/globalSnackbar';
 
 const originalClipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
@@ -77,5 +77,39 @@ describe('table clipboard utilities', () => {
       message: 'Copy failed',
       severity: 'error',
     });
+  });
+
+  it('copies silent text without snackbar feedback', async () => {
+    const listener = vi.fn();
+    window.addEventListener(GLOBAL_SNACKBAR_EVENT, listener);
+    writeText.mockResolvedValue(undefined);
+
+    try {
+      copyTextToClipboardSilently('Tomato / Bed 1');
+      await Promise.resolve();
+    } finally {
+      window.removeEventListener(GLOBAL_SNACKBAR_EVENT, listener);
+    }
+
+    expect(writeText).toHaveBeenCalledWith('Tomato / Bed 1');
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('ignores silent text copy failures without snackbar feedback', async () => {
+    const listener = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    window.addEventListener(GLOBAL_SNACKBAR_EVENT, listener);
+    writeText.mockRejectedValue(new Error('Clipboard denied'));
+
+    try {
+      copyTextToClipboardSilently('Tomato / Bed 1');
+      await Promise.resolve();
+      await Promise.resolve();
+    } finally {
+      window.removeEventListener(GLOBAL_SNACKBAR_EVENT, listener);
+    }
+
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(listener).not.toHaveBeenCalled();
   });
 });

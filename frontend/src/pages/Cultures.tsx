@@ -68,7 +68,7 @@ import { CulturesExportDialog } from './CulturesExportDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
-import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction } from './requirementFlow';
+import { getFirstMissingCultivationPlanRequirement, getTranslatedProjectSetupAction } from './requirementFlow';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import {
@@ -445,7 +445,7 @@ function Cultures() {
     hasCultures: cultures.length > 0,
   });
   const firstMissingPlanAction = firstMissingPlanRequirement
-    ? getProjectSetupAction(firstMissingPlanRequirement)
+    ? getTranslatedProjectSetupAction(firstMissingPlanRequirement, t)
     : null;
   const canCreatePlantingPlan = Boolean(selectedCulture) && firstMissingPlanRequirement === null;
   const planRequirementEmptyState = firstMissingPlanRequirement === 'fields'
@@ -587,7 +587,7 @@ function Cultures() {
             <EmptyStateCard
               title={planRequirementEmptyState.title}
               description={planRequirementEmptyState.description}
-              actions={firstMissingPlanAction ? [{ label: t(firstMissingPlanAction.labelKey), to: firstMissingPlanAction.to }] : []}
+              actions={firstMissingPlanAction ? [firstMissingPlanAction] : []}
               containerSx={PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_CONTAINER_SX}
               titleSx={PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_TITLE_SX}
             />

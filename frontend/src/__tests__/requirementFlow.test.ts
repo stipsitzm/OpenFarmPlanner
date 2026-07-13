@@ -4,6 +4,7 @@ import {
   getFirstMissingProjectSetupStep,
   getProjectSetupAction,
   getProjectSetupActions,
+  getTranslatedProjectSetupActions,
 } from '../pages/requirementFlow';
 
 describe('getFirstMissingCultivationPlanRequirement', () => {
@@ -56,6 +57,19 @@ describe('project setup actions', () => {
       },
       {
         labelKey: 'common:setupActions.createCulture',
+        to: '/app/cultures?create=true',
+      },
+    ]);
+  });
+
+  it('translates setup actions while preserving routes', () => {
+    expect(getTranslatedProjectSetupActions('cultures', (key) => `translated:${key}`)).toEqual([
+      {
+        label: 'translated:common:setupActions.openCultureLibrary',
+        to: '/app/cultures?library=true',
+      },
+      {
+        label: 'translated:common:setupActions.createCulture',
         to: '/app/cultures?create=true',
       },
     ]);

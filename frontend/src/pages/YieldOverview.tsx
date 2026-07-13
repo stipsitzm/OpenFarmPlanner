@@ -28,6 +28,7 @@ import {
   segmentedToggleButtonGroupSx,
   segmentedToggleButtonSx,
 } from "../components/buttons/segmentedControlStyles";
+import { copyTextToClipboardSilently } from "../components/data-grid";
 import PageContainer from "../components/layout/PageContainer";
 import PageSurface from "../components/layout/PageSurface";
 import EmptyStateCard from "../components/project/EmptyStateCard";
@@ -505,7 +506,7 @@ function YieldDistributionChart({
 
   const copySegmentSummary = useCallback((payload: { cultureName: string; periodLabel: string; yieldValue: number }) => {
     const summary = `${payload.cultureName} · ${payload.periodLabel} · ${payload.yieldValue.toFixed(2)} kg`;
-    void navigator.clipboard?.writeText(summary).catch(() => undefined);
+    copyTextToClipboardSilently(summary);
   }, []);
 
   // Keyboard navigation between bars — the chart-region reference
@@ -650,8 +651,32 @@ function YieldDistributionChart({
   // Cultures are pre-sorted by visible yield (see useYieldChartData), so the
   // collapsed legend still shows the most relevant entries instead of hiding
   // every culture behind a count button.
-  const [isLegendExpanded, setIsLegendExpanded] = useState(false);
   const legendCultureCount = chartCultures.length;
+  const legendExpansionResetKey = `${legendCultureCount}:${period}:${selectedCultureId}`;
+  const [legendExpansionState, setLegendExpansionState] = useState({
+    resetKey: legendExpansionResetKey,
+    expanded: false,
+  });
+  const isLegendExpanded = (
+    legendExpansionState.resetKey === legendExpansionResetKey
+      ? legendExpansionState.expanded
+      : false
+  );
+  const toggleLegendExpanded = useCallback(() => {
+    setLegendExpansionState((current) => {
+      const currentExpanded = current.resetKey === legendExpansionResetKey
+        ? current.expanded
+        : false;
+      return {
+        resetKey: legendExpansionResetKey,
+        expanded: !currentExpanded,
+      };
+    });
+  }, [legendExpansionResetKey]);
+  const chartCultureIds = useMemo(() => new Set(chartCultures.map((culture) => culture.id)), [chartCultures]);
+  const activeHighlightedCultureId = highlightedCultureId !== null && chartCultureIds.has(highlightedCultureId)
+    ? highlightedCultureId
+    : null;
   const isLegendExpandable = legendCultureCount > DEFAULT_LEGEND_CULTURE_LIMIT;
   const visibleLegendCultures = useMemo(
     () => (
@@ -662,19 +687,6 @@ function YieldDistributionChart({
     [chartCultures, isLegendExpanded, isLegendExpandable],
   );
   const hiddenLegendCultureCount = legendCultureCount - DEFAULT_LEGEND_CULTURE_LIMIT;
-
-  useEffect(() => {
-    setIsLegendExpanded(false);
-  }, [legendCultureCount, period, selectedCultureId]);
-
-  useEffect(() => {
-    if (
-      highlightedCultureId !== null
-      && !chartCultures.some((culture) => culture.id === highlightedCultureId)
-    ) {
-      setHighlightedCultureId(null);
-    }
-  }, [chartCultures, highlightedCultureId]);
 
   return (
     <>
@@ -701,8 +713,8 @@ function YieldDistributionChart({
             }}
           >
             {visibleLegendCultures.map((culture) => {
-              const isHighlighted = highlightedCultureId === culture.id;
-              const isDimmed = highlightedCultureId !== null && !isHighlighted;
+              const isHighlighted = activeHighlightedCultureId === culture.id;
+              const isDimmed = activeHighlightedCultureId !== null && !isHighlighted;
               const formattedYield = formatCompactYield(
                 culture.totalYield,
                 i18n.resolvedLanguage ?? i18n.language,
@@ -767,7 +779,7 @@ function YieldDistributionChart({
           {isLegendExpandable ? (
             <Button
               size="small"
-              onClick={() => setIsLegendExpanded((value) => !value)}
+              onClick={toggleLegendExpanded}
               sx={{ textTransform: "none", mt: 1 }}
             >
               {isLegendExpanded
@@ -869,7 +881,7 @@ function YieldDistributionChart({
                           isKeyboardTooltipOpen={keyboardTooltipKey === segmentKey}
                           isTooltipSuppressed={contextMenuState !== null}
                           isPressed={pressedSegmentKey === segmentKey && isLongPressing}
-                          isDimmed={highlightedCultureId !== null && highlightedCultureId !== culture.culture_id}
+                          isDimmed={activeHighlightedCultureId !== null && activeHighlightedCultureId !== culture.culture_id}
                           tooltipPeriodLabel={tooltipPeriodLabel}
                           tooltipYieldLabel={tooltipYieldLabel}
                           actionsLabel={actionsLabel}

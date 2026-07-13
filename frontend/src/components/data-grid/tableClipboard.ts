@@ -48,6 +48,10 @@ export async function copyTextToClipboard(text: string): Promise<void> {
   await navigator.clipboard.writeText(text);
 }
 
+export function copyTextToClipboardSilently(text: string): void {
+  void copyTextToClipboard(text).catch(() => undefined);
+}
+
 function showClipboardSnackbar(detail: ClipboardSnackbarDetail): void {
   showGlobalSnackbar(detail);
 }

@@ -97,7 +97,11 @@ import {
 import type { CommandSpec } from "../commands/types";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { useColumnVisibility } from "../hooks/useColumnVisibility";
-import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction, getProjectSetupActions } from "./requirementFlow";
+import {
+  getFirstMissingCultivationPlanRequirement,
+  getTranslatedProjectSetupAction,
+  getTranslatedProjectSetupActions,
+} from "./requirementFlow";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
 import EmptyStateCard from "../components/project/EmptyStateCard";
@@ -1699,9 +1703,9 @@ function PlantingPlans() {
   const shouldShowNoPlansState = canCreatePlan && !hasPlans;
   const isInitialLoading = !shouldShowProjectRequiredState && (isHierarchyLoading || (!shouldShowPrerequisiteState && isPlansLoading));
   const prerequisiteActions = firstMissingRequirement
-    ? getProjectSetupActions(firstMissingRequirement)
+    ? getTranslatedProjectSetupActions(firstMissingRequirement, t)
     : [];
-  const createPlanAction = getProjectSetupAction("plans");
+  const createPlanAction = getTranslatedProjectSetupAction("plans", t);
 
   const handleCreatePlan = useCallback((): void => {
     if (isMobile) {
@@ -1789,13 +1793,13 @@ function PlantingPlans() {
           <EmptyStateCard
             title={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.title`)}
             description={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.description`)}
-            actions={prerequisiteActions.map((action) => ({ label: t(action.labelKey), to: action.to }))}
+            actions={prerequisiteActions}
           />
         ) : shouldShowNoPlansState ? (
           <EmptyStateCard
             title={t("plantingPlans:emptyStates.states.plans.title")}
             description={t("plantingPlans:emptyStates.states.plans.description")}
-            actions={[{ label: t(createPlanAction.labelKey), to: createPlanAction.to }]}
+            actions={[createPlanAction]}
           />
         ) : null}
 
