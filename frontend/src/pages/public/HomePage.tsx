@@ -21,12 +21,12 @@ const PRODUCT_TOUR_ITEMS = [
     image: '/landing/screenshots/demo-areas.webp',
   },
   {
-    key: 'plantingPlans',
-    image: '/landing/screenshots/demo-planting-plans.webp',
-  },
-  {
     key: 'cultures',
     image: '/landing/screenshots/demo-cultures.webp',
+  },
+  {
+    key: 'plantingPlans',
+    image: '/landing/screenshots/demo-planting-plans.webp',
   },
   {
     key: 'calendar',
@@ -80,10 +80,11 @@ export default function HomePage() {
     setActiveTourKey(value);
   };
 
+  
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
       <Box component="main" sx={{ flex: 1 }}>
-        <Container maxWidth="lg" sx={{ width: '100%', pt: { xs: 4, md: 5.5 }, pb: { xs: 2.5, md: 3 } }}>
+        <Container maxWidth="lg" sx={{ width: '100%', pt: { xs: 2.5, md: 3.5 }, pb: { xs: 2.5, md: 3 } }}>
           <Stack direction="row" spacing={1.4} alignItems="center" justifyContent="center">
             <Box
               component="img"

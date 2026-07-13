@@ -98,8 +98,8 @@ describe('App', () => {
     expect(await screen.findByRole('tab', { name: 'Flächen' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
       'Flächen',
-      'Anbaupläne',
       'Kulturen',
+      'Anbaupläne',
       'Kalender',
       'Erträge',
       'Saatgut',

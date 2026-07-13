@@ -46,6 +46,9 @@ const screenshots = [
     path: '/app/anbauplaene',
     ready: /Anbaupläne|Anbauplan/i,
     filename: 'demo-planting-plans.webp',
+    // Hide the computed harvest-date columns so the screenshot has room to
+    // breathe and focuses on the columns a user actually edits.
+    columnVisibility: { harvest_date: false, harvest_end_date: false },
   },
 ] as const;
 
@@ -113,6 +116,11 @@ test.describe('landing page product screenshots', () => {
       await page.evaluate((fieldsViewMode) => {
         window.localStorage.setItem('fieldsBedsViewMode', fieldsViewMode ?? 'table');
       }, 'fieldsViewMode' in item ? item.fieldsViewMode : undefined);
+      if ('columnVisibility' in item) {
+        await page.evaluate((columnVisibility) => {
+          window.localStorage.setItem('tableColumns.plantingPlans', JSON.stringify(columnVisibility));
+        }, item.columnVisibility);
+      }
       await page.goto(item.path);
       await disableTransientUi(page);
       await waitForPageStable(page, item.ready);
