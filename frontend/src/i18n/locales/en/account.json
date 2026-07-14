@@ -4,17 +4,18 @@
   "displayName": "Display name",
   "sections": {
     "profile": "Profile",
-    "publicProfile": "Public profile",
+    "publicProfile": "Public culture library",
     "security": "Login & security",
     "account": "Account"
   },
   "publicProfile": {
-    "description": "The public display name is shown as the author when you publish an entry to the public culture library. If it is not set, publications appear anonymous.",
-    "publicDisplayName": "Public display name",
-    "noPublicDisplayName": "— (publications appear anonymous)",
-    "helperText": "Visible to all visitors of the public culture library. Leave blank to publish anonymously.",
+    "description": "This name is only shown as the author when you publish cultures to the public culture library.",
+    "publicDisplayName": "Name on publications",
+    "noPublicDisplayName": "Not set – you publish anonymously",
+    "helperText": "Visible to everyone browsing the culture library. Leave blank to publish anonymously.",
     "actions": {
-      "editPublicDisplayName": "Change public display name"
+      "setPublicDisplayName": "Set name",
+      "editPublicDisplayName": "Change name"
     }
   },
   "actions": {

@@ -307,7 +307,9 @@ export default function AccountSettingsPage() {
             <Box>
               {activeEditor !== 'publicDisplayName' ? (
                 <Button variant="outlined" onClick={() => setActiveEditor('publicDisplayName')} sx={actionButtonSx}>
-                  {t('publicProfile.actions.editPublicDisplayName')}
+                  {user?.public_display_name
+                    ? t('publicProfile.actions.editPublicDisplayName')
+                    : t('publicProfile.actions.setPublicDisplayName')}
                 </Button>
               ) : null}
             </Box>
