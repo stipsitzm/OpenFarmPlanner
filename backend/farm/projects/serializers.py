@@ -1,8 +1,8 @@
-"""DRF serializers for the farm app API."""
+"""DRF serializers for the projects domain (projects, memberships, invitations)."""
 
 from rest_framework import serializers
 
-from .models import Project, ProjectInvitation, ProjectMembership
+from farm.models import Project, ProjectInvitation, ProjectMembership
 
 
 class ProjectSerializer(serializers.ModelSerializer):

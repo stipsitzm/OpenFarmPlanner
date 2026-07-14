@@ -31,19 +31,19 @@ from .notes.views import (
     NoteAttachmentDeleteView,
     NoteAttachmentListCreateView,
 )
-from .views import (
-    ProjectViewSet,
-    MyProjectsView,
-    ProjectSwitchView,
-    ProjectMembersView,
-    ProjectInvitationView,
-    PublicProjectInvitationView,
-    PendingProjectInvitationView,
-    AcceptProjectInvitationView,
-    AcceptProjectInvitationByTokenView,
+from .common.views import VersionView
+from .projects.views import (
     AcceptPendingProjectInvitationView,
+    AcceptProjectInvitationByTokenView,
+    AcceptProjectInvitationView,
+    MyProjectsView,
+    PendingProjectInvitationView,
+    ProjectInvitationView,
+    ProjectMembersView,
+    ProjectSwitchView,
+    ProjectViewSet,
+    PublicProjectInvitationView,
     RevokeProjectInvitationView,
-    VersionView,
 )
 
 router = DefaultRouter()

@@ -1,22 +1,14 @@
-"""ViewSets for the farm app API endpoints.
-
-This module provides RESTful API endpoints for all farm models using
-Django REST Framework's ModelViewSet. Each ViewSet handles CRUD operations
-for its respective model.
-"""
+"""API endpoints for the projects domain (projects, memberships, invitations, agent login)."""
 
 import logging
 
 from django.conf import settings
 from django.contrib.auth import login
-from django.core.mail import send_mail
 from django.http import HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect
-from django.template.loader import render_to_string
-from django.utils import timezone, translation
+from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.text import slugify
-from django.utils.translation import gettext as _
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
@@ -24,17 +16,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import UserProjectSettings
-
-from .models import AgentLoginToken, Location, Project, ProjectInvitation, ProjectMembership
-from .project_context import require_project_admin, resolve_project_for_user
-from .serializers import (
-    InvitationTokenSerializer,
-    ProjectInvitationSerializer,
-    ProjectMembershipSerializer,
-    ProjectSerializer,
-)
-from .services.demo_project import create_personal_demo_project
-from .services.project_invitations import (
+from config.frontend_urls import build_public_frontend_url
+from farm.models import AgentLoginToken, Location, Project, ProjectInvitation, ProjectMembership
+from farm.project_context import require_project_admin, resolve_project_for_user
+from farm.services.demo_project import create_personal_demo_project
+from farm.services.project_invitations import (
     InvitationFlowError,
     accept_invitation,
     accept_pending_invitation_from_session,
@@ -46,67 +32,22 @@ from .services.project_invitations import (
     revoke_invitation,
     store_pending_invitation_token,
 )
-from config.version import get_version
-from config.frontend_urls import build_public_frontend_url
 
+from .emails import _send_project_invitation_email
+from .serializers import (
+    InvitationTokenSerializer,
+    ProjectInvitationSerializer,
+    ProjectMembershipSerializer,
+    ProjectSerializer,
+)
 
 logger = logging.getLogger(__name__)
+
 
 def _invitation_error_response(exc: InvitationFlowError) -> Response:
     """Build a consistent error response for invitation domain errors."""
     status_code = status.HTTP_403_FORBIDDEN if exc.code == 'email_mismatch' else status.HTTP_400_BAD_REQUEST
     return Response({'code': exc.code, 'detail': exc.message}, status=status_code)
-
-
-def _send_project_invitation_email(*, invitation: ProjectInvitation, project_name: str, invited_by: object) -> tuple[bool, str]:
-    """Send invitation email and return delivery result plus diagnostic message."""
-    support_mail = settings.SUPPORT_CONTACT_EMAIL
-    invite_link = build_public_frontend_url(f'/invite/accept?token={invitation.token}')
-    with translation.override('de'):
-        subject = _('Einladung zu OpenFarmPlanner: %(project)s') % {'project': project_name}
-        body = render_to_string('accounts/emails/project_invitation_email.txt', {
-            'project_name': project_name,
-            'role': invitation.role,
-            'invite_link': invite_link,
-            'invited_by': invited_by,
-        })
-
-    non_delivery_backends = {
-        'django.core.mail.backends.console.EmailBackend',
-        'django.core.mail.backends.locmem.EmailBackend',
-        'django.core.mail.backends.filebased.EmailBackend',
-        'django.core.mail.backends.dummy.EmailBackend',
-    }
-    backend_is_delivery_capable = settings.EMAIL_BACKEND not in non_delivery_backends
-
-    if not backend_is_delivery_capable:
-        logger.info('Project invitation created without outbound email delivery because backend=%s', settings.EMAIL_BACKEND)
-        return False, (
-            'Die E-Mail konnte nicht gesendet werden. '
-            f'Bitte kontaktiere [{support_mail}](mailto:{support_mail}).'
-        )
-
-    try:
-        sent_count = send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [invitation.email], fail_silently=False)
-        if sent_count > 0:
-            return True, ''
-        logger.error(
-            'Project invitation email backend accepted request but returned zero deliveries',
-            extra={'project_id': invitation.project_id, 'invitation_id': invitation.id, 'email': invitation.email},
-        )
-        return False, (
-            'Die E-Mail konnte nicht gesendet werden. '
-            f'Bitte kontaktiere [{support_mail}](mailto:{support_mail}).'
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.exception(
-            'Project invitation email could not be sent',
-            extra={'project_id': invitation.project_id, 'invitation_id': invitation.id, 'email': invitation.email},
-        )
-        return False, (
-            'Die E-Mail konnte nicht gesendet werden. '
-            f'Bitte kontaktiere [{support_mail}](mailto:{support_mail}).'
-        )
 
 
 def _coerce_request_string(value, default='') -> str:
@@ -125,15 +66,6 @@ def _coerce_request_string(value, default='') -> str:
             return first.strip()
         return str(first).strip()
     return default
-
-
-class VersionView(APIView):
-    """Return the current backend/API version."""
-
-    permission_classes = [permissions.AllowAny]
-
-    def get(self, request, *args, **kwargs):  # noqa: ANN001, ARG002
-        return Response({'version': get_version()})
 
 
 def agent_login_consume_view(request, token: str):  # noqa: ANN001
@@ -178,10 +110,6 @@ def _apply_invitation_project_settings(*, user, project: Project) -> dict[str, i
     }
 
 
-
-
-
-
 def _build_unique_project_slug(name: str) -> str:
     """Generate a unique project slug from a project name."""
     base_slug = slugify(name) or get_random_string(8).lower()
@@ -191,6 +119,7 @@ def _build_unique_project_slug(name: str) -> str:
         candidate = f'{base_slug}-{suffix}'
         suffix += 1
     return candidate
+
 
 class MyProjectsView(APIView):
     """Return all projects for current user with membership metadata."""

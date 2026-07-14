@@ -9,7 +9,7 @@ suggests a package combination from the selected supplier's packaging sizes.
 The step-by-step calculation, worked examples, and edge cases are documented
 in docs/seed-demand-calculation.md - keep that file in sync when changing
 behavior here. The HTTP layer (request parsing, serialization, the supplier
-selection POST) lives in farm.views.SeedDemandListView.
+selection POST) lives in farm.cultures.views.SeedDemandListView.
 """
 from __future__ import annotations
 

@@ -3,7 +3,7 @@ Crop Library service layer — the single place `crops.views` (and, in the
 future, any other consumer) reads published crop data from.
 
 This module must never import anything project-scoped (`Project`,
-`PlantingPlan`, `Bed`, ...) or anything from `farm.views`/`farm.serializers`
+`PlantingPlan`, `Bed`, ...) or anything from farm's domain view/serializer packages
 — see docs/crop-library-architecture.md for the dependency rule this
 enforces ("the crop library knows nothing about projects; farm planning
 uses the crop library, never the other way round").
