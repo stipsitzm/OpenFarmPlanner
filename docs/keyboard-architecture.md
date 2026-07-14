@@ -44,7 +44,7 @@ return <Box ref={containerRef} sx={{ ... }}>...</Box>;
   `theme.ts`'s `MuiCssBaseline` override) — the container is focusable even
   with no children, so F6 always lands somewhere visible.
 
-Registered app-wide regions (`App.tsx`, `RootLayout`): `sidebar` (order 0),
+Registered app-wide regions (`navigation/RootLayout.tsx`): `sidebar` (order 0),
 `topbar` (order 1), `main-content` (order 2, wraps the routed page). Pages
 add more specific regions nested inside `main-content` as needed — see §4.
 
@@ -99,7 +99,7 @@ implementations).
   have been worse than picking a different, equally standard key. `/` is
   also the more universally recognized "jump to search" key (GitHub, etc.).
 - **`?`, Ctrl+B (sidebar toggle)** used to be raw `window.addEventListener('keydown', ...)`
-  listeners in `App.tsx`, duplicated a second time for `?` in
+  listeners in the root layout (now `navigation/RootLayout.tsx`), duplicated a second time for `?` in
   `pages/Cultures.tsx` (which meant pressing `?` on the Cultures page could
   open two different dialogs at once). Both are now regular commands
   registered through the same system as everything else — one listener,
