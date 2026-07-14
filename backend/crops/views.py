@@ -4,7 +4,7 @@ Read-only crop library API. Intentionally requires authentication only
 project uses) and does no project scoping at all — a published crop
 belongs to the library, not to any one project.
 
-This mirrors `farm.views.PublicCultureViewSet` (which keeps serving
+This mirrors `farm.cultures.views.PublicCultureViewSet` (which keeps serving
 `/api/public-cultures/` unchanged for the current frontend) rather than
 replacing it, so this is purely additive: a new, forward-looking surface
 at `/api/crops/` that can later be made genuinely public (e.g. by

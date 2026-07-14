@@ -253,7 +253,7 @@ class ProjectsApiTests(APITestCase):
         self.assertIn('Die E-Mail konnte nicht gesendet werden.', response.data.get('mail_error', ''))
         self.assertNotIn('email_backend', response.data)
 
-    @patch('farm.views.send_mail', side_effect=RuntimeError('SMTP stacktrace details'))
+    @patch('farm.projects.emails.send_mail', side_effect=RuntimeError('SMTP stacktrace details'))
     def test_invitation_mail_failure_returns_safe_warning(self, _mocked_send_mail) -> None:
         response = self.client.post(
             f'/openfarmplanner/api/projects/{self.project.id}/invitations/',

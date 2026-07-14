@@ -1,39 +1,49 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import (
-    LocationViewSet,
-    SupplierViewSet,
-    FieldViewSet,
-    BedViewSet,
-    CultureViewSet,
-    CultureSupplierDataViewSet,
+from .planning.views import (
     PlantingPlanViewSet,
     TaskViewSet,
-    SeedDemandListView,
     YieldCalendarListView,
-    NoteAttachmentListCreateView,
-    NoteAttachmentDeleteView,
-    MediaFileUploadView,
+)
+from .structure.views import (
+    BedLayoutByLocationView,
+    BedViewSet,
+    FieldViewSet,
+    LocationViewSet,
+)
+from .cultures.views import (
+    CultureSupplierDataViewSet,
+    CultureUndeleteView,
+    CultureViewSet,
+    PublicCultureViewSet,
+    SeedDemandListView,
+    SeedPackageViewSet,
+    SupplierViewSet,
+)
+from .history.views import (
     GlobalHistoryListView,
     GlobalHistoryRestoreView,
     ProjectHistoryListView,
     ProjectHistoryRestoreView,
-    CultureUndeleteView,
-    SeedPackageViewSet,
-    BedLayoutByLocationView,
-    ProjectViewSet,
-    MyProjectsView,
-    ProjectSwitchView,
-    ProjectMembersView,
-    ProjectInvitationView,
-    PublicProjectInvitationView,
-    PublicCultureViewSet,
-    PendingProjectInvitationView,
-    AcceptProjectInvitationView,
-    AcceptProjectInvitationByTokenView,
+)
+from .notes.views import (
+    MediaFileUploadView,
+    NoteAttachmentDeleteView,
+    NoteAttachmentListCreateView,
+)
+from .common.views import VersionView
+from .projects.views import (
     AcceptPendingProjectInvitationView,
+    AcceptProjectInvitationByTokenView,
+    AcceptProjectInvitationView,
+    MyProjectsView,
+    PendingProjectInvitationView,
+    ProjectInvitationView,
+    ProjectMembersView,
+    ProjectSwitchView,
+    ProjectViewSet,
+    PublicProjectInvitationView,
     RevokeProjectInvitationView,
-    VersionView,
 )
 
 router = DefaultRouter()

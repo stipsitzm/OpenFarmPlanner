@@ -1,7 +1,7 @@
 """
-Defined independently from `farm.serializers.PublicCultureSerializer` on
+Defined independently from `farm.cultures.serializers.PublicCultureSerializer` on
 purpose, even though the two are currently near-identical: this app must
-depend on `farm.models` only, never on `farm.serializers` or `farm.views`
+depend on `farm.models` only, never on farm's domain serializer/view packages
 (that would put the dependency arrow backwards — see
 docs/crop-library-architecture.md). The small duplication is the
 deliberate cost of keeping that direction correct until `PublicCulture`

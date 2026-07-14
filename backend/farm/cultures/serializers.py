@@ -1,13 +1,28 @@
-"""DRF serializers for the farm app API."""
+"""DRF serializers for the cultures domain (cultures, suppliers, seeds, public library)."""
 
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from rest_framework import serializers
 
-from .enum_normalization import normalize_seed_rate_unit
-from .seed_units import (
+from farm.common.serializer_fields import (
+    CentimetersField,
+    LocalizedDecimalField,
+    _resolve_active_project_from_serializer,
+)
+from farm.enum_normalization import normalize_seed_rate_unit
+from farm.models import (
+    Culture,
+    CultureSupplierData,
+    MediaFile,
+    Project,
+    PublicCulture,
+    SeedPackage,
+    Supplier,
+    is_supplier_domain,
+)
+from farm.seed_units import (
     SEED_PACKAGE_UNIT_GRAMS,
     SEED_PACKAGE_UNIT_SEEDS,
     SEED_RATE_UNIT_G_PER_LFM,
@@ -18,43 +33,7 @@ from .seed_units import (
     SEED_RATE_UNITS,
 )
 
-from .models import (
-    Bed,
-    BedLayout,
-    FieldLayout,
-    Culture,
-    CultureSupplierData,
-    Field,
-    Location,
-    MediaFile,
-    NoteAttachment,
-    PlantingPlan,
-    Supplier,
-    Task,
-    SeedPackage,
-    PublicCulture,
-    Project,
-    ProjectMembership,
-    ProjectInvitation,
-    is_supplier_domain,
-)
-
-FIELD_NAME_DUPLICATE_MESSAGE = 'Eine Parzelle mit diesem Namen existiert in diesem Standort bereits.'
-BED_NAME_DUPLICATE_MESSAGE = 'Ein Beet mit diesem Namen existiert in dieser Parzelle bereits.'
 EMPTY_SEED_RATE_UNIT_VALUES = {None, '', '-'}
-
-
-def _resolve_active_project_from_serializer(serializer) -> Project | None:
-    """Resolve active project from serializer context or bound instance."""
-    request = serializer.context.get('request')
-    if request is not None:
-        active_project = getattr(request, 'active_project', None)
-        if active_project is not None:
-            return active_project
-    instance = getattr(serializer, 'instance', None)
-    if instance is not None and hasattr(instance, 'project'):
-        return instance.project
-    return None
 
 
 def _normalize_seed_rate_unit_value(value: object) -> str | None:
@@ -65,108 +44,6 @@ def _normalize_seed_rate_unit_value(value: object) -> str | None:
     if normalized_value:
         return normalized_value
     raise serializers.ValidationError('Unsupported seed rate unit.')
-
-
-class AuditUserSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    email = serializers.EmailField()
-    display_name = serializers.SerializerMethodField()
-    display_label = serializers.SerializerMethodField()
-
-    def get_display_name(self, obj) -> str:
-        full_name = f'{obj.first_name or ""} {obj.last_name or ""}'.strip()
-        return full_name or obj.username
-
-    def get_display_label(self, obj) -> str:
-        full_name = self.get_display_name(obj)
-        if full_name:
-            return f'{full_name} ({obj.email})'
-        return obj.email or obj.username
-
-
-class CentimetersField(serializers.FloatField):
-    """Expose meter-based model fields as centimeters in the API."""
-    
-    def to_representation(self, value):
-        if value is None:
-            return None
-        return float(value) * 100.0
-    
-    def to_internal_value(self, data):
-        cm_value = super().to_internal_value(data)
-        return cm_value / 100.0
-
-
-class LocalizedDecimalField(serializers.DecimalField):
-    """Decimal field that accepts comma decimals and returns float JSON values."""
-
-    default_error_messages = {
-        'invalid': 'Please enter a valid numeric value, e.g. 3.9.',
-    }
-
-    def to_internal_value(self, data):
-        normalized = data
-        if isinstance(data, str):
-            normalized = data.strip().replace(',', '.')
-        return super().to_internal_value(normalized)
-
-    def to_representation(self, value):
-        decimal_value = super().to_representation(value)
-        if decimal_value is None:
-            return None
-        return float(decimal_value)
-
-
-
-class LocationSerializer(serializers.ModelSerializer):
-    @staticmethod
-    def _parse_coordinate(value, field_name: str):
-        if value in (None, ''):
-            return None
-        if isinstance(value, str):
-            value = value.strip().replace(',', '.')
-            if value == '':
-                return None
-        try:
-            return float(value)
-        except (TypeError, ValueError) as exc:
-            raise serializers.ValidationError({field_name: f'{field_name.capitalize()} must be a valid number.'}) from exc
-
-    def to_internal_value(self, data):
-        payload = data.copy() if isinstance(data, dict) else data
-        if isinstance(payload, dict):
-            if 'latitude' in payload:
-                payload['latitude'] = self._parse_coordinate(payload.get('latitude'), 'latitude')
-            if 'longitude' in payload:
-                payload['longitude'] = self._parse_coordinate(payload.get('longitude'), 'longitude')
-        return super().to_internal_value(payload)
-
-    def validate_latitude(self, value):
-        if value is None:
-            return value
-        if not (-90 <= value <= 90):
-            raise serializers.ValidationError('Latitude must be between -90 and 90.')
-        return value
-
-    def validate_longitude(self, value):
-        if value is None:
-            return value
-        if not (-180 <= value <= 180):
-            raise serializers.ValidationError('Longitude must be between -180 and 180.')
-        return value
-
-    def get_image_file(self, obj):
-        if not obj.image_file_id:
-            return None
-        return {
-            'id': obj.image_file_id,
-            'storage_path': obj.image_file.storage_path,
-        }
-
-    class Meta:
-        model = Location
-        fields = '__all__'
-        extra_kwargs = {'project': {'required': False}}
 
 
 class SupplierSerializer(serializers.ModelSerializer):
@@ -207,7 +84,7 @@ class SupplierSerializer(serializers.ModelSerializer):
         return homepage_url
 
     def validate_name(self, value):
-        from .utils import normalize_supplier_name
+        from farm.utils import normalize_supplier_name
 
         name = (value or '').strip()
         if not name:
@@ -228,179 +105,6 @@ class SupplierSerializer(serializers.ModelSerializer):
         model = Supplier
         fields = ['id', 'name', 'homepage_url', 'slug', 'allowed_domains', 'created_at', 'updated_at', 'created']
         read_only_fields = ['created_at', 'updated_at', 'slug']
-
-
-class FieldSerializer(serializers.ModelSerializer):
-    location_name = serializers.CharField(source='location.name', read_only=True)
-
-    def get_image_file(self, obj):
-        if not obj.image_file_id:
-            return None
-        return {
-            'id': obj.image_file_id,
-            'storage_path': obj.image_file.storage_path,
-        }
-
-    class Meta:
-        model = Field
-        fields = '__all__'
-        validators = []
-        extra_kwargs = {
-            'project': {'required': False},
-            'name': {'label': 'Parzelle'},
-        }
-    
-    def validate_area_sqm(self, value):
-        if value is not None:
-            if value < Field.MIN_AREA_SQM:
-                raise serializers.ValidationError(
-                    f'Area must be at least {Field.MIN_AREA_SQM} sqm.'
-                )
-            if value > Field.MAX_AREA_SQM:
-                raise serializers.ValidationError(
-                    f'Area must not exceed {Field.MAX_AREA_SQM} sqm (100 hectares).'
-                )
-            if value.as_tuple().exponent < -1:
-                raise serializers.ValidationError('Area must have at most one decimal place for fields.')
-        return value
-
-    def validate_length_m(self, value):
-        if value is not None and value < 0:
-            raise serializers.ValidationError('Length must be greater than or equal to 0.')
-        return value
-
-    def validate_width_m(self, value):
-        if value is not None and value < 0:
-            raise serializers.ValidationError('Width must be greater than or equal to 0.')
-        return value
-
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
-        project = _resolve_active_project_from_serializer(self)
-        location = attrs.get('location') or getattr(self.instance, 'location', None)
-        if project is not None and location is not None and location.project_id != project.id:
-            raise serializers.ValidationError({'location': 'Location does not belong to the active project.'})
-        name = attrs.get('name') or getattr(self.instance, 'name', None)
-        if location is not None and name:
-            duplicate_fields = Field.objects.filter(location=location, name=name)
-            if self.instance is not None and self.instance.pk is not None:
-                duplicate_fields = duplicate_fields.exclude(pk=self.instance.pk)
-            if duplicate_fields.exists():
-                raise serializers.ValidationError({'name': FIELD_NAME_DUPLICATE_MESSAGE})
-        return attrs
-
-
-class BedSerializer(serializers.ModelSerializer):
-    field_name = serializers.CharField(source='field.name', read_only=True)
-
-    def get_image_file(self, obj):
-        if not obj.image_file_id:
-            return None
-        return {
-            'id': obj.image_file_id,
-            'storage_path': obj.image_file.storage_path,
-        }
-
-    class Meta:
-        model = Bed
-        fields = '__all__'
-        validators = []
-        extra_kwargs = {
-            'project': {'required': False},
-            'field': {'label': 'Parzelle'},
-        }
-
-    def validate_area_sqm(self, value):
-        if value is not None:
-            if value < Bed.MIN_AREA_SQM:
-                raise serializers.ValidationError(
-                    f'Area must be at least {Bed.MIN_AREA_SQM} sqm.'
-                )
-            if value > Bed.MAX_AREA_SQM:
-                raise serializers.ValidationError(
-                    f'Area must not exceed {Bed.MAX_AREA_SQM} sqm (1 hectare).'
-                )
-            if value.as_tuple().exponent < -1:
-                raise serializers.ValidationError('Area must have at most one decimal place for beds.')
-        return value
-
-    def validate_length_m(self, value):
-        if value is not None and value < 0:
-            raise serializers.ValidationError('Length must be greater than or equal to 0.')
-        return value
-
-    def validate_width_m(self, value):
-        if value is not None and value < 0:
-            raise serializers.ValidationError('Width must be greater than or equal to 0.')
-        return value
-
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
-        project = _resolve_active_project_from_serializer(self)
-        field = attrs.get('field') or getattr(self.instance, 'field', None)
-        if project is not None and field is not None and field.project_id != project.id:
-            raise serializers.ValidationError({'field': 'Field does not belong to the active project.'})
-        name = attrs.get('name') or getattr(self.instance, 'name', None)
-        if field is not None and name:
-            duplicate_beds = Bed.objects.filter(field=field, name=name)
-            if self.instance is not None and self.instance.pk is not None:
-                duplicate_beds = duplicate_beds.exclude(pk=self.instance.pk)
-            if duplicate_beds.exists():
-                raise serializers.ValidationError({'name': BED_NAME_DUPLICATE_MESSAGE})
-        return attrs
-
-
-class FieldLayoutSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FieldLayout
-        fields = [
-            'id',
-            'field',
-            'location',
-            'x',
-            'y',
-            'version',
-            'scale',
-            'created_at',
-            'updated_at',
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
-        field = attrs.get('field') or getattr(self.instance, 'field', None)
-        location = attrs.get('location') or getattr(self.instance, 'location', None)
-        if field and location and field.location_id != location.id:
-            raise serializers.ValidationError('Layout location must match the field location.')
-        return attrs
-
-
-class BedLayoutSerializer(serializers.ModelSerializer):
-    field_id = serializers.IntegerField(source='bed.field_id', read_only=True)
-
-    class Meta:
-        model = BedLayout
-        fields = [
-            'id',
-            'bed',
-            'location',
-            'field_id',
-            'x',
-            'y',
-            'version',
-            'scale',
-            'created_at',
-            'updated_at',
-        ]
-        read_only_fields = ['id', 'field_id', 'created_at', 'updated_at']
-
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
-        bed = attrs.get('bed') or getattr(self.instance, 'bed', None)
-        location = attrs.get('location') or getattr(self.instance, 'location', None)
-        if bed and location and bed.field.location_id != location.id:
-            raise serializers.ValidationError('Layout location must match the bed location.')
-        return attrs
 
 
 class SeedPackageSerializer(serializers.ModelSerializer):
@@ -573,7 +277,7 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'supplier_id': 'supplier_project_mismatch'})
         supplier_name_input = attrs.pop('supplier_name_input', None)
         if not attrs.get('supplier') and supplier_name_input:
-            from .utils import normalize_supplier_name
+            from farm.utils import normalize_supplier_name
 
             project = _resolve_active_project_from_serializer(self)
             if project is None:
@@ -606,7 +310,6 @@ class CultureSupplierDataSerializer(serializers.ModelSerializer):
 
         self._validate_unique_culture_supplier(attrs)
         return attrs
-
 
 
 class PublicCultureSerializer(serializers.ModelSerializer):
@@ -985,7 +688,7 @@ class CultureSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         """Validate cross-field rules and supplier get-or-create."""
         errors = {}
-        from .utils import normalize_text
+        from farm.utils import normalize_text
 
         raw_name = attrs.get(
             'name',
@@ -1196,7 +899,7 @@ class CultureSerializer(serializers.ModelSerializer):
         supplier_name = attrs.pop('supplier_name', None)
         supplier_explicitly_set = 'supplier' in attrs
         if supplier_name and not supplier_explicitly_set and not attrs.get('supplier'):
-            from .utils import normalize_supplier_name
+            from farm.utils import normalize_supplier_name
             project = attrs.get('project')
             if self.instance is not None:
                 project = self.instance.project
@@ -1292,162 +995,6 @@ class CultureSerializer(serializers.ModelSerializer):
         return attrs
 
 
-class PlantingPlanSerializer(serializers.ModelSerializer):
-    culture_name = serializers.CharField(source='culture.name', read_only=True)
-    culture_variety = serializers.CharField(source='culture.variety', read_only=True, allow_blank=True)
-    culture_display_color = serializers.CharField(source='culture.display_color', read_only=True, allow_blank=True)
-    culture_propagation_duration_days = serializers.IntegerField(source='culture.propagation_duration_days', read_only=True, allow_null=True)
-    culture_cultivation_type = serializers.CharField(source='culture.cultivation_type', read_only=True, allow_blank=True)
-    culture_cultivation_types = serializers.ListField(source='culture.cultivation_types', child=serializers.CharField(), read_only=True)
-    bed_name = serializers.CharField(source='bed.name', read_only=True)
-    plants_count = serializers.SerializerMethodField(read_only=True)
-    note_attachment_count = serializers.IntegerField(read_only=True)
-    created_by_user = AuditUserSerializer(source='created_by', read_only=True)
-    updated_by_user = AuditUserSerializer(source='updated_by', read_only=True)
-    
-    # Write-only fields for area input
-    area_input_value = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        write_only=True,
-        required=False,
-        help_text='Area value to input (m² or plant count depending on unit)'
-    )
-    area_input_unit = serializers.ChoiceField(
-        choices=[('M2', 'm²'), ('PLANTS', 'Plants')],
-        write_only=True,
-        required=False,
-        help_text='Unit for area input: M2 (square meters) or PLANTS (plant count)'
-    )
-
-    def get_image_file(self, obj):
-        if not obj.image_file_id:
-            return None
-        return {
-            'id': obj.image_file_id,
-            'storage_path': obj.image_file.storage_path,
-        }
-
-    class Meta:
-        model = PlantingPlan
-        fields = '__all__'
-        read_only_fields = ['project', 'harvest_date', 'harvest_end_date', 'created_by', 'updated_by']
-    
-    def get_plants_count(self, obj):
-        """Compute plant count from area and culture spacing."""
-        if not obj.area_usage_sqm or not obj.culture:
-            return None
-        plants_per_m2 = obj.culture.plants_per_m2
-        if not plants_per_m2 or plants_per_m2 <= 0:
-            return None
-        return round(obj.area_usage_sqm * plants_per_m2)
-
-    def validate(self, attrs):
-        project = _resolve_active_project_from_serializer(self)
-        culture = attrs.get('culture') or (self.instance.culture if self.instance else None)
-        bed = attrs.get('bed') or (self.instance.bed if self.instance else None)
-        if project is not None and culture is not None and culture.project_id != project.id:
-            raise serializers.ValidationError({'culture': 'Culture does not belong to the active project.'})
-        if project is not None and bed is not None and bed.project_id != project.id:
-            raise serializers.ValidationError({'bed': 'Bed does not belong to the active project.'})
-        
-        # Handle area input conversion
-        area_input_value = attrs.pop('area_input_value', None)
-        area_input_unit = attrs.pop('area_input_unit', None)
-        
-        # Validate area input fields
-        if area_input_value is not None:
-            # Value must be positive
-            if area_input_value <= 0:
-                raise serializers.ValidationError({
-                    'area_input_value': 'Area input value must be greater than 0.'
-                })
-            
-            # Unit is required when value is provided
-            if not area_input_unit:
-                raise serializers.ValidationError({
-                    'area_input_unit': (
-                        'Area input unit is required when '
-                        'area_input_value is provided.'
-                    )
-                })
-            
-            # Get culture (could be from attrs for create, or from instance for update)
-            culture = attrs.get('culture')
-            if not culture and self.instance:
-                culture = self.instance.culture
-            
-            # Convert based on unit
-            if area_input_unit == 'M2':
-                # Direct assignment
-                attrs['area_usage_sqm'] = area_input_value
-            elif area_input_unit == 'PLANTS':
-                # Validate culture is present
-                if not culture:
-                    raise serializers.ValidationError({
-                        'area_input_unit': 'Culture must be selected to input area as plant count.'
-                    })
-                
-                # Validate culture has valid spacing
-                plants_per_m2 = culture.plants_per_m2
-                if plants_per_m2 is None or plants_per_m2 <= 0:
-                    raise serializers.ValidationError({
-                        'area_input_unit': (
-                            'Culture spacing data is missing or invalid. '
-                            'Cannot calculate area from plant count.'
-                        )
-                    })
-                
-                # Calculate area in m²: plants / (plants_per_m2)
-                attrs['area_usage_sqm'] = area_input_value / plants_per_m2
-        
-        model_field_names = {field.name for field in PlantingPlan._meta.fields}
-        if self.instance:
-            validation_attrs = {}
-            for field_name in model_field_names:
-                if field_name in attrs:
-                    validation_attrs[field_name] = attrs[field_name]
-                elif hasattr(self.instance, field_name):
-                    validation_attrs[field_name] = getattr(self.instance, field_name)
-            instance = PlantingPlan(
-                **{name: value for name, value in validation_attrs.items() if name in model_field_names}
-            )
-            instance.pk = self.instance.pk
-        else:
-            instance = PlantingPlan(**{name: value for name, value in attrs.items() if name in model_field_names})
-
-        try:
-            instance.clean()
-        except ValidationError as e:
-            raise serializers.ValidationError(e.message_dict) from e
-        
-        return attrs
-
-
-class TaskSerializer(serializers.ModelSerializer):
-    planting_plan_name = serializers.CharField(source='planting_plan.__str__', read_only=True)
-
-    def get_image_file(self, obj):
-        if not obj.image_file_id:
-            return None
-        return {
-            'id': obj.image_file_id,
-            'storage_path': obj.image_file.storage_path,
-        }
-
-    class Meta:
-        model = Task
-        fields = '__all__'
-
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
-        project = _resolve_active_project_from_serializer(self)
-        planting_plan = attrs.get('planting_plan') or getattr(self.instance, 'planting_plan', None)
-        if project is not None and planting_plan is not None and planting_plan.project_id != project.id:
-            raise serializers.ValidationError({'planting_plan': 'Planting plan does not belong to the active project.'})
-        return attrs
-
-
 class CultureImportPreviewItemSerializer(serializers.Serializer):
     """Preview result for a single culture import item."""
     status = serializers.ChoiceField(
@@ -1510,140 +1057,3 @@ class SeedDemandSerializer(serializers.Serializer):
     package_suggestion = SeedDemandPackageSuggestionSerializer(allow_null=True, required=False)
     packages_needed = serializers.IntegerField(allow_null=True, required=False)
     warning = serializers.CharField(allow_null=True)
-
-
-class NoteAttachmentSerializer(serializers.ModelSerializer):
-    """Serializer for note image attachments."""
-
-    image_url = serializers.SerializerMethodField()
-    created_by_user = AuditUserSerializer(source='created_by', read_only=True)
-    updated_by_user = AuditUserSerializer(source='updated_by', read_only=True)
-
-    def get_image_file(self, obj):
-        if not obj.image_file_id:
-            return None
-        return {
-            'id': obj.image_file_id,
-            'storage_path': obj.image_file.storage_path,
-        }
-
-    class Meta:
-        model = NoteAttachment
-        fields = [
-            "id",
-            "planting_plan",
-            "image",
-            "image_url",
-            "caption",
-            "created_at",
-            "updated_at",
-            "created_by",
-            "updated_by",
-            "created_by_user",
-            "updated_by_user",
-            "width",
-            "height",
-            "size_bytes",
-            "mime_type",
-        ]
-        read_only_fields = [
-            "id",
-            "planting_plan",
-            "created_at",
-            "updated_at",
-            "created_by",
-            "updated_by",
-            "width",
-            "height",
-            "size_bytes",
-            "mime_type",
-        ]
-
-    def get_image_url(self, obj):
-        request = self.context.get("request")
-        if not obj.image:
-            return None
-        if request:
-            return request.build_absolute_uri(obj.image.url)
-        return obj.image.url
-
-
-class CultureHistoryEntrySerializer(serializers.Serializer):
-    history_id = serializers.IntegerField()
-    culture_id = serializers.IntegerField(required=False)
-    history_date = serializers.DateTimeField()
-    history_type = serializers.CharField()
-    history_user = serializers.CharField(allow_null=True)
-    summary = serializers.CharField()
-    object_type = serializers.CharField(required=False, allow_blank=True)
-    object_display_name = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    action = serializers.CharField(required=False, allow_blank=True)
-    actor_label = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    is_current_version = serializers.BooleanField(required=False)
-    changes = serializers.ListField(child=serializers.DictField(), required=False)
-
-
-class CultureRestoreSerializer(serializers.Serializer):
-    history_id = serializers.IntegerField()
-
-
-class ProjectSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Project
-        fields = ['id', 'name', 'slug', 'description', 'is_active', 'deleted_at', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'slug', 'is_active', 'deleted_at', 'created_at', 'updated_at']
-
-
-class ProjectMembershipSerializer(serializers.ModelSerializer):
-    user_email = serializers.EmailField(source='user.email', read_only=True)
-    user_display_name = serializers.CharField(source='user.display_name', read_only=True)
-
-    class Meta:
-        model = ProjectMembership
-        fields = ['id', 'user', 'user_email', 'user_display_name', 'project', 'role', 'created_at']
-        read_only_fields = ['id', 'created_at', 'project']
-
-
-class ProjectInvitationSerializer(serializers.ModelSerializer):
-    resolved_status = serializers.CharField(read_only=True)
-
-    class Meta:
-        model = ProjectInvitation
-        fields = [
-            'id',
-            'project',
-            'email',
-            'email_normalized',
-            'role',
-            'token',
-            'status',
-            'resolved_status',
-            'invited_by',
-            'accepted_by',
-            'accepted_at',
-            'expires_at',
-            'revoked_at',
-            'revoked_by',
-            'message',
-            'created_at',
-            'updated_at',
-        ]
-        read_only_fields = [
-            'id',
-            'token',
-            'status',
-            'email_normalized',
-            'accepted_by',
-            'accepted_at',
-            'expires_at',
-            'revoked_at',
-            'revoked_by',
-            'created_at',
-            'updated_at',
-            'project',
-            'invited_by',
-        ]
-
-
-class InvitationTokenSerializer(serializers.Serializer):
-    token = serializers.CharField()

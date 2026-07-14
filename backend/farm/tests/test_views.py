@@ -1570,7 +1570,7 @@ class NoteAttachmentApiTest(DRFAPITestCase):
             project=self.project,
         )
 
-    @patch('farm.views.process_note_image')
+    @patch('farm.notes.views.process_note_image')
     def test_upload_list_delete_attachment(self, mock_process):
         mock_process.return_value = (
             SimpleUploadedFile('processed.webp', b'processed', content_type='image/webp'),
@@ -1601,7 +1601,7 @@ class NoteAttachmentApiTest(DRFAPITestCase):
 
 
     @patch(
-        'farm.views.process_note_image',
+        'farm.notes.views.process_note_image',
         side_effect=__import__('farm.image_processing', fromlist=['ImageProcessingBackendUnavailableError']).ImageProcessingBackendUnavailableError('Image processing backend is not available. Install Pillow in the backend environment.'),
     )
     def test_attachment_upload_returns_503_when_processing_backend_missing(self, _mock_process):
@@ -1614,7 +1614,7 @@ class NoteAttachmentApiTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
 
     @patch(
-        'farm.views.process_note_image',
+        'farm.notes.views.process_note_image',
         side_effect=__import__('farm.image_processing', fromlist=['ImageProcessingError']).ImageProcessingError('bad image'),
     )
     def test_invalid_attachment_upload_returns_400(self, _mock_process):

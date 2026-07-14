@@ -18,7 +18,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-from farm.views import agent_login_consume_view
+from farm.projects.views import agent_login_consume_view
 
 def _with_prefix(path_suffix: str) -> str:
     """Build a URL path suffix with optional deployment prefix."""

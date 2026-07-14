@@ -41,7 +41,7 @@ erDiagram
   the `admin` role — enforced in view code (`require_project_admin()` in
   `backend/farm/project_context.py`), not a DB constraint.
 - Every API request that touches project-scoped data must send an
-  `X-Project-Id` header; `ProjectScopedMixin` (`backend/farm/views.py`)
+  `X-Project-Id` header; `ProjectScopedMixin` (`backend/farm/common/mixins.py`)
   resolves and validates it once per request (`initial()`), then
   auto-filters `get_queryset()` by `project=request.active_project` for any
   model that has a `project` field, and auto-injects `project` on create.
