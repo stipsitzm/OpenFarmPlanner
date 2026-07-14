@@ -67,7 +67,7 @@ msgstr "Falls das Konto existiert, wurde eine E-Mail gesendet."
 
 #: accounts/views.py:46
 msgid "Registration successful. Please check your email to activate your account."
-msgstr "Registrierung erfolgreich. Bitte pruefe deine E-Mails, um dein Konto zu aktivieren."
+msgstr "Registrierung erfolgreich. Bitte prüfe deine E-Mails, um dein Konto zu aktivieren."
 
 #: accounts/views.py:49
 msgid ""

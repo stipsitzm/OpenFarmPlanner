@@ -36,7 +36,7 @@ describe('authApi error mapping', () => {
   });
 
   it('sends explicit terms acceptance during registration', async () => {
-    const fetchMock = vi.fn(async () => ({
+    const fetchMock = vi.fn<typeof fetch>(async () => ({
       ok: true,
       status: 201,
       text: async () => JSON.stringify({ detail: 'ok' }),
@@ -47,8 +47,11 @@ describe('authApi error mapping', () => {
     await register('new@example.com', 'new-safe-password-123', 'new-safe-password-123', '', true);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    const registerCall = fetchMock.mock.calls[1];
-    const body = JSON.parse((registerCall[1] as RequestInit).body as string) as Record<string, unknown>;
+    const registerInit = fetchMock.mock.calls[1]?.[1];
+    if (!registerInit?.body) {
+      throw new Error('Expected registration request body');
+    }
+    const body = JSON.parse(String(registerInit.body)) as Record<string, unknown>;
     expect(body).toMatchObject({ accept_terms: true });
   });
 
