@@ -6,7 +6,8 @@ from rest_framework import serializers
 
 from farm.models import Bed, Culture, Field, Location, PlantingPlan, Project, Supplier
 from farm.common.serializer_fields import CentimetersField
-from farm.serializers import CultureSerializer, PlantingPlanSerializer
+from farm.planning.serializers import PlantingPlanSerializer
+from farm.serializers import CultureSerializer
 from farm.structure.serializers import BedSerializer, FieldSerializer, LocationSerializer
 from farm.utils.normalization import normalize_supplier_name, normalize_text
 

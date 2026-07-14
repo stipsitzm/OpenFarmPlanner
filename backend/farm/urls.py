@@ -1,5 +1,10 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from .planning.views import (
+    PlantingPlanViewSet,
+    TaskViewSet,
+    YieldCalendarListView,
+)
 from .structure.views import (
     BedLayoutByLocationView,
     BedViewSet,
@@ -21,10 +26,7 @@ from .views import (
     SupplierViewSet,
     CultureViewSet,
     CultureSupplierDataViewSet,
-    PlantingPlanViewSet,
-    TaskViewSet,
     SeedDemandListView,
-    YieldCalendarListView,
     CultureUndeleteView,
     SeedPackageViewSet,
     ProjectViewSet,
