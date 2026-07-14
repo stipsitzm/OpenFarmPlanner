@@ -16,7 +16,7 @@ import { useTopbarTitleActions } from '../hooks/useTopbarTitleActions';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard, { type EmptyStateAction } from '../components/project/EmptyStateCard';
 import { getProjectSetupAction } from './requirementFlow';
-import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
+import type { RootLayoutOutletContext, TopbarContextAction } from '../navigation/topbarTypes';
 import { type SxProps, type Theme } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import { useHierarchyData } from '../components/hierarchy/hooks/useHierarchyData';

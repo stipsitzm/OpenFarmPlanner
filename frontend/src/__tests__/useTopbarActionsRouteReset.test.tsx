@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { useMemo, useState } from 'react';
 import { useTopbarActionsRouteReset } from '../hooks/useTopbarActionsRouteReset';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
-import type { TopbarContextAction } from '../App';
+import type { TopbarContextAction } from '../navigation/topbarTypes';
 
 /**
  * Regression test for a bug where the "Kulturbibliothek" toolbar button (and

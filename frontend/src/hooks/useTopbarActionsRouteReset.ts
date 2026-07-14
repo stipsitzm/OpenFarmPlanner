@@ -1,5 +1,5 @@
 import { useLayoutEffect } from 'react';
-import type { TopbarContextAction } from '../App';
+import type { TopbarContextAction } from '../navigation/topbarTypes';
 
 // Must run as a layout effect: passive effects fire child-before-parent, so a
 // plain useEffect here would run after a newly routed page's own

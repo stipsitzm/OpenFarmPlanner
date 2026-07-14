@@ -69,7 +69,7 @@ import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { getFirstMissingCultivationPlanRequirement, getTranslatedProjectSetupAction } from './requirementFlow';
-import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
+import type { RootLayoutOutletContext, TopbarContextAction } from '../navigation/topbarTypes';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import {
   DeleteUndoSnackbar,

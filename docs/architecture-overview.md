@@ -85,7 +85,9 @@ docs/                  # This documentation
 
 ## Frontend structure
 
-- **Routing** (`App.tsx`): a single data router. Public routes
+- **Routing** (`App.tsx`) and the navigation shell
+  (`navigation/RootLayout.tsx`, with the shared topbar-action types in
+  `navigation/topbarTypes.ts`): a single data router. Public routes
   (`pages/public/` — landing/imprint/privacy, `pages/auth/` —
   login/register/activation/password reset) render outside any auth check.
   Everything under `/app/*` is nested inside a single `<ProtectedRoute />`
