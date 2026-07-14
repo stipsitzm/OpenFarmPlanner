@@ -5,8 +5,7 @@
   "sections": {
     "profile": "Profile",
     "publicProfile": "Public profile",
-    "security": "Login & security",
-    "account": "Account"
+    "security": "Login & security"
   },
   "publicProfile": {
     "description": "The public display name is shown as the author when you publish an entry to the public culture library. If it is not set, publications appear anonymous.",

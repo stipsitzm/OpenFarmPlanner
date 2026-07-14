@@ -55,7 +55,7 @@ describe('AccountSettingsPage', () => {
     expect(screen.getByText('Profil')).toBeInTheDocument();
     expect(screen.getByText('Öffentliches Profil')).toBeInTheDocument();
     expect(screen.getByText('Login & Sicherheit')).toBeInTheDocument();
-    expect(screen.getByText('Konto')).toBeInTheDocument();
+    expect(screen.getByText('Gefährlicher Bereich')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Anzeigename ändern' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Öffentlichen Anzeigenamen ändern' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'E-Mail-Adresse ändern' })).toBeInTheDocument();

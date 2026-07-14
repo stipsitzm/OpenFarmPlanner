@@ -5,8 +5,7 @@
   "sections": {
     "profile": "Profil",
     "publicProfile": "Öffentliches Profil",
-    "security": "Login & Sicherheit",
-    "account": "Konto"
+    "security": "Login & Sicherheit"
   },
   "publicProfile": {
     "description": "Der öffentliche Anzeigename wird als Urheber:in angezeigt, wenn du einen Eintrag in der öffentlichen Kulturbibliothek veröffentlichst. Ohne gesetzten Namen erfolgt die Veröffentlichung anonym.",

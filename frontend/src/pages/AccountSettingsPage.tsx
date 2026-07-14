@@ -99,6 +99,31 @@ function InlineEditor({ open, saveLabel, onSave, onCancel, submitting, saveDisab
   );
 }
 
+interface SettingsCardProps {
+  title: ReactNode;
+  description?: ReactNode;
+  danger?: boolean;
+  children: ReactNode;
+}
+
+function SettingsCard({ title, description, danger = false, children }: SettingsCardProps) {
+  return (
+    <Card variant={danger ? 'outlined' : undefined} sx={danger ? { borderColor: 'error.main' } : undefined}>
+      <CardContent>
+        <Typography variant="h6" color={danger ? 'error' : undefined} sx={{ mb: description ? 0.5 : 2 }}>
+          {title}
+        </Typography>
+        {description ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {description}
+          </Typography>
+        ) : null}
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AccountSettingsPage() {
   const { user, requestAccountDeletion, refreshUser } = useAuth();
   const { t } = useTranslation('account');
@@ -235,202 +260,178 @@ export default function AccountSettingsPage() {
       </Typography>
 
       <Stack spacing={3}>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              {t('sections.profile')}
+        <SettingsCard title={t('sections.profile')}>
+          <Stack spacing={2}>
+            <Typography>
+              <strong>{t('email')}:</strong> {user?.email}
             </Typography>
-            <Stack spacing={2}>
-              <Typography>
-                <strong>{t('email')}:</strong> {user?.email}
-              </Typography>
-              <Typography>
-                <strong>{t('displayName')}:</strong> {user?.display_name || t('noDisplayName')}
-              </Typography>
-              <SectionAlerts message={profileSection.message} error={profileSection.error} />
-              <Box>
-                {activeEditor !== 'displayName' ? (
-                  <Button variant="outlined" onClick={() => setActiveEditor('displayName')} sx={actionButtonSx}>
-                    {t('actions.editDisplayName')}
-                  </Button>
-                ) : null}
-              </Box>
-              <InlineEditor
-                open={activeEditor === 'displayName'}
-                saveLabel={t('actions.save')}
-                onSave={() => void handleProfileSave()}
-                onCancel={closeDisplayNameEditor}
-                submitting={profileSection.submitting}
-              >
-                <TextField
-                  label={t('displayName')}
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  fullWidth
-                  slotProps={{ htmlInput: { maxLength: 255 } }}
-                />
-              </InlineEditor>
-            </Stack>
-          </CardContent>
-        </Card>
+            <Typography>
+              <strong>{t('displayName')}:</strong> {user?.display_name || t('noDisplayName')}
+            </Typography>
+            <SectionAlerts message={profileSection.message} error={profileSection.error} />
+            <Box>
+              {activeEditor !== 'displayName' ? (
+                <Button variant="outlined" onClick={() => setActiveEditor('displayName')} sx={actionButtonSx}>
+                  {t('actions.editDisplayName')}
+                </Button>
+              ) : null}
+            </Box>
+            <InlineEditor
+              open={activeEditor === 'displayName'}
+              saveLabel={t('actions.save')}
+              onSave={() => void handleProfileSave()}
+              onCancel={closeDisplayNameEditor}
+              submitting={profileSection.submitting}
+            >
+              <TextField
+                label={t('displayName')}
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                fullWidth
+                slotProps={{ htmlInput: { maxLength: 255 } }}
+              />
+            </InlineEditor>
 
-        <Card>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 2 }}>
+            <Divider />
+
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               {t('sections.publicProfile')}
             </Typography>
-            <Stack spacing={2}>
-              <Typography variant="body2" color="text.secondary">
-                {t('publicProfile.description')}
-              </Typography>
-              <Typography>
-                <strong>{t('publicProfile.publicDisplayName')}:</strong>{' '}
-                {user?.public_display_name || t('publicProfile.noPublicDisplayName')}
-              </Typography>
-              <SectionAlerts message={publicProfileSection.message} error={publicProfileSection.error} />
-              <Box>
-                {activeEditor !== 'publicDisplayName' ? (
-                  <Button variant="outlined" onClick={() => setActiveEditor('publicDisplayName')} sx={actionButtonSx}>
-                    {t('publicProfile.actions.editPublicDisplayName')}
-                  </Button>
-                ) : null}
-              </Box>
-              <InlineEditor
-                open={activeEditor === 'publicDisplayName'}
-                saveLabel={t('actions.save')}
-                onSave={() => void handlePublicProfileSave()}
-                onCancel={closePublicDisplayNameEditor}
-                submitting={publicProfileSection.submitting}
-              >
-                <TextField
-                  label={t('publicProfile.publicDisplayName')}
-                  value={publicDisplayName}
-                  onChange={(event) => setPublicDisplayName(event.target.value)}
-                  fullWidth
-                  helperText={t('publicProfile.helperText')}
-                  slotProps={{ htmlInput: { maxLength: 255 } }}
-                />
-              </InlineEditor>
-            </Stack>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              {t('sections.security')}
+            <Typography variant="body2" color="text.secondary">
+              {t('publicProfile.description')}
             </Typography>
-
-            <SectionAlerts message={emailSection.message} error={emailSection.error} />
-            <SectionAlerts message={passwordSection.message} error={passwordSection.error} />
-
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
-              <Button
-                variant={activeEditor === 'email' ? 'contained' : 'outlined'}
-                onClick={() => setActiveEditor('email')}
-                sx={actionButtonSx}
-              >
-                {t('security.changeEmailTitle')}
-              </Button>
-              <Button
-                variant={activeEditor === 'password' ? 'contained' : 'outlined'}
-                onClick={() => setActiveEditor('password')}
-                sx={actionButtonSx}
-              >
-                {t('security.changePasswordTitle')}
-              </Button>
-            </Stack>
-
+            <Typography>
+              <strong>{t('publicProfile.publicDisplayName')}:</strong>{' '}
+              {user?.public_display_name || t('publicProfile.noPublicDisplayName')}
+            </Typography>
+            <SectionAlerts message={publicProfileSection.message} error={publicProfileSection.error} />
+            <Box>
+              {activeEditor !== 'publicDisplayName' ? (
+                <Button variant="outlined" onClick={() => setActiveEditor('publicDisplayName')} sx={actionButtonSx}>
+                  {t('publicProfile.actions.editPublicDisplayName')}
+                </Button>
+              ) : null}
+            </Box>
             <InlineEditor
-              open={activeEditor === 'email'}
-              saveLabel={t('actions.sendConfirmationLink')}
-              onSave={() => void handleEmailChangeRequest()}
-              onCancel={closeEmailEditor}
-              submitting={emailSection.submitting}
-              saveDisabled={!newEmail.trim() || !emailPassword.trim()}
-              sx={{ mb: 2 }}
+              open={activeEditor === 'publicDisplayName'}
+              saveLabel={t('actions.save')}
+              onSave={() => void handlePublicProfileSave()}
+              onCancel={closePublicDisplayNameEditor}
+              submitting={publicProfileSection.submitting}
             >
               <TextField
-                label={t('security.newEmail')}
-                type="email"
+                label={t('publicProfile.publicDisplayName')}
+                value={publicDisplayName}
+                onChange={(event) => setPublicDisplayName(event.target.value)}
                 fullWidth
-                value={newEmail}
-                onChange={(event) => setNewEmail(event.target.value)}
-              />
-              <TextField
-                label={t('currentPassword')}
-                type="password"
-                fullWidth
-                value={emailPassword}
-                onChange={(event) => setEmailPassword(event.target.value)}
+                helperText={t('publicProfile.helperText')}
+                slotProps={{ htmlInput: { maxLength: 255 } }}
               />
             </InlineEditor>
+          </Stack>
+        </SettingsCard>
 
-            <InlineEditor
-              open={activeEditor === 'password'}
-              saveLabel={t('actions.savePassword')}
-              onSave={() => void handlePasswordChange()}
-              onCancel={closePasswordEditor}
-              submitting={passwordSection.submitting}
-              saveDisabled={!currentPassword || !newPassword || !repeatPassword}
+        <SettingsCard title={t('sections.security')}>
+          <SectionAlerts message={emailSection.message} error={emailSection.error} />
+          <SectionAlerts message={passwordSection.message} error={passwordSection.error} />
+
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
+            <Button
+              variant={activeEditor === 'email' ? 'contained' : 'outlined'}
+              onClick={() => setActiveEditor('email')}
+              sx={actionButtonSx}
             >
-              <TextField
-                label={t('currentPassword')}
-                type="password"
-                fullWidth
-                value={currentPassword}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-              />
-              <TextField
-                label={t('security.newPassword')}
-                type="password"
-                fullWidth
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-              />
-              <TextField
-                label={t('security.repeatNewPassword')}
-                type="password"
-                fullWidth
-                value={repeatPassword}
-                onChange={(event) => setRepeatPassword(event.target.value)}
-              />
-            </InlineEditor>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              {t('sections.account')}
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <Button color="error" variant="outlined" onClick={() => setDeleteDialogOpen(true)}>
-              {t('deleteButton')}
+              {t('security.changeEmailTitle')}
             </Button>
-          </CardContent>
-        </Card>
+            <Button
+              variant={activeEditor === 'password' ? 'contained' : 'outlined'}
+              onClick={() => setActiveEditor('password')}
+              sx={actionButtonSx}
+            >
+              {t('security.changePasswordTitle')}
+            </Button>
+          </Stack>
+
+          <InlineEditor
+            open={activeEditor === 'email'}
+            saveLabel={t('actions.sendConfirmationLink')}
+            onSave={() => void handleEmailChangeRequest()}
+            onCancel={closeEmailEditor}
+            submitting={emailSection.submitting}
+            saveDisabled={!newEmail.trim() || !emailPassword.trim()}
+            sx={{ mb: 2 }}
+          >
+            <TextField
+              label={t('security.newEmail')}
+              type="email"
+              fullWidth
+              value={newEmail}
+              onChange={(event) => setNewEmail(event.target.value)}
+            />
+            <TextField
+              label={t('currentPassword')}
+              type="password"
+              fullWidth
+              value={emailPassword}
+              onChange={(event) => setEmailPassword(event.target.value)}
+            />
+          </InlineEditor>
+
+          <InlineEditor
+            open={activeEditor === 'password'}
+            saveLabel={t('actions.savePassword')}
+            onSave={() => void handlePasswordChange()}
+            onCancel={closePasswordEditor}
+            submitting={passwordSection.submitting}
+            saveDisabled={!currentPassword || !newPassword || !repeatPassword}
+          >
+            <TextField
+              label={t('currentPassword')}
+              type="password"
+              fullWidth
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+            />
+            <TextField
+              label={t('security.newPassword')}
+              type="password"
+              fullWidth
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+            />
+            <TextField
+              label={t('security.repeatNewPassword')}
+              type="password"
+              fullWidth
+              value={repeatPassword}
+              onChange={(event) => setRepeatPassword(event.target.value)}
+            />
+          </InlineEditor>
+        </SettingsCard>
 
         {import.meta.env.DEV ? (
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 1 }}>{t('developer.title')}</Typography>
-              <Divider sx={{ mb: 2 }} />
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {t('developer.hintsDescription')}
-              </Typography>
-              {hintsResetDone ? <Alert severity="success" sx={{ mb: 2 }}>{t('developer.hintsResetDone')}</Alert> : null}
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                <Button variant="outlined" onClick={handleResetHints}>
-                  {t('developer.resetHintsAction')}
-                </Button>
-                <Button variant="outlined" onClick={handleShowOnboardingPreview}>
-                  {t('developer.showOnboardingAction')}
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
+          <SettingsCard title={t('developer.title')} description={t('developer.hintsDescription')}>
+            {hintsResetDone ? <Alert severity="success" sx={{ mb: 2 }}>{t('developer.hintsResetDone')}</Alert> : null}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <Button variant="outlined" onClick={handleResetHints}>
+                {t('developer.resetHintsAction')}
+              </Button>
+              <Button variant="outlined" onClick={handleShowOnboardingPreview}>
+                {t('developer.showOnboardingAction')}
+              </Button>
+            </Stack>
+          </SettingsCard>
         ) : null}
+
+        <SettingsCard
+          title={t('dangerZone')}
+          description={`${t('deleteDescription')} ${t('restoreDescription')}`}
+          danger
+        >
+          <Button color="error" variant="outlined" onClick={() => setDeleteDialogOpen(true)}>
+            {t('deleteButton')}
+          </Button>
+        </SettingsCard>
       </Stack>
 
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} fullWidth maxWidth="sm">
