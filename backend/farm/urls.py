@@ -1,5 +1,11 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from .history.views import (
+    GlobalHistoryListView,
+    GlobalHistoryRestoreView,
+    ProjectHistoryListView,
+    ProjectHistoryRestoreView,
+)
 from .notes.views import (
     MediaFileUploadView,
     NoteAttachmentDeleteView,
@@ -16,10 +22,6 @@ from .views import (
     TaskViewSet,
     SeedDemandListView,
     YieldCalendarListView,
-    GlobalHistoryListView,
-    GlobalHistoryRestoreView,
-    ProjectHistoryListView,
-    ProjectHistoryRestoreView,
     CultureUndeleteView,
     SeedPackageViewSet,
     BedLayoutByLocationView,
