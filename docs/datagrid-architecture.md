@@ -12,10 +12,11 @@ stock grid. It intentionally does not repeat:
   page, not `EditableDataGrid`) — [occupancy-tree-hierarchy.md](./occupancy-tree-hierarchy.md)
 
 **Not every table uses `EditableDataGrid`.** `FieldsBedsHierarchy.tsx`
-renders a raw MUI `<DataGrid>` with its own, independently-implemented
-context menu and keyboard navigation (`useHierarchyContextMenu.ts`). It
-duplicates rather than reuses the patterns below — when you change one,
-check whether the other needs the same fix, but don't assume the code is
+renders a raw MUI `<DataGrid>` with its own row-data wiring and keyboard
+navigation (`useHierarchyContextMenu.ts`). It shares the generic context
+menu state/shell pieces with `EditableDataGrid`, but still has separate
+trigger conditions and hierarchy-specific actions — when you change one,
+check whether the other needs the same fix, but don't assume every layer is
 shared.
 
 ## File map
@@ -42,6 +43,12 @@ frontend/src/components/data-grid/
   tableClipboard.ts, TableCopyMenuItems.tsx   copy row/table as TSV
   columns.tsx, calculatedColumns.tsx    column builders (select, computed)
   dataGridUtils.tsx, handlers.ts, styles.ts, localeText.ts   shared helpers
+
+frontend/src/components/contextMenu/
+  CustomContextMenu.tsx          shared MUI Menu shell for app context menus
+  useContextMenuPositionState.ts generic open/close/reposition state
+  useRowContextMenuState.ts      row-menu state plus focus restoration
+  useLongPressTimer.ts           touch long-press helper
 ```
 
 ## Imperative API (`EditableDataGridCommandApi`)
@@ -135,6 +142,13 @@ caller-supplied row actions (duplicate/delete by default) plus
 "copy row"/"copy table" (see below). Closing the menu restores keyboard
 focus to whatever opened it.
 
+Use `components/contextMenu/CustomContextMenu.tsx` for the rendered menu
+shell instead of repeating MUI's `hideBackdrop`, pointer-events, paper class,
+`anchorReference`, and optional list-focus props in each page. Use
+`useContextMenuPositionState.ts` for positioned chart-style menus, and
+`useRowContextMenuState.ts` when the menu should restore focus to the row or
+cell that opened it.
+
 A first-run **discovery hint** (`ContextMenuHint.tsx` /
 `useContextMenuHint.ts`) shows a small "right-click a row" banner once,
 only on fine-pointer desktop viewports, persisted per-user in
@@ -150,11 +164,12 @@ implementation of the same right-click/long-press pattern**, because that
 page uses a raw `<DataGrid>`, not `EditableDataGrid`, and needs different
 data shapes (three row types/APIs, whole-row-object state) that
 `EditableDataGrid` has no concept of. It shares its open/close/reposition
-state machine and long-press timer with `useDataGridRowActionMenu.ts` via
-two small, tree-agnostic hooks
+state machine, focus restoration, menu shell, and long-press timer with
+`useDataGridRowActionMenu.ts` via small, tree-agnostic helpers
 (`components/contextMenu/useRowContextMenuState.ts`,
-`useLongPressTimer.ts`), but the trigger conditions and row-data wiring
-around that shared core are deliberately separate — treat a UX fix to
+`CustomContextMenu.tsx`, `useLongPressTimer.ts`), but the trigger conditions
+and row-data wiring around that shared core are deliberately separate —
+treat a UX fix to
 *when/how* the menu opens (or the row-type-specific actions inside it) as
 *not* automatically fixing the other; only a fix to the shared
 open/close/reposition/focus-restore mechanics itself applies to both.

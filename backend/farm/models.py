@@ -1295,20 +1295,16 @@ class PublicCulture(TimestampedModel):
     def created_by_label(self) -> str:
         """Public attribution shown to every user for this entry.
 
-        Must never surface the account email address or the (private,
-        optional) registration name — only the account's platform username,
-        which is an opaque identifier distinct from the email address it was
-        originally derived from at registration (see
-        accounts.serializers.build_username_from_email: a random suffix is
-        appended and the domain is dropped, so it cannot be used to contact
-        the user directly).
-
-        TODO(privacy): once a dedicated, user-configurable public display
-        name exists, prefer it here over the username.
+        Must never surface the account email address, the username, or the
+        (private, project-scoped) registration name. Attribution is opt-in:
+        it shows the user's explicitly configured public display name
+        (``accounts.models.PublicProfile.public_display_name``), or is
+        empty (rendered as anonymous by callers) if none was set.
         """
         if not self.created_by:
             return ''
-        return self.created_by.username
+        public_profile = getattr(self.created_by, 'public_profile', None)
+        return public_profile.public_display_name if public_profile else ''
 
     def __str__(self) -> str:
         return f"{self.name} ({self.variety})" if self.variety else self.name

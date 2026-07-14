@@ -32,12 +32,14 @@ import {
 import { dataGridSx, dataGridFooterSx, dataGridAddRowButtonSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRenderCellParams, GridRowParams, GridPaginationModel } from '@mui/x-data-grid';
-import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { CustomContextMenu } from '../contextMenu/CustomContextMenu';
+import { ContextMenuActionItem } from '../contextMenu/ContextMenuActionItem';
 import { ContextMenuIndicator } from '../contextMenu/ContextMenuIndicator';
 import { contextMenuActionsOverlaySx } from '../contextMenu/contextMenuIndicatorStyles';
 import { useNavigationBlocker } from '../../hooks/autosave';
@@ -2073,36 +2075,24 @@ export function EditableDataGrid<T extends EditableRow>({
           </Box>
         </Box>
       </Box>
-      <Menu
+      <CustomContextMenu
         open={Boolean(rowActionMenuState)}
         onClose={closeRowActionMenu}
-        hideBackdrop
-        sx={{ pointerEvents: 'none' }}
         autoFocus
         disableAutoFocusItem={false}
-        slotProps={{
-          paper: {
-            className: 'ofp-custom-context-menu',
-            sx: { pointerEvents: 'auto' },
-          },
-          list: {
-            autoFocus: true,
-            ref: rowActionMenuListRef,
-            onKeyDown: (event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeRowActionMenu),
-          },
-        }}
+        listRef={rowActionMenuListRef}
+        onListKeyDown={(event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeRowActionMenu)}
         onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeRowActionMenu)}
         anchorEl={rowActionMenuState?.anchorEl}
-        anchorReference={(rowActionMenuState?.anchorEl ? 'anchorEl' : 'anchorPosition') as 'anchorEl' | 'anchorPosition'}
-        anchorPosition={
-          rowActionMenuState?.mouseX !== undefined && rowActionMenuState?.mouseY !== undefined
-            ? { left: rowActionMenuState.mouseX, top: rowActionMenuState.mouseY }
-            : undefined
-        }
+        mouseX={rowActionMenuState?.mouseX}
+        mouseY={rowActionMenuState?.mouseY}
       >
         {menuActions.map((action) => (
-          <MenuItem
+          <ContextMenuActionItem
             key={action.id}
+            label={action.label}
+            icon={action.icon}
+            color={action.color === 'error' ? 'error' : undefined}
             disabled={action.disabled}
             onClick={() => {
               if (!menuRow) {
@@ -2111,19 +2101,7 @@ export function EditableDataGrid<T extends EditableRow>({
               closeRowActionMenu();
               action.onClick(menuRow, rowActionHelpers);
             }}
-          >
-            {action.icon ? (
-              <ListItemIcon sx={{ color: action.color === 'error' ? 'error.main' : undefined }}>
-                {action.icon}
-              </ListItemIcon>
-            ) : null}
-            <ListItemText
-              primary={action.label}
-              primaryTypographyProps={{
-                color: action.color === 'error' ? 'error.main' : 'text.primary',
-              }}
-            />
-          </MenuItem>
+          />
         ))}
         <TableCopyMenuItems
           rowValues={menuRow ? getClipboardRowValues(menuRow) : null}
@@ -2136,7 +2114,7 @@ export function EditableDataGrid<T extends EditableRow>({
           includeDivider={menuActions.length > 0}
           onClose={closeRowActionMenu}
         />
-      </Menu>
+      </CustomContextMenu>
 
       {deleteUndoOptions ? pendingDeleteWithUndo.map((deletion, index) => (
         <DeleteUndoSnackbar

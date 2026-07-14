@@ -9,6 +9,7 @@ export interface AuthUser {
   email: string;
   display_name: string;
   display_label: string;
+  public_display_name: string;
   is_active: boolean;
   default_project_id: number | null;
   last_project_id: number | null;

@@ -37,10 +37,11 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/derzeit nicht möglich/)).toBeInTheDocument();
   });
 
-  it('states that public attribution uses a username, never the email address', () => {
+  it('states that public attribution uses an opt-in public display name, never the email address', () => {
     renderPrivacyPolicyPage();
 
-    expect(screen.getByText(/öffentlicher Benutzername angezeigt/)).toBeInTheDocument();
+    expect(screen.getByText(/öffentliche Anzeigename angezeigt/)).toBeInTheDocument();
+    expect(screen.getByText(/erfolgt die Veröffentlichung anonym/)).toBeInTheDocument();
     expect(screen.getByText(/zu keinem Zeitpunkt Bestandteil eines öffentlichen Eintrags/)).toBeInTheDocument();
   });
 

@@ -35,12 +35,9 @@ import type {
 } from "@mui/x-data-grid";
 import { Box, Alert, useMediaQuery } from "@mui/material";
 import Divider from "@mui/material/Divider";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import ListItemText from "@mui/material/ListItemText";
-import Typography from "@mui/material/Typography";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { ContextMenuActionItem } from "../components/contextMenu/ContextMenuActionItem";
+import { CustomContextMenu } from "../components/contextMenu/CustomContextMenu";
 import { HierarchyAddIcon } from "../components/hierarchy/HierarchyAddIcon";
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { CALCULATED_COLUMN_CELL_CLASS } from "../components/data-grid/calculatedColumns";
@@ -1667,68 +1664,34 @@ function FieldsBedsHierarchy({
         )}
         loading={notesEditor.isSaving}
       />
-      <Menu
+      <CustomContextMenu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
-        hideBackdrop
-        sx={{ pointerEvents: "none" }}
         autoFocus
         disableAutoFocusItem={false}
-        slotProps={{
-          paper: {
-            className: "ofp-custom-context-menu",
-            sx: { pointerEvents: "auto" },
-          },
-          list: {
-            autoFocus: true,
-            ref: contextMenuListRef,
-            onKeyDown: (event: React.KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
-          },
-        }}
+        listRef={contextMenuListRef}
+        onListKeyDown={(event: React.KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
         onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
-        anchorReference="anchorPosition"
-        anchorPosition={
-          contextMenuState !== null
-            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
-            : undefined
-        }
+        mouseX={contextMenuState?.mouseX}
+        mouseY={contextMenuState?.mouseY}
       >
         {contextMenuActions.flatMap((action, index) => {
           const previousAction = contextMenuActions[index - 1];
           const shouldSeparateGroup = previousAction !== undefined && previousAction.group !== action.group;
           const menuItem = (
-            <MenuItem
+            <ContextMenuActionItem
               key={action.id}
+              label={action.label}
+              icon={action.icon}
+              color={action.color === "error" ? "error" : undefined}
+              emphasized={action.emphasized}
+              shortcutHint={action.shortcutHint}
+              renderPlainWhenUnadorned
               onClick={() => {
                 closeContextMenu();
                 action.onClick();
               }}
-              sx={{ color: action.color === "error" ? "error.main" : undefined }}
-            >
-              {action.icon ? (
-                <>
-                  <ListItemIcon>{action.icon}</ListItemIcon>
-                  <ListItemText
-                    primary={action.label}
-                    slotProps={{
-                      primary: {
-                        sx: {
-                          fontWeight: action.emphasized ? 600 : undefined,
-                          color: action.color === "error" ? "error.main" : undefined,
-                        },
-                      },
-                    }}
-                  />
-                  {action.shortcutHint ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: "auto", pl: 3 }}>
-                      {action.shortcutHint}
-                    </Typography>
-                  ) : null}
-                </>
-              ) : (
-                action.label
-              )}
-            </MenuItem>
+            />
           );
 
           return shouldSeparateGroup
@@ -1746,7 +1709,7 @@ function FieldsBedsHierarchy({
           includeDivider={contextMenuActions.length > 0}
           onClose={closeContextMenu}
         />
-      </Menu>
+      </CustomContextMenu>
       {pendingDeletions.map((deletion, index) => (
         <DeleteUndoSnackbar
           key={deletion.id}

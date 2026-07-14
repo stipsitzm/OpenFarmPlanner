@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -6,9 +6,6 @@ import {
   CircularProgress,
   FormControl,
   Link,
-  ListItemIcon,
-  ListItemText,
-  Menu,
   MenuItem,
   Select,
   Table,
@@ -27,8 +24,11 @@ import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import { bedAPI, cultureAPI, fieldAPI, locationAPI, plantingPlanAPI, seedDemandAPI } from '../api/api';
 import type { SeedDemand } from '../api/types';
 import { useTranslation } from '../i18n';
+import { ContextMenuActionItem } from '../components/contextMenu/ContextMenuActionItem';
 import { ContextMenuIndicator } from '../components/contextMenu/ContextMenuIndicator';
 import { contextMenuActionsOverlaySx } from '../components/contextMenu/contextMenuIndicatorStyles';
+import { CustomContextMenu } from '../components/contextMenu/CustomContextMenu';
+import { useRowContextMenuState } from '../components/contextMenu/useRowContextMenuState';
 import { useCommandContextTag } from '../commands/useCommandContext';
 import PageContainer from '../components/layout/PageContainer';
 import PageSurface from '../components/layout/PageSurface';
@@ -37,10 +37,10 @@ import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { ContextMenuHint, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
-import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from '../components/data-grid/contextMenuFocus';
-import { getFirstMissingProjectSetupStep, getProjectSetupAction, getProjectSetupActions } from './requirementFlow';
+import { handleContextMenuKeyboardNavigation } from '../components/data-grid/contextMenuFocus';
+import { getFirstMissingProjectSetupStep, getTranslatedProjectSetupActions } from './requirementFlow';
 import { formatLocalizedNumber } from '../utils/numberLocalization';
-import { shouldOpenCustomContextMenu, suppressNativeContextMenu, useCloseCustomContextMenuOnNativeContextMenu } from '../utils/contextMenu';
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
@@ -96,12 +96,6 @@ export default function SeedDemandPage() {
   const [locationCount, setLocationCount] = useState(0);
   const [fieldCount, setFieldCount] = useState(0);
   const [bedCount, setBedCount] = useState(0);
-  const [contextMenuState, setContextMenuState] = useState<{
-    row: SeedDemand;
-    mouseX: number;
-    mouseY: number;
-  } | null>(null);
-  const contextMenuOriginRef = useRef<HTMLElement | null>(null);
   const hasPlans = planCount > 0;
   const hasSeedData = hasCulturesWithSeedData;
   const canCalculateSeedDemand = locationCount > 0 && fieldCount > 0 && bedCount > 0 && cultureCount > 0 && hasPlans && hasSeedData;
@@ -116,37 +110,33 @@ export default function SeedDemandPage() {
     hasCultures: cultureCount > 0,
     hasPlans,
   });
-  const getTranslatedSetupActions = useCallback((step: NonNullable<typeof firstMissingSetupStep>) => (
-    getProjectSetupActions(step).map((action) => ({ label: t(action.labelKey), to: action.to }))
-  ), [t]);
   const missingRequirement = useMemo(() => {
     if (firstMissingSetupStep === 'fields') {
       return {
         title: t('seedDemand.progressive.fields.title'),
         description: t('seedDemand.progressive.fields.description'),
-        actions: getTranslatedSetupActions(firstMissingSetupStep),
+        actions: getTranslatedProjectSetupActions(firstMissingSetupStep, t),
       };
     }
     if (firstMissingSetupStep === 'beds') {
       return {
         title: t('seedDemand.progressive.beds.title'),
         description: t('seedDemand.progressive.beds.description'),
-        actions: getTranslatedSetupActions(firstMissingSetupStep),
+        actions: getTranslatedProjectSetupActions(firstMissingSetupStep, t),
       };
     }
     if (firstMissingSetupStep === 'cultures') {
       return {
         title: t('seedDemand.progressive.cultures.title'),
         description: t('seedDemand.progressive.cultures.description'),
-        actions: getTranslatedSetupActions(firstMissingSetupStep),
+        actions: getTranslatedProjectSetupActions(firstMissingSetupStep, t),
       };
     }
     if (firstMissingSetupStep === 'plans') {
-      const action = getProjectSetupAction(firstMissingSetupStep);
       return {
         title: t('seedDemand.progressive.plans.title'),
         description: t('seedDemand.progressive.plans.description'),
-        actions: [{ label: t(action.labelKey), to: action.to }],
+        actions: getTranslatedProjectSetupActions(firstMissingSetupStep, t),
       };
     }
     if (!hasSeedData) {
@@ -164,7 +154,7 @@ export default function SeedDemandPage() {
       };
     }
     return null;
-  }, [firstMissingSetupStep, getTranslatedSetupActions, hasSeedData, t]);
+  }, [firstMissingSetupStep, hasSeedData, t]);
 
   const loadRows = async () => {
     setIsLoading(true);
@@ -318,30 +308,17 @@ export default function SeedDemandPage() {
     ...rows.map(getRowClipboardValues),
   ], [getRowClipboardValues, rows, t]);
 
-  const closeContextMenu = useCallback((): void => {
-    setContextMenuState(null);
-    focusContextMenuOrigin(contextMenuOriginRef.current);
-  }, []);
-  const contextMenuListRef = useContextMenuFocus(contextMenuState !== null, closeContextMenu);
-
   const isSeedDemandContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
     shouldOpenCustomContextMenu(target) &&
     target instanceof HTMLElement &&
     target.closest('tr[data-seed-demand-culture-id]') !== null
   ), []);
-  const repositionOpenContextMenu = useCallback((event: globalThis.MouseEvent): void => {
-    setContextMenuState((currentState) => (
-      currentState
-        ? { row: currentState.row, mouseX: event.clientX + 2, mouseY: event.clientY - 6 }
-        : currentState
-    ));
-  }, []);
-  useCloseCustomContextMenuOnNativeContextMenu(
-    contextMenuState !== null,
-    closeContextMenu,
-    isSeedDemandContextMenuTarget,
-    repositionOpenContextMenu,
-  );
+  const {
+    state: contextMenuState,
+    listRef: contextMenuListRef,
+    open: openContextMenuState,
+    close: closeContextMenu,
+  } = useRowContextMenuState<SeedDemand>({ isContextMenuTarget: isSeedDemandContextMenuTarget });
 
   const openContextMenu = useCallback((
     event: MouseEvent<HTMLTableRowElement>,
@@ -352,13 +329,8 @@ export default function SeedDemandPage() {
     }
     suppressNativeContextMenu(event);
     markContextMenuHintUsed();
-    contextMenuOriginRef.current = event.currentTarget;
-    setContextMenuState({
-      row,
-      mouseX: event.clientX + 2,
-      mouseY: event.clientY - 6,
-    });
-  }, [isSeedDemandContextMenuTarget, markContextMenuHintUsed]);
+    openContextMenuState(row, event.clientX + 2, event.clientY - 6, event.currentTarget);
+  }, [isSeedDemandContextMenuTarget, markContextMenuHintUsed, openContextMenuState]);
 
   const openKeyboardContextMenu = useCallback((
     event: KeyboardEvent<HTMLTableRowElement>,
@@ -371,27 +343,22 @@ export default function SeedDemandPage() {
 
     suppressNativeContextMenu(event);
     markContextMenuHintUsed();
-    contextMenuOriginRef.current = event.currentTarget;
     const rowRect = event.currentTarget.getBoundingClientRect();
-    setContextMenuState({
+    openContextMenuState(
       row,
-      mouseX: rowRect.left + Math.min(240, rowRect.width),
-      mouseY: rowRect.top + 12,
-    });
-  }, [markContextMenuHintUsed]);
+      rowRect.left + Math.min(240, rowRect.width),
+      rowRect.top + 12,
+      event.currentTarget,
+    );
+  }, [markContextMenuHintUsed, openContextMenuState]);
 
   const openInlineActionMenu = useCallback((event: MouseEvent<HTMLButtonElement>, row: SeedDemand): void => {
     event.preventDefault();
     event.stopPropagation();
     markContextMenuHintUsed();
-    contextMenuOriginRef.current = event.currentTarget;
     const rect = event.currentTarget.getBoundingClientRect();
-    setContextMenuState({
-      row,
-      mouseX: rect.right - 8,
-      mouseY: rect.top + 12,
-    });
-  }, [markContextMenuHintUsed]);
+    openContextMenuState(row, rect.right - 8, rect.top + 12, event.currentTarget);
+  }, [markContextMenuHintUsed, openContextMenuState]);
 
   const openCulture = useCallback((row: SeedDemand): void => {
     navigate(`/app/cultures?cultureId=${row.culture_id}`);
@@ -405,7 +372,7 @@ export default function SeedDemandPage() {
     if (!contextMenuState) {
       return;
     }
-    const { row } = contextMenuState;
+    const { key: row } = contextMenuState;
     closeContextMenu();
     openCulture(row);
   }, [closeContextMenu, contextMenuState, openCulture]);
@@ -414,7 +381,7 @@ export default function SeedDemandPage() {
     if (!contextMenuState) {
       return;
     }
-    const { row } = contextMenuState;
+    const { key: row } = contextMenuState;
     closeContextMenu();
     editCulture(row);
   }, [closeContextMenu, contextMenuState, editCulture]);
@@ -614,46 +581,29 @@ export default function SeedDemandPage() {
         )}
       </PageSurface>
 
-      <Menu
+      <CustomContextMenu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
-        hideBackdrop
-        sx={{ pointerEvents: 'none' }}
         autoFocus
         disableAutoFocusItem={false}
-        slotProps={{
-          paper: {
-            className: 'ofp-custom-context-menu',
-            sx: { pointerEvents: 'auto' },
-          },
-          list: {
-            autoFocus: true,
-            ref: contextMenuListRef,
-            onKeyDown: (event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
-          },
-        }}
+        listRef={contextMenuListRef}
+        onListKeyDown={(event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
         onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
-        anchorReference="anchorPosition"
-        anchorPosition={
-          contextMenuState !== null
-            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
-            : undefined
-        }
+        mouseX={contextMenuState?.mouseX}
+        mouseY={contextMenuState?.mouseY}
       >
-        <MenuItem onClick={handleContextMenuOpenCulture}>
-          <ListItemIcon>
-            <OpenInNewIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary={t('seedDemand.contextMenu.openCulture')} />
-        </MenuItem>
-        <MenuItem onClick={handleContextMenuEditCulture}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary={t('seedDemand.contextMenu.editCulture')} />
-        </MenuItem>
+        <ContextMenuActionItem
+          label={t('seedDemand.contextMenu.openCulture')}
+          icon={<OpenInNewIcon fontSize="small" />}
+          onClick={handleContextMenuOpenCulture}
+        />
+        <ContextMenuActionItem
+          label={t('seedDemand.contextMenu.editCulture')}
+          icon={<EditIcon fontSize="small" />}
+          onClick={handleContextMenuEditCulture}
+        />
         <TableCopyMenuItems
-          rowValues={contextMenuState ? getRowClipboardValues(contextMenuState.row) : null}
+          rowValues={contextMenuState ? getRowClipboardValues(contextMenuState.key) : null}
           tableRows={getTableClipboardRows()}
           copyRowLabel={t('common:actions.copyRow')}
           copyTableLabel={t('common:actions.copyTable')}
@@ -663,7 +613,7 @@ export default function SeedDemandPage() {
           includeDivider
           onClose={closeContextMenu}
         />
-      </Menu>
+      </CustomContextMenu>
     </PageContainer>
   );
 }

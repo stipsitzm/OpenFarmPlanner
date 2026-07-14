@@ -1,7 +1,7 @@
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import { Divider, ListItemIcon, ListItemText, MenuItem } from '@mui/material';
-import { buildTsv, copyTextToClipboard, showClipboardSnackbar, type TableClipboardRow } from './tableClipboard';
+import { copyRowsToClipboard, type TableClipboardRow } from './tableClipboard';
 
 interface TableCopyMenuItemsProps {
   rowValues: TableClipboardRow | null;
@@ -27,13 +27,11 @@ export function TableCopyMenuItems({
   onClose,
 }: TableCopyMenuItemsProps) {
   const copy = async (rows: readonly TableClipboardRow[], successMessage: string): Promise<void> => {
-    try {
-      await copyTextToClipboard(buildTsv(rows));
-      showClipboardSnackbar({ message: successMessage, severity: 'success' });
-    } catch (error) {
-      console.error('Error copying table data', error);
-      showClipboardSnackbar({ message: copyErrorMessage, severity: 'error' });
-    }
+    await copyRowsToClipboard({
+      rows,
+      successMessage,
+      errorMessage: copyErrorMessage,
+    });
   };
 
   const handleCopyRow = (): void => {

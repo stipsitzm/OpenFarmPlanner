@@ -577,6 +577,22 @@ class AuthApiTest(APITestCase):
         self.user.refresh_from_db()
         self.assertEqual(self.user.first_name, 'Neuer Name')
 
+    def test_public_profile_update_sets_public_display_name(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.patch(
+            '/openfarmplanner/api/auth/account/public-profile/', {'public_display_name': 'Grüner Hof'}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['user']['public_display_name'], 'Grüner Hof')
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.public_profile.public_display_name, 'Grüner Hof')
+
+    def test_public_profile_defaults_to_blank_not_username_or_display_name(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.get('/openfarmplanner/api/auth/me/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['public_display_name'], '')
+
     def test_email_change_rejects_wrong_password(self) -> None:
         self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
         response = self.client.post(

@@ -20,7 +20,6 @@ import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
 import { PublicCultureLibraryDialog } from '../crops/components/PublicCultureLibraryDialog';
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -33,10 +32,11 @@ import {
   ListItem,
   ListItemText,
   Paper,
-  Snackbar,
   Typography,
   Link,
   Stack,
+  type SxProps,
+  type Theme,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -63,15 +63,29 @@ import { useCultureImportExport } from './useCultureImportExport';
 import { CulturesImportDialog } from './CulturesImportDialog';
 import { CulturesImportStartDialog } from './CulturesImportStartDialog';
 import { CulturesExportDialog } from './CulturesExportDialog';
+import { AlertSnackbar } from '../components/feedback/AlertSnackbar';
+import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
-import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction } from './requirementFlow';
+import { getFirstMissingCultivationPlanRequirement, getTranslatedProjectSetupAction } from './requirementFlow';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import {
   DeleteUndoSnackbar,
 } from '../components/data-grid';
+
+const PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_CONTAINER_SX: SxProps<Theme> = {
+  backgroundColor: 'rgba(76, 175, 80, 0.06)',
+  borderLeft: '3px solid',
+  borderLeftColor: 'success.main',
+  py: 1.25,
+  px: 1.5,
+};
+
+const PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_TITLE_SX: SxProps<Theme> = {
+  fontWeight: 500,
+};
 
 function Cultures() {
   const { t } = useTranslation(['cultures', 'common']);
@@ -253,7 +267,6 @@ function Cultures() {
       setHasBeds(false);
       return;
     }
-    // eslint-disable-next-line -- Data fetching on mount is intentional
     fetchCultures();
   }, [fetchCultures, shouldShowProjectRequiredState]);
 
@@ -420,11 +433,11 @@ function Cultures() {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  const handleCreatePlantingPlan = () => {
+  const handleCreatePlantingPlan = useCallback(() => {
     if (selectedCultureId) {
       navigate(`/app/planting-plans?cultureId=${selectedCultureId}`);
     }
-  };
+  }, [navigate, selectedCultureId]);
 
   const firstMissingPlanRequirement = getFirstMissingCultivationPlanRequirement({
     hasFields,
@@ -432,9 +445,20 @@ function Cultures() {
     hasCultures: cultures.length > 0,
   });
   const firstMissingPlanAction = firstMissingPlanRequirement
-    ? getProjectSetupAction(firstMissingPlanRequirement)
+    ? getTranslatedProjectSetupAction(firstMissingPlanRequirement, t)
     : null;
   const canCreatePlantingPlan = Boolean(selectedCulture) && firstMissingPlanRequirement === null;
+  const planRequirementEmptyState = firstMissingPlanRequirement === 'fields'
+    ? {
+      title: t('buttons.createPlantingPlanMissingFieldsTitle'),
+      description: t('buttons.createPlantingPlanDisabled.fields'),
+    }
+    : firstMissingPlanRequirement === 'beds'
+      ? {
+        title: t('buttons.createPlantingPlanMissingBedsTitle'),
+        description: t('buttons.createPlantingPlanDisabled.beds'),
+      }
+      : null;
   useCommandContextTag('cultures');
 
   const goToRelativeCulture = useCallback((direction: 'next' | 'previous') => {
@@ -559,38 +583,15 @@ function Cultures() {
       </Box>
       {cultures.length > 0 && (
         <Box sx={{ mb: 2 }}>
-          {firstMissingPlanRequirement === 'fields' ? (
+          {planRequirementEmptyState ? (
             <EmptyStateCard
-              title={t('buttons.createPlantingPlanMissingFieldsTitle')}
-              description={t('buttons.createPlantingPlanDisabled.fields')}
-              actions={firstMissingPlanAction ? [{ label: t(firstMissingPlanAction.labelKey), to: firstMissingPlanAction.to }] : []}
-              containerSx={{
-                backgroundColor: 'rgba(76, 175, 80, 0.06)',
-                borderLeft: '3px solid',
-                borderLeftColor: 'success.main',
-                py: 1.25,
-                px: 1.5,
-              }}
-              titleSx={{ fontWeight: 500 }}
+              title={planRequirementEmptyState.title}
+              description={planRequirementEmptyState.description}
+              actions={firstMissingPlanAction ? [firstMissingPlanAction] : []}
+              containerSx={PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_CONTAINER_SX}
+              titleSx={PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_TITLE_SX}
             />
           ) : null}
-
-          {firstMissingPlanRequirement === 'beds' ? (
-            <EmptyStateCard
-              title={t('buttons.createPlantingPlanMissingBedsTitle')}
-              description={t('buttons.createPlantingPlanDisabled.beds')}
-              actions={firstMissingPlanAction ? [{ label: t(firstMissingPlanAction.labelKey), to: firstMissingPlanAction.to }] : []}
-              containerSx={{
-                backgroundColor: 'rgba(76, 175, 80, 0.06)',
-                borderLeft: '3px solid',
-                borderLeftColor: 'success.main',
-                py: 1.25,
-                px: 1.5,
-              }}
-              titleSx={{ fontWeight: 500 }}
-            />
-          ) : null}
-
         </Box>
       )}
 
@@ -611,29 +612,22 @@ function Cultures() {
         }}
       />
 
-      <Dialog
+      <ConfirmationDialog
         open={Boolean(deleteDialogCulture)}
-        onClose={() => setDeleteDialogCulture(null)}
         fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle sx={{ pb: 1 }}>
-          {t('deleteDialog.title')}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <Typography color="text.secondary">
-            {t('deleteDialog.confirmation', { name: deleteDialogCulture?.name ?? '' })}
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-          <Button variant="outlined" onClick={() => setDeleteDialogCulture(null)}>
-            {t('common:actions.cancel')}
-          </Button>
-          <Button color="error" variant="contained" onClick={handleDeleteConfirm}>
-            {t('buttons.delete')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        title={t('deleteDialog.title')}
+        message={t('deleteDialog.confirmation', { name: deleteDialogCulture?.name ?? '' })}
+        cancelLabel={t('common:actions.cancel')}
+        confirmLabel={t('buttons.delete')}
+        onCancel={() => setDeleteDialogCulture(null)}
+        onConfirm={handleDeleteConfirm}
+        titleSx={{ pb: 1 }}
+        contentSx={{ pt: 1 }}
+        messageTypographyProps={{ variant: 'body1', color: 'text.secondary' }}
+        actionsSx={{ px: 3, pb: 2.5, pt: 1 }}
+        cancelButtonProps={{ variant: 'outlined' }}
+        confirmButtonProps={{ color: 'error', variant: 'contained' }}
+      />
 
       <Dialog
         open={publishConfirmOpen}
@@ -911,31 +905,25 @@ function Cultures() {
 
 
 
-      <Snackbar
+      <AlertSnackbar
         open={snackbar.open}
         autoHideDuration={4200}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        sx={{
+        message={snackbar.message}
+        severity={snackbar.severity}
+        variant="filled"
+        snackbarSx={{
           '& .MuiAlert-root': {
             borderRadius: 2,
             boxShadow: '0 6px 20px rgba(15, 23, 42, 0.12)',
           },
         }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{
-            width: '100%',
-            alignItems: 'center',
-            fontWeight: 500,
-          }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+        alertSx={{
+          width: '100%',
+          alignItems: 'center',
+          fontWeight: 500,
+        }}
+      />
       {pendingCultureDeletions.map((deletion, index) => (
         <DeleteUndoSnackbar
           key={deletion.id}

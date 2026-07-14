@@ -133,6 +133,32 @@ class DocumentConsent(models.Model):
         return f'{self.get_document_display()} consent for {identifier} (v{self.version}, {self.accepted_at.isoformat()})'
 
 
+class PublicProfile(models.Model):
+    """Stores the opt-in public display name used to attribute public content.
+
+    Distinct from ``User.first_name`` (the private, project-scoped
+    registration name — see ``AccountProfileSerializer``): this name is
+    shown to *all* users, including anonymous visitors, as the author of
+    published public content (e.g. the public culture library). It is
+    never set from the username or the private display name — it must be
+    entered explicitly. Publications by a user without a public display
+    name are attributed anonymously (see ``PublicCulture.created_by_label``).
+    """
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='public_profile',
+    )
+    public_display_name = models.CharField(max_length=255, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:
+        identifier = getattr(self.user, 'email', '') or getattr(self.user, 'username', '')
+        return f'Public profile for {identifier}'
+
+
 class AccountEmailChangeRequest(models.Model):
     """Stores pending email-change requests that require token confirmation."""
 

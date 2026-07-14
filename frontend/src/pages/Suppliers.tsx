@@ -11,10 +11,6 @@ import {
   DialogTitle,
   IconButton,
   Link,
-  ListItemIcon,
-  ListItemText,
-  Menu,
-  MenuItem,
   Table,
   TableBody,
   TableCell,
@@ -30,8 +26,10 @@ import { supplierAPI } from '../api/api';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
 import PageSurface from '../components/layout/PageSurface';
+import { ContextMenuActionItem } from '../components/contextMenu/ContextMenuActionItem';
 import { ContextMenuIndicator } from '../components/contextMenu/ContextMenuIndicator';
 import { contextMenuActionsOverlaySx } from '../components/contextMenu/contextMenuIndicatorStyles';
+import { CustomContextMenu } from '../components/contextMenu/CustomContextMenu';
 import TableSurface from '../components/layout/TableSurface';
 import type { Supplier, SupplierDeleteUndoPayload, SupplierDeleteUsage } from '../api/types';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -40,9 +38,12 @@ import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import { useRegisterCreateActions } from '../commands/useCommandContext';
 import { ContextMenuHint, DELETE_UNDO_DURATION_MS, DeleteUndoSnackbar, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
-import { focusContextMenuOrigin, handleContextMenuKeyboardNavigation, useContextMenuFocus } from '../components/data-grid/contextMenuFocus';
+import { handleContextMenuKeyboardNavigation } from '../components/data-grid/contextMenuFocus';
+import { useRowContextMenuState } from '../components/contextMenu/useRowContextMenuState';
 import { extractApiErrorMessage } from '../api/errors';
-import { shouldOpenCustomContextMenu, suppressNativeContextMenu, useCloseCustomContextMenuOnNativeContextMenu } from '../utils/contextMenu';
+import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
+import { showGlobalSnackbar } from '../utils/globalSnackbar';
+import { createTransientId } from '../utils/transientId';
 
 interface SupplierDraft {
   id?: number;
@@ -106,12 +107,6 @@ export default function Suppliers() {
   const [loadError, setLoadError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<SupplierFieldErrors>({});
   const [draft, setDraft] = useState<SupplierDraft>({ name: '', homepage_url: '' });
-  const [contextMenuState, setContextMenuState] = useState<{
-    supplier: Supplier;
-    mouseX: number;
-    mouseY: number;
-  } | null>(null);
-  const contextMenuOriginRef = useRef<HTMLElement | null>(null);
   const [pendingSupplierDeletions, setPendingSupplierDeletions] = useState<PendingSupplierDeletion[]>([]);
   const [deleteUsageDialog, setDeleteUsageDialog] = useState<SupplierDeleteUsageDialogState | null>(null);
   const [unlinkDeletingSupplierId, setUnlinkDeletingSupplierId] = useState<number | null>(null);
@@ -263,12 +258,7 @@ export default function Suppliers() {
   };
 
   const showDeleteError = useCallback((message: string): void => {
-    window.dispatchEvent(new CustomEvent('ofp:show-snackbar', {
-      detail: {
-        message,
-        severity: 'error',
-      },
-    }));
+    showGlobalSnackbar({ message, severity: 'error' });
   }, []);
 
   const removePendingSupplierDeletion = useCallback((deletionId: string): void => {
@@ -370,9 +360,10 @@ export default function Suppliers() {
   }, []);
 
   useEffect(() => {
+    const pendingSupplierDeleteTimers = pendingSupplierDeleteTimersRef.current;
     return () => {
-      pendingSupplierDeleteTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
-      pendingSupplierDeleteTimersRef.current.clear();
+      pendingSupplierDeleteTimers.forEach((timerId) => window.clearTimeout(timerId));
+      pendingSupplierDeleteTimers.clear();
     };
   }, []);
 
@@ -394,7 +385,7 @@ export default function Suppliers() {
       return;
     }
 
-    const deletionId = `supplier-${supplier.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const deletionId = createTransientId('supplier', supplier.id);
     const pendingDeletion: PendingSupplierDeletion = {
       id: deletionId,
       supplierId: supplier.id,
@@ -432,7 +423,7 @@ export default function Suppliers() {
     try {
       setError('');
       const response = await supplierAPI.unlinkAndDelete(supplierId);
-      const deletionId = `supplier-unlink-${supplierId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const deletionId = createTransientId('supplier-unlink', supplierId);
       const pendingDeletion: PendingSupplierDeletion = {
         id: deletionId,
         supplierId,
@@ -456,30 +447,17 @@ export default function Suppliers() {
     }
   }, [deleteUsageDialog, showDeleteError, suppliers, t]);
 
-  const closeContextMenu = useCallback((): void => {
-    setContextMenuState(null);
-    focusContextMenuOrigin(contextMenuOriginRef.current);
-  }, []);
-  const contextMenuListRef = useContextMenuFocus(contextMenuState !== null, closeContextMenu);
-
   const isSupplierContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
     shouldOpenCustomContextMenu(target) &&
     target instanceof HTMLElement &&
     target.closest('tr[data-supplier-id]') !== null
   ), []);
-  const repositionOpenSupplierContextMenu = useCallback((event: globalThis.MouseEvent): void => {
-    setContextMenuState((currentState) => (
-      currentState
-        ? { supplier: currentState.supplier, mouseX: event.clientX + 2, mouseY: event.clientY - 6 }
-        : currentState
-    ));
-  }, []);
-  useCloseCustomContextMenuOnNativeContextMenu(
-    contextMenuState !== null,
-    closeContextMenu,
-    isSupplierContextMenuTarget,
-    repositionOpenSupplierContextMenu,
-  );
+  const {
+    state: contextMenuState,
+    listRef: contextMenuListRef,
+    open: openContextMenuState,
+    close: closeContextMenu,
+  } = useRowContextMenuState<Supplier>({ isContextMenuTarget: isSupplierContextMenuTarget });
 
   const openSupplierContextMenu = useCallback((
     event: MouseEvent<HTMLTableRowElement>,
@@ -490,13 +468,8 @@ export default function Suppliers() {
     }
     suppressNativeContextMenu(event);
     markContextMenuHintUsed();
-    contextMenuOriginRef.current = event.currentTarget;
-    setContextMenuState({
-      supplier,
-      mouseX: event.clientX + 2,
-      mouseY: event.clientY - 6,
-    });
-  }, [isSupplierContextMenuTarget, markContextMenuHintUsed]);
+    openContextMenuState(supplier, event.clientX + 2, event.clientY - 6, event.currentTarget);
+  }, [isSupplierContextMenuTarget, markContextMenuHintUsed, openContextMenuState]);
 
   const openSupplierKeyboardContextMenu = useCallback((
     event: KeyboardEvent<HTMLTableRowElement>,
@@ -509,20 +482,20 @@ export default function Suppliers() {
 
     suppressNativeContextMenu(event);
     markContextMenuHintUsed();
-    contextMenuOriginRef.current = event.currentTarget;
     const rowRect = event.currentTarget.getBoundingClientRect();
-    setContextMenuState({
+    openContextMenuState(
       supplier,
-      mouseX: rowRect.left + Math.min(240, rowRect.width),
-      mouseY: rowRect.top + 12,
-    });
-  }, [markContextMenuHintUsed]);
+      rowRect.left + Math.min(240, rowRect.width),
+      rowRect.top + 12,
+      event.currentTarget,
+    );
+  }, [markContextMenuHintUsed, openContextMenuState]);
 
   const handleContextMenuDelete = useCallback((): void => {
     if (!contextMenuState) {
       return;
     }
-    const { supplier } = contextMenuState;
+    const { key: supplier } = contextMenuState;
     closeContextMenu();
     void deleteSupplier(supplier);
   }, [closeContextMenu, contextMenuState, deleteSupplier]);
@@ -531,7 +504,7 @@ export default function Suppliers() {
     if (!contextMenuState) {
       return;
     }
-    const { supplier } = contextMenuState;
+    const { key: supplier } = contextMenuState;
     closeContextMenu();
     openEdit(supplier);
   }, [closeContextMenu, contextMenuState, openEdit]);
@@ -540,14 +513,9 @@ export default function Suppliers() {
     event.preventDefault();
     event.stopPropagation();
     markContextMenuHintUsed();
-    contextMenuOriginRef.current = event.currentTarget;
     const rect = event.currentTarget.getBoundingClientRect();
-    setContextMenuState({
-      supplier,
-      mouseX: rect.right - 8,
-      mouseY: rect.top + 12,
-    });
-  }, [markContextMenuHintUsed]);
+    openContextMenuState(supplier, rect.right - 8, rect.top + 12, event.currentTarget);
+  }, [markContextMenuHintUsed, openContextMenuState]);
 
   const getSupplierRowClipboardValues = useCallback((supplier: Supplier): string[] => [
     supplier.name,
@@ -710,49 +678,30 @@ export default function Suppliers() {
         ) : null}
       </PageSurface>
 
-      <Menu
+      <CustomContextMenu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
-        hideBackdrop
-        sx={{ pointerEvents: 'none' }}
         autoFocus
         disableAutoFocusItem={false}
-        slotProps={{
-          paper: {
-            className: 'ofp-custom-context-menu',
-            sx: { pointerEvents: 'auto' },
-          },
-          list: {
-            autoFocus: true,
-            ref: contextMenuListRef,
-            onKeyDown: (event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu),
-          },
-        }}
+        listRef={contextMenuListRef}
+        onListKeyDown={(event: KeyboardEvent<HTMLUListElement>) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
         onKeyDown={(event) => handleContextMenuKeyboardNavigation(event, closeContextMenu)}
-        anchorReference="anchorPosition"
-        anchorPosition={
-          contextMenuState !== null
-            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
-            : undefined
-        }
+        mouseX={contextMenuState?.mouseX}
+        mouseY={contextMenuState?.mouseY}
       >
-        <MenuItem onClick={handleContextMenuEdit}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary={t('editAction')} />
-        </MenuItem>
-        <MenuItem onClick={handleContextMenuDelete}>
-          <ListItemIcon sx={{ color: 'error.main' }}>
-            <DeleteIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText
-            primary={t('deleteAction')}
-            primaryTypographyProps={{ color: 'error.main' }}
-          />
-        </MenuItem>
+        <ContextMenuActionItem
+          label={t('editAction')}
+          icon={<EditIcon fontSize="small" />}
+          onClick={handleContextMenuEdit}
+        />
+        <ContextMenuActionItem
+          label={t('deleteAction')}
+          icon={<DeleteIcon fontSize="small" />}
+          color="error"
+          onClick={handleContextMenuDelete}
+        />
         <TableCopyMenuItems
-          rowValues={contextMenuState ? getSupplierRowClipboardValues(contextMenuState.supplier) : null}
+          rowValues={contextMenuState ? getSupplierRowClipboardValues(contextMenuState.key) : null}
           tableRows={getSupplierTableClipboardRows()}
           copyRowLabel={t('common:actions.copyRow')}
           copyTableLabel={t('common:actions.copyTable')}
@@ -762,7 +711,7 @@ export default function Suppliers() {
           includeDivider
           onClose={closeContextMenu}
         />
-      </Menu>
+      </CustomContextMenu>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
         <Box component="form" onSubmit={handleSupplierSubmit}>

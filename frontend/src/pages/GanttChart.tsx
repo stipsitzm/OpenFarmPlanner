@@ -27,7 +27,6 @@ import {
   IconButton,
   InputAdornment,
   InputLabel,
-  Menu,
   MenuItem,
   Popover,
   Select,
@@ -42,8 +41,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import {
   shouldOpenCustomContextMenu,
   suppressNativeContextMenu,
-  useCloseCustomContextMenuOnNativeContextMenu,
 } from '../utils/contextMenu';
+import { confirmAction } from '../utils/confirmAction';
 import {
   bedAPI,
   cultureAPI,
@@ -69,6 +68,7 @@ import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import { extractApiErrorMessage } from '../api/errors';
 import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import { useTopbarTitleActions } from '../hooks/useTopbarTitleActions';
+import { CustomContextMenu } from '../components/contextMenu/CustomContextMenu';
 import EmptyStateCard from '../components/project/EmptyStateCard';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
 import { AuthContext } from '../auth/authContextShared';
@@ -86,11 +86,13 @@ import {
   type GanttTaskGroup,
   type OccupancyHierarchyNode,
 } from './ganttChartUtils';
-import { getFirstMissingCultivationPlanRequirement, getProjectSetupActions } from './requirementFlow';
+import { getFirstMissingCultivationPlanRequirement, getTranslatedProjectSetupActions } from './requirementFlow';
 import {
   getSegmentedActionButtonSx,
   segmentedButtonGroupSx,
 } from '../components/buttons/segmentedControlStyles';
+import { copyTextToClipboardSilently } from '../components/data-grid';
+import { useContextMenuPositionState } from '../components/contextMenu/useContextMenuPositionState';
 import { getGanttRenderWindow } from './ganttRenderWindow';
 import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState';
 import { collectVisibleIdsWithAncestors, flattenTreeRows } from '../components/hierarchy/utils/treeRows';
@@ -981,13 +983,16 @@ function GanttChartPage() {
     onClick: () => void;
   }
 
-  const [contextMenuState, setContextMenuState] = useState<{
-    target: GanttContextMenuTarget;
-    mouseX: number;
-    mouseY: number;
-  } | null>(null);
-
-  const closeContextMenu = useCallback(() => setContextMenuState(null), []);
+  const isGanttContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
+    shouldOpenCustomContextMenu(target)
+    && target instanceof HTMLElement
+    && target.closest('[data-rmg-component="task"], [data-rmg-component="task-group"]') !== null
+  ), []);
+  const {
+    state: contextMenuState,
+    open: openContextMenuState,
+    close: closeContextMenu,
+  } = useContextMenuPositionState<GanttContextMenuTarget>({ isContextMenuTarget: isGanttContextMenuTarget });
 
   const openContextMenu = useCallback((
     event: React.MouseEvent | React.TouchEvent,
@@ -999,12 +1004,8 @@ function GanttChartPage() {
       ? event.changedTouches[0] ?? event.touches[0]
       : event;
     if (!point) return;
-    setContextMenuState({
-      target,
-      mouseX: point.clientX + 2,
-      mouseY: point.clientY - 6,
-    });
-  }, []);
+    openContextMenuState(target, point.clientX + 2, point.clientY - 6);
+  }, [openContextMenuState]);
 
   const handleTaskContextMenu = useCallback((
     event: React.MouseEvent | React.TouchEvent,
@@ -1020,21 +1021,6 @@ function GanttChartPage() {
   ) => {
     openContextMenu(event, { type: 'group', group });
   }, [openContextMenu]);
-
-  const isGanttContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
-    shouldOpenCustomContextMenu(target)
-    && target instanceof HTMLElement
-    && target.closest('[data-rmg-component="task"], [data-rmg-component="task-group"]') !== null
-  ), []);
-
-  useCloseCustomContextMenuOnNativeContextMenu(
-    contextMenuState !== null,
-    closeContextMenu,
-    isGanttContextMenuTarget,
-    (event) => setContextMenuState((current) => (
-      current ? { ...current, mouseX: event.clientX + 2, mouseY: event.clientY - 6 } : current
-    )),
-  );
 
   const openPlantingPlanFromTask = useCallback((task: GanttTask, options?: { edit?: boolean }) => {
     if (task.plantingPlanId) {
@@ -1077,12 +1063,12 @@ function GanttChartPage() {
       group.name,
       `${formatGanttDate(task.startDate)} – ${formatGanttDate(task.endDate)}`,
     ].filter(Boolean);
-    void navigator.clipboard?.writeText(parts.join(' · ')).catch(() => undefined);
+    copyTextToClipboardSilently(parts.join(' · '));
   }, []);
 
   const deletePlantingPlanFromTask = useCallback(async (task: GanttTask) => {
     if (!task.plantingPlanId) return;
-    const confirmed = window.confirm(t('ganttChart:contextMenu.confirmDeletePlan'));
+    const confirmed = confirmAction(t('ganttChart:contextMenu.confirmDeletePlan'));
     if (!confirmed) return;
     try {
       await plantingPlanAPI.delete(task.plantingPlanId);
@@ -1147,7 +1133,7 @@ function GanttChartPage() {
     return [];
   }, [addPlantingPlanForBed, copyTaskSummary, deletePlantingPlanFromTask, openAreasPage, openCultureFromTask, openPlantingPlanFromTask, t]);
 
-  const contextMenuActions = contextMenuState ? getContextMenuActions(contextMenuState.target) : [];
+  const contextMenuActions = contextMenuState ? getContextMenuActions(contextMenuState.key) : [];
 
   const occupancyHierarchyNodes = useMemo<OccupancyHierarchyNode[]>(() => buildFieldOccupancyHierarchy({
     locations,
@@ -1795,7 +1781,7 @@ function GanttChartPage() {
   const firstMissingRequirement = firstMissingPrerequisite ?? (hasPlantingPlans ? null : 'plans');
   const hasCalendarRequirements = firstMissingRequirement === null;
   const requirementActions = firstMissingRequirement
-    ? getProjectSetupActions(firstMissingRequirement)
+    ? getTranslatedProjectSetupActions(firstMissingRequirement, t)
     : [];
   const calendarCommands = useMemo<CommandSpec[]>(() => [
     {
@@ -2421,7 +2407,7 @@ function GanttChartPage() {
                   ...(firstMissingRequirement === 'beds' ? [{ label: t('ganttChart:requirements.bed.label'), done: false, missingLabel: t('ganttChart:requirements.bed.missing') }] : []),
                   ...(firstMissingRequirement === 'cultures' ? [{ label: t('ganttChart:requirements.culture.label'), done: false, missingLabel: t('ganttChart:requirements.culture.missing') }] : []),
                 ]}
-                actions={requirementActions.map((action) => ({ label: t(action.labelKey), to: action.to }))}
+                actions={requirementActions}
               />
             </Box>
           </Box>
@@ -2894,23 +2880,11 @@ function GanttChartPage() {
           </PageSurface>
         )}
 
-      <Menu
+      <CustomContextMenu
         open={contextMenuState !== null}
         onClose={closeContextMenu}
-        hideBackdrop
-        sx={{ pointerEvents: 'none' }}
-        slotProps={{
-          paper: {
-            className: 'ofp-custom-context-menu',
-            sx: { pointerEvents: 'auto' },
-          },
-        }}
-        anchorReference="anchorPosition"
-        anchorPosition={
-          contextMenuState !== null
-            ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
-            : undefined
-        }
+        mouseX={contextMenuState?.mouseX}
+        mouseY={contextMenuState?.mouseY}
       >
         {contextMenuActions.flatMap((action, index) => {
           const previousAction = contextMenuActions[index - 1];
@@ -2931,7 +2905,7 @@ function GanttChartPage() {
             ? [<Divider key={`${action.id}-divider`} role="separator" />, menuItem]
             : [menuItem];
         })}
-      </Menu>
+      </CustomContextMenu>
     </PageContainer>
   );
 }

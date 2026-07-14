@@ -251,6 +251,15 @@ export async function updateProfile(displayName: string): Promise<{ detail: stri
   });
 }
 
+export async function updatePublicDisplayName(publicDisplayName: string): Promise<{ detail: string; user: AuthUser }> {
+  await ensureCsrfCookie();
+  return request<{ detail: string; user: AuthUser }>('/auth/account/public-profile/', {
+    method: 'PATCH',
+    headers: csrfHeader(),
+    body: JSON.stringify({ public_display_name: publicDisplayName }),
+  });
+}
+
 export async function requestEmailChange(newEmail: string, currentPassword: string): Promise<AccountActionResponse> {
   await ensureCsrfCookie();
   return request<AccountActionResponse>('/auth/account/change-email/', {

@@ -493,10 +493,10 @@ describe("YieldOverviewPage", () => {
     });
 
     it("shows the top 15 legend entries and can expand or collapse the remaining cultures", async () => {
-      const cultures = Array.from({ length: 45 }, (_, index) => ({
+      const cultures = Array.from({ length: 17 }, (_, index) => ({
         culture_id: index + 1,
         culture_name: `Kultur ${index + 1}`,
-        yield: 45 - index,
+        yield: 17 - index,
       }));
       mocks.yieldList.mockResolvedValue({ data: [buildWeek(2, cultures)] });
 
@@ -510,12 +510,12 @@ describe("YieldOverviewPage", () => {
       expect(screen.getByText("Kultur 1")).toBeInTheDocument();
       expect(screen.getByText("Kultur 15")).toBeInTheDocument();
       expect(screen.queryByText("Kultur 16")).not.toBeInTheDocument();
-      expect(screen.queryByText("Kultur 45")).not.toBeInTheDocument();
-      const showMoreButton = screen.getByRole("button", { name: "Weitere 30 anzeigen" });
+      expect(screen.queryByText("Kultur 17")).not.toBeInTheDocument();
+      const showMoreButton = screen.getByRole("button", { name: "Weitere 2 anzeigen" });
 
       fireEvent.click(showMoreButton);
 
-      expect(await screen.findByText("Kultur 45")).toBeInTheDocument();
+      expect(await screen.findByText("Kultur 17")).toBeInTheDocument();
       const collapseButton = screen.getByRole("button", { name: "Auf Top 15 reduzieren" });
 
       fireEvent.click(collapseButton);

@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from django.contrib.auth import get_user_model
 
+from accounts.models import PublicProfile
 from farm.models import Bed, Culture, Field, Location, PlantingPlan, Project, PublicCulture, Supplier, Task, is_supplier_domain
 
 User = get_user_model()
@@ -535,9 +536,10 @@ class TaskModelTest(TestCase):
 
 
 class PublicCultureAttributionTest(TestCase):
-    """created_by_label must never surface an email address (privacy-sensitive)."""
+    """created_by_label must never surface an email, username, or private name (privacy-sensitive);
+    it only ever shows the user's explicitly-set public display name, or nothing (anonymous)."""
 
-    def test_label_is_the_username_even_when_a_full_name_is_set(self):
+    def test_label_is_empty_when_no_public_display_name_is_set(self):
         user = User.objects.create_user(
             username='market_gardener_ab12cd34',
             email='real.person@example.com',
@@ -546,25 +548,32 @@ class PublicCultureAttributionTest(TestCase):
         )
         culture = PublicCulture.objects.create(name='Lettuce', created_by=user)
 
-        self.assertEqual(culture.created_by_label, 'market_gardener_ab12cd34')
+        self.assertEqual(culture.created_by_label, '')
+
+    def test_label_is_the_public_display_name_when_set(self):
+        user = User.objects.create_user(username='market_gardener_ab12cd34', email='real.person@example.com')
+        PublicProfile.objects.create(user=user, public_display_name='Grüner Hof')
+        culture = PublicCulture.objects.create(name='Lettuce', created_by=user)
+
+        self.assertEqual(culture.created_by_label, 'Grüner Hof')
         self.assertNotIn('@', culture.created_by_label)
-        self.assertNotIn('Real', culture.created_by_label)
 
     def test_label_is_empty_when_no_creator_is_set(self):
         culture = PublicCulture.objects.create(name='Carrot', created_by=None)
 
         self.assertEqual(culture.created_by_label, '')
 
-    def test_label_survives_account_anonymization(self):
-        """An anonymized user (first/last name and email cleared, username kept)
-        should still resolve to a non-empty, non-email label."""
+    def test_label_is_anonymous_after_account_anonymization(self):
+        """An anonymized user's public library entries fall back to anonymous
+        attribution, even if a public display name had been set previously."""
         user = User.objects.create_user(username='former_user_11223344', email='deleted-user-1@deleted.local')
-        user.first_name = ''
-        user.last_name = ''
-        user.save(update_fields=['first_name', 'last_name'])
+        PublicProfile.objects.create(user=user, public_display_name='Grüner Hof')
         culture = PublicCulture.objects.create(name='Kale', created_by=user)
 
-        self.assertEqual(culture.created_by_label, 'former_user_11223344')
+        PublicProfile.objects.filter(user=user).update(public_display_name='')
+        culture = PublicCulture.objects.get(pk=culture.pk)
+
+        self.assertEqual(culture.created_by_label, '')
 
 
 class CultureNormalizedFieldsTest(TestCase):

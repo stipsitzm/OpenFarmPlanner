@@ -1,5 +1,4 @@
 import {
-  Alert,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -7,7 +6,6 @@ import {
   ListItem,
   ListItemButton,
   ListItemText,
-  Snackbar,
   Typography,
 } from '@mui/material';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -17,6 +15,7 @@ import type { CommandContextTag, CommandSpec, CreateAction } from './types';
 import type { ShortcutSpec } from '../hooks/useKeyboardShortcuts';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useTranslation } from '../i18n';
+import { AlertSnackbar } from '../components/feedback/AlertSnackbar';
 import { CommandContext } from './commandContextShared';
 import { useFocusManager } from '../focus/useFocusManager';
 
@@ -341,16 +340,14 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
           ))}
         </DialogContent>
       </Dialog>
-      <Snackbar
+      <AlertSnackbar
         open={hintOpen}
         autoHideDuration={6000}
         onClose={() => setHintOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity="info" onClose={() => setHintOpen(false)} closeText={t('common:actions.close')}>
-          💡 {t('commandPalette.shortcutHint')}
-        </Alert>
-      </Snackbar>
+        message={<>💡 {t('commandPalette.shortcutHint')}</>}
+        severity="info"
+        closeText={t('common:actions.close')}
+      />
     </CommandContext.Provider>
   );
 }

@@ -36,6 +36,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 // see docs/crop-library-architecture.md for why this is flagged as a
 // future cleanup candidate rather than fixed now.
 import { stripCitationMarkers } from '../../components/data-grid/markdown';
+import { createTransientId } from '../../utils/transientId';
 
 interface PublicCultureLibraryDialogProps {
   open: boolean;
@@ -103,18 +104,24 @@ export function PublicCultureLibraryDialog({
 
   useEffect(() => {
     if (open) {
-      setQuery(initialQuery);
-      setSelectedId(initialSelectedId);
-      setVarietyFilter('');
-      setSupplierFilter('');
-      setNutrientFilter('');
-      setCropFamilyFilter('');
-      if (initialSelectedId && useMobileFilterLayout) {
-        setMobileStep('detail');
-      } else {
-        setMobileStep('list');
-      }
+      let cancelled = false;
+      queueMicrotask(() => {
+        if (cancelled) {
+          return;
+        }
+        setQuery(initialQuery);
+        setSelectedId(initialSelectedId);
+        setVarietyFilter('');
+        setSupplierFilter('');
+        setNutrientFilter('');
+        setCropFamilyFilter('');
+        setMobileStep(initialSelectedId && useMobileFilterLayout ? 'detail' : 'list');
+      });
+      return () => {
+        cancelled = true;
+      };
     }
+    return undefined;
   }, [initialQuery, initialSelectedId, open, useMobileFilterLayout]);
 
   useEffect(() => {
@@ -139,7 +146,7 @@ export function PublicCultureLibraryDialog({
 
     if (modalHistoryIdRef.current === null) {
       const currentHistoryState = window.history.state;
-      modalHistoryIdRef.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      modalHistoryIdRef.current = createTransientId();
       window.history.pushState(
         {
           ...(currentHistoryState && typeof currentHistoryState === 'object' ? currentHistoryState as Record<string, unknown> : {}),
@@ -211,9 +218,20 @@ export function PublicCultureLibraryDialog({
     if (loading || (initialSelectedId && selectedId === initialSelectedId && cultures.length === 0)) {
       return;
     }
-    if (selectedId && !filteredCultures.some((entry) => entry.id === selectedId)) {
-      setSelectedId(null);
+    if (!selectedId || filteredCultures.some((entry) => entry.id === selectedId)) {
+      return undefined;
     }
+
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) {
+        return;
+      }
+      setSelectedId((currentSelectedId) => (currentSelectedId === selectedId ? null : currentSelectedId));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [cultures.length, filteredCultures, initialSelectedId, loading, selectedId]);
 
   const selectedCulture = useMemo(
@@ -407,14 +425,12 @@ export function PublicCultureLibraryDialog({
                     label={`${t('library.versionLabel')} ${selectedCulture.version}`}
                     sx={previewBadgeSx}
                   />
-                  {selectedCulture.created_by_label ? (
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      label={`${t('library.createdByLabel')} ${selectedCulture.created_by_label}`}
-                      sx={previewBadgeSx}
-                    />
-                  ) : null}
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={`${t('library.createdByLabel')} ${selectedCulture.created_by_label || t('library.anonymousAuthor')}`}
+                    sx={previewBadgeSx}
+                  />
                 </Box>
                 <Box sx={{ display: 'grid', gap: 0.5, mb: selectedCulture.notes ? 1.5 : 0.75 }}>
                   <Typography variant="body2" sx={{ lineHeight: 1.35 }}>

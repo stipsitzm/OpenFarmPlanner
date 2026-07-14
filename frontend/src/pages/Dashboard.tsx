@@ -10,7 +10,7 @@ import PageContainer from '../components/layout/PageContainer';
 import PageSurface from '../components/layout/PageSurface';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
-import { getFirstMissingProjectSetupStep, getProjectSetupActions } from './requirementFlow';
+import { getFirstMissingProjectSetupStep, getTranslatedProjectSetupActions } from './requirementFlow';
 import { deriveLocationTasks } from './locationDerivedTasks';
 
 export default function Dashboard() {
@@ -78,7 +78,7 @@ export default function Dashboard() {
   if (shouldShowProjectRequiredState && missingProjectReason) return <PageContainer><PageSurface variant="contentFit"><ProjectRequiredState reason={missingProjectReason} /></PageSurface></PageContainer>;
 
   const isSetupComplete = firstMissingChecklistStep === null;
-  const nextSetupActions = firstMissingChecklistStep ? getProjectSetupActions(firstMissingChecklistStep) : [];
+  const nextSetupActions = firstMissingChecklistStep ? getTranslatedProjectSetupActions(firstMissingChecklistStep, t) : [];
 
   return (
     <PageContainer>
@@ -131,7 +131,7 @@ export default function Dashboard() {
                     to={action.to}
                     variant={index === 0 ? 'contained' : 'outlined'}
                   >
-                    {t(action.labelKey)}
+                    {action.label}
                   </Button>
                 ))}
               </Stack>

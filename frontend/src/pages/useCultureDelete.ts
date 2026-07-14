@@ -4,6 +4,7 @@ import { cultureAPI, type Culture } from '../api/api';
 import { useTranslation } from '../i18n';
 import { extractApiErrorMessage } from '../api/errors';
 import { DELETE_UNDO_DURATION_MS } from '../components/data-grid';
+import { createTransientId } from '../utils/transientId';
 
 export interface PendingCultureDeletion {
   id: string;
@@ -107,9 +108,10 @@ export function useCultureDelete({
   }, []);
 
   useEffect(() => {
+    const pendingCultureDeleteTimers = pendingCultureDeleteTimersRef.current;
     return () => {
-      pendingCultureDeleteTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
-      pendingCultureDeleteTimersRef.current.clear();
+      pendingCultureDeleteTimers.forEach((timerId) => window.clearTimeout(timerId));
+      pendingCultureDeleteTimers.clear();
     };
   }, []);
 
@@ -124,7 +126,7 @@ export function useCultureDelete({
       return;
     }
 
-    const deletionId = `culture-${cultureId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const deletionId = createTransientId('culture', cultureId);
     const currentCultures = cultures;
     const deletedCultureIndex = currentCultures.findIndex((culture) => culture.id === cultureId);
     const pendingDeletion: PendingCultureDeletion = {

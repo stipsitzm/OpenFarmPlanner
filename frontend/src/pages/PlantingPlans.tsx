@@ -29,12 +29,9 @@ import {
   FormControl,
   IconButton,
   InputLabel,
-  ListItemIcon,
-  ListItemText,
   Menu,
   MenuItem,
   Select,
-  Snackbar,
   Stack,
   TextField,
   Tooltip,
@@ -59,6 +56,8 @@ import {
 import { usePlantingPlanHierarchy, type CultivationTypeSelectOption } from "./usePlantingPlanHierarchy";
 import PageContainer from "../components/layout/PageContainer";
 import PageSurface from "../components/layout/PageSurface";
+import { ContextMenuActionItem } from "../components/contextMenu/ContextMenuActionItem";
+import { AlertSnackbar } from "../components/feedback/AlertSnackbar";
 import {
   plantingPlanAPI,
   type PlantingPlan,
@@ -79,11 +78,9 @@ import {
   type EditableRow,
   type DataGridAPI,
   type EditableDataGridCommandApi,
-  buildTsv,
-  copyTextToClipboard,
+  copyRowsToClipboard,
   formatClipboardValue,
   getPlainExcerpt,
-  showClipboardSnackbar,
   toIsoDateString,
   parseGermanDateText,
   formatDateAsGerman,
@@ -99,7 +96,11 @@ import {
 import type { CommandSpec } from "../commands/types";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
 import { useColumnVisibility } from "../hooks/useColumnVisibility";
-import { getFirstMissingCultivationPlanRequirement, getProjectSetupAction, getProjectSetupActions } from "./requirementFlow";
+import {
+  getFirstMissingCultivationPlanRequirement,
+  getTranslatedProjectSetupAction,
+  getTranslatedProjectSetupActions,
+} from "./requirementFlow";
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
 import EmptyStateCard from "../components/project/EmptyStateCard";
@@ -1216,16 +1217,12 @@ function PlantingPlans() {
     rows: readonly string[][],
     successMessage: string,
   ): Promise<void> => {
-    try {
-      await copyTextToClipboard(buildTsv(rows));
-      showClipboardSnackbar({ message: successMessage, severity: "success" });
-    } catch (error) {
-      console.error("Error copying planting plan data", error);
-      showClipboardSnackbar({
-        message: t("common:messages.copyError"),
-        severity: "error",
-      });
-    }
+    await copyRowsToClipboard({
+      rows,
+      successMessage,
+      errorMessage: t("common:messages.copyError"),
+      errorLogMessage: "Error copying planting plan data",
+    });
   }, [t]);
 
   const handleCopyPlantingPlan = useCallback((row: PlantingPlanRow): void => {
@@ -1705,9 +1702,9 @@ function PlantingPlans() {
   const shouldShowNoPlansState = canCreatePlan && !hasPlans;
   const isInitialLoading = !shouldShowProjectRequiredState && (isHierarchyLoading || (!shouldShowPrerequisiteState && isPlansLoading));
   const prerequisiteActions = firstMissingRequirement
-    ? getProjectSetupActions(firstMissingRequirement)
+    ? getTranslatedProjectSetupActions(firstMissingRequirement, t)
     : [];
-  const createPlanAction = getProjectSetupAction("plans");
+  const createPlanAction = getTranslatedProjectSetupAction("plans", t);
 
   const handleCreatePlan = useCallback((): void => {
     if (isMobile) {
@@ -1755,20 +1752,14 @@ function PlantingPlans() {
   return (
     <PageContainer variant="workspacePage">
 
-      <Snackbar
+      <AlertSnackbar
         open={areaNotice !== null}
-        autoHideDuration={5000}
         onClose={() => setAreaNotice(null)}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          severity={areaNotice?.severity ?? "info"}
-          variant="filled"
-          onClose={() => setAreaNotice(null)}
-        >
-          {areaNotice?.message}
-        </Alert>
-      </Snackbar>
+        message={areaNotice?.message}
+        severity={areaNotice?.severity ?? "info"}
+        variant="filled"
+      />
 
       <Box sx={{ width: "100%" }}>
         {isInitialLoading ? (
@@ -1795,13 +1786,13 @@ function PlantingPlans() {
           <EmptyStateCard
             title={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.title`)}
             description={t(`plantingPlans:emptyStates.states.${firstMissingRequirement}.description`)}
-            actions={prerequisiteActions.map((action) => ({ label: t(action.labelKey), to: action.to }))}
+            actions={prerequisiteActions}
           />
         ) : shouldShowNoPlansState ? (
           <EmptyStateCard
             title={t("plantingPlans:emptyStates.states.plans.title")}
             description={t("plantingPlans:emptyStates.states.plans.description")}
-            actions={[{ label: t(createPlanAction.labelKey), to: createPlanAction.to }]}
+            actions={[createPlanAction]}
           />
         ) : null}
 
@@ -1878,62 +1869,48 @@ function PlantingPlans() {
               open={Boolean(mobileActionMenuAnchor)}
               onClose={closeMobileActionMenu}
             >
-              <MenuItem
+              <ContextMenuActionItem
+                label={t("common:actions.edit")}
+                icon={<EditIcon fontSize="small" />}
                 onClick={() => {
                   if (mobileActionMenuRow) {
                     openMobileEditDialog(mobileActionMenuRow);
                   }
                   closeMobileActionMenu();
                 }}
-              >
-                <ListItemIcon>
-                  <EditIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary={t("common:actions.edit")} />
-              </MenuItem>
-              <MenuItem
+              />
+              <ContextMenuActionItem
+                label={t("common:actions.duplicate")}
+                icon={<ContentCopyIcon fontSize="small" />}
                 onClick={() => {
                   if (mobileActionMenuRow) {
                     openMobileDuplicateDialog(mobileActionMenuRow);
                   }
                   closeMobileActionMenu();
                 }}
-              >
-                <ListItemIcon>
-                  <ContentCopyIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary={t("common:actions.duplicate")} />
-              </MenuItem>
-              <MenuItem
+              />
+              <ContextMenuActionItem
+                label={t("plantingPlans:actions.copyPlantingPlan")}
+                icon={<ContentCopyIcon fontSize="small" />}
                 onClick={() => {
                   if (mobileActionMenuRow) {
                     handleCopyPlantingPlan(mobileActionMenuRow);
                   }
                   closeMobileActionMenu();
                 }}
-              >
-                <ListItemIcon>
-                  <ContentCopyIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary={t("plantingPlans:actions.copyPlantingPlan")} />
-              </MenuItem>
+              />
               <Divider role="separator" />
-              <MenuItem
+              <ContextMenuActionItem
+                label={t("common:actions.delete")}
+                icon={<DeleteIcon fontSize="small" />}
+                color="error"
                 onClick={() => {
                   if (mobileActionMenuRow) {
                     gridCommandApiRef.current?.deleteRow(mobileActionMenuRow.id);
                   }
                   closeMobileActionMenu();
                 }}
-              >
-                <ListItemIcon sx={{ color: "error.main" }}>
-                  <DeleteIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText
-                  primary={t("common:actions.delete")}
-                  primaryTypographyProps={{ color: "error.main" }}
-                />
-              </MenuItem>
+              />
             </Menu>
           </Box>
         ) : null}

@@ -57,6 +57,7 @@ def build_username_from_email(email: str) -> str:
 class UserSerializer(serializers.ModelSerializer):
     display_name = serializers.SerializerMethodField()
     display_label = serializers.SerializerMethodField()
+    public_display_name = serializers.SerializerMethodField()
     default_project_id = serializers.SerializerMethodField()
     last_project_id = serializers.SerializerMethodField()
     memberships = serializers.SerializerMethodField()
@@ -73,6 +74,7 @@ class UserSerializer(serializers.ModelSerializer):
             'email',
             'display_name',
             'display_label',
+            'public_display_name',
             'is_active',
             'default_project_id',
             'last_project_id',
@@ -92,6 +94,10 @@ class UserSerializer(serializers.ModelSerializer):
     def get_display_label(self, obj: User) -> str:
         full_name = self.get_display_name(obj)
         return full_name or obj.email or obj.username
+
+    def get_public_display_name(self, obj: User) -> str:
+        public_profile = getattr(obj, 'public_profile', None)
+        return public_profile.public_display_name if public_profile else ''
 
     def get_default_project_id(self, obj: User) -> int | None:
         settings = getattr(obj, 'project_settings', None)
@@ -228,6 +234,10 @@ class AccountRestoreSerializer(serializers.Serializer):
 
 class AccountProfileSerializer(serializers.Serializer):
     display_name = serializers.CharField(max_length=255, allow_blank=True, required=True)
+
+
+class AccountPublicProfileSerializer(serializers.Serializer):
+    public_display_name = serializers.CharField(max_length=255, allow_blank=True, required=True)
 
 
 class AccountEmailChangeRequestSerializer(serializers.Serializer):

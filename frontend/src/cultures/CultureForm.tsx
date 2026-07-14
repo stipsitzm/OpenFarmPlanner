@@ -36,6 +36,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { cultureAPI, publicCultureAPI, supplierAPI } from '../api/api';
 import { useActiveSaveShortcut } from '../hooks/useActiveSaveShortcut';
 import { useDialogKeyboardScroll } from '../hooks/useDialogKeyboardScroll';
+import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
 import { useNavigate } from 'react-router-dom';
 import { hasEffectiveCultureFormChanges } from './cultureFormChangeDetection';
 import { validateCulture } from './validation';
@@ -838,20 +839,20 @@ export function CultureForm({
           </Button>
         </DialogActions>
       </form>
-      <Dialog open={showDiscardConfirm} onClose={() => setShowDiscardConfirm(false)} maxWidth="xs">
-        <DialogTitle>{t('form.discardChangesTitle')}</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2">
-            {t('form.discardChangesMessage')}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button autoFocus onClick={() => setShowDiscardConfirm(false)}>{t('form.discardCancel')}</Button>
-          <Button variant="contained" color="error" onClick={() => { setShowDiscardConfirm(false); onCancel(); }}>
-            {t('form.discardConfirm')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmationDialog
+        open={showDiscardConfirm}
+        title={t('form.discardChangesTitle')}
+        message={t('form.discardChangesMessage')}
+        cancelLabel={t('form.discardCancel')}
+        confirmLabel={t('form.discardConfirm')}
+        onCancel={() => setShowDiscardConfirm(false)}
+        onConfirm={() => {
+          setShowDiscardConfirm(false);
+          onCancel();
+        }}
+        cancelButtonProps={{ autoFocus: true }}
+        confirmButtonProps={{ variant: 'contained', color: 'error' }}
+      />
     </Dialog>
   );
 }

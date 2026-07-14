@@ -10,6 +10,7 @@ const authState = {
     email: 'demo@example.com',
     display_name: 'Demo',
     display_label: 'Demo',
+    public_display_name: '',
     is_active: true,
     default_project_id: null,
     last_project_id: null,
@@ -33,6 +34,7 @@ vi.mock('../hooks/useNavigationBlocker', () => ({
 
 vi.mock('../auth/authApi', () => ({
   updateProfile: vi.fn(async () => ({ detail: 'Profil aktualisiert.', user: authState.user })),
+  updatePublicDisplayName: vi.fn(async () => ({ detail: 'Profil aktualisiert.', user: authState.user })),
   requestEmailChange: vi.fn(async () => ({ detail: 'Bestätigungslink gesendet.' })),
   changePassword: vi.fn(async () => ({ detail: 'Passwort geändert.' })),
 }));
@@ -51,9 +53,11 @@ describe('AccountSettingsPage', () => {
     render(<MemoryRouter><AccountSettingsPage /></MemoryRouter>);
 
     expect(screen.getByText('Profil')).toBeInTheDocument();
+    expect(screen.getByText('Öffentliches Profil')).toBeInTheDocument();
     expect(screen.getByText('Login & Sicherheit')).toBeInTheDocument();
     expect(screen.getByText('Konto')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Anzeigename ändern' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Öffentlichen Anzeigenamen ändern' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'E-Mail-Adresse ändern' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Passwort ändern' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Neue E-Mail-Adresse')).not.toBeInTheDocument();

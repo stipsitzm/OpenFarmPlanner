@@ -9,7 +9,6 @@ import {
   CardContent,
   Divider,
   FormControl,
-  Menu,
   MenuItem,
   Select,
   Stack,
@@ -28,6 +27,7 @@ import {
   segmentedToggleButtonGroupSx,
   segmentedToggleButtonSx,
 } from "../components/buttons/segmentedControlStyles";
+import { copyTextToClipboardSilently } from "../components/data-grid";
 import PageContainer from "../components/layout/PageContainer";
 import PageSurface from "../components/layout/PageSurface";
 import EmptyStateCard from "../components/project/EmptyStateCard";
@@ -37,11 +37,12 @@ import { useTranslation } from "../i18n";
 import {
   shouldOpenCustomContextMenu,
   suppressNativeContextMenu,
-  useCloseCustomContextMenuOnNativeContextMenu,
   useLongPress,
 } from "../utils/contextMenu";
 import { ContextMenuIndicator } from "../components/contextMenu/ContextMenuIndicator";
 import { contextMenuIndicatorHostSx } from "../components/contextMenu/contextMenuIndicatorStyles";
+import { CustomContextMenu } from "../components/contextMenu/CustomContextMenu";
+import { useContextMenuPositionState } from "../components/contextMenu/useContextMenuPositionState";
 import { useFocusRegion } from "../focus/useFocusManager";
 import { parseDateString } from "./ganttChartUtils";
 import {
@@ -68,6 +69,13 @@ interface YieldChartColumn {
   secondaryLabel: string;
   cultures: YieldCalendarCulture[];
   totalYield: number;
+}
+
+interface YieldContextMenuPayload {
+  cultureId: number;
+  cultureName: string;
+  periodLabel: string;
+  yieldValue: number;
 }
 
 const ALL_CULTURES = "all";
@@ -460,20 +468,20 @@ function YieldDistributionChart({
   const tooltipYieldLabel = t("chart.tooltipYield");
   const actionsLabel = t("common:actions.actions");
 
-  const [contextMenuState, setContextMenuState] = useState<{
-    cultureId: number;
-    cultureName: string;
-    periodLabel: string;
-    yieldValue: number;
-    mouseX: number;
-    mouseY: number;
-  } | null>(null);
-
-  const closeContextMenu = useCallback(() => setContextMenuState(null), []);
+  const isYieldContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
+    shouldOpenCustomContextMenu(target)
+    && target instanceof HTMLElement
+    && target.closest('[data-rmg-component="yield-segment"]') !== null
+  ), []);
+  const {
+    state: contextMenuState,
+    open: openContextMenuState,
+    close: closeContextMenu,
+  } = useContextMenuPositionState<YieldContextMenuPayload>({ isContextMenuTarget: isYieldContextMenuTarget });
 
   const openContextMenu = useCallback((
     event: React.MouseEvent | React.TouchEvent,
-    payload: { cultureId: number; cultureName: string; periodLabel: string; yieldValue: number },
+    payload: YieldContextMenuPayload,
   ) => {
     if (!shouldOpenCustomContextMenu(event.target)) return;
     suppressNativeContextMenu(event);
@@ -481,31 +489,16 @@ function YieldDistributionChart({
       ? event.changedTouches[0] ?? event.touches[0]
       : event;
     if (!point) return;
-    setContextMenuState({ ...payload, mouseX: point.clientX + 2, mouseY: point.clientY - 6 });
-  }, []);
-
-  const isYieldContextMenuTarget = useCallback((target: EventTarget | null): boolean => (
-    shouldOpenCustomContextMenu(target)
-    && target instanceof HTMLElement
-    && target.closest('[data-rmg-component="yield-segment"]') !== null
-  ), []);
-
-  useCloseCustomContextMenuOnNativeContextMenu(
-    contextMenuState !== null,
-    closeContextMenu,
-    isYieldContextMenuTarget,
-    (event) => setContextMenuState((current) => (
-      current ? { ...current, mouseX: event.clientX + 2, mouseY: event.clientY - 6 } : current
-    )),
-  );
+    openContextMenuState(payload, point.clientX + 2, point.clientY - 6);
+  }, [openContextMenuState]);
 
   const openCulture = useCallback((cultureId: number) => {
     navigate(`/app/cultures?cultureId=${cultureId}`);
   }, [navigate]);
 
-  const copySegmentSummary = useCallback((payload: { cultureName: string; periodLabel: string; yieldValue: number }) => {
+  const copySegmentSummary = useCallback((payload: YieldContextMenuPayload) => {
     const summary = `${payload.cultureName} · ${payload.periodLabel} · ${payload.yieldValue.toFixed(2)} kg`;
-    void navigator.clipboard?.writeText(summary).catch(() => undefined);
+    copyTextToClipboardSilently(summary);
   }, []);
 
   // Keyboard navigation between bars — the chart-region reference
@@ -578,16 +571,14 @@ function YieldDistributionChart({
     if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
       event.preventDefault();
       const rect = event.currentTarget.getBoundingClientRect();
-      setContextMenuState({ ...payload, mouseX: rect.left + 2, mouseY: rect.bottom - 6 });
+      openContextMenuState(payload, rect.left + 2, rect.bottom - 6);
     }
-  }, [chartData, focusSegment, getSegmentKey, openCulture]);
+  }, [chartData, focusSegment, getSegmentKey, openContextMenuState, openCulture]);
 
   // Only one segment can be pressed at a time, so a single long-press timer
   // (keyed by the currently pressed segment's payload) covers every bar.
   const [pressedSegmentKey, setPressedSegmentKey] = useState<string | null>(null);
-  const pressedSegmentPayloadRef = useRef<
-    { cultureId: number; cultureName: string; periodLabel: string; yieldValue: number } | null
-  >(null);
+  const pressedSegmentPayloadRef = useRef<YieldContextMenuPayload | null>(null);
   const { onTouchStart: startSegmentLongPress, onTouchEnd: clearSegmentLongPressBase, isLongPressing } = useLongPress(
     (event) => {
       const payload = pressedSegmentPayloadRef.current;
@@ -596,7 +587,7 @@ function YieldDistributionChart({
   );
   const handleSegmentTouchStart = useCallback((
     event: React.TouchEvent,
-    payload: { cultureId: number; cultureName: string; periodLabel: string; yieldValue: number },
+    payload: YieldContextMenuPayload,
     segmentKey: string,
   ) => {
     pressedSegmentPayloadRef.current = payload;
@@ -650,8 +641,32 @@ function YieldDistributionChart({
   // Cultures are pre-sorted by visible yield (see useYieldChartData), so the
   // collapsed legend still shows the most relevant entries instead of hiding
   // every culture behind a count button.
-  const [isLegendExpanded, setIsLegendExpanded] = useState(false);
   const legendCultureCount = chartCultures.length;
+  const legendExpansionResetKey = `${legendCultureCount}:${period}:${selectedCultureId}`;
+  const [legendExpansionState, setLegendExpansionState] = useState({
+    resetKey: legendExpansionResetKey,
+    expanded: false,
+  });
+  const isLegendExpanded = (
+    legendExpansionState.resetKey === legendExpansionResetKey
+      ? legendExpansionState.expanded
+      : false
+  );
+  const toggleLegendExpanded = useCallback(() => {
+    setLegendExpansionState((current) => {
+      const currentExpanded = current.resetKey === legendExpansionResetKey
+        ? current.expanded
+        : false;
+      return {
+        resetKey: legendExpansionResetKey,
+        expanded: !currentExpanded,
+      };
+    });
+  }, [legendExpansionResetKey]);
+  const chartCultureIds = useMemo(() => new Set(chartCultures.map((culture) => culture.id)), [chartCultures]);
+  const activeHighlightedCultureId = highlightedCultureId !== null && chartCultureIds.has(highlightedCultureId)
+    ? highlightedCultureId
+    : null;
   const isLegendExpandable = legendCultureCount > DEFAULT_LEGEND_CULTURE_LIMIT;
   const visibleLegendCultures = useMemo(
     () => (
@@ -662,19 +677,6 @@ function YieldDistributionChart({
     [chartCultures, isLegendExpanded, isLegendExpandable],
   );
   const hiddenLegendCultureCount = legendCultureCount - DEFAULT_LEGEND_CULTURE_LIMIT;
-
-  useEffect(() => {
-    setIsLegendExpanded(false);
-  }, [legendCultureCount, period, selectedCultureId]);
-
-  useEffect(() => {
-    if (
-      highlightedCultureId !== null
-      && !chartCultures.some((culture) => culture.id === highlightedCultureId)
-    ) {
-      setHighlightedCultureId(null);
-    }
-  }, [chartCultures, highlightedCultureId]);
 
   return (
     <>
@@ -701,8 +703,8 @@ function YieldDistributionChart({
             }}
           >
             {visibleLegendCultures.map((culture) => {
-              const isHighlighted = highlightedCultureId === culture.id;
-              const isDimmed = highlightedCultureId !== null && !isHighlighted;
+              const isHighlighted = activeHighlightedCultureId === culture.id;
+              const isDimmed = activeHighlightedCultureId !== null && !isHighlighted;
               const formattedYield = formatCompactYield(
                 culture.totalYield,
                 i18n.resolvedLanguage ?? i18n.language,
@@ -767,7 +769,7 @@ function YieldDistributionChart({
           {isLegendExpandable ? (
             <Button
               size="small"
-              onClick={() => setIsLegendExpanded((value) => !value)}
+              onClick={toggleLegendExpanded}
               sx={{ textTransform: "none", mt: 1 }}
             >
               {isLegendExpanded
@@ -869,7 +871,7 @@ function YieldDistributionChart({
                           isKeyboardTooltipOpen={keyboardTooltipKey === segmentKey}
                           isTooltipSuppressed={contextMenuState !== null}
                           isPressed={pressedSegmentKey === segmentKey && isLongPressing}
-                          isDimmed={highlightedCultureId !== null && highlightedCultureId !== culture.culture_id}
+                          isDimmed={activeHighlightedCultureId !== null && activeHighlightedCultureId !== culture.culture_id}
                           tooltipPeriodLabel={tooltipPeriodLabel}
                           tooltipYieldLabel={tooltipYieldLabel}
                           actionsLabel={actionsLabel}
@@ -941,29 +943,18 @@ function YieldDistributionChart({
         </Box>
       </CardContent>
     </Card>
-    <Menu
+    <CustomContextMenu
       open={contextMenuState !== null}
       onClose={closeContextMenu}
-      hideBackdrop
-      sx={{ pointerEvents: "none" }}
-      slotProps={{
-        paper: {
-          className: "ofp-custom-context-menu",
-          sx: { pointerEvents: "auto" },
-        },
-      }}
-      anchorReference="anchorPosition"
-      anchorPosition={
-        contextMenuState !== null
-          ? { top: contextMenuState.mouseY, left: contextMenuState.mouseX }
-          : undefined
-      }
+      mouseX={contextMenuState?.mouseX}
+      mouseY={contextMenuState?.mouseY}
     >
       <MenuItem
         onClick={() => {
           if (!contextMenuState) return;
+          const { key: payload } = contextMenuState;
           closeContextMenu();
-          openCulture(contextMenuState.cultureId);
+          openCulture(payload.cultureId);
         }}
       >
         {t("contextMenu.openCulture")}
@@ -972,13 +963,14 @@ function YieldDistributionChart({
       <MenuItem
         onClick={() => {
           if (!contextMenuState) return;
+          const { key: payload } = contextMenuState;
           closeContextMenu();
-          copySegmentSummary(contextMenuState);
+          copySegmentSummary(payload);
         }}
       >
         {t("common:actions.copyRow")}
       </MenuItem>
-    </Menu>
+    </CustomContextMenu>
     </>
   );
 }

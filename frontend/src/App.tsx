@@ -10,7 +10,6 @@
 
 import { createBrowserRouter, RouterProvider, Outlet, Link as RouterLink, redirect, useLocation, useNavigate, Navigate, useRouteError } from 'react-router-dom';
 import {
-  Alert,
   AppBar,
   Button,
   ButtonGroup,
@@ -28,7 +27,6 @@ import {
   Menu,
   MenuItem,
   Paper,
-  Snackbar,
   Stack,
   SvgIcon,
   type SvgIconProps,
@@ -80,6 +78,7 @@ import './App.css';
 import { useAuth } from './auth/useAuth';
 import ProtectedRoute from './auth/ProtectedRoute';
 import AppLogo from './components/layout/AppLogo';
+import { AlertSnackbar } from './components/feedback/AlertSnackbar';
 import { HelpDialog } from './components/help/HelpDialog';
 import PageHelp from './components/help/PageHelp';
 import {
@@ -88,6 +87,7 @@ import {
 } from './components/buttons/segmentedControlStyles';
 import { buildInvitationAcceptPath } from './pages/invitationAcceptance';
 import { getHistoryEntryTarget, getHistoryEntryTitle, isCurrentHistoryEntry } from './pages/culturesHistoryUtils';
+import { GLOBAL_SNACKBAR_EVENT, type GlobalSnackbarDetail } from './utils/globalSnackbar';
 import { resolveRouterBasename } from './routerBasename';
 import { OPEN_CREATE_PROJECT_EVENT } from './projects/projectCreationFlow';
 import { useGlobalOverlayKeyboardScroll } from './hooks/useDialogKeyboardScroll';
@@ -161,14 +161,7 @@ interface SnackbarState {
   message: string;
   severity: 'success' | 'error';
   actionLabel?: string;
-  onAction?: () => void;
-}
-
-interface GlobalSnackbarEventDetail {
-  message: string;
-  severity: 'success' | 'error';
-  actionLabel?: string;
-  onAction?: () => void;
+  onAction?: () => void | Promise<void>;
 }
 
 interface ProjectMenuProps {
@@ -497,21 +490,21 @@ function RootLayout() {
     message: '',
     severity: 'success',
   });
-  const showSnackbar = useCallback((message: string, severity: 'success' | 'error', actionLabel?: string, onAction?: () => void) => {
+  const showSnackbar = useCallback((message: string, severity: 'success' | 'error', actionLabel?: string, onAction?: () => void | Promise<void>) => {
     setSnackbar({ open: true, message, severity, actionLabel, onAction });
   }, []);
 
   useEffect(() => {
     const handleGlobalSnackbar = (event: Event): void => {
-      const detail = (event as CustomEvent<GlobalSnackbarEventDetail>).detail;
+      const detail = (event as CustomEvent<GlobalSnackbarDetail>).detail;
       if (!detail?.message) {
         return;
       }
       showSnackbar(detail.message, detail.severity ?? 'success', detail.actionLabel, detail.onAction);
     };
 
-    window.addEventListener('ofp:show-snackbar', handleGlobalSnackbar);
-    return () => window.removeEventListener('ofp:show-snackbar', handleGlobalSnackbar);
+    window.addEventListener(GLOBAL_SNACKBAR_EVENT, handleGlobalSnackbar);
+    return () => window.removeEventListener(GLOBAL_SNACKBAR_EVENT, handleGlobalSnackbar);
   }, [showSnackbar]);
 
   const handleOpenProjectHistory = useCallback(async () => {
@@ -2087,33 +2080,26 @@ function RootLayout() {
         </Box>
       </Dialog>
 
-      <Snackbar
+      <AlertSnackbar
         open={snackbar.open}
-        autoHideDuration={5000}
         onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
-          closeText={t('common:actions.close')}
-          sx={{ width: '100%' }}
-          action={snackbar.actionLabel && snackbar.onAction ? (
-            <Button
-              color="inherit"
-              size="small"
-              onClick={() => {
-                setSnackbar((prev) => ({ ...prev, open: false }));
-                snackbar.onAction?.();
-              }}
-            >
-              {snackbar.actionLabel}
-            </Button>
-          ) : undefined}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+        message={snackbar.message}
+        severity={snackbar.severity}
+        closeText={t('common:actions.close')}
+        alertSx={{ width: '100%' }}
+        action={snackbar.actionLabel && snackbar.onAction ? (
+          <Button
+            color="inherit"
+            size="small"
+            onClick={() => {
+              setSnackbar((prev) => ({ ...prev, open: false }));
+              void snackbar.onAction?.();
+            }}
+          >
+            {snackbar.actionLabel}
+          </Button>
+        ) : undefined}
+      />
     </Box>
   );
 }
