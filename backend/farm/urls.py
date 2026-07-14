@@ -11,6 +11,15 @@ from .structure.views import (
     FieldViewSet,
     LocationViewSet,
 )
+from .cultures.views import (
+    CultureSupplierDataViewSet,
+    CultureUndeleteView,
+    CultureViewSet,
+    PublicCultureViewSet,
+    SeedDemandListView,
+    SeedPackageViewSet,
+    SupplierViewSet,
+)
 from .history.views import (
     GlobalHistoryListView,
     GlobalHistoryRestoreView,
@@ -23,19 +32,12 @@ from .notes.views import (
     NoteAttachmentListCreateView,
 )
 from .views import (
-    SupplierViewSet,
-    CultureViewSet,
-    CultureSupplierDataViewSet,
-    SeedDemandListView,
-    CultureUndeleteView,
-    SeedPackageViewSet,
     ProjectViewSet,
     MyProjectsView,
     ProjectSwitchView,
     ProjectMembersView,
     ProjectInvitationView,
     PublicProjectInvitationView,
-    PublicCultureViewSet,
     PendingProjectInvitationView,
     AcceptProjectInvitationView,
     AcceptProjectInvitationByTokenView,

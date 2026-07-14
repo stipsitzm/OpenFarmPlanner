@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 
 from farm.models import Culture, EntityRevision
 from farm.project_context import get_active_project_or_400, require_project_admin
-from farm.serializers import CultureSerializer
+from farm.cultures.serializers import CultureSerializer
 
 from .records import _build_entity_revision_changes, _current_actor_label, record_entity_revision
 from .restore import _restore_project_state_at
