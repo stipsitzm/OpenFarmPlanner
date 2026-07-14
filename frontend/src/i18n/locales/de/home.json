@@ -87,7 +87,7 @@
     },
     "privacy": {
       "title": "Datenschutzerklärung",
-      "version": "Stand: 13. Juli 2026",
+      "version": "Stand: 14. Juli 2026",
       "sections": {
         "controller": {
           "title": "Verantwortlicher",
@@ -129,7 +129,7 @@
           "content": "Sie können einzelne Kultur-Datensätze (z. B. Anbauinformationen zu einer Gemüsesorte) aus einem privaten Projekt eigenständig in eine öffentliche Kulturbibliothek veröffentlichen. Diese Bibliothek kann von allen angemeldeten Nutzern eingesehen und in ein eigenes Projekt importiert werden. Die Veröffentlichung ist freiwillig und für die Nutzung von OpenFarmPlanner nicht erforderlich. Welche Nutzungsrechte Sie OpenFarmPlanner damit einräumen, regeln die Nutzungsbedingungen, Abschnitt „Nutzungsrechte an veröffentlichten Kulturdaten“.",
           "bullets": {
             "publicContent": "Veröffentlicht werden ausschließlich die landwirtschaftlichen Anbaudaten der Kultur (z. B. Name, Sorte, Wachstums- und Erntedauer, Pflanzabstände, Saatgutmenge, Lieferantenname). Notizen aus dem privaten Projekt werden nicht mitveröffentlicht.",
-            "attribution": "Als Urheber eines veröffentlichten Eintrags wird der von Ihnen in den Kontoeinstellungen frei wählbare öffentliche Anzeigename angezeigt. Haben Sie keinen öffentlichen Anzeigenamen festgelegt, erfolgt die Veröffentlichung anonym, ohne Namensangabe. Ihr Benutzername und Ihre E-Mail-Adresse sind zu keinem Zeitpunkt Bestandteil eines öffentlichen Eintrags; die E-Mail-Adresse dient ausschließlich der Kontoverwaltung und unserer Kommunikation mit Ihnen (siehe Abschnitt „E-Mail-Kommunikation“).",
+            "attribution": "Als Urheber eines veröffentlichten Eintrags wird der von Ihnen in den Kontoeinstellungen frei wählbare öffentliche Anzeigename angezeigt. Dieser Name gehört zu Ihrem Konto, nicht zum einzelnen Eintrag: Legen Sie ihn erstmals fest oder ändern ihn, erscheint er automatisch bei allen bereits von Ihnen veröffentlichten Kulturen als Urheber; entfernen Sie ihn wieder, werden diese Einträge wieder anonym angezeigt. Frühere Namen werden dabei nicht an einzelnen Einträgen gespeichert. Haben Sie keinen öffentlichen Anzeigenamen festgelegt, erfolgt die Veröffentlichung anonym, ohne Namensangabe. Der Anzeigename muss eindeutig sein; bei der Vergabe wird technisch geprüft, ob er bereits von einem anderen Konto verwendet wird. Ihr Benutzername und Ihre E-Mail-Adresse sind zu keinem Zeitpunkt Bestandteil eines öffentlichen Eintrags; die E-Mail-Adresse dient ausschließlich der Kontoverwaltung und unserer Kommunikation mit Ihnen (siehe Abschnitt „E-Mail-Kommunikation“).",
             "noReview": "Die Veröffentlichung erfolgt unmittelbar durch Sie selbst; es findet aktuell keine inhaltliche Prüfung oder Freigabe durch uns statt.",
             "persistence": "Ein veröffentlichter Eintrag bleibt in der öffentlichen Bibliothek bestehen, auch wenn Sie die ursprüngliche Kultur in Ihrem privaten Projekt später ändern oder löschen.",
             "removal": "Da die Veröffentlichung auf Ihrer Einwilligung beruht, können Sie diese jederzeit mit Wirkung für die Zukunft widerrufen. Eine eigenständige Rücknahme über die Anwendung ist derzeit nicht möglich; melden Sie sich dazu bitte unter info@openfarmplanner.org, wir entfernen den Eintrag dann für Sie.",

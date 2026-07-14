@@ -9,10 +9,10 @@
     "account": "Account"
   },
   "publicProfile": {
-    "description": "This name is only shown as the author when you publish cultures to the public culture library.",
+    "description": "This name belongs to your account and is shown as the author on every culture you have published, or will publish, to the public culture library.",
     "publicDisplayName": "Name on publications",
-    "noPublicDisplayName": "Not set – you publish anonymously",
-    "helperText": "Visible to everyone browsing the culture library. Leave blank to publish anonymously.",
+    "noPublicDisplayName": "Anonymous",
+    "helperText": "Without a name, your publications appear anonymous. If you set a name later, it automatically appears as the author on all cultures you already published – if you remove it again, those cultures appear anonymous once more. The name must be unique and not already used by someone else.",
     "actions": {
       "setPublicDisplayName": "Set name",
       "editPublicDisplayName": "Change name"

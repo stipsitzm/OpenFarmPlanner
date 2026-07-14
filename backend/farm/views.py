@@ -1742,7 +1742,7 @@ class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related('created_by__public_profile')
         query = (self.request.query_params.get('q') or '').strip()
         name = (self.request.query_params.get('name') or '').strip()
         variety = (self.request.query_params.get('variety') or '').strip()

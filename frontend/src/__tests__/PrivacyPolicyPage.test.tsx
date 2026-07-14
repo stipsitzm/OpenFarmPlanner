@@ -45,6 +45,14 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/zu keinem Zeitpunkt Bestandteil eines öffentlichen Eintrags/)).toBeInTheDocument();
   });
 
+  it('explains that the display name belongs to the account and applies retroactively, and must be unique', () => {
+    renderPrivacyPolicyPage();
+
+    expect(screen.getByText(/gehört zu Ihrem Konto, nicht zum einzelnen Eintrag/)).toBeInTheDocument();
+    expect(screen.getByText(/Frühere Namen werden dabei nicht an einzelnen Einträgen gespeichert/)).toBeInTheDocument();
+    expect(screen.getByText(/Der Anzeigename muss eindeutig sein/)).toBeInTheDocument();
+  });
+
   it('mentions a general, forward-looking note on future collaboration without describing features that do not exist yet', () => {
     renderPrivacyPolicyPage();
 
@@ -87,6 +95,6 @@ describe('PrivacyPolicyPage', () => {
   it('uses a concrete revision date instead of a generic month/year stamp', () => {
     renderPrivacyPolicyPage();
 
-    expect(screen.getByText(/Stand: 13\. Juli 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Stand: 14\. Juli 2026/)).toBeInTheDocument();
   });
 });

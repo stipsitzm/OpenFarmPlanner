@@ -9,10 +9,10 @@
     "account": "Konto"
   },
   "publicProfile": {
-    "description": "Dieser Name wird ausschließlich als Urheber:in angezeigt, wenn du Kulturen in der öffentlichen Kulturbibliothek veröffentlichst.",
+    "description": "Dieser Name gehört zu deinem Konto und wird als Urheber:in bei allen Kulturen angezeigt, die du in der öffentlichen Kulturbibliothek veröffentlicht hast oder noch veröffentlichst.",
     "publicDisplayName": "Name bei Veröffentlichungen",
-    "noPublicDisplayName": "Nicht festgelegt – du veröffentlichst anonym",
-    "helperText": "Für alle Besucher:innen der Kulturbibliothek sichtbar. Leer lassen, um anonym zu veröffentlichen.",
+    "noPublicDisplayName": "Anonym",
+    "helperText": "Ohne Namen veröffentlichst du anonym. Legst du später einen Namen fest, erscheint er automatisch bei allen bereits veröffentlichten Kulturen als Urheber – entfernst du ihn wieder, werden diese Kulturen wieder anonym angezeigt. Der Name muss eindeutig sein und darf noch von niemandem sonst verwendet werden.",
     "actions": {
       "setPublicDisplayName": "Namen festlegen",
       "editPublicDisplayName": "Namen ändern"

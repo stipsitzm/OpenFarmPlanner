@@ -15,7 +15,7 @@ from rest_framework import serializers
 from farm.models import ProjectMembership
 from farm.project_context import resolve_project_for_user
 from .consent import get_pending_consent_documents, record_acceptance
-from .models import AccountDeletionRequest, DocumentConsent
+from .models import AccountDeletionRequest, DocumentConsent, PublicProfile
 
 User = get_user_model()
 _username_validator = UnicodeUsernameValidator()
@@ -238,6 +238,18 @@ class AccountProfileSerializer(serializers.Serializer):
 
 class AccountPublicProfileSerializer(serializers.Serializer):
     public_display_name = serializers.CharField(max_length=255, allow_blank=True, required=True)
+
+    def validate_public_display_name(self, value: str) -> str:
+        value = value.strip()
+        if not value:
+            return value
+        request = self.context.get('request')
+        queryset = PublicProfile.objects.filter(public_display_name__iexact=value)
+        if request is not None:
+            queryset = queryset.exclude(user=request.user)
+        if queryset.exists():
+            raise serializers.ValidationError('Dieser Name wird bereits verwendet.')
+        return value
 
 
 class AccountEmailChangeRequestSerializer(serializers.Serializer):
