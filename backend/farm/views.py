@@ -10,13 +10,11 @@ import logging
 import time
 from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
-import json
 from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import login
 from django.core.exceptions import ValidationError
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError, OperationalError, transaction
 from django.db.models import Case, When, Value, F, FloatField, IntegerField, ExpressionWrapper, Sum, CharField, Q, Count, Prefetch
 from django.db.models.functions import Coalesce, Ceil, Cast
@@ -34,7 +32,17 @@ from django.utils.crypto import get_random_string
 from django.utils.text import slugify
 from django.utils.dateparse import parse_date
 from django.utils.translation import gettext as _
-from .models import AgentLoginToken, Location, Field, Bed, BedLayout, FieldLayout, Culture, CultureSupplierData, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, PublicCulture, culture_media_upload_path, EntityRevision, Project, ProjectMembership, ProjectInvitation, format_culture_display_name
+from .models import AgentLoginToken, Location, Field, Bed, BedLayout, FieldLayout, Culture, CultureSupplierData, PlantingPlan, Task, Supplier, NoteAttachment, MediaFile, SeedPackage, PublicCulture, culture_media_upload_path, EntityRevision, Project, ProjectMembership, ProjectInvitation
+from .history import (
+    _build_entity_revision_changes,
+    _current_actor_label,
+    _diff_changed_fields,
+    _entity_display_name,
+    _entity_type_for,
+    _restore_project_state_at,
+    _serialize_instance,
+    record_entity_revision,
+)
 from .project_context import get_active_project_or_400, require_project_admin, resolve_project_for_user
 from .serializers import (
     LocationSerializer,
@@ -254,192 +262,6 @@ def _iso_week_key(day: date) -> str:
     """Return ISO week key in the format YYYY-Www using ISO year and week."""
     iso_year, iso_week, _ = day.isocalendar()
     return f"{iso_year}-W{iso_week:02d}"
-
-
-# Entity types that participate in per-entity revision history and whole-project
-# point-in-time restore, in FK-dependency order (parents before children).
-_RESTORABLE_ENTITY_TYPES: list[tuple[type, str]] = [
-    (Location, 'location'),
-    (Field, 'field'),
-    (Bed, 'bed'),
-    (BedLayout, 'bed_layout'),
-    (FieldLayout, 'field_layout'),
-    (Supplier, 'supplier'),
-    (Culture, 'culture'),
-    (PlantingPlan, 'planting_plan'),
-    (Task, 'task'),
-    (NoteAttachment, 'note_attachment'),
-]
-
-# Entity types recorded in history but not part of whole-project restore
-# (mirrors the entities `_serialize_project_state` used to omit).
-_ENTITY_TYPE_LABELS: dict[type, str] = {model: label for model, label in _RESTORABLE_ENTITY_TYPES} | {
-    MediaFile: 'media_file',
-    SeedPackage: 'seed_package',
-    CultureSupplierData: 'culture_supplier_data',
-}
-
-
-def _entity_type_for(instance) -> str:
-    return _ENTITY_TYPE_LABELS.get(type(instance), type(instance).__name__.lower())
-
-
-def _current_actor_label(request) -> str:
-    user = getattr(request, 'user', None)
-    if not user or not getattr(user, 'is_authenticated', False):
-        return ''
-    display_name = (getattr(user, 'display_name', '') or '').strip()
-    if display_name:
-        return display_name
-    full_name = (user.get_full_name() or '').strip()
-    if full_name:
-        return full_name
-    return user.email or user.username or ''
-
-
-def _serialize_instance(instance) -> dict[str, Any]:
-    """Serialize a single model instance's current DB row to a JSON-safe dict."""
-    manager = getattr(type(instance), 'all_objects', None) or type(instance)._base_manager
-    row = manager.filter(pk=instance.pk).values().first()
-    if row is None:
-        # Instance has already been deleted from the DB (hard delete) — fall back
-        # to its still-populated in-memory field values.
-        row = {field.attname: getattr(instance, field.attname) for field in instance._meta.concrete_fields}
-    return json.loads(json.dumps(row, cls=DjangoJSONEncoder))
-
-
-def _diff_changed_fields(previous: dict[str, Any], current: dict[str, Any]) -> list[str]:
-    return [
-        key for key, value in current.items()
-        if key not in {'created_at', 'updated_at'} and previous.get(key) != value
-    ]
-
-
-def _entity_display_name(instance) -> str:
-    if isinstance(instance, Culture):
-        return format_culture_display_name(instance.name, instance.variety) or ''
-    if isinstance(instance, PlantingPlan):
-        culture_label = format_culture_display_name(instance.culture.name, instance.culture.variety) if instance.culture_id else None
-        bed_label = instance.bed.name if instance.bed_id else None
-        return ' / '.join(part for part in (culture_label, bed_label) if part)
-    if isinstance(instance, (CultureSupplierData, SeedPackage)):
-        return format_culture_display_name(instance.culture.name, instance.culture.variety) if instance.culture_id else ''
-    if isinstance(instance, Task):
-        return instance.title or ''
-    return getattr(instance, 'name', None) or ''
-
-
-def record_entity_revision(
-    *,
-    project: Project,
-    entity_type: str,
-    object_id: int,
-    action: str,
-    snapshot: dict[str, Any],
-    display_name: str = '',
-    changed_fields: list[str] | None = None,
-    user_name: str = '',
-) -> None:
-    EntityRevision.objects.create(
-        project=project,
-        entity_type=entity_type,
-        object_id=object_id,
-        action=action,
-        display_name=display_name or '',
-        snapshot=snapshot,
-        changed_fields=changed_fields if changed_fields is not None else ([EntityRevision.ACTION_CREATED] if action == EntityRevision.ACTION_CREATED else []),
-        user_name=user_name or '',
-    )
-
-
-_ENTITY_HISTORY_IGNORED_FIELDS = {
-    'id',
-    'created_at',
-    'updated_at',
-    'deleted_at',
-    'project_id',
-    'created_by_id',
-    'updated_by_id',
-    'name_normalized',
-    'variety_normalized',
-}
-
-
-def _build_entity_revision_changes(
-    snapshot: dict[str, Any],
-    previous_snapshot: dict[str, Any] | None,
-    changed_fields: list[str] | None,
-) -> list[dict[str, Any]]:
-    """Build displayable field changes from entity revision snapshots."""
-    if not isinstance(snapshot, dict):
-        return []
-
-    if not isinstance(changed_fields, list):
-        changed_fields = []
-
-    changes: list[dict[str, Any]] = []
-    for field in changed_fields:
-        if field in _ENTITY_HISTORY_IGNORED_FIELDS:
-            continue
-        if field == EntityRevision.ACTION_CREATED:
-            changes.append({
-                'field': field,
-                'old_value': None,
-                'new_value': True,
-            })
-            continue
-        if field not in snapshot:
-            continue
-
-        old_value = previous_snapshot.get(field) if isinstance(previous_snapshot, dict) else None
-        changes.append({
-            'field': field,
-            'old_value': old_value,
-            'new_value': snapshot.get(field),
-        })
-
-    return changes
-
-
-def _entity_states_at(project: Project, entity_type: str, target_time) -> dict[int, dict[str, Any] | None]:
-    """Return {object_id: snapshot} for every object with a revision at/before
-    target_time; a value of None marks an object that was deleted by then."""
-    revisions = (
-        EntityRevision.objects
-        .filter(project=project, entity_type=entity_type, created_at__lte=target_time)
-        .order_by('object_id', '-created_at')
-    )
-    states: dict[int, dict[str, Any] | None] = {}
-    for revision in revisions:
-        if revision.object_id in states:
-            continue
-        states[revision.object_id] = None if revision.action == EntityRevision.ACTION_DELETED else revision.snapshot
-    return states
-
-
-def _restore_project_state_at(project: Project, target_time) -> None:
-    """Reconstruct every restorable entity type to its state at target_time."""
-    with transaction.atomic():
-        for model, _entity_type in reversed(_RESTORABLE_ENTITY_TYPES):
-            manager = getattr(model, 'all_objects', None) or model._base_manager
-            manager.filter(project=project).delete()
-
-        for model, entity_type in _RESTORABLE_ENTITY_TYPES:
-            allowed_fields = {field.attname for field in model._meta.concrete_fields}
-            states = _entity_states_at(project, entity_type, target_time)
-            rows = []
-            for snapshot in states.values():
-                if snapshot is None:
-                    continue
-                # Old snapshots may carry fields since renamed/removed from the model
-                # (schema changes don't rewrite historical JSON) — drop anything the
-                # current model no longer has instead of crashing on an unknown kwarg.
-                row_data = {key: value for key, value in snapshot.items() if key in allowed_fields}
-                row_data['project_id'] = project.id
-                rows.append(model(**row_data))
-            if rows:
-                model.objects.bulk_create(rows)
-
 
 
 class BedLayoutByLocationView(APIView):
