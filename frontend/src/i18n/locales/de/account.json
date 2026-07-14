@@ -4,17 +4,18 @@
   "displayName": "Anzeigename",
   "sections": {
     "profile": "Profil",
-    "publicProfile": "Öffentliches Profil",
+    "publicProfile": "Öffentliche Kulturbibliothek",
     "security": "Login & Sicherheit",
     "account": "Konto"
   },
   "publicProfile": {
-    "description": "Der öffentliche Anzeigename wird als Urheber:in angezeigt, wenn du einen Eintrag in der öffentlichen Kulturbibliothek veröffentlichst. Ohne gesetzten Namen erfolgt die Veröffentlichung anonym.",
-    "publicDisplayName": "Öffentlicher Anzeigename",
-    "noPublicDisplayName": "— (Veröffentlichungen erfolgen anonym)",
-    "helperText": "Sichtbar für alle Besucher:innen der öffentlichen Kulturbibliothek. Leer lassen, um anonym zu veröffentlichen.",
+    "description": "Dieser Name gehört zu deinem Konto und wird als Urheber:in bei allen Kulturen angezeigt, die du in der öffentlichen Kulturbibliothek veröffentlicht hast oder noch veröffentlichst.",
+    "publicDisplayName": "Name bei Veröffentlichungen",
+    "noPublicDisplayName": "Anonym",
+    "helperText": "Ohne Namen veröffentlichst du anonym. Legst du später einen Namen fest, erscheint er automatisch bei allen bereits veröffentlichten Kulturen als Urheber – entfernst du ihn wieder, werden diese Kulturen wieder anonym angezeigt. Der Name muss eindeutig sein und darf noch von niemandem sonst verwendet werden.",
     "actions": {
-      "editPublicDisplayName": "Öffentlichen Anzeigenamen ändern"
+      "setPublicDisplayName": "Namen festlegen",
+      "editPublicDisplayName": "Namen ändern"
     }
   },
   "actions": {
@@ -38,10 +39,11 @@
   "restoreDescription": "Innerhalb dieser Frist kannst du die Löschung rückgängig machen.",
   "deleteButton": "Konto löschen",
   "dialogTitle": "Konto zur Löschung vormerken",
-  "dialogWarning": "Bitte bestätige mit deinem aktuellen Passwort und dem Text „LÖSCHEN“. Dein Konto wird deaktiviert und nach 14 Tagen endgültig anonymisiert.",
+  "dialogWarning": "Bitte bestätige mit deinem aktuellen Passwort und dem Text „{{phrase}}“. Dein Konto wird deaktiviert und nach 14 Tagen endgültig anonymisiert.",
   "currentPassword": "Aktuelles Passwort",
+  "deletePhrase": "LÖSCHEN",
   "deletePhraseLabel": "Bestätigungstext",
-  "deletePhraseHelper": "Bitte gib zur Bestätigung genau „LÖSCHEN“ ein.",
+  "deletePhraseHelper": "Bitte gib zur Bestätigung genau „{{phrase}}“ ein.",
   "cancel": "Abbrechen",
   "confirmDelete": "Konto zur Löschung vormerken",
   "deletionScheduled": "Dein Konto wurde zur Löschung vorgemerkt. Endgültige Löschung am {{date}}.",

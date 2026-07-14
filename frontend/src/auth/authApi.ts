@@ -39,6 +39,7 @@ const authFieldLabelFallbacks: Record<string, string> = {
   uid: 'Benutzerkennung',
   token: 'Token',
   display_name: 'Anzeigename',
+  public_display_name: 'Name bei Veröffentlichungen',
   document: 'Dokument',
   detail: 'Fehler',
   non_field_errors: 'Fehler',
@@ -53,6 +54,7 @@ const knownValidationMessageKeys: Record<string, string> = {
   'Unable to log in with provided credentials.': 'invalidCredentials',
   'Die E-Mail konnte nicht gesendet werden. Bitte kontaktiere [info@openfarmplanner.org](mailto:info@openfarmplanner.org).': 'emailSendFailed',
   'Dein Konto wurde erstellt, aber die Aktivierungs-E-Mail konnte nicht gesendet werden. Bitte kontaktiere [info@openfarmplanner.org](mailto:info@openfarmplanner.org), damit wir dein Konto aktivieren oder dir den Link erneut senden können.': 'activationEmailSendFailed',
+  'Dieser Name wird bereits verwendet.': 'publicDisplayNameTaken',
 };
 
 function translateOrFallback(key: string, fallback: string, options?: Record<string, unknown>): string {

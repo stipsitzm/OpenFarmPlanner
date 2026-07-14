@@ -53,11 +53,11 @@ describe('AccountSettingsPage', () => {
     render(<MemoryRouter><AccountSettingsPage /></MemoryRouter>);
 
     expect(screen.getByText('Profil')).toBeInTheDocument();
-    expect(screen.getByText('Öffentliches Profil')).toBeInTheDocument();
+    expect(screen.getByText('Öffentliche Kulturbibliothek')).toBeInTheDocument();
     expect(screen.getByText('Login & Sicherheit')).toBeInTheDocument();
     expect(screen.getByText('Konto')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Anzeigename ändern' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Öffentlichen Anzeigenamen ändern' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Namen festlegen' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'E-Mail-Adresse ändern' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Passwort ändern' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Neue E-Mail-Adresse')).not.toBeInTheDocument();
@@ -69,6 +69,8 @@ describe('AccountSettingsPage', () => {
     expect(confirmButton).toBeDisabled();
 
     fireEvent.change(within(dialog).getByLabelText('Aktuelles Passwort'), { target: { value: 'secret' } });
+    fireEvent.change(within(dialog).getByLabelText('Bestätigungstext'), { target: { value: 'DELETE' } });
+    expect(confirmButton).toBeDisabled();
     fireEvent.change(within(dialog).getByLabelText('Bestätigungstext'), { target: { value: 'LÖSCHEN' } });
     expect(confirmButton).toBeEnabled();
   });

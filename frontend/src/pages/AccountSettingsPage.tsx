@@ -13,8 +13,10 @@ import {
   Stack,
   TextField,
   Typography,
+  type SxProps,
+  type Theme,
 } from '@mui/material';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { changePassword, requestEmailChange, updateProfile, updatePublicDisplayName } from '../auth/authApi';
 import { useAuth } from '../auth/useAuth';
@@ -22,33 +24,122 @@ import { useTranslation } from '../i18n';
 import { useNavigationBlocker } from '../hooks/useNavigationBlocker';
 import { enableDevOnboardingPreview } from '../projects/devOnboardingPreview';
 
+const actionButtonSx = { width: { xs: '100%', sm: 'auto' } } as const;
+
+interface SectionSubmit {
+  message: string | null;
+  error: string | null;
+  submitting: boolean;
+  submit: (action: () => Promise<{ detail: string }>, onSuccess?: () => void | Promise<void>) => Promise<void>;
+  clearError: () => void;
+}
+
+function useSectionSubmit(genericErrorMessage: string): SectionSubmit {
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const submit = async (
+    action: () => Promise<{ detail: string }>,
+    onSuccess?: () => void | Promise<void>,
+  ): Promise<void> => {
+    setSubmitting(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const response = await action();
+      setMessage(response.detail);
+      await onSuccess?.();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : genericErrorMessage);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return { message, error, submitting, submit, clearError: () => setError(null) };
+}
+
+function SectionAlerts({ message, error }: Pick<SectionSubmit, 'message' | 'error'>) {
+  return (
+    <>
+      {message ? <Alert severity="success">{message}</Alert> : null}
+      {error ? <Alert severity="error">{error}</Alert> : null}
+    </>
+  );
+}
+
+interface InlineEditorProps {
+  open: boolean;
+  saveLabel: ReactNode;
+  onSave: () => void;
+  onCancel: () => void;
+  submitting: boolean;
+  saveDisabled?: boolean;
+  sx?: SxProps<Theme>;
+  children: ReactNode;
+}
+
+function InlineEditor({ open, saveLabel, onSave, onCancel, submitting, saveDisabled = false, sx, children }: InlineEditorProps) {
+  const { t } = useTranslation('account');
+  return (
+    <Collapse in={open} unmountOnExit>
+      <Stack spacing={2} sx={sx}>
+        {children}
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+          <Button variant="contained" onClick={onSave} disabled={submitting || saveDisabled} sx={actionButtonSx}>
+            {saveLabel}
+          </Button>
+          <Button variant="text" onClick={onCancel} disabled={submitting} sx={actionButtonSx}>
+            {t('cancel')}
+          </Button>
+        </Stack>
+      </Stack>
+    </Collapse>
+  );
+}
+
+interface SettingsCardProps {
+  title: ReactNode;
+  description?: ReactNode;
+  children: ReactNode;
+}
+
+function SettingsCard({ title, description, children }: SettingsCardProps) {
+  return (
+    <Card>
+      <CardContent>
+        <Typography variant="h6" sx={{ mb: description ? 0.5 : 2 }}>
+          {title}
+        </Typography>
+        {description ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {description}
+          </Typography>
+        ) : null}
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AccountSettingsPage() {
   const { user, requestAccountDeletion, refreshUser } = useAuth();
   const { t } = useTranslation('account');
   const navigate = useNavigate();
 
   const [displayName, setDisplayName] = useState(user?.display_name ?? '');
-  const [profileMessage, setProfileMessage] = useState<string | null>(null);
-  const [profileError, setProfileError] = useState<string | null>(null);
-  const [profileSubmitting, setProfileSubmitting] = useState(false);
-
   const [publicDisplayName, setPublicDisplayName] = useState(user?.public_display_name ?? '');
-  const [publicProfileMessage, setPublicProfileMessage] = useState<string | null>(null);
-  const [publicProfileError, setPublicProfileError] = useState<string | null>(null);
-  const [publicProfileSubmitting, setPublicProfileSubmitting] = useState(false);
-
   const [newEmail, setNewEmail] = useState('');
   const [emailPassword, setEmailPassword] = useState('');
-  const [emailMessage, setEmailMessage] = useState<string | null>(null);
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [emailSubmitting, setEmailSubmitting] = useState(false);
-
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [repeatPassword, setRepeatPassword] = useState('');
-  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+
+  const profileSection = useSectionSubmit(t('errors.generic'));
+  const publicProfileSection = useSectionSubmit(t('errors.generic'));
+  const emailSection = useSectionSubmit(t('errors.generic'));
+  const passwordSection = useSectionSubmit(t('errors.generic'));
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
@@ -58,7 +149,8 @@ export default function AccountSettingsPage() {
   const [activeEditor, setActiveEditor] = useState<'displayName' | 'publicDisplayName' | 'email' | 'password' | null>(null);
   const [hintsResetDone, setHintsResetDone] = useState(false);
 
-  const requiresDeletePhrase = deleteConfirmationText.trim() === 'LÖSCHEN';
+  const deletePhrase = t('deletePhrase');
+  const requiresDeletePhrase = deleteConfirmationText.trim() === deletePhrase;
   const canDelete = deletePassword.trim().length > 0 && requiresDeletePhrase;
 
   const hasUnsavedChanges = useMemo(() => {
@@ -85,20 +177,20 @@ export default function AccountSettingsPage() {
   const closeDisplayNameEditor = (): void => {
     setActiveEditor(null);
     setDisplayName(user?.display_name ?? '');
-    setProfileError(null);
+    profileSection.clearError();
   };
 
   const closePublicDisplayNameEditor = (): void => {
     setActiveEditor(null);
     setPublicDisplayName(user?.public_display_name ?? '');
-    setPublicProfileError(null);
+    publicProfileSection.clearError();
   };
 
   const closeEmailEditor = (): void => {
     setActiveEditor(null);
     setNewEmail('');
     setEmailPassword('');
-    setEmailError(null);
+    emailSection.clearError();
   };
 
   const closePasswordEditor = (): void => {
@@ -106,70 +198,32 @@ export default function AccountSettingsPage() {
     setCurrentPassword('');
     setNewPassword('');
     setRepeatPassword('');
-    setPasswordError(null);
+    passwordSection.clearError();
   };
 
-  const handleProfileSave = async (): Promise<void> => {
-    setProfileSubmitting(true);
-    setProfileMessage(null);
-    setProfileError(null);
-    try {
-      const response = await updateProfile(displayName);
-      setProfileMessage(response.detail);
-      await refreshUser();
-      setActiveEditor(null);
-    } catch (error) {
-      setProfileError(error instanceof Error ? error.message : t('errors.generic'));
-    } finally {
-      setProfileSubmitting(false);
-    }
-  };
+  const handleProfileSave = (): Promise<void> =>
+    profileSection.submit(
+      () => updateProfile(displayName),
+      async () => {
+        await refreshUser();
+        setActiveEditor(null);
+      },
+    );
 
-  const handlePublicProfileSave = async (): Promise<void> => {
-    setPublicProfileSubmitting(true);
-    setPublicProfileMessage(null);
-    setPublicProfileError(null);
-    try {
-      const response = await updatePublicDisplayName(publicDisplayName);
-      setPublicProfileMessage(response.detail);
-      await refreshUser();
-      setActiveEditor(null);
-    } catch (error) {
-      setPublicProfileError(error instanceof Error ? error.message : t('errors.generic'));
-    } finally {
-      setPublicProfileSubmitting(false);
-    }
-  };
+  const handlePublicProfileSave = (): Promise<void> =>
+    publicProfileSection.submit(
+      () => updatePublicDisplayName(publicDisplayName),
+      async () => {
+        await refreshUser();
+        setActiveEditor(null);
+      },
+    );
 
-  const handleEmailChangeRequest = async (): Promise<void> => {
-    setEmailSubmitting(true);
-    setEmailMessage(null);
-    setEmailError(null);
-    try {
-      const response = await requestEmailChange(newEmail, emailPassword);
-      setEmailMessage(response.detail);
-      closeEmailEditor();
-    } catch (error) {
-      setEmailError(error instanceof Error ? error.message : t('errors.generic'));
-    } finally {
-      setEmailSubmitting(false);
-    }
-  };
+  const handleEmailChangeRequest = (): Promise<void> =>
+    emailSection.submit(() => requestEmailChange(newEmail, emailPassword), closeEmailEditor);
 
-  const handlePasswordChange = async (): Promise<void> => {
-    setPasswordSubmitting(true);
-    setPasswordMessage(null);
-    setPasswordError(null);
-    try {
-      const response = await changePassword(currentPassword, newPassword, repeatPassword);
-      setPasswordMessage(response.detail);
-      closePasswordEditor();
-    } catch (error) {
-      setPasswordError(error instanceof Error ? error.message : t('errors.generic'));
-    } finally {
-      setPasswordSubmitting(false);
-    }
-  };
+  const handlePasswordChange = (): Promise<void> =>
+    passwordSection.submit(() => changePassword(currentPassword, newPassword, repeatPassword), closePasswordEditor);
 
   const handleResetHints = (): void => {
     localStorage.removeItem('ofp.shortcutHintSeen');
@@ -205,274 +259,186 @@ export default function AccountSettingsPage() {
       </Typography>
 
       <Stack spacing={3}>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              {t('sections.profile')}
+        <SettingsCard title={t('sections.profile')}>
+          <Stack spacing={2}>
+            <Typography>
+              <strong>{t('email')}:</strong> {user?.email}
             </Typography>
-            <Stack spacing={2}>
-              <Typography>
-                <strong>{t('email')}:</strong> {user?.email}
-              </Typography>
-              <Typography>
-                <strong>{t('displayName')}:</strong> {user?.display_name || t('noDisplayName')}
-              </Typography>
-              {profileMessage ? <Alert severity="success">{profileMessage}</Alert> : null}
-              {profileError ? <Alert severity="error">{profileError}</Alert> : null}
-              <Box>
-                {activeEditor !== 'displayName' ? (
-                  <Button
-                    variant="outlined"
-                    onClick={() => setActiveEditor('displayName')}
-                    sx={{ width: { xs: '100%', sm: 'auto' } }}
-                  >
-                    {t('actions.editDisplayName')}
-                  </Button>
-                ) : null}
-              </Box>
-              <Collapse in={activeEditor === 'displayName'} unmountOnExit>
-                <Stack spacing={2}>
-                  <TextField
-                    label={t('displayName')}
-                    value={displayName}
-                    onChange={(event) => setDisplayName(event.target.value)}
-                    fullWidth
-                    slotProps={{ htmlInput: { maxLength: 255 } }}
-                  />
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                    <Button
-                      variant="contained"
-                      onClick={() => void handleProfileSave()}
-                      disabled={profileSubmitting}
-                      sx={{ width: { xs: '100%', sm: 'auto' } }}
-                    >
-                      {t('actions.save')}
-                    </Button>
-                    <Button
-                      variant="text"
-                      onClick={closeDisplayNameEditor}
-                      disabled={profileSubmitting}
-                      sx={{ width: { xs: '100%', sm: 'auto' } }}
-                    >
-                      {t('cancel')}
-                    </Button>
-                  </Stack>
-                </Stack>
-              </Collapse>
-            </Stack>
-          </CardContent>
-        </Card>
+            <Typography>
+              <strong>{t('displayName')}:</strong> {user?.display_name || t('noDisplayName')}
+            </Typography>
+            <SectionAlerts message={profileSection.message} error={profileSection.error} />
+            <Box>
+              {activeEditor !== 'displayName' ? (
+                <Button variant="outlined" onClick={() => setActiveEditor('displayName')} sx={actionButtonSx}>
+                  {t('actions.editDisplayName')}
+                </Button>
+              ) : null}
+            </Box>
+            <InlineEditor
+              open={activeEditor === 'displayName'}
+              saveLabel={t('actions.save')}
+              onSave={() => void handleProfileSave()}
+              onCancel={closeDisplayNameEditor}
+              submitting={profileSection.submitting}
+            >
+              <TextField
+                label={t('displayName')}
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                fullWidth
+                slotProps={{ htmlInput: { maxLength: 255 } }}
+              />
+            </InlineEditor>
 
-        <Card>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 2 }}>
+            <Divider />
+
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               {t('sections.publicProfile')}
             </Typography>
-            <Stack spacing={2}>
-              <Typography variant="body2" color="text.secondary">
-                {t('publicProfile.description')}
-              </Typography>
-              <Typography>
-                <strong>{t('publicProfile.publicDisplayName')}:</strong>{' '}
-                {user?.public_display_name || t('publicProfile.noPublicDisplayName')}
-              </Typography>
-              {publicProfileMessage ? <Alert severity="success">{publicProfileMessage}</Alert> : null}
-              {publicProfileError ? <Alert severity="error">{publicProfileError}</Alert> : null}
-              <Box>
-                {activeEditor !== 'publicDisplayName' ? (
-                  <Button
-                    variant="outlined"
-                    onClick={() => setActiveEditor('publicDisplayName')}
-                    sx={{ width: { xs: '100%', sm: 'auto' } }}
-                  >
-                    {t('publicProfile.actions.editPublicDisplayName')}
-                  </Button>
-                ) : null}
-              </Box>
-              <Collapse in={activeEditor === 'publicDisplayName'} unmountOnExit>
-                <Stack spacing={2}>
-                  <TextField
-                    label={t('publicProfile.publicDisplayName')}
-                    value={publicDisplayName}
-                    onChange={(event) => setPublicDisplayName(event.target.value)}
-                    fullWidth
-                    helperText={t('publicProfile.helperText')}
-                    slotProps={{ htmlInput: { maxLength: 255 } }}
-                  />
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                    <Button
-                      variant="contained"
-                      onClick={() => void handlePublicProfileSave()}
-                      disabled={publicProfileSubmitting}
-                      sx={{ width: { xs: '100%', sm: 'auto' } }}
-                    >
-                      {t('actions.save')}
-                    </Button>
-                    <Button
-                      variant="text"
-                      onClick={closePublicDisplayNameEditor}
-                      disabled={publicProfileSubmitting}
-                      sx={{ width: { xs: '100%', sm: 'auto' } }}
-                    >
-                      {t('cancel')}
-                    </Button>
-                  </Stack>
-                </Stack>
-              </Collapse>
-            </Stack>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              {t('sections.security')}
+            <Typography variant="body2" color="text.secondary">
+              {t('publicProfile.description')}
             </Typography>
-
-            {emailMessage ? <Alert severity="success">{emailMessage}</Alert> : null}
-            {passwordMessage ? <Alert severity="success">{passwordMessage}</Alert> : null}
-            {emailError ? <Alert severity="error">{emailError}</Alert> : null}
-            {passwordError ? <Alert severity="error">{passwordError}</Alert> : null}
-
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
-              <Button
-                variant={activeEditor === 'email' ? 'contained' : 'outlined'}
-                onClick={() => setActiveEditor('email')}
-                sx={{ width: { xs: '100%', sm: 'auto' } }}
-              >
-                {t('security.changeEmailTitle')}
-              </Button>
-              <Button
-                variant={activeEditor === 'password' ? 'contained' : 'outlined'}
-                onClick={() => setActiveEditor('password')}
-                sx={{ width: { xs: '100%', sm: 'auto' } }}
-              >
-                {t('security.changePasswordTitle')}
-              </Button>
-            </Stack>
-
-            <Collapse in={activeEditor === 'email'} unmountOnExit>
-              <Stack spacing={2} sx={{ mb: 2 }}>
-                <TextField
-                  label={t('security.newEmail')}
-                  type="email"
-                  fullWidth
-                  value={newEmail}
-                  onChange={(event) => setNewEmail(event.target.value)}
-                />
-                <TextField
-                  label={t('currentPassword')}
-                  type="password"
-                  fullWidth
-                  value={emailPassword}
-                  onChange={(event) => setEmailPassword(event.target.value)}
-                />
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                  <Button
-                    variant="contained"
-                    onClick={() => void handleEmailChangeRequest()}
-                    disabled={emailSubmitting || !newEmail.trim() || !emailPassword.trim()}
-                    sx={{ width: { xs: '100%', sm: 'auto' } }}
-                  >
-                    {t('actions.sendConfirmationLink')}
-                  </Button>
-                  <Button
-                    variant="text"
-                    onClick={closeEmailEditor}
-                    disabled={emailSubmitting}
-                    sx={{ width: { xs: '100%', sm: 'auto' } }}
-                  >
-                    {t('cancel')}
-                  </Button>
-                </Stack>
-              </Stack>
-            </Collapse>
-
-            <Collapse in={activeEditor === 'password'} unmountOnExit>
-              <Stack spacing={2}>
-                <TextField
-                  label={t('currentPassword')}
-                  type="password"
-                  fullWidth
-                  value={currentPassword}
-                  onChange={(event) => setCurrentPassword(event.target.value)}
-                />
-                <TextField
-                  label={t('security.newPassword')}
-                  type="password"
-                  fullWidth
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                />
-                <TextField
-                  label={t('security.repeatNewPassword')}
-                  type="password"
-                  fullWidth
-                  value={repeatPassword}
-                  onChange={(event) => setRepeatPassword(event.target.value)}
-                />
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                  <Button
-                    variant="contained"
-                    onClick={() => void handlePasswordChange()}
-                    disabled={passwordSubmitting || !currentPassword || !newPassword || !repeatPassword}
-                    sx={{ width: { xs: '100%', sm: 'auto' } }}
-                  >
-                    {t('actions.savePassword')}
-                  </Button>
-                  <Button
-                    variant="text"
-                    onClick={closePasswordEditor}
-                    disabled={passwordSubmitting}
-                    sx={{ width: { xs: '100%', sm: 'auto' } }}
-                  >
-                    {t('cancel')}
-                  </Button>
-                </Stack>
-              </Stack>
-            </Collapse>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              {t('sections.account')}
+            <Typography>
+              <strong>{t('publicProfile.publicDisplayName')}:</strong>{' '}
+              {user?.public_display_name || t('publicProfile.noPublicDisplayName')}
             </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <Button color="error" variant="outlined" onClick={() => setDeleteDialogOpen(true)}>
-              {t('deleteButton')}
+            <SectionAlerts message={publicProfileSection.message} error={publicProfileSection.error} />
+            <Box>
+              {activeEditor !== 'publicDisplayName' ? (
+                <Button variant="outlined" onClick={() => setActiveEditor('publicDisplayName')} sx={actionButtonSx}>
+                  {user?.public_display_name
+                    ? t('publicProfile.actions.editPublicDisplayName')
+                    : t('publicProfile.actions.setPublicDisplayName')}
+                </Button>
+              ) : null}
+            </Box>
+            <InlineEditor
+              open={activeEditor === 'publicDisplayName'}
+              saveLabel={t('actions.save')}
+              onSave={() => void handlePublicProfileSave()}
+              onCancel={closePublicDisplayNameEditor}
+              submitting={publicProfileSection.submitting}
+            >
+              <TextField
+                label={t('publicProfile.publicDisplayName')}
+                value={publicDisplayName}
+                onChange={(event) => setPublicDisplayName(event.target.value)}
+                fullWidth
+                helperText={t('publicProfile.helperText')}
+                slotProps={{ htmlInput: { maxLength: 255 } }}
+              />
+            </InlineEditor>
+          </Stack>
+        </SettingsCard>
+
+        <SettingsCard title={t('sections.security')}>
+          <SectionAlerts message={emailSection.message} error={emailSection.error} />
+          <SectionAlerts message={passwordSection.message} error={passwordSection.error} />
+
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
+            <Button
+              variant={activeEditor === 'email' ? 'contained' : 'outlined'}
+              onClick={() => setActiveEditor('email')}
+              sx={actionButtonSx}
+            >
+              {t('security.changeEmailTitle')}
             </Button>
-          </CardContent>
-        </Card>
+            <Button
+              variant={activeEditor === 'password' ? 'contained' : 'outlined'}
+              onClick={() => setActiveEditor('password')}
+              sx={actionButtonSx}
+            >
+              {t('security.changePasswordTitle')}
+            </Button>
+          </Stack>
+
+          <InlineEditor
+            open={activeEditor === 'email'}
+            saveLabel={t('actions.sendConfirmationLink')}
+            onSave={() => void handleEmailChangeRequest()}
+            onCancel={closeEmailEditor}
+            submitting={emailSection.submitting}
+            saveDisabled={!newEmail.trim() || !emailPassword.trim()}
+            sx={{ mb: 2 }}
+          >
+            <TextField
+              label={t('security.newEmail')}
+              type="email"
+              fullWidth
+              value={newEmail}
+              onChange={(event) => setNewEmail(event.target.value)}
+            />
+            <TextField
+              label={t('currentPassword')}
+              type="password"
+              fullWidth
+              value={emailPassword}
+              onChange={(event) => setEmailPassword(event.target.value)}
+            />
+          </InlineEditor>
+
+          <InlineEditor
+            open={activeEditor === 'password'}
+            saveLabel={t('actions.savePassword')}
+            onSave={() => void handlePasswordChange()}
+            onCancel={closePasswordEditor}
+            submitting={passwordSection.submitting}
+            saveDisabled={!currentPassword || !newPassword || !repeatPassword}
+          >
+            <TextField
+              label={t('currentPassword')}
+              type="password"
+              fullWidth
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+            />
+            <TextField
+              label={t('security.newPassword')}
+              type="password"
+              fullWidth
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+            />
+            <TextField
+              label={t('security.repeatNewPassword')}
+              type="password"
+              fullWidth
+              value={repeatPassword}
+              onChange={(event) => setRepeatPassword(event.target.value)}
+            />
+          </InlineEditor>
+        </SettingsCard>
 
         {import.meta.env.DEV ? (
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 1 }}>{t('developer.title')}</Typography>
-              <Divider sx={{ mb: 2 }} />
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                {t('developer.hintsDescription')}
-              </Typography>
-              {hintsResetDone ? <Alert severity="success" sx={{ mb: 2 }}>{t('developer.hintsResetDone')}</Alert> : null}
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-                <Button variant="outlined" onClick={handleResetHints}>
-                  {t('developer.resetHintsAction')}
-                </Button>
-                <Button variant="outlined" onClick={handleShowOnboardingPreview}>
-                  {t('developer.showOnboardingAction')}
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
+          <SettingsCard title={t('developer.title')} description={t('developer.hintsDescription')}>
+            {hintsResetDone ? <Alert severity="success" sx={{ mb: 2 }}>{t('developer.hintsResetDone')}</Alert> : null}
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+              <Button variant="outlined" onClick={handleResetHints}>
+                {t('developer.resetHintsAction')}
+              </Button>
+              <Button variant="outlined" onClick={handleShowOnboardingPreview}>
+                {t('developer.showOnboardingAction')}
+              </Button>
+            </Stack>
+          </SettingsCard>
         ) : null}
+
+        <SettingsCard
+          title={t('sections.account')}
+          description={`${t('deleteDescription')} ${t('restoreDescription')}`}
+        >
+          <Button color="error" variant="outlined" onClick={() => setDeleteDialogOpen(true)}>
+            {t('deleteButton')}
+          </Button>
+        </SettingsCard>
       </Stack>
 
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>{t('dialogTitle')}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <Alert severity="warning">{t('dialogWarning')}</Alert>
+            <Alert severity="warning">{t('dialogWarning', { phrase: deletePhrase })}</Alert>
             <Typography>{t('deleteDescription')}</Typography>
             <Typography>{t('restoreDescription')}</Typography>
             <TextField
@@ -487,7 +453,7 @@ export default function AccountSettingsPage() {
               label={t('deletePhraseLabel')}
               value={deleteConfirmationText}
               onChange={(event) => setDeleteConfirmationText(event.target.value)}
-              helperText={t('deletePhraseHelper')}
+              helperText={t('deletePhraseHelper', { phrase: deletePhrase })}
             />
             {deleteError ? <Alert severity="error">{deleteError}</Alert> : null}
           </Stack>

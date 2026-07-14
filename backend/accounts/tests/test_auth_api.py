@@ -16,7 +16,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.consent import CURRENT_VERSIONS
-from accounts.models import AccountDeletionRequest, AccountEmailChangeRequest, DocumentConsent, PendingActivation
+from accounts.models import AccountDeletionRequest, AccountEmailChangeRequest, DocumentConsent, PendingActivation, PublicProfile
 
 User = get_user_model()
 
@@ -586,6 +586,39 @@ class AuthApiTest(APITestCase):
         self.assertEqual(response.data['user']['public_display_name'], 'Grüner Hof')
         self.user.refresh_from_db()
         self.assertEqual(self.user.public_profile.public_display_name, 'Grüner Hof')
+
+    def test_public_profile_update_rejects_name_already_used_case_insensitively(self) -> None:
+        other = User.objects.create_user(
+            username='other', email='other@example.com', password=self.password, is_active=True,
+        )
+        PublicProfile.objects.create(user=other, public_display_name='Grüner Hof')
+
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.patch(
+            '/openfarmplanner/api/auth/account/public-profile/', {'public_display_name': 'grüner hof'}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(PublicProfile.objects.filter(user=self.user).exists())
+
+    def test_public_profile_update_allows_reusing_own_current_name(self) -> None:
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        self.client.patch('/openfarmplanner/api/auth/account/public-profile/', {'public_display_name': 'Grüner Hof'}, format='json')
+        response = self.client.patch(
+            '/openfarmplanner/api/auth/account/public-profile/', {'public_display_name': 'Grüner Hof'}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_public_profile_update_allows_multiple_users_to_stay_anonymous(self) -> None:
+        other = User.objects.create_user(
+            username='other', email='other@example.com', password=self.password, is_active=True,
+        )
+        PublicProfile.objects.create(user=other, public_display_name='')
+
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+        response = self.client.patch(
+            '/openfarmplanner/api/auth/account/public-profile/', {'public_display_name': ''}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_public_profile_defaults_to_blank_not_username_or_display_name(self) -> None:
         self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')

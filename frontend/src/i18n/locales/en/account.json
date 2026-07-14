@@ -4,17 +4,18 @@
   "displayName": "Display name",
   "sections": {
     "profile": "Profile",
-    "publicProfile": "Public profile",
+    "publicProfile": "Public culture library",
     "security": "Login & security",
     "account": "Account"
   },
   "publicProfile": {
-    "description": "The public display name is shown as the author when you publish an entry to the public culture library. If it is not set, publications appear anonymous.",
-    "publicDisplayName": "Public display name",
-    "noPublicDisplayName": "— (publications appear anonymous)",
-    "helperText": "Visible to all visitors of the public culture library. Leave blank to publish anonymously.",
+    "description": "This name belongs to your account and is shown as the author on every culture you have published, or will publish, to the public culture library.",
+    "publicDisplayName": "Name on publications",
+    "noPublicDisplayName": "Anonymous",
+    "helperText": "Without a name, your publications appear anonymous. If you set a name later, it automatically appears as the author on all cultures you already published – if you remove it again, those cultures appear anonymous once more. The name must be unique and not already used by someone else.",
     "actions": {
-      "editPublicDisplayName": "Change public display name"
+      "setPublicDisplayName": "Set name",
+      "editPublicDisplayName": "Change name"
     }
   },
   "actions": {
@@ -38,10 +39,11 @@
   "restoreDescription": "You can undo the deletion within this period.",
   "deleteButton": "Delete account",
   "dialogTitle": "Schedule account for deletion",
-  "dialogWarning": "Please confirm with your current password and the text \"DELETE\". Your account will be deactivated and permanently anonymized after 14 days.",
+  "dialogWarning": "Please confirm with your current password and the text \"{{phrase}}\". Your account will be deactivated and permanently anonymized after 14 days.",
   "currentPassword": "Current password",
+  "deletePhrase": "DELETE",
   "deletePhraseLabel": "Confirmation text",
-  "deletePhraseHelper": "Please enter exactly \"DELETE\" to confirm.",
+  "deletePhraseHelper": "Please enter exactly \"{{phrase}}\" to confirm.",
   "cancel": "Cancel",
   "confirmDelete": "Schedule account for deletion",
   "deletionScheduled": "Your account has been scheduled for deletion. It will be permanently deleted on {{date}}.",

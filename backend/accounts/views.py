@@ -9,6 +9,7 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sessions.models import Session
 from django.core.mail import send_mail
+from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.utils import timezone, translation
@@ -17,7 +18,7 @@ from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.translation import gettext as _
 from django.views.decorators.csrf import ensure_csrf_cookie
-from rest_framework import permissions, status
+from rest_framework import permissions, serializers, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -360,10 +361,13 @@ class AccountProfileView(APIView):
 
 class AccountPublicProfileView(APIView):
     def patch(self, request: Request) -> Response:
-        serializer = AccountPublicProfileSerializer(data=request.data)
+        serializer = AccountPublicProfileSerializer(data=request.data, context={'request': request})
         _validate_serializer_in_german(serializer)
         public_display_name = serializer.validated_data['public_display_name'].strip()
-        PublicProfile.objects.update_or_create(user=request.user, defaults={'public_display_name': public_display_name})
+        try:
+            PublicProfile.objects.update_or_create(user=request.user, defaults={'public_display_name': public_display_name})
+        except IntegrityError:
+            raise serializers.ValidationError({'public_display_name': ['Dieser Name wird bereits verwendet.']})
         return Response({'detail': PROFILE_UPDATED_MESSAGE, 'user': UserSerializer(request.user).data})
 
 

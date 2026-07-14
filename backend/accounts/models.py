@@ -4,6 +4,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.db.models.functions import Lower
 
 
 class PendingActivation(models.Model):
@@ -153,6 +154,15 @@ class PublicProfile(models.Model):
     public_display_name = models.CharField(max_length=255, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                Lower('public_display_name'),
+                name='unique_public_display_name_ci',
+                condition=~models.Q(public_display_name=''),
+            ),
+        ]
 
     def __str__(self) -> str:
         identifier = getattr(self.user, 'email', '') or getattr(self.user, 'username', '')
