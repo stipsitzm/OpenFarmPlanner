@@ -29,14 +29,14 @@ re-serializing everything the project contains.
 
 ## Writing revisions
 
-`record_entity_revision(...)` (`backend/farm/views.py`) is the single
+`record_entity_revision(...)` (`backend/farm/history/records.py`) is the single
 write path — it just creates an `EntityRevision` row. It's called:
 
 - **Automatically** inside `Culture.save()` on every create/update, so
   culture history requires no explicit call from view code.
 - **Explicitly** from view code for other mutation paths (soft-delete,
   restore, project-level restore) — look for `culture._history_action = ...`
-  assignments before `.save()` calls in `backend/farm/views.py`; this is
+  assignments before `.save()` calls in the farm domain view packages; this is
   how a save is tagged as a delete/restore action rather than a plain
   update for history purposes.
 
@@ -94,5 +94,5 @@ Two restore paths, both admin-only (`require_project_admin`):
 
 - The exact list backing `_RESTORABLE_ENTITY_TYPES` (which models
   participate in whole-project restore) should be read directly from
-  `backend/farm/views.py` before assuming a given model is or isn't
+  `backend/farm/history/records.py` before assuming a given model is or isn't
   covered — it wasn't fully enumerated in this doc.

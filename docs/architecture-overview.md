@@ -48,8 +48,21 @@ docs/                  # This documentation
 
 - **`farm`** is the main domain app: nearly every model and viewset for
   locations, fields, beds, cultures, suppliers, planting plans, tasks, seed
-  demand, and history/versioning lives here (`backend/farm/models.py`,
-  `views.py`, `serializers.py`).
+  demand, and history/versioning lives here. All models live in
+  `backend/farm/models.py`; views and serializers are organized into
+  domain packages inside the app:
+  - `farm/common/` — shared API plumbing: `ProjectScopedMixin`/
+    `ProjectRevisionMixin` (`mixins.py`), shared serializer fields
+    (`serializer_fields.py`), and the version endpoint (`views.py`).
+  - `farm/history/` — the entity-revision engine (`records.py`,
+    `restore.py`) plus the project/global history API endpoints.
+  - `farm/projects/` — projects, memberships, invitations, agent login,
+    and invitation email delivery (`emails.py`).
+  - `farm/structure/` — locations, fields, beds, and bed/field layouts.
+  - `farm/cultures/` — cultures, suppliers, seed packages, seed demand,
+    and the public culture library endpoints.
+  - `farm/planning/` — planting plans, tasks, and the yield calendar.
+  - `farm/notes/` — media uploads and note image attachments.
 - **`accounts`** owns the Django `User` lifecycle: registration/activation,
   password reset, per-user project settings (`UserProjectSettings`:
   default/last project), account deletion with a grace period, and
@@ -135,7 +148,7 @@ docs/                  # This documentation
   `ProjectMembership` (role: `admin` or `member` — no finer-grained
   permission system exists).
 - Every project-scoped API request must carry an `X-Project-Id` header.
-  `ProjectScopedMixin` (`backend/farm/views.py`) resolves and validates it
+  `ProjectScopedMixin` (`backend/farm/common/mixins.py`) resolves and validates it
   once per request, then auto-scopes the queryset and auto-injects the
   project on create — this is the actual multi-tenancy enforcement point,
   not something each view re-implements.

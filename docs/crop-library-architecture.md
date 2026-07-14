@@ -70,7 +70,7 @@ backend/crops/
 ```
 
 This is **additive**: `/api/public-cultures/` keeps working exactly as
-before (still defined in `farm/views.py`/`farm/urls.py`, untouched) —
+before (still defined in `farm/cultures/views.py`/`farm/urls.py`, untouched) —
 the current frontend keeps using it. `/api/crops/` and `/api/crops/<id>/`
 are new, parallel endpoints with the same `IsAuthenticated` requirement
 as everything else — **not actually public yet**. Making them public
@@ -113,12 +113,12 @@ Applied concretely:
 
 - `crops/services.py`, `crops/serializers.py`, `crops/views.py` import
   only `farm.models.PublicCulture` and `farm.utils.normalize_text` — never
-  `farm.views`, `farm.serializers`, `Project`, or `Culture`. This is the
+  farm's view/serializer packages, `Project`, or `Culture`. This is the
   one dependency direction that matters: if `crops` ever imported from
-  `farm.serializers`, the arrow would point the wrong way (crop library
+  farm's serializers, the arrow would point the wrong way (crop library
   depending on farm planning).
 - `crops/serializers.py`'s `CropSerializer` is **not** a re-export or
-  subclass of `farm.serializers.PublicCultureSerializer`, even though
+  subclass of `farm.cultures.serializers.PublicCultureSerializer`, even though
   they're currently near-identical — importing it would create exactly
   that backwards dependency. It's a small, deliberate duplication.
 - `CropSerializer` also deliberately **excludes**
@@ -129,7 +129,7 @@ Applied concretely:
 - The publish/import bridge itself (`farm/services/public_cultures.py`)
   is **not** moved into `crops`. It inherently needs both `Culture` and
   `Project` — it's a bridge, not a pure citizen of either domain. It's
-  called "farm's dependency on the crop library" already (`farm/views.py`
+  called "farm's dependency on the crop library" already (`farm/cultures/views.py`
   imports it), which is the correct direction; deciding whether it should
   someday become a real network call (once crops is an actual separate
   service) is future work, documented in §5, not solved now.
