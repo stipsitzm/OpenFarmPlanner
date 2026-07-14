@@ -873,84 +873,109 @@ class Culture(TimestampedModel):
     )
     
     def clean(self) -> None:
-        """Validate numeric ranges for positive values."""
+        """Validate the culture; each helper below covers one field group."""
         super().clean()
-        errors = {}
+        errors: dict[str, str] = {}
+        self._normalize_legacy_dash_units()
+        self._clean_cultivation_types(errors)
+        self._clean_non_negative_numbers(errors)
+        self._clean_seeding_requirement(errors)
+        self._clean_seed_rate_by_cultivation(errors)
+        self._clean_seed_rates(errors)
+        self._clean_selected_seed_demand_supplier(errors)
+        self._clean_display_color(errors)
+        if errors:
+            raise ValidationError(errors)
+
+    def _normalize_legacy_dash_units(self) -> None:
+        """Map the legacy '-' placeholder on unit fields to None."""
         for field_name in ('seed_rate_unit', 'seed_rate_direct_unit', 'seed_rate_pre_cultivation_unit'):
             if getattr(self, field_name) == '-':
                 setattr(self, field_name, None)
 
+    def _clean_cultivation_types(self, errors: dict[str, str]) -> None:
+        """Normalize cultivation_types and keep cultivation_type consistent with it."""
         if not isinstance(self.cultivation_types, list):
             errors['cultivation_types'] = 'Cultivation types must be a list.'
-        else:
-            normalized_types = [str(item).strip() for item in self.cultivation_types if str(item).strip()]
-            if not normalized_types and self.cultivation_type:
-                normalized_types = [self.cultivation_type]
-            if not normalized_types:
-                normalized_types = ['pre_cultivation']
-            if len(set(normalized_types)) != len(normalized_types):
-                errors['cultivation_types'] = 'Cultivation types must be unique.'
-            invalid_types = [item for item in normalized_types if item not in self.CULTIVATION_TYPE_VALUES]
-            if invalid_types:
-                errors['cultivation_types'] = 'Cultivation types contain unsupported values.'
-            self.cultivation_types = normalized_types
-            if normalized_types and self.cultivation_type not in normalized_types:
-                self.cultivation_type = normalized_types[0]
-        
-        # Validate positive numeric fields.
-        if self.growth_duration_days is not None and self.growth_duration_days < 0:
-            errors['growth_duration_days'] = 'Growth duration must be non-negative.'
-        
-        if self.harvest_duration_days is not None and self.harvest_duration_days < 0:
-            errors['harvest_duration_days'] = 'Harvest duration must be non-negative.'
-        
-        if self.propagation_duration_days is not None and self.propagation_duration_days < 0:
-            errors['propagation_duration_days'] = 'Propagation duration must be non-negative.'
-        
-        if self.expected_yield is not None and self.expected_yield < 0:
-            errors['expected_yield'] = 'Expected yield must be non-negative.'
+            return
+        normalized_types = [str(item).strip() for item in self.cultivation_types if str(item).strip()]
+        if not normalized_types and self.cultivation_type:
+            normalized_types = [self.cultivation_type]
+        if not normalized_types:
+            normalized_types = ['pre_cultivation']
+        if len(set(normalized_types)) != len(normalized_types):
+            errors['cultivation_types'] = 'Cultivation types must be unique.'
+        invalid_types = [item for item in normalized_types if item not in self.CULTIVATION_TYPE_VALUES]
+        if invalid_types:
+            errors['cultivation_types'] = 'Cultivation types contain unsupported values.'
+        self.cultivation_types = normalized_types
+        if normalized_types and self.cultivation_type not in normalized_types:
+            self.cultivation_type = normalized_types[0]
 
+    def _clean_non_negative_numbers(self, errors: dict[str, str]) -> None:
+        non_negative_fields = (
+            ('growth_duration_days', 'Growth duration must be non-negative.'),
+            ('harvest_duration_days', 'Harvest duration must be non-negative.'),
+            ('propagation_duration_days', 'Propagation duration must be non-negative.'),
+            ('expected_yield', 'Expected yield must be non-negative.'),
+        )
+        for field_name, message in non_negative_fields:
+            value = getattr(self, field_name)
+            if value is not None and value < 0:
+                errors[field_name] = message
+
+    def _clean_seeding_requirement(self, errors: dict[str, str]) -> None:
         if self.seeding_requirement is None and self.seeding_requirement_type:
             errors['seeding_requirement'] = 'Seeding requirement value is required when seeding requirement type is set.'
-
         if self.seeding_requirement is not None and not self.seeding_requirement_type:
             errors['seeding_requirement_type'] = 'Seeding requirement type is required when seeding requirement is set.'
 
-        if self.seed_rate_by_cultivation is not None:
-            if not isinstance(self.seed_rate_by_cultivation, dict):
-                errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation must be an object.'
-            else:
-                key_set = set(self.seed_rate_by_cultivation.keys())
-                if not key_set.issubset(set(self.cultivation_types or [])):
-                    errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation keys must be a subset of cultivation_types.'
-                for method, payload in self.seed_rate_by_cultivation.items():
-                    if not isinstance(payload, dict):
-                        errors['seed_rate_by_cultivation'] = 'Each cultivation seed rate entry must be an object.'
-                        continue
-                    value = payload.get('value')
-                    unit = payload.get('unit')
-                    if not isinstance(value, (int, float)) or float(value) <= 0:
-                        errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation values must be positive numbers.'
-                    if method == 'pre_cultivation' and unit not in self.PRE_CULTIVATION_AUTO_SEED_RATE_UNITS:
-                        errors['seed_rate_by_cultivation'] = 'Pre-cultivation unit is unsupported.'
-                    if method == 'direct_sowing' and unit not in self.DIRECT_SOWING_SEED_RATE_UNITS:
-                        errors['seed_rate_by_cultivation'] = 'Direct-sowing unit is unsupported.'
+    def _clean_seed_rate_by_cultivation(self, errors: dict[str, str]) -> None:
+        if self.seed_rate_by_cultivation is None:
+            return
+        if not isinstance(self.seed_rate_by_cultivation, dict):
+            errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation must be an object.'
+            return
+        key_set = set(self.seed_rate_by_cultivation.keys())
+        if not key_set.issubset(set(self.cultivation_types or [])):
+            errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation keys must be a subset of cultivation_types.'
+        for method, payload in self.seed_rate_by_cultivation.items():
+            if not isinstance(payload, dict):
+                errors['seed_rate_by_cultivation'] = 'Each cultivation seed rate entry must be an object.'
+                continue
+            value = payload.get('value')
+            unit = payload.get('unit')
+            if not isinstance(value, (int, float)) or float(value) <= 0:
+                errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation values must be positive numbers.'
+            if method == 'pre_cultivation' and unit not in self.PRE_CULTIVATION_AUTO_SEED_RATE_UNITS:
+                errors['seed_rate_by_cultivation'] = 'Pre-cultivation unit is unsupported.'
+            if method == 'direct_sowing' and unit not in self.DIRECT_SOWING_SEED_RATE_UNITS:
+                errors['seed_rate_by_cultivation'] = 'Direct-sowing unit is unsupported.'
 
-        if self.distance_within_row_m is not None and self.distance_within_row_m < 0:
-            errors['distance_within_row_m'] = 'Distance within row must be non-negative.'
-        
-        if self.row_spacing_m is not None and self.row_spacing_m < 0:
-            errors['row_spacing_m'] = 'Row spacing must be non-negative.'
-        
-        if self.sowing_depth_m is not None and self.sowing_depth_m < 0:
-            errors['sowing_depth_m'] = 'Sowing depth must be non-negative.'
+    def _clean_seed_rates(self, errors: dict[str, str]) -> None:
+        """Validate spacing plus the legacy, direct-sowing and pre-cultivation seed rates."""
+        non_negative_fields = (
+            ('distance_within_row_m', 'Distance within row must be non-negative.'),
+            ('row_spacing_m', 'Row spacing must be non-negative.'),
+            ('sowing_depth_m', 'Sowing depth must be non-negative.'),
+        )
+        for field_name, message in non_negative_fields:
+            value = getattr(self, field_name)
+            if value is not None and value < 0:
+                errors[field_name] = message
 
         if self.seed_rate_value is not None and self.seed_rate_value <= 0:
             errors['seed_rate_value'] = 'Seed rate value must be greater than zero.'
-
         if self.seed_rate_unit and self.seed_rate_unit not in self.PRE_CULTIVATION_AUTO_SEED_RATE_UNITS:
             errors['seed_rate_unit'] = 'Seed rate unit is unsupported.'
 
+        self._clean_direct_sowing_seed_rate(errors)
+        self._clean_pre_cultivation_seed_rate(errors)
+
+        if self.thousand_kernel_weight_g is not None and self.thousand_kernel_weight_g <= 0:
+            errors['thousand_kernel_weight_g'] = 'Thousand kernel weight must be greater than zero.'
+
+    def _clean_direct_sowing_seed_rate(self, errors: dict[str, str]) -> None:
         if self.seed_rate_direct_value is not None and self.seed_rate_direct_value <= 0:
             errors['seed_rate_direct_value'] = 'Direct sowing seed rate value must be greater than zero.'
         if (
@@ -960,11 +985,10 @@ class Culture(TimestampedModel):
         ):
             errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is unsupported.'
         has_direct = 'direct_sowing' in (self.cultivation_types or [])
-        has_pre = 'pre_cultivation' in (self.cultivation_types or [])
-
         if has_direct and self.seed_rate_direct_value is not None and not self.seed_rate_direct_unit:
             errors['seed_rate_direct_unit'] = 'Direct sowing seed rate unit is required when direct sowing value is set.'
 
+    def _clean_pre_cultivation_seed_rate(self, errors: dict[str, str]) -> None:
         if self.seed_rate_pre_cultivation_value is not None and self.seed_rate_pre_cultivation_value <= 0:
             errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value must be greater than zero.'
         if (
@@ -973,24 +997,17 @@ class Culture(TimestampedModel):
             and self.seed_rate_pre_cultivation_unit not in self.PRE_CULTIVATION_AUTO_SEED_RATE_UNITS
         ):
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is unsupported.'
+        has_pre = 'pre_cultivation' in (self.cultivation_types or [])
         if has_pre and self.seed_rate_pre_cultivation_value is not None and not self.seed_rate_pre_cultivation_unit:
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is required when pre-cultivation value is set.'
 
-        if self.thousand_kernel_weight_g is not None and self.thousand_kernel_weight_g <= 0:
-            errors['thousand_kernel_weight_g'] = 'Thousand kernel weight must be greater than zero.'
-
+    def _clean_selected_seed_demand_supplier(self, errors: dict[str, str]) -> None:
         if self.selected_seed_demand_supplier_id and self.project_id and self.selected_seed_demand_supplier.project_id != self.project_id:
             errors['selected_seed_demand_supplier'] = 'Selected seed demand supplier must belong to the same project.'
 
-        
-        # Validate hex color format if provided.
-        if self.display_color:
-            import re
-            if not re.match(r'^#[0-9A-Fa-f]{6}$', self.display_color):
-                errors['display_color'] = 'Display color must be in hex format (#RRGGBB).'
-        
-        if errors:
-            raise ValidationError(errors)
+    def _clean_display_color(self, errors: dict[str, str]) -> None:
+        if self.display_color and not re.match(r'^#[0-9A-Fa-f]{6}$', self.display_color):
+            errors['display_color'] = 'Display color must be in hex format (#RRGGBB).'
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the culture and auto-generate display color and normalized fields."""
