@@ -155,17 +155,11 @@ class ConsentAcceptSerializer(serializers.Serializer):
 
 
 class RegisterSerializer(serializers.Serializer):
-    """Registration has no separate terms-acceptance field: creating an account
-
-    itself constitutes acceptance of the current Terms of Service (see
-    `create()`), matching the implicit-consent pattern used by platforms like
-    GitHub or Wikipedia rather than a dedicated checkbox.
-    """
-
     email = serializers.EmailField()
     display_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
     password = serializers.CharField(**_password_field_kwargs)
     password_confirm = serializers.CharField(**_password_field_kwargs)
+    accept_terms = serializers.BooleanField(required=True)
 
     def validate_email(self, value: str) -> str:
         normalized = normalize_email_lower(value)
@@ -173,18 +167,20 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError(_de(_('An account with this email already exists.')))
         return normalized
 
-    def validate(self, attrs: dict[str, str]) -> dict[str, str]:
+    def validate(self, attrs: dict[str, object]) -> dict[str, object]:
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError({'password_confirm': _de(_('Passwords do not match.'))})
-        validate_password(attrs['password'])
+        if attrs.get('accept_terms') is not True:
+            raise serializers.ValidationError({'accept_terms': _de(_('You must accept the Terms of Service.'))})
+        validate_password(str(attrs['password']))
         return attrs
 
-    def create(self, validated_data: dict[str, str]) -> User:
-        display_name = validated_data.get('display_name', '').strip()
+    def create(self, validated_data: dict[str, object]) -> User:
+        display_name = str(validated_data.get('display_name', '')).strip()
         user = User.objects.create_user(
-            username=build_username_from_email(validated_data['email']),
-            email=validated_data['email'],
-            password=validated_data['password'],
+            username=build_username_from_email(str(validated_data['email'])),
+            email=str(validated_data['email']),
+            password=str(validated_data['password']),
             first_name=display_name,
             is_active=False,
         )

@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Container, InputAdornment, Link, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, Container, FormControlLabel, InputAdornment, Link, Stack, TextField, Typography } from '@mui/material';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
@@ -25,6 +25,7 @@ export default function RegisterPage() {
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [registrationSucceeded, setRegistrationSucceeded] = useState(false);
   const [pendingInvitation, setPendingInvitation] = useState<InvitationPublicStatus | null>(null);
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const nextPath = getNextFromSearch(location.search);
   const isLoggedIn = user !== null;
   const currentUserLabel = user?.display_label || user?.email || '–';
@@ -61,13 +62,17 @@ export default function RegisterPage() {
       setError(t('auth:register.passwordMismatch'));
       return;
     }
+    if (!acceptTerms) {
+      setError(t('auth:register.termsRequired'));
+      return;
+    }
 
     setSubmitting(true);
     try {
       if (nextPath) {
         storeInvitationRedirect(nextPath, getTokenFromNextPath(nextPath));
       }
-      const message = await register(email.trim().toLowerCase(), password, passwordConfirm, displayName.trim());
+      const message = await register(email.trim().toLowerCase(), password, passwordConfirm, displayName.trim(), acceptTerms);
       setSuccess(pendingInvitation ? t('projectInvitations:registerSuccessWithInvitation', { detail: message }) : message);
       setRegistrationSucceeded(true);
     } catch (err) {
@@ -179,18 +184,31 @@ export default function RegisterPage() {
               htmlInput: { autoComplete: 'new-password' },
             }}
           />
-          <Button type="submit" variant="contained" disabled={submitting || isLoggedIn}>{submitting ? t('auth:register.submitting') : t('auth:register.submit')}</Button>
-          <Typography variant="caption" color="text.secondary">
-            {t('auth:register.termsNoticePrefix')}
-            <Link component={RouterLink} to="/nutzungsbedingungen" target="_blank" rel="noopener">
-              {t('auth:register.termsNoticeTermsLinkLabel')}
-            </Link>
-            {t('auth:register.termsNoticeMiddle')}
-            <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener">
-              {t('auth:register.termsNoticePrivacyLinkLabel')}
-            </Link>
-            {t('auth:register.termsNoticeSuffix')}
-          </Typography>
+          <FormControlLabel
+            control={(
+              <Checkbox
+                checked={acceptTerms}
+                onChange={(event) => setAcceptTerms(event.target.checked)}
+                disabled={isLoggedIn}
+              />
+            )}
+            label={(
+              <Typography variant="body2" color="text.secondary">
+                {t('auth:register.termsNoticePrefix')}
+                <Link component={RouterLink} to="/nutzungsbedingungen" target="_blank" rel="noopener">
+                  {t('auth:register.termsNoticeTermsLinkLabel')}
+                </Link>
+                {t('auth:register.termsNoticeMiddle')}
+                <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener">
+                  {t('auth:register.termsNoticePrivacyLinkLabel')}
+                </Link>
+                {t('auth:register.termsNoticeSuffix')}
+              </Typography>
+            )}
+          />
+          <Button type="submit" variant="contained" disabled={submitting || isLoggedIn || !acceptTerms}>
+            {submitting ? t('auth:register.submitting') : t('auth:register.submit')}
+          </Button>
           {registrationSucceeded && !isLoggedIn ? (
             <Button type="button" onClick={() => void handleResend()}>{t('auth:register.resendActivation')}</Button>
           ) : null}

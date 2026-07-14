@@ -22,15 +22,23 @@ vi.mock('../auth/useAuth', () => ({
 
 vi.mock('../i18n', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, params?: { version?: string }) => {
       const map: Record<string, string> = {
         'reconsent.accepting': 'Wird bestätigt…',
         'reconsent.logout': 'Abmelden',
         'reconsent.failed': 'Das hat leider nicht funktioniert. Bitte versuche es erneut.',
-        'reconsent.terms.title': 'Wir haben unsere Nutzungsbedingungen aktualisiert',
-        'reconsent.terms.body': 'Damit du OpenFarmPlanner weiter nutzen kannst, bestätige bitte die aktuelle Fassung der Nutzungsbedingungen.',
-        'reconsent.terms.linkLabel': 'Nutzungsbedingungen ansehen',
-        'reconsent.terms.acceptButton': 'Nutzungsbedingungen akzeptieren',
+        'reconsent.currentVersion': `Aktuelle Fassung: ${params?.version ?? ''}`,
+        'reconsent.additionalDocuments': 'Ebenfalls aktualisiert:',
+        'reconsent.terms.title': 'Die Nutzungsbedingungen wurden aktualisiert',
+        'reconsent.terms.body': 'Bitte lies und bestätige die aktuelle Fassung, bevor du OpenFarmPlanner weiter nutzt.',
+        'reconsent.terms.linkLabel': 'Nutzungsbedingungen lesen',
+        'reconsent.terms.acceptButton': 'Akzeptieren',
+        'reconsent.privacy.title': 'Die Datenschutzerklärung wurde aktualisiert',
+        'reconsent.privacy.body': 'Bitte lies und bestätige die aktuelle Fassung, bevor du OpenFarmPlanner weiter nutzt.',
+        'reconsent.privacy.linkLabel': 'Datenschutzerklärung lesen',
+        'reconsent.privacy.acceptButton': 'Akzeptieren',
+        'home:legal.terms.version': 'Stand: 14. Juli 2026',
+        'home:legal.privacy.version': 'Stand: 14. Juli 2026',
       };
       return map[key] ?? key;
     },
@@ -48,16 +56,18 @@ describe('ConsentGate', () => {
     };
   });
 
-  it('explains that the terms changed, links to the full text, and offers an accept button (no checkbox)', () => {
+  it('explains that the terms changed, links to the full text, shows the version, and offers a concise accept button', () => {
     render(
       <MemoryRouter>
         <ConsentGate />
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Wir haben unsere Nutzungsbedingungen aktualisiert' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Nutzungsbedingungen ansehen' })).toHaveAttribute('href', '/nutzungsbedingungen');
-    expect(screen.getByRole('button', { name: 'Nutzungsbedingungen akzeptieren' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Die Nutzungsbedingungen wurden aktualisiert' })).toBeInTheDocument();
+    expect(screen.getByText(/bevor du OpenFarmPlanner weiter nutzt/)).toBeInTheDocument();
+    expect(screen.getByText('Aktuelle Fassung: Stand: 14. Juli 2026')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Nutzungsbedingungen lesen' })).toHaveAttribute('href', '/nutzungsbedingungen');
+    expect(screen.getByRole('button', { name: 'Akzeptieren' })).toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
@@ -68,7 +78,7 @@ describe('ConsentGate', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: 'Wir haben unsere Nutzungsbedingungen aktualisiert' })).toHaveFocus();
+    expect(screen.getByRole('heading', { name: 'Die Nutzungsbedingungen wurden aktualisiert' })).toHaveFocus();
   });
 
   it('accepts the current terms version with a single click, no checkbox required', async () => {
@@ -79,9 +89,50 @@ describe('ConsentGate', () => {
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Nutzungsbedingungen akzeptieren' }));
+    await user.click(screen.getByRole('button', { name: 'Akzeptieren' }));
 
     expect(acceptConsentMock).toHaveBeenCalledWith('terms');
+  });
+
+  it('can render and accept a required privacy policy consent', async () => {
+    authUser = {
+      id: 1,
+      email: 'test@example.com',
+      pending_consents: ['privacy'],
+    };
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ConsentGate />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Die Datenschutzerklärung wurde aktualisiert' })).toBeInTheDocument();
+    expect(screen.getByText('Aktuelle Fassung: Stand: 14. Juli 2026')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Datenschutzerklärung lesen' })).toHaveAttribute('href', '/datenschutz');
+
+    await user.click(screen.getByRole('button', { name: 'Akzeptieren' }));
+
+    expect(acceptConsentMock).toHaveBeenCalledWith('privacy');
+  });
+
+  it('links to the privacy policy when it is also pending after the terms update', () => {
+    authUser = {
+      id: 1,
+      email: 'test@example.com',
+      pending_consents: ['terms', 'privacy'],
+    };
+
+    render(
+      <MemoryRouter>
+        <ConsentGate />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: 'Nutzungsbedingungen lesen' })).toHaveAttribute('href', '/nutzungsbedingungen');
+    expect(screen.getByText('Ebenfalls aktualisiert:')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Datenschutzerklärung lesen' })).toHaveAttribute('href', '/datenschutz');
   });
 
   it('is fully keyboard-operable: tab reaches the accept and logout buttons', async () => {
@@ -93,9 +144,9 @@ describe('ConsentGate', () => {
     );
 
     await user.tab();
-    expect(screen.getByRole('link', { name: 'Nutzungsbedingungen ansehen' })).toHaveFocus();
+    expect(screen.getByRole('link', { name: 'Nutzungsbedingungen lesen' })).toHaveFocus();
     await user.tab();
-    expect(screen.getByRole('button', { name: 'Nutzungsbedingungen akzeptieren' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Akzeptieren' })).toHaveFocus();
     await user.keyboard('{Enter}');
     expect(acceptConsentMock).toHaveBeenCalledWith('terms');
 
@@ -125,7 +176,7 @@ describe('ConsentGate', () => {
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Nutzungsbedingungen akzeptieren' }));
+    await user.click(screen.getByRole('button', { name: 'Akzeptieren' }));
 
     expect(await screen.findByText('Netzwerkfehler')).toBeInTheDocument();
   });

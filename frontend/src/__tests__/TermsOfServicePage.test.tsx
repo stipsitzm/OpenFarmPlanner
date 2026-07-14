@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { vi } from 'vitest';
 import TermsOfServicePage from '../pages/public/TermsOfServicePage';
 
 function renderTermsOfServicePage(): ReturnType<typeof render> {
@@ -17,7 +18,7 @@ describe('TermsOfServicePage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Nutzungsbedingungen' })).toBeInTheDocument();
 
     const sectionHeadings = screen.getAllByRole('heading', { level: 6 });
-    expect(sectionHeadings.length).toBeGreaterThanOrEqual(13);
+    expect(sectionHeadings.length).toBeGreaterThanOrEqual(16);
     for (const heading of sectionHeadings) {
       expect(heading.textContent).not.toMatch(/legal\.terms\.sections/);
     }
@@ -29,6 +30,29 @@ describe('TermsOfServicePage', () => {
     expect(screen.queryByText(/bewusst schlank gehalten/)).not.toBeInTheDocument();
     const sectionHeadings = screen.getAllByRole('heading', { level: 6 });
     expect(sectionHeadings[0].textContent).toMatch(/^1\./);
+  });
+
+  it('identifies the provider, contract language, and current no-payment scope', () => {
+    renderTermsOfServicePage();
+
+    expect(screen.getByRole('heading', { name: /Anbieter und Kontakt/ })).toBeInTheDocument();
+    expect(screen.getByText(/Martin Stipsitz/)).toBeInTheDocument();
+    expect(screen.getByText(/Eine Umsatzsteuer-Identifikationsnummer besteht derzeit nicht/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Leistungsumfang, Kosten und Lieferung/ })).toBeInTheDocument();
+    expect(screen.getByText(/keine Zahlungsabwicklung/)).toBeInTheDocument();
+    expect(screen.getByText(/keine Waren geliefert/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Vertragssprache/ })).toBeInTheDocument();
+    expect(screen.getByText(/Maßgeblich ist die deutsche Fassung/)).toBeInTheDocument();
+  });
+
+  it('offers a print action so the terms can be saved or printed from the browser', () => {
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => undefined);
+    renderTermsOfServicePage();
+
+    screen.getByRole('button', { name: 'Drucken / als PDF speichern' }).click();
+
+    expect(printSpy).toHaveBeenCalledTimes(1);
+    printSpy.mockRestore();
   });
 
   it('mentions the privacy policy from within the scope section instead of a standalone link', () => {
@@ -66,6 +90,6 @@ describe('TermsOfServicePage', () => {
   it('uses a concrete revision date instead of a generic month/year stamp', () => {
     renderTermsOfServicePage();
 
-    expect(screen.getByText(/Stand: 13\. Juli 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Stand: 14\. Juli 2026/)).toBeInTheDocument();
   });
 });

@@ -93,6 +93,10 @@
           "title": "Controller",
           "content": "Responsible for data processing on this website:\n\nMartin Stipsitz\nBurgenlandstraße 44A / 9\n9500 Villach\nAustria\n\nEmail: info@openfarmplanner.org"
         },
+        "dataProtectionOfficer": {
+          "title": "Data protection officer",
+          "content": "No data protection officer has been appointed because, based on the current assessment, there is no legal obligation to do so. For privacy requests, you can contact the controller using the contact details above."
+        },
         "generalNotice": {
           "title": "General information on data processing",
           "content": "We take the protection of your personal data seriously. We process your data confidentially and in accordance with applicable data protection laws and this privacy policy.\n\nUsing OpenFarmPlanner is generally possible without providing personal data. If personal data is collected (for example during registration), this is done on a voluntary basis."
@@ -149,20 +153,35 @@
         },
         "cookies": {
           "title": "Cookies",
-          "content": "OpenFarmPlanner uses technically necessary cookies to ensure core functionality.",
+          "content": "OpenFarmPlanner uses only technically necessary cookies. No analytics, tracking, or marketing cookies are used. The cookies are used only to enable logged-in use of the application and to protect requests technically. The specific storage period depends on the server's session and security configuration; session cookies are deleted at the latest when they expire or when you delete them in your browser.",
           "bullets": {
-            "sessionCookies": "Session cookies for login",
-            "securityCookies": "Security cookies (CSRF protection)"
-          },
-          "legalBasis": "Legal basis: Art. 6(1)(f) GDPR"
+            "sessionCookies": "Session cookie to maintain your login (legal basis: Art. 6(1)(b) GDPR - without this cookie, logged-in use of the application cannot be provided)",
+            "securityCookies": "Security cookie for protection against cross-site request forgery, or CSRF (legal basis: Art. 6(1)(f) GDPR, legitimate interest in securing the application)"
+          }
+        },
+        "localStorage": {
+          "title": "Local storage (Local Storage/Session Storage)",
+          "content": "In addition to cookies, the application stores individual technical settings in your browser's local storage (Local Storage/Session Storage). This includes, in particular, the last opened project, view options, sidebar and table states, sorting and filters, hints that have already been shown, and temporarily stored redirects or tokens for project invitations. This data does not leave your device, is not visible to us, and does not contain login credentials. Local Storage data remains in your browser until it is replaced by the application, reset by you in the application, or deleted via browser functions; Session Storage data is usually deleted when the browser tab is closed. Because we do not process this data on our systems, this is not processing of personal data by us within the meaning of Art. 4 No. 2 GDPR; a separate legal basis is therefore not applicable."
         },
         "dataSharing": {
           "title": "Data sharing",
-          "content": "Your data is not shared with third parties, except where necessary for contractual performance or where legally required."
+          "content": "Apart from cooperation with our hosting provider as a processor (see the Hosting section), we share your personal data only if:\n\n- this is necessary for technical email delivery in connection with your account or project invitations; email delivery uses the mail infrastructure operated by Uberspace,\n- you actively publish a crop in the public crop library and thereby choose visibility for all logged-in users, including your public display name if you have set one (see the Public crop library section), or\n- we are legally required to do so, for example toward authorities."
+        },
+        "thirdCountryTransfers": {
+          "title": "Third-country transfers",
+          "content": "Based on the current assessment, personal data is not transferred to recipients outside the European Union or the European Economic Area."
+        },
+        "mandatoryProvision": {
+          "title": "Provision of personal data",
+          "content": "Providing personal data is neither legally nor contractually required if you only visit the public landing page. For registration and use of the application, your email address, password, and technically necessary cookies are required; without this data we cannot provide a user account or enable login. You provide project and application data voluntarily when you want to use the relevant features; without this information, the corresponding planning features cannot be used or can be used only in a limited way. Publishing to the public crop library is voluntary and is not required for using the rest of the application."
         },
         "storageDuration": {
           "title": "Storage duration",
-          "content": "Your data is stored as long as your user account exists. You can request account deletion at any time."
+          "content": "Your account data is stored as long as your user account exists. User accounts that are not activated are deleted after the activation period expires; activation links are currently valid for 7 days. Password reset links are time-limited; email change links are currently valid for 24 hours. Project invitations are currently valid for 14 days.\n\nIf you request account deletion, the account is first marked for deletion for 14 days; during this period, you can undo the deletion. After that period, we anonymize your account (email address and display name are removed and the account is deactivated) instead of deleting it completely, so that project and library data of other users remains consistent, unless legal obligations or other compelling reasons prevent this.\n\nProject data, cultivation plans, and related change history remain, if the respective project continues to exist and is not deleted separately, even after your account has been anonymized. The same applies to entries you have already published in the public crop library (see the Project and application data and Public crop library sections). Server log files of the hosting provider are rotated daily and deleted after 7 days; IP addresses are stored in shortened form by Uberspace. Our own technical cron and application logs are stored for no more than 14 days, unless they are no longer needed earlier for operation, troubleshooting, and security. There are currently no further statutory retention obligations for the data we process because OpenFarmPlanner does not process billing- or tax-relevant data."
+        },
+        "automatedDecisionMaking": {
+          "title": "Automated decision-making",
+          "content": "Automated decision-making, including profiling within the meaning of Art. 22 GDPR, does not take place."
         },
         "rights": {
           "title": "Your rights",
@@ -184,6 +203,83 @@
         "changes": {
           "title": "Changes to this privacy policy",
           "content": "We reserve the right to adjust this privacy policy to reflect new features or legal requirements."
+        }
+      }
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "print": "Print / save as PDF",
+      "version": "Status: July 14, 2026",
+      "sections": {
+        "provider": {
+          "title": "Provider and contact",
+          "content": "The provider of the application available at openfarmplanner.org is:\n\nMartin Stipsitz\nBurgenlandstraße 44A / 9\n9500 Villach\nAustria\n\nEmail: info@openfarmplanner.org\n\nThere is currently no VAT identification number."
+        },
+        "scope": {
+          "title": "Scope and use of the platform",
+          "content": "These Terms of Service apply to the use of OpenFarmPlanner, a web application for planning agricultural and horticultural cultivation. By registering a user account or using the application, you accept these Terms of Service.\n\nOpenFarmPlanner is intended for private individuals as well as agricultural and horticultural businesses that want to organize their cultivation planning digitally. Information on the processing of personal data can be found in the Privacy Policy."
+        },
+        "serviceAndCosts": {
+          "title": "Service scope, costs, and delivery",
+          "content": "OpenFarmPlanner provides digital planning functions as a hosted web application. No goods are delivered and no payment processing takes place through OpenFarmPlanner.\n\nUse of the application available at openfarmplanner.org is currently free of charge. If paid features are introduced in the future, we will inform you in advance; such features will only be provided on the basis of separate terms or explicit consent.\n\nBecause no paid services, goods deliveries, or digital purchases are currently offered, these Terms of Service do not contain provisions on prices, shipping costs, payment methods, delivery territories, after-sales service, or statutory withdrawal and warranty information for purchases."
+        },
+        "contractLanguage": {
+          "title": "Contract language",
+          "content": "The contract language for using the application available at openfarmplanner.org is German. The German version of these Terms of Service is authoritative."
+        },
+        "accounts": {
+          "title": "User accounts",
+          "content": "A user account is required to use the application. You are obliged to provide truthful information during registration and to keep your password confidential.\n\nYou are responsible for all activities carried out through your user account. Please inform us immediately at info@openfarmplanner.org if you suspect that someone has gained unauthorized access to your account. A user account is personal and non-transferable."
+        },
+        "userContent": {
+          "title": "Your content in OpenFarmPlanner",
+          "content": "Within your projects, you can create your own data, such as location, field and crop data, cultivation plans, tasks, notes, and photos. You are responsible for the accuracy, completeness, and legality of this content.\n\nDo not upload content for which you do not have the necessary rights, such as copyrighted photos of third parties."
+        },
+        "publicLibrary": {
+          "title": "Public crop library",
+          "content": "You can voluntarily publish individual crop records from a private project to the public crop library. This library is visible to all logged-in users and entries can be imported into their own projects. Which data is published, that only your freely chosen public display name or, if not set, no name (anonymous) appears as author, and how you can undo a publication is explained in the Privacy Policy, section \"Public crop library\".\n\nBy publishing, you confirm that the published information is accurate to the best of your knowledge and that you are entitled to publish it."
+        },
+        "contributionLicense": {
+          "title": "Rights to published crop data",
+          "content": "When you publish a crop record to the public crop library, you grant OpenFarmPlanner a simple, unlimited right in time and territory to display this information to all logged-in users, enable its import into their own projects, and technically store and process the information for that purpose.\n\nYou remain the owner of your rights to the data. You can revoke this use at any time with effect for the future (see the \"Content removal\" section); copies that other users imported into their own project before revocation or removal of the entry are not affected, because they continue to exist independently in the respective project and can be edited there independently."
+        },
+        "prohibitedContent": {
+          "title": "Prohibited content and behavior",
+          "content": "When using OpenFarmPlanner, especially when publishing content in the public crop library, it is not permitted to",
+          "bullets": {
+            "illegalContent": "post unlawful, misleading, or third-party-rights-infringing content (for example copyright or personality rights),",
+            "malware": "distribute malware or bypass security measures of the application,",
+            "abuse": "misuse the application in an automated way, for example through mass registrations or spam,",
+            "misrepresentation": "impersonate another person or knowingly publish false information."
+          }
+        },
+        "copyright": {
+          "title": "Copyright",
+          "content": "The OpenFarmPlanner software is protected by copyright and is licensed under the license named in the \"Open-source software\" section. The content you enter, such as crop data or notes, remains your property.\n\nIf you believe that an entry published in the public crop library infringes your copyright or other rights, please contact info@openfarmplanner.org. We investigate justified notices (see the \"Content removal\" section)."
+        },
+        "contentRemoval": {
+          "title": "Content removal",
+          "content": "We reserve the right to remove or block published content in the public crop library in whole or in part if there are concrete indications of a violation of these Terms of Service or applicable law, for example following a notice within the meaning of Art. 16 of the EU Digital Services Act. Notices of allegedly unlawful content can be sent at any time to info@openfarmplanner.org. We are not obliged to carry out general, proactive monitoring of published content.\n\nYou can request removal of an entry you published at any time by contacting info@openfarmplanner.org."
+        },
+        "accountSuspension": {
+          "title": "Suspension of user accounts",
+          "content": "In the event of a serious or repeated violation of these Terms of Service, we may temporarily restrict access to your user account or suspend the account. We proceed proportionately and take into account the severity of the violation and whether it is an isolated or repeated incident.\n\nIn the event of suspension, we will inform you of the reason where possible. You can contact info@openfarmplanner.org at any time about this."
+        },
+        "liability": {
+          "title": "Liability",
+          "content": "OpenFarmPlanner is developed and operated with great care. Nevertheless, we cannot guarantee error-free or uninterrupted availability at all times, for example during maintenance, technical disruptions, or events outside our control.\n\nThe public crop library contains content created by users themselves. The respective publishing users are responsible for its accuracy, not OpenFarmPlanner (see the \"Your content in OpenFarmPlanner\" section).\n\nAgricultural and horticultural information in OpenFarmPlanner, such as growth and harvest periods, plant spacing, or seed quantities, is intended only to support your own cultivation planning and does not replace professional advice.\n\nFor damages resulting from slightly negligent breaches of duty, our liability is limited. Our liability for intent and gross negligence as well as for damages resulting from injury to life, body, or health remains unaffected, as do other mandatory statutory liability rules."
+        },
+        "openSource": {
+          "title": "Open-source software",
+          "content": "The OpenFarmPlanner source code is published as open-source software under the GNU Affero General Public License Version 3 (AGPLv3) and can be viewed, reused, and modified in the OpenFarmPlanner GitHub repository (https://github.com/stipsitzm/OpenFarmPlanner). The license regulates only the rights to the software itself and, as is common with open-source software, excludes any warranty for the software.\n\nThis is separate from use of the hosted application at openfarmplanner.org, which is governed by these Terms of Service."
+        },
+        "futureFeatures": {
+          "title": "Further development of the platform",
+          "content": "OpenFarmPlanner is continuously developed. These Terms of Service apply analogously to future features around user-provided content, such as comments, ratings, or version histories for entries in the public crop library. In the case of material new functions of this kind, we will update these Terms of Service if necessary (see the \"Changes to these Terms of Service\" section)."
+        },
+        "changes": {
+          "title": "Changes to these Terms of Service",
+          "content": "We update these Terms of Service if the offered functions or legal framework change. The version published within the application at the time of your use is authoritative; the date of the last change can be found at the top of this page. In the event of material changes, we will inform active users in an appropriate way, for example by email or through a notice in the application."
         }
       }
     }

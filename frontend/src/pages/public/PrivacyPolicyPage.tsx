@@ -4,6 +4,7 @@ import { useTranslation } from '../../i18n';
 
 const privacySections = [
   'controller',
+  'dataProtectionOfficer',
   'generalNotice',
   'hosting',
   'registration',
@@ -14,7 +15,10 @@ const privacySections = [
   'cookies',
   'localStorage',
   'dataSharing',
+  'thirdCountryTransfers',
+  'mandatoryProvision',
   'storageDuration',
+  'automatedDecisionMaking',
   'rights',
   'complaint',
   'changes',

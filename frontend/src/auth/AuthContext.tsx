@@ -120,12 +120,13 @@ export function AuthProvider({
         await logoutRequest();
         clearAuthenticatedUser();
       },
-      register: async (email, password, passwordConfirm, displayName = "") => {
+      register: async (email, password, passwordConfirm, displayName = "", acceptTerms = false) => {
         const response = await registerRequest(
           email,
           password,
           passwordConfirm,
           displayName,
+          acceptTerms,
         );
         return response.detail;
       },

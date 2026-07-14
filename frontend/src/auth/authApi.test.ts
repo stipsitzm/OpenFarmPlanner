@@ -35,6 +35,23 @@ describe('authApi error mapping', () => {
     });
   });
 
+  it('sends explicit terms acceptance during registration', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 201,
+      text: async () => JSON.stringify({ detail: 'ok' }),
+      json: async () => ({ detail: 'ok' }),
+    } as Response));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await register('new@example.com', 'new-safe-password-123', 'new-safe-password-123', '', true);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const registerCall = fetchMock.mock.calls[1];
+    const body = JSON.parse((registerCall[1] as RequestInit).body as string) as Record<string, unknown>;
+    expect(body).toMatchObject({ accept_terms: true });
+  });
+
   it('does not expose non_field_errors and translates typical login messages', async () => {
     installFetchMock([
       { ok: true, status: 200, body: { detail: 'ok' } },

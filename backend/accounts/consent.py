@@ -12,12 +12,17 @@ User = get_user_model()
 # on the document's page (e.g. frontend/src/i18n/locales/de/home.json,
 # legal.terms.version for DOCUMENT_TERMS).
 CURRENT_VERSIONS: dict[str, str] = {
-    DocumentConsent.DOCUMENT_TERMS: '2026-07-13',
+    DocumentConsent.DOCUMENT_TERMS: '2026-07-14',
+    DocumentConsent.DOCUMENT_PRIVACY: '2026-07-14',
 }
 
 # Documents a user currently must have accepted the current version of to
 # use the application. Add a document here once its consent flow (version
 # entry above, UI copy, etc.) is actually implemented.
+# Privacy policy consent is intentionally supported but not currently required:
+# the July 2026 privacy edits clarify existing processing rather than adding a
+# new consent-based processing purpose. Add DocumentConsent.DOCUMENT_PRIVACY
+# here when a future privacy-policy change genuinely requires active consent.
 REQUIRED_DOCUMENTS: list[str] = [
     DocumentConsent.DOCUMENT_TERMS,
 ]

@@ -177,6 +177,7 @@ Deploy scripts, cron/scheduling config, and infra are **not** in this repo — t
 ## Agent Collaboration Preferences
 - When discussing how to approach a non-trivial task (architecture redesign, risky refactor, planning work), proactively recommend a reasoning-effort/model level (e.g. low/medium/high/xhigh, or a specific model) with a short rationale, before being asked.
 - User-workflow/collaboration preferences like this one should be recorded here in AGENTS.md, not only in a tool-specific private memory, since AGENTS.md is the shared, centrally-linked ruleset read by all coding agents (Claude, Codex, Copilot, etc.).
+- When changing the privacy policy or related legal texts, decide case by case whether the change only requires informing users or whether it requires renewed active consent from existing users. If renewed consent is necessary, implement the corresponding consent/version bump flow in the same change; if it is not necessary, state that explicitly in the summary.
 
 ## QA / Exploratory Testing
 When asked to search for bugs, run exploratory tests, or do a QA sweep:

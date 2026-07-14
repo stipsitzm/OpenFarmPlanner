@@ -1,8 +1,12 @@
-import { Box, Container, Stack, Typography } from '@mui/material';
+import PrintIcon from '@mui/icons-material/Print';
+import { Box, Button, Container, Stack, Typography } from '@mui/material';
 import { useTranslation } from '../../i18n';
 
 const termsSections = [
+  'provider',
   'scope',
+  'serviceAndCosts',
+  'contractLanguage',
   'accounts',
   'userContent',
   'publicLibrary',
@@ -27,9 +31,20 @@ export default function TermsOfServicePage() {
   return (
     <Container maxWidth="md" sx={{ py: { xs: 6, md: 9 } }}>
       <Stack spacing={3}>
-        <Typography variant="h3" component="h1">
-          {t('legal.terms.title')}
-        </Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between">
+          <Typography variant="h3" component="h1">
+            {t('legal.terms.title')}
+          </Typography>
+          <Button
+            type="button"
+            variant="outlined"
+            startIcon={<PrintIcon />}
+            onClick={() => window.print()}
+            sx={{ '@media print': { display: 'none' } }}
+          >
+            {t('legal.terms.print')}
+          </Button>
+        </Stack>
 
         {termsSections.map((sectionKey, index) => {
           const bulletKeys = termsSectionBulletKeys[sectionKey];
