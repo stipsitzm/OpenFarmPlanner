@@ -5,7 +5,9 @@ from django.test import TestCase
 from rest_framework import serializers
 
 from farm.models import Bed, Culture, Field, Location, PlantingPlan, Project, Supplier
-from farm.serializers import BedSerializer, CentimetersField, CultureSerializer, FieldSerializer, LocationSerializer, PlantingPlanSerializer
+from farm.common.serializer_fields import CentimetersField
+from farm.serializers import CultureSerializer, PlantingPlanSerializer
+from farm.structure.serializers import BedSerializer, FieldSerializer, LocationSerializer
 from farm.utils.normalization import normalize_supplier_name, normalize_text
 
 

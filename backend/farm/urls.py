@@ -1,5 +1,11 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from .structure.views import (
+    BedLayoutByLocationView,
+    BedViewSet,
+    FieldViewSet,
+    LocationViewSet,
+)
 from .history.views import (
     GlobalHistoryListView,
     GlobalHistoryRestoreView,
@@ -12,10 +18,7 @@ from .notes.views import (
     NoteAttachmentListCreateView,
 )
 from .views import (
-    LocationViewSet,
     SupplierViewSet,
-    FieldViewSet,
-    BedViewSet,
     CultureViewSet,
     CultureSupplierDataViewSet,
     PlantingPlanViewSet,
@@ -24,7 +27,6 @@ from .views import (
     YieldCalendarListView,
     CultureUndeleteView,
     SeedPackageViewSet,
-    BedLayoutByLocationView,
     ProjectViewSet,
     MyProjectsView,
     ProjectSwitchView,
