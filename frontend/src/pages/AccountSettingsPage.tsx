@@ -102,15 +102,14 @@ function InlineEditor({ open, saveLabel, onSave, onCancel, submitting, saveDisab
 interface SettingsCardProps {
   title: ReactNode;
   description?: ReactNode;
-  danger?: boolean;
   children: ReactNode;
 }
 
-function SettingsCard({ title, description, danger = false, children }: SettingsCardProps) {
+function SettingsCard({ title, description, children }: SettingsCardProps) {
   return (
-    <Card variant={danger ? 'outlined' : undefined} sx={danger ? { borderColor: 'error.main' } : undefined}>
+    <Card>
       <CardContent>
-        <Typography variant="h6" color={danger ? 'error' : undefined} sx={{ mb: description ? 0.5 : 2 }}>
+        <Typography variant="h6" sx={{ mb: description ? 0.5 : 2 }}>
           {title}
         </Typography>
         {description ? (
@@ -424,9 +423,8 @@ export default function AccountSettingsPage() {
         ) : null}
 
         <SettingsCard
-          title={t('dangerZone')}
+          title={t('sections.account')}
           description={`${t('deleteDescription')} ${t('restoreDescription')}`}
-          danger
         >
           <Button color="error" variant="outlined" onClick={() => setDeleteDialogOpen(true)}>
             {t('deleteButton')}
