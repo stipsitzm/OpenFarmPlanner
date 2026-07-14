@@ -75,6 +75,8 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByRole('heading', { name: /^\d+\. Cookies$/ })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Lokaler Speicher/ })).toBeInTheDocument();
     expect(screen.getByText(/keine Analyse-, Tracking- oder Marketing-Cookies/)).toBeInTheDocument();
+    expect(screen.getByText(/zuletzt geöffnete Projekt/)).toBeInTheDocument();
+    expect(screen.getByText(/Session-Storage-Daten werden in der Regel beim Schließen des Browser-Tabs gelöscht/)).toBeInTheDocument();
   });
 
   it('does not claim data is never shared with third parties', () => {
@@ -90,6 +92,30 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/Widerruf einer erteilten Einwilligung/)).toBeInTheDocument();
     expect(screen.getByText(/Art\. 15 DSGVO/)).toBeInTheDocument();
     expect(screen.getByText(/Art\. 7 Abs\. 3 DSGVO/)).toBeInTheDocument();
+  });
+
+  it('covers WKO checklist details for officer, provision duty, third-country transfer, and profiling', () => {
+    renderPrivacyPolicyPage();
+
+    expect(screen.getByRole('heading', { name: /Datenschutzbeauftragter/ })).toBeInTheDocument();
+    expect(screen.getByText(/kein Datenschutzbeauftragter bestellt/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Bereitstellung personenbezogener Daten/ })).toBeInTheDocument();
+    expect(screen.getByText(/ohne diese Daten können wir kein Benutzerkonto bereitstellen/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Drittlandübermittlung/ })).toBeInTheDocument();
+    expect(screen.getByText(/außerhalb der Europäischen Union oder des Europäischen Wirtschaftsraums findet/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Automatisierte Entscheidungsfindung/ })).toBeInTheDocument();
+    expect(screen.getByText(/einschließlich Profiling im Sinne des Art\. 22 DSGVO/)).toBeInTheDocument();
+  });
+
+  it('states concrete retention windows visible from account and invitation flows', () => {
+    renderPrivacyPolicyPage();
+
+    expect(screen.getByText(/Aktivierungslinks sind derzeit 7 Tage gültig/)).toBeInTheDocument();
+    expect(screen.getByText(/E-Mail-Änderungslinks sind derzeit 24 Stunden gültig/)).toBeInTheDocument();
+    expect(screen.getByText(/Projekt-Einladungen sind derzeit 14 Tage gültig/)).toBeInTheDocument();
+    expect(screen.getByText(/für 14 Tage als „zur Löschung vorgemerkt“/)).toBeInTheDocument();
+    expect(screen.getByText(/Server-Logfiles des Hosting-Anbieters werden täglich rotiert und nach 7 Tagen gelöscht/)).toBeInTheDocument();
+    expect(screen.getByText(/Eigene technische Cron- und Anwendungslogs speichern wir höchstens 14 Tage/)).toBeInTheDocument();
   });
 
   it('uses a concrete revision date instead of a generic month/year stamp', () => {

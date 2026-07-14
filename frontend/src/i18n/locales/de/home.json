@@ -93,6 +93,10 @@
           "title": "Verantwortlicher",
           "content": "Verantwortlich für die Datenverarbeitung im Sinne der Datenschutz-Grundverordnung (DSGVO) ist:\n\nMartin Stipsitz\nBurgenlandstraße 44A / 9\n9500 Villach\nÖsterreich\n\nE-Mail: info@openfarmplanner.org"
         },
+        "dataProtectionOfficer": {
+          "title": "Datenschutzbeauftragter",
+          "content": "Es ist kein Datenschutzbeauftragter bestellt, weil dafür nach derzeitigem Stand keine gesetzliche Verpflichtung besteht. Für Datenschutzanfragen erreichen Sie den Verantwortlichen über die oben genannten Kontaktdaten."
+        },
         "generalNotice": {
           "title": "Allgemeine Hinweise",
           "content": "Wir verarbeiten Ihre personenbezogenen Daten vertraulich und entsprechend der gesetzlichen Datenschutzvorschriften sowie dieser Datenschutzerklärung. Diese Datenschutzerklärung ergänzt die Nutzungsbedingungen von OpenFarmPlanner. Für Fragen zur Verarbeitung personenbezogener Daten ist ausschließlich diese Datenschutzerklärung maßgeblich.\n\nDie Nutzung der Startseite von OpenFarmPlanner ist ohne Angabe personenbezogener Daten möglich. Sobald Sie ein Benutzerkonto anlegen und die Anwendung nutzen, verarbeiten wir die in den folgenden Abschnitten beschriebenen Daten. Für jede Verarbeitung ist die jeweils angegebene Rechtsgrundlage nach Art. 6 Abs. 1 DSGVO maßgeblich."
@@ -162,7 +166,7 @@
         },
         "cookies": {
           "title": "Cookies",
-          "content": "OpenFarmPlanner verwendet ausschließlich technisch notwendige Cookies. Es werden keine Analyse-, Tracking- oder Marketing-Cookies eingesetzt.",
+          "content": "OpenFarmPlanner verwendet ausschließlich technisch notwendige Cookies. Es werden keine Analyse-, Tracking- oder Marketing-Cookies eingesetzt. Die Cookies dienen ausschließlich dazu, die angemeldete Nutzung der Anwendung und die technische Absicherung der Anfragen zu ermöglichen. Die konkrete Speicherdauer richtet sich nach der Sitzungs- und Sicherheitskonfiguration des Servers; Session-Cookies werden spätestens gelöscht, wenn sie ablaufen oder Sie sie in Ihrem Browser löschen.",
           "bullets": {
             "sessionCookies": "Session-Cookie zur Aufrechterhaltung Ihrer Anmeldung (Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO – ohne dieses Cookie kann die angemeldete Nutzung der Anwendung nicht bereitgestellt werden)",
             "securityCookies": "Sicherheits-Cookie zum Schutz vor Cross-Site-Request-Forgery, kurz CSRF (Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO, berechtigtes Interesse an der Absicherung der Anwendung, vgl. Erwägungsgrund 49 DSGVO)"
@@ -170,15 +174,27 @@
         },
         "localStorage": {
           "title": "Lokaler Speicher (Local Storage/Session Storage)",
-          "content": "Zusätzlich zu den Cookies speichert die Anwendung einzelne rein technische Einstellungen – etwa gewählte Ansichtsoptionen, das zuletzt geöffnete Projekt oder die Sortierung von Tabellen – im lokalen Speicher Ihres Browsers (Local Storage/Session Storage). Diese Daten verlassen Ihr Gerät nicht, sind für uns nicht einsehbar und enthalten keine Zugangsdaten. Da wir dabei keine Daten verarbeiten, handelt es sich nicht um eine Verarbeitung personenbezogener Daten unsererseits im Sinne des Art. 4 Nr. 2 DSGVO; eine gesonderte Rechtsgrundlage ist daher nicht einschlägig."
+          "content": "Zusätzlich zu den Cookies speichert die Anwendung einzelne technische Einstellungen im lokalen Speicher Ihres Browsers (Local Storage/Session Storage). Dazu gehören insbesondere das zuletzt geöffnete Projekt, Ansichtsoptionen, Sidebar- und Tabellenzustände, Sortierungen und Filter, Hinweise, die bereits angezeigt wurden, sowie kurzzeitig zwischengespeicherte Weiterleitungen oder Tokens für Projekt-Einladungen. Diese Daten verlassen Ihr Gerät nicht, sind für uns nicht einsehbar und enthalten keine Zugangsdaten. Local-Storage-Daten bleiben in Ihrem Browser gespeichert, bis sie durch die Anwendung ersetzt, von Ihnen über die Anwendung zurückgesetzt oder über die Browserfunktionen gelöscht werden; Session-Storage-Daten werden in der Regel beim Schließen des Browser-Tabs gelöscht. Da wir dabei keine Daten auf unseren Systemen verarbeiten, handelt es sich nicht um eine Verarbeitung personenbezogener Daten unsererseits im Sinne des Art. 4 Nr. 2 DSGVO; eine gesonderte Rechtsgrundlage ist daher nicht einschlägig."
         },
         "dataSharing": {
           "title": "Weitergabe von Daten",
-          "content": "Über die in Auftragsverarbeitung erfolgende Zusammenarbeit mit unserem Hosting-Anbieter (siehe Abschnitt „Hosting“) hinaus geben wir Ihre personenbezogenen Daten nur weiter, wenn:\n\n– Sie durch das aktive Veröffentlichen einer Kultur in der öffentlichen Kulturbibliothek deren Sichtbarkeit für alle angemeldeten Nutzer wählen, gegebenenfalls einschließlich Ihres öffentlichen Anzeigenamens, sofern Sie einen solchen festgelegt haben (siehe Abschnitt „Öffentliche Kulturbibliothek“), oder\n– wir gesetzlich dazu verpflichtet sind, etwa gegenüber Behörden."
+          "content": "Über die in Auftragsverarbeitung erfolgende Zusammenarbeit mit unserem Hosting-Anbieter (siehe Abschnitt „Hosting“) hinaus geben wir Ihre personenbezogenen Daten nur weiter, wenn:\n\n– dies für den technischen E-Mail-Versand im Zusammenhang mit Ihrem Konto oder Projekt-Einladungen erforderlich ist; der Versand erfolgt über die bei Uberspace betriebene Mail-Infrastruktur,\n– Sie durch das aktive Veröffentlichen einer Kultur in der öffentlichen Kulturbibliothek deren Sichtbarkeit für alle angemeldeten Nutzer wählen, gegebenenfalls einschließlich Ihres öffentlichen Anzeigenamens, sofern Sie einen solchen festgelegt haben (siehe Abschnitt „Öffentliche Kulturbibliothek“), oder\n– wir gesetzlich dazu verpflichtet sind, etwa gegenüber Behörden."
+        },
+        "thirdCountryTransfers": {
+          "title": "Drittlandübermittlung",
+          "content": "Eine Übermittlung personenbezogener Daten an Empfänger außerhalb der Europäischen Union oder des Europäischen Wirtschaftsraums findet nach derzeitigem Stand nicht statt."
+        },
+        "mandatoryProvision": {
+          "title": "Bereitstellung personenbezogener Daten",
+          "content": "Die Bereitstellung personenbezogener Daten ist weder gesetzlich noch vertraglich vorgeschrieben, soweit Sie nur die öffentliche Startseite aufrufen. Für die Registrierung und Nutzung der Anwendung sind E-Mail-Adresse, Passwort und die technisch notwendigen Cookies erforderlich; ohne diese Daten können wir kein Benutzerkonto bereitstellen und keine Anmeldung ermöglichen. Projekt- und Anwendungsdaten stellen Sie freiwillig bereit, soweit Sie die jeweiligen Funktionen nutzen möchten; ohne diese Angaben können die entsprechenden Planungsfunktionen nicht oder nur eingeschränkt verwendet werden. Die Veröffentlichung in der öffentlichen Kulturbibliothek ist freiwillig und für die Nutzung der übrigen Anwendung nicht erforderlich."
         },
         "storageDuration": {
           "title": "Speicherdauer",
-          "content": "Ihre Kontodaten werden gespeichert, solange Ihr Benutzerkonto besteht. Wenn Sie Ihr Konto löschen lassen, wird es zunächst für 14 Tage als „zur Löschung vorgemerkt“ geführt; in diesem Zeitraum können Sie die Löschung rückgängig machen. Nach Ablauf dieser Frist anonymisieren wir Ihr Konto (E-Mail-Adresse und Anzeigename werden entfernt, das Konto wird deaktiviert), anstatt es vollständig zu löschen, damit die Projekt- und Bibliotheksdaten anderer Nutzer konsistent bleiben – soweit dem keine gesetzlichen Pflichten oder sonstige zwingende Gründe entgegenstehen.\n\nProjektdaten, Anbaupläne und der zugehörige Änderungsverlauf bleiben – sofern das jeweilige Projekt weiterbesteht und nicht separat gelöscht wird – auch nach der Anonymisierung Ihres Kontos bestehen, ebenso von Ihnen bereits veröffentlichte Einträge in der öffentlichen Kulturbibliothek (siehe Abschnitte „Projekt- und Anwendungsdaten“ und „Öffentliche Kulturbibliothek“). Darüber hinausgehende gesetzliche Aufbewahrungspflichten bestehen für die von uns verarbeiteten Daten derzeit nicht, da OpenFarmPlanner keine abrechnungs- oder steuerrelevanten Daten verarbeitet."
+          "content": "Ihre Kontodaten werden gespeichert, solange Ihr Benutzerkonto besteht. Nicht aktivierte Benutzerkonten werden nach Ablauf der Aktivierungsfrist gelöscht; Aktivierungslinks sind derzeit 7 Tage gültig. Passwort-Reset-Links sind zeitlich begrenzt; E-Mail-Änderungslinks sind derzeit 24 Stunden gültig. Projekt-Einladungen sind derzeit 14 Tage gültig.\n\nWenn Sie Ihr Konto löschen lassen, wird es zunächst für 14 Tage als „zur Löschung vorgemerkt“ geführt; in diesem Zeitraum können Sie die Löschung rückgängig machen. Nach Ablauf dieser Frist anonymisieren wir Ihr Konto (E-Mail-Adresse und Anzeigename werden entfernt, das Konto wird deaktiviert), anstatt es vollständig zu löschen, damit die Projekt- und Bibliotheksdaten anderer Nutzer konsistent bleiben – soweit dem keine gesetzlichen Pflichten oder sonstige zwingende Gründe entgegenstehen.\n\nProjektdaten, Anbaupläne und der zugehörige Änderungsverlauf bleiben – sofern das jeweilige Projekt weiterbesteht und nicht separat gelöscht wird – auch nach der Anonymisierung Ihres Kontos bestehen, ebenso von Ihnen bereits veröffentlichte Einträge in der öffentlichen Kulturbibliothek (siehe Abschnitte „Projekt- und Anwendungsdaten“ und „Öffentliche Kulturbibliothek“). Server-Logfiles des Hosting-Anbieters werden täglich rotiert und nach 7 Tagen gelöscht; IP-Adressen werden dabei von Uberspace gekürzt gespeichert. Eigene technische Cron- und Anwendungslogs speichern wir höchstens 14 Tage, soweit sie nicht bereits früher für Betrieb, Fehleranalyse und Sicherheit entbehrlich sind. Darüber hinausgehende gesetzliche Aufbewahrungspflichten bestehen für die von uns verarbeiteten Daten derzeit nicht, da OpenFarmPlanner keine abrechnungs- oder steuerrelevanten Daten verarbeitet."
+        },
+        "automatedDecisionMaking": {
+          "title": "Automatisierte Entscheidungsfindung",
+          "content": "Eine automatisierte Entscheidungsfindung einschließlich Profiling im Sinne des Art. 22 DSGVO findet nicht statt."
         },
         "rights": {
           "title": "Ihre Rechte",
@@ -206,11 +222,24 @@
     },
     "terms": {
       "title": "Nutzungsbedingungen",
-      "version": "Stand: 13. Juli 2026",
+      "print": "Drucken / als PDF speichern",
+      "version": "Stand: 14. Juli 2026",
       "sections": {
+        "provider": {
+          "title": "Anbieter und Kontakt",
+          "content": "Anbieter der unter openfarmplanner.org bereitgestellten Anwendung ist:\n\nMartin Stipsitz\nBurgenlandstraße 44A / 9\n9500 Villach\nÖsterreich\n\nE-Mail: info@openfarmplanner.org\n\nEine Umsatzsteuer-Identifikationsnummer besteht derzeit nicht."
+        },
         "scope": {
           "title": "Geltungsbereich und Nutzung der Plattform",
           "content": "Diese Nutzungsbedingungen gelten für die Nutzung von OpenFarmPlanner, einer Webanwendung zur Planung von landwirtschaftlichem und gärtnerischem Anbau. Mit der Registrierung eines Benutzerkontos oder der Nutzung der Anwendung erkennen Sie diese Nutzungsbedingungen an.\n\nOpenFarmPlanner richtet sich an Privatpersonen sowie landwirtschaftliche und gärtnerische Betriebe, die ihre Anbauplanung digital organisieren möchten. Informationen zur Verarbeitung personenbezogener Daten finden Sie in der Datenschutzerklärung."
+        },
+        "serviceAndCosts": {
+          "title": "Leistungsumfang, Kosten und Lieferung",
+          "content": "OpenFarmPlanner stellt digitale Planungsfunktionen als gehostete Webanwendung bereit. Es werden keine Waren geliefert und es findet keine Zahlungsabwicklung über OpenFarmPlanner statt.\n\nDie Nutzung der unter openfarmplanner.org bereitgestellten Anwendung ist derzeit unentgeltlich. Sollten künftig kostenpflichtige Funktionen eingeführt werden, informieren wir Sie vorab; solche Funktionen kommen nur auf Grundlage gesonderter Bedingungen oder einer ausdrücklichen Zustimmung zustande.\n\nDa aktuell keine kostenpflichtigen Leistungen, Warenlieferungen oder digitalen Käufe angeboten werden, enthalten diese Nutzungsbedingungen keine Regelungen zu Preisen, Versandkosten, Zahlungsmitteln, Liefergebieten, After-Sales-Service oder kaufrechtlichen Widerrufs- und Gewährleistungsinformationen."
+        },
+        "contractLanguage": {
+          "title": "Vertragssprache",
+          "content": "Die Vertragssprache für die Nutzung der unter openfarmplanner.org bereitgestellten Anwendung ist Deutsch. Maßgeblich ist die deutsche Fassung dieser Nutzungsbedingungen."
         },
         "accounts": {
           "title": "Benutzerkonten",

@@ -36,6 +36,7 @@ const authFieldLabelFallbacks: Record<string, string> = {
   email: 'E-Mail',
   password: 'Passwort',
   password_confirm: 'Passwort bestätigen',
+  accept_terms: 'Nutzungsbedingungen',
   uid: 'Benutzerkennung',
   token: 'Token',
   display_name: 'Anzeigename',
@@ -51,6 +52,7 @@ const knownValidationMessageKeys: Record<string, string> = {
   'This password is too common.': 'passwordTooCommon',
   'This password is too short.': 'passwordTooShort',
   'This password is entirely numeric.': 'passwordEntirelyNumeric',
+  'You must accept the Terms of Service.': 'termsRequired',
   'Unable to log in with provided credentials.': 'invalidCredentials',
   'Die E-Mail konnte nicht gesendet werden. Bitte kontaktiere [info@openfarmplanner.org](mailto:info@openfarmplanner.org).': 'emailSendFailed',
   'Dein Konto wurde erstellt, aber die Aktivierungs-E-Mail konnte nicht gesendet werden. Bitte kontaktiere [info@openfarmplanner.org](mailto:info@openfarmplanner.org), damit wir dein Konto aktivieren oder dir den Link erneut senden können.': 'activationEmailSendFailed',
@@ -189,6 +191,7 @@ export async function register(
   password: string,
   passwordConfirm: string,
   displayName = '',
+  acceptTerms = false,
 ): Promise<{ detail: string }> {
   await ensureCsrfCookie();
   return request<{ detail: string }>('/auth/register/', {
@@ -199,6 +202,7 @@ export async function register(
       password,
       password_confirm: passwordConfirm,
       display_name: displayName,
+      accept_terms: acceptTerms,
     }),
   });
 }

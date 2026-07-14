@@ -10,19 +10,24 @@ import { useTranslation } from '../i18n';
  * document starts requiring versioned consent — no other gating logic
  * needs to change.
  */
-const CONSENT_DOCUMENT_CONFIG: Record<string, { path: string; translationKey: string }> = {
-  terms: { path: '/nutzungsbedingungen', translationKey: 'terms' },
+const CONSENT_DOCUMENT_CONFIG: Record<string, { path: string; translationKey: string; versionKey: string }> = {
+  terms: { path: '/nutzungsbedingungen', translationKey: 'terms', versionKey: 'legal.terms.version' },
+  privacy: { path: '/datenschutz', translationKey: 'privacy', versionKey: 'legal.privacy.version' },
 };
 
 export default function ConsentGate() {
   const { user, acceptConsent, logout } = useAuth();
-  const { t } = useTranslation('auth');
+  const { t } = useTranslation(['auth', 'home']);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   const documentKey = user?.pending_consents[0];
   const config = documentKey ? CONSENT_DOCUMENT_CONFIG[documentKey] : undefined;
+  const additionalPendingDocuments = user?.pending_consents
+    .filter((pendingDocument) => pendingDocument !== documentKey)
+    .map((pendingDocument) => CONSENT_DOCUMENT_CONFIG[pendingDocument])
+    .filter((pendingConfig): pendingConfig is NonNullable<typeof pendingConfig> => pendingConfig !== undefined) ?? [];
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -67,10 +72,27 @@ export default function ConsentGate() {
         <Typography color="text.secondary">
           {t(`reconsent.${config.translationKey}.body`)}
         </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {t('reconsent.currentVersion', { version: t(`home:${config.versionKey}`) })}
+        </Typography>
         {error ? <Alert severity="error">{error}</Alert> : null}
-        <Link component={RouterLink} to={config.path} target="_blank" rel="noopener">
-          {t(`reconsent.${config.translationKey}.linkLabel`)}
-        </Link>
+        <Stack spacing={0.75}>
+          <Link component={RouterLink} to={config.path} target="_blank" rel="noopener">
+            {t(`reconsent.${config.translationKey}.linkLabel`)}
+          </Link>
+          {additionalPendingDocuments.length > 0 ? (
+            <Stack spacing={0.5}>
+              <Typography variant="body2" color="text.secondary">
+                {t('reconsent.additionalDocuments')}
+              </Typography>
+              {additionalPendingDocuments.map((pendingConfig) => (
+                <Link key={pendingConfig.translationKey} component={RouterLink} to={pendingConfig.path} target="_blank" rel="noopener">
+                  {t(`reconsent.${pendingConfig.translationKey}.linkLabel`)}
+                </Link>
+              ))}
+            </Stack>
+          ) : null}
+        </Stack>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
           <Button variant="contained" onClick={() => void handleAccept()} disabled={submitting}>
             {submitting ? t('reconsent.accepting') : t(`reconsent.${config.translationKey}.acceptButton`)}
