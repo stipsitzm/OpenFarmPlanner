@@ -77,6 +77,8 @@ import type { CultureHistoryEntry } from './api/types';
 import './App.css';
 import { useAuth } from './auth/useAuth';
 import ProtectedRoute from './auth/ProtectedRoute';
+import type { RootLayoutOutletContext, TopbarContextAction } from './navigation/topbarTypes';
+export type { RootLayoutOutletContext, TopbarContextAction } from './navigation/topbarTypes';
 import AppLogo from './components/layout/AppLogo';
 import { AlertSnackbar } from './components/feedback/AlertSnackbar';
 import { HelpDialog } from './components/help/HelpDialog';
@@ -302,25 +304,6 @@ function GlobalMenu(props: GlobalMenuProps) {
   return <Menu id="global-actions-menu" anchorEl={anchorEl} open={open} onClose={onClose}>{isMobile ? mobileMenuItems : desktopMenuItems}</Menu>;
 }
 
-export interface TopbarContextAction {
-  id: string;
-  label: string;
-  ariaLabel?: string;
-  onClick: () => void;
-  disabled?: boolean;
-  shortcutHint?: string;
-  active?: boolean;
-  hidden?: boolean;
-  reserveSpace?: boolean;
-  groupId?: string;
-  tooltip?: string;
-  menuActions?: Array<{ id: string; label: string; onClick: () => void; disabled?: boolean }>;
-}
-
-export interface RootLayoutOutletContext {
-  setTopbarContextActions: (actions: TopbarContextAction[]) => void;
-  setTopbarTitleActions: (actions: TopbarContextAction[]) => void;
-}
 
 function getCompactTopbarActionIcon(actionId: string): React.ReactNode {
   switch (actionId) {

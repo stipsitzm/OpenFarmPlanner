@@ -70,7 +70,7 @@ import { useTopbarContextActions } from '../hooks/useTopbarContextActions';
 import { useTopbarTitleActions } from '../hooks/useTopbarTitleActions';
 import { CustomContextMenu } from '../components/contextMenu/CustomContextMenu';
 import EmptyStateCard from '../components/project/EmptyStateCard';
-import type { RootLayoutOutletContext, TopbarContextAction } from '../App';
+import type { RootLayoutOutletContext, TopbarContextAction } from '../navigation/topbarTypes';
 import { AuthContext } from '../auth/authContextShared';
 import {
   buildFieldOccupancyHierarchy,

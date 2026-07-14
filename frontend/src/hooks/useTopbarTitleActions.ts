@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { TopbarContextAction } from '../App';
+import type { TopbarContextAction } from '../navigation/topbarTypes';
 
 export function useTopbarTitleActions(
   setActions: ((actions: TopbarContextAction[]) => void) | undefined,
