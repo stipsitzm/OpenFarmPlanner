@@ -35,6 +35,32 @@ from farm.seed_units import (
 
 EMPTY_SEED_RATE_UNIT_VALUES = {None, '', '-'}
 
+PRE_CULTIVATION_SEED_RATE_UNITS = {
+    SEED_RATE_UNIT_G_PER_M2,
+    SEED_RATE_UNIT_G_PER_LFM,
+    SEED_RATE_UNIT_SEEDS_PER_M2,
+    SEED_RATE_UNIT_SEEDS_PER_LFM,
+    SEED_RATE_UNIT_SEEDS_PER_PLANT,
+}
+
+
+def _seed_rate_entry_error(method: str, payload: object) -> str | None:
+    """Return the validation error for one seed-rate-by-cultivation entry, if any."""
+    if not isinstance(payload, dict):
+        return 'Seed rate entries must be objects.'
+    try:
+        parsed_value = float(payload.get('value'))
+    except (TypeError, ValueError):
+        return 'Seed rate values must be numeric.'
+    if parsed_value <= 0:
+        return 'Seed rate values must be positive.'
+    unit = payload.get('unit')
+    if method == 'pre_cultivation' and unit not in PRE_CULTIVATION_SEED_RATE_UNITS:
+        return 'Pre-cultivation seed rate unit is unsupported.'
+    if method == 'direct_sowing' and unit not in SEED_RATE_UNITS:
+        return 'Direct sowing seed rate unit is unsupported.'
+    return None
+
 
 def _normalize_seed_rate_unit_value(value: object) -> str | None:
     """Normalize supported seed rate units and legacy empty placeholders."""
@@ -686,8 +712,59 @@ class CultureSerializer(serializers.ModelSerializer):
         return value
     
     def validate(self, attrs):
-        """Validate cross-field rules and supplier get-or-create."""
+        """Validate cross-field rules and supplier get-or-create.
+
+        Split into one helper per field group. The intermediate error gates
+        (raise-before-continuing) mirror the original monolithic method:
+        later phases assume the earlier ones produced consistent data.
+        """
         errors = {}
+
+        self._validate_name_and_duplicates(attrs, errors)
+        cultivation_types = self._validate_cultivation_types(attrs, errors)
+        self._validate_seed_rate_by_cultivation(attrs, errors, cultivation_types)
+        self._validate_seed_rate_fields(attrs, errors, cultivation_types)
+        self._validate_supplier_data_rows(attrs, errors)
+        self._resolve_supplier_from_name(attrs)
+        self._normalize_variety(attrs)
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        self._validate_supplier_consistency(attrs, errors)
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        self._validate_seeding_requirement(attrs, errors)
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        self._run_model_clean(attrs)
+        return attrs
+
+    def _resolve_project(self, attrs, *, instance_first: bool):
+        """Resolve the project the way the original inline blocks did.
+
+        The name/duplicate check prefers attrs -> request -> instance, while
+        the supplier get-or-create prefers attrs -> instance -> request.
+        """
+        project = attrs.get('project')
+        if instance_first:
+            if project is None and self.instance is not None:
+                project = self.instance.project
+            if project is None:
+                request = self.context.get('request')
+                project = getattr(request, 'active_project', None)
+            return project
+        if project is None:
+            request = self.context.get('request')
+            if request is not None:
+                project = getattr(request, 'active_project', None)
+        if project is None and self.instance is not None:
+            project = self.instance.project
+        return project
+
+    def _validate_name_and_duplicates(self, attrs, errors):
+        """Require a name and reject duplicate name/variety pairs per project."""
         from farm.utils import normalize_text
 
         raw_name = attrs.get(
@@ -702,44 +779,35 @@ class CultureSerializer(serializers.ModelSerializer):
         normalized_variety = normalize_text(raw_variety)
         if not normalized_name:
             errors['name'] = 'Name is required.'
-        else:
-            attrs['name'] = ' '.join(str(raw_name).split())
-            attrs['variety'] = ' '.join(str(raw_variety).split())
-            request = self.context.get('request')
-            project = attrs.get('project')
-            if project is None and request is not None:
-                project = getattr(request, 'active_project', None)
-            if project is None and self.instance is not None:
-                project = self.instance.project
+            return
+        attrs['name'] = ' '.join(str(raw_name).split())
+        attrs['variety'] = ' '.join(str(raw_variety).split())
+        project = self._resolve_project(attrs, instance_first=False)
+        if project is None:
+            return
 
-            if project is not None:
-                instance_name_normalized = None
-                instance_variety_normalized = None
-                if self.instance is not None:
-                    instance_name_normalized = normalize_text(getattr(self.instance, 'name', None))
-                    instance_variety_normalized = normalize_text(getattr(self.instance, 'variety', None))
+        # Keep existing duplicate records editable when the normalized
+        # identity is unchanged on update. This preserves compatibility
+        # with legacy data that may already contain duplicates.
+        if (
+            self.instance is not None
+            and normalize_text(getattr(self.instance, 'name', None)) == normalized_name
+            and normalize_text(getattr(self.instance, 'variety', None)) == normalized_variety
+        ):
+            return
+        existing_name_query = Culture.all_objects.filter(
+            project=project,
+            deleted_at__isnull=True,
+            name_normalized=normalized_name,
+            variety_normalized=normalized_variety,
+        )
+        if self.instance is not None:
+            existing_name_query = existing_name_query.exclude(pk=self.instance.pk)
+        if existing_name_query.exists():
+            errors['name'] = 'A culture with this name and variety already exists.'
 
-                # Keep existing duplicate records editable when the normalized
-                # identity is unchanged on update. This preserves compatibility
-                # with legacy data that may already contain duplicates.
-                if (
-                    self.instance is not None
-                    and instance_name_normalized == normalized_name
-                    and instance_variety_normalized == normalized_variety
-                ):
-                    pass
-                else:
-                    existing_name_query = Culture.all_objects.filter(
-                        project=project,
-                        deleted_at__isnull=True,
-                        name_normalized=normalized_name,
-                        variety_normalized=normalized_variety,
-                    )
-                    if self.instance is not None:
-                        existing_name_query = existing_name_query.exclude(pk=self.instance.pk)
-                    if existing_name_query.exists():
-                        errors['name'] = 'A culture with this name and variety already exists.'
-
+    def _validate_cultivation_types(self, attrs, errors):
+        """Normalize cultivation_types; returns the resolved raw value."""
         cultivation_types = attrs.get(
             'cultivation_types',
             getattr(self.instance, 'cultivation_types', None) if self.instance else None,
@@ -752,69 +820,54 @@ class CultureSerializer(serializers.ModelSerializer):
             cultivation_types = [legacy_cultivation_type] if legacy_cultivation_type else []
         if not isinstance(cultivation_types, list):
             errors['cultivation_types'] = 'Cultivation types must be a list.'
+            return cultivation_types
+        normalized_types = [str(item).strip() for item in cultivation_types if str(item).strip()]
+        allowed_types = {'pre_cultivation', 'direct_sowing'}
+        if not normalized_types:
+            normalized_types = ['pre_cultivation']
+        if len(set(normalized_types)) != len(normalized_types):
+            errors['cultivation_types'] = 'Cultivation types must be unique.'
+        elif any(item not in allowed_types for item in normalized_types):
+            errors['cultivation_types'] = 'Cultivation types contain unsupported values.'
         else:
-            normalized_types = [str(item).strip() for item in cultivation_types if str(item).strip()]
-            allowed_types = {'pre_cultivation', 'direct_sowing'}
-            if not normalized_types:
-                normalized_types = ['pre_cultivation']
-            if len(set(normalized_types)) != len(normalized_types):
-                errors['cultivation_types'] = 'Cultivation types must be unique.'
-            elif any(item not in allowed_types for item in normalized_types):
-                errors['cultivation_types'] = 'Cultivation types contain unsupported values.'
-            else:
-                attrs['cultivation_types'] = normalized_types
-                attrs['cultivation_type'] = normalized_types[0]
+            attrs['cultivation_types'] = normalized_types
+            attrs['cultivation_type'] = normalized_types[0]
+        return cultivation_types
 
+    def _validate_seed_rate_by_cultivation(self, attrs, errors, cultivation_types):
+        """Validate the per-cultivation seed rate map and derive the legacy fields."""
         seed_rate_by_cultivation = attrs.get(
             'seed_rate_by_cultivation',
             getattr(self.instance, 'seed_rate_by_cultivation', None) if self.instance else None,
         )
-        if seed_rate_by_cultivation is not None:
-            if not isinstance(seed_rate_by_cultivation, dict):
-                errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation must be an object.'
+        if seed_rate_by_cultivation is None:
+            return
+        if not isinstance(seed_rate_by_cultivation, dict):
+            errors['seed_rate_by_cultivation'] = 'Seed rate by cultivation must be an object.'
+            return
+        target_types = set(attrs.get('cultivation_types') or cultivation_types or [])
+        if not set(seed_rate_by_cultivation.keys()).issubset(target_types):
+            errors['seed_rate_by_cultivation'] = 'Seed rate keys must be subset of cultivation_types.'
+        else:
+            for method, payload in seed_rate_by_cultivation.items():
+                entry_error = _seed_rate_entry_error(method, payload)
+                if entry_error:
+                    errors['seed_rate_by_cultivation'] = entry_error
+                    break
+
+        if 'seed_rate_by_cultivation' not in errors:
+            if 'pre_cultivation' in seed_rate_by_cultivation:
+                primary = seed_rate_by_cultivation['pre_cultivation']
+            elif 'direct_sowing' in seed_rate_by_cultivation:
+                primary = seed_rate_by_cultivation['direct_sowing']
             else:
-                target_types = set(attrs.get('cultivation_types') or cultivation_types or [])
-                if not set(seed_rate_by_cultivation.keys()).issubset(target_types):
-                    errors['seed_rate_by_cultivation'] = 'Seed rate keys must be subset of cultivation_types.'
-                else:
-                    for method, payload in seed_rate_by_cultivation.items():
-                        if not isinstance(payload, dict):
-                            errors['seed_rate_by_cultivation'] = 'Seed rate entries must be objects.'
-                            break
-                        value = payload.get('value')
-                        unit = payload.get('unit')
-                        try:
-                            parsed_value = float(value)
-                        except (TypeError, ValueError):
-                            errors['seed_rate_by_cultivation'] = 'Seed rate values must be numeric.'
-                            break
-                        if parsed_value <= 0:
-                            errors['seed_rate_by_cultivation'] = 'Seed rate values must be positive.'
-                            break
-                        if method == 'pre_cultivation' and unit not in {
-                            SEED_RATE_UNIT_G_PER_M2,
-                            SEED_RATE_UNIT_G_PER_LFM,
-                            SEED_RATE_UNIT_SEEDS_PER_M2,
-                            SEED_RATE_UNIT_SEEDS_PER_LFM,
-                            SEED_RATE_UNIT_SEEDS_PER_PLANT,
-                        }:
-                            errors['seed_rate_by_cultivation'] = 'Pre-cultivation seed rate unit is unsupported.'
-                            break
-                        if method == 'direct_sowing' and unit not in SEED_RATE_UNITS:
-                            errors['seed_rate_by_cultivation'] = 'Direct sowing seed rate unit is unsupported.'
-                            break
+                primary = None
+            if isinstance(primary, dict):
+                attrs['seed_rate_value'] = float(primary.get('value'))
+                attrs['seed_rate_unit'] = primary.get('unit')
 
-                if 'seed_rate_by_cultivation' not in errors:
-                    if 'pre_cultivation' in seed_rate_by_cultivation:
-                        primary = seed_rate_by_cultivation['pre_cultivation']
-                    elif 'direct_sowing' in seed_rate_by_cultivation:
-                        primary = seed_rate_by_cultivation['direct_sowing']
-                    else:
-                        primary = None
-                    if isinstance(primary, dict):
-                        attrs['seed_rate_value'] = float(primary.get('value'))
-                        attrs['seed_rate_unit'] = primary.get('unit')
-
+    def _validate_seed_rate_fields(self, attrs, errors, cultivation_types):
+        """Validate the flat direct-sowing / pre-cultivation seed rate fields."""
         direct_value = attrs.get(
             'seed_rate_direct_value',
             getattr(self.instance, 'seed_rate_direct_value', None) if self.instance else None,
@@ -850,94 +903,90 @@ class CultureSerializer(serializers.ModelSerializer):
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is required when pre-cultivation value is set.'
         if pre_value is not None and pre_value <= 0:
             errors['seed_rate_pre_cultivation_value'] = 'Pre-cultivation seed rate value must be greater than zero.'
-        if pre_value is not None and pre_unit and pre_unit not in {
-            SEED_RATE_UNIT_G_PER_M2,
-            SEED_RATE_UNIT_G_PER_LFM,
-            SEED_RATE_UNIT_SEEDS_PER_M2,
-            SEED_RATE_UNIT_SEEDS_PER_LFM,
-            SEED_RATE_UNIT_SEEDS_PER_PLANT,
-        }:
+        if pre_value is not None and pre_unit and pre_unit not in PRE_CULTIVATION_SEED_RATE_UNITS:
             errors['seed_rate_pre_cultivation_unit'] = 'Pre-cultivation seed rate unit is unsupported.'
 
+    def _validate_supplier_data_rows(self, attrs, errors):
+        """Require a supplier on any non-empty supplier_data_input row."""
         supplier_data_input = attrs.get('supplier_data_input')
-        if isinstance(supplier_data_input, list):
-            existing_supplier_rows = {}
-            if self.instance is not None:
-                existing_supplier_rows = {row.id: row for row in self.instance.supplier_data.all()}
+        if not isinstance(supplier_data_input, list):
+            return
+        existing_supplier_rows = {}
+        if self.instance is not None:
+            existing_supplier_rows = {row.id: row for row in self.instance.supplier_data.all()}
 
-            supplier_data_errors = {}
-            for index, row in enumerate(supplier_data_input):
-                if not isinstance(row, dict) or _is_empty_supplier_data_payload(row):
-                    continue
+        supplier_data_errors = {}
+        for index, row in enumerate(supplier_data_input):
+            if not isinstance(row, dict) or _is_empty_supplier_data_payload(row):
+                continue
 
-                has_supplier = _supplier_data_payload_has_supplier(row)
-                raw_row_id = row.get('id')
-                try:
-                    row_id = int(raw_row_id)
-                except (TypeError, ValueError):
-                    row_id = None
-                if (
-                    not has_supplier
-                    and row_id is not None
-                    and row_id in existing_supplier_rows
-                    and 'supplier_id' not in row
-                    and 'supplier' not in row
-                ):
-                    has_supplier = True
+            has_supplier = _supplier_data_payload_has_supplier(row)
+            raw_row_id = row.get('id')
+            try:
+                row_id = int(raw_row_id)
+            except (TypeError, ValueError):
+                row_id = None
+            if (
+                not has_supplier
+                and row_id is not None
+                and row_id in existing_supplier_rows
+                and 'supplier_id' not in row
+                and 'supplier' not in row
+            ):
+                has_supplier = True
 
-                if not has_supplier and _supplier_data_payload_has_information(row):
-                    supplier_data_errors[index] = {
-                        'supplier_id': 'supplier_data_missing_supplier',
-                    }
+            if not has_supplier and _supplier_data_payload_has_information(row):
+                supplier_data_errors[index] = {
+                    'supplier_id': 'supplier_data_missing_supplier',
+                }
 
-            if supplier_data_errors:
-                errors['supplier_data_input'] = supplier_data_errors
+        if supplier_data_errors:
+            errors['supplier_data_input'] = supplier_data_errors
 
-        # Handle supplier_name via get-or-create to keep imports ergonomic.
-        # If supplier_id was explicitly provided (including null), respect it and
-        # do not implicitly override from supplier_name.
+    def _resolve_supplier_from_name(self, attrs):
+        """Handle supplier_name via get-or-create to keep imports ergonomic.
+
+        If supplier_id was explicitly provided (including null), respect it and
+        do not implicitly override from supplier_name.
+        """
         supplier_name = attrs.pop('supplier_name', None)
         supplier_explicitly_set = 'supplier' in attrs
-        if supplier_name and not supplier_explicitly_set and not attrs.get('supplier'):
-            from farm.utils import normalize_supplier_name
-            project = attrs.get('project')
-            if self.instance is not None:
-                project = self.instance.project
-            if project is None:
-                request = self.context.get('request')
-                project = getattr(request, 'active_project', None)
-            if project is None:
-                project, _ = Project.objects.get_or_create(
-                    slug='gelawi-zwiebelzopf',
-                    defaults={'name': 'Gelawi Zwiebelzopf', 'description': '', 'is_active': True},
+        if not supplier_name or supplier_explicitly_set or attrs.get('supplier'):
+            return
+        from farm.utils import normalize_supplier_name
+        project = self._resolve_project(attrs, instance_first=True)
+        if project is None:
+            project, _ = Project.objects.get_or_create(
+                slug='gelawi-zwiebelzopf',
+                defaults={'name': 'Gelawi Zwiebelzopf', 'description': '', 'is_active': True},
+            )
+        normalized = normalize_supplier_name(supplier_name) or ''
+        try:
+            with transaction.atomic():
+                supplier, _created = Supplier.objects.get_or_create(
+                    name_normalized=normalized,
+                    project=project,
+                    defaults={
+                        'name': supplier_name,
+                        'homepage_url': 'https://example.invalid',
+                        'project': project,
+                    },
                 )
-            normalized = normalize_supplier_name(supplier_name) or ''
-            try:
-                with transaction.atomic():
-                    supplier, _created = Supplier.objects.get_or_create(
-                        name_normalized=normalized,
-                        project=project,
-                        defaults={
-                            'name': supplier_name,
-                            'homepage_url': 'https://example.invalid',
-                            'project': project,
-                        },
-                    )
-            except IntegrityError as exc:
-                supplier = Supplier.objects.filter(project=project, name_normalized=normalized).first()
-                if supplier is None:
-                    raise serializers.ValidationError({'supplier': 'Lieferant konnte nicht gespeichert werden.'}) from exc
-            attrs['supplier'] = supplier
+        except IntegrityError as exc:
+            supplier = Supplier.objects.filter(project=project, name_normalized=normalized).first()
+            if supplier is None:
+                raise serializers.ValidationError({'supplier': 'Lieferant konnte nicht gespeichert werden.'}) from exc
+        attrs['supplier'] = supplier
 
-        # Keep variety optional for compatibility with existing API/tests.
+    def _normalize_variety(self, attrs):
+        """Keep variety optional for compatibility with existing API/tests."""
         if 'variety' not in attrs and not self.instance:
             attrs['variety'] = ''
         elif 'variety' in attrs:
             attrs['variety'] = (attrs.get('variety') or '').strip()
 
-        if errors:
-            raise serializers.ValidationError(errors)
-
+    def _validate_supplier_consistency(self, attrs, errors):
+        """Suppliers and the product URL must match the active project/domains."""
         supplier = attrs.get('supplier', getattr(self.instance, 'supplier', None) if self.instance else None)
         project = attrs.get('project') or _resolve_active_project_from_serializer(self)
         if project is not None and supplier is not None and supplier.project_id != project.id:
@@ -959,9 +1008,7 @@ class CultureSerializer(serializers.ModelSerializer):
                     'message': 'Supplier product URL must match supplier allowed domains.',
                 }
 
-        if errors:
-            raise serializers.ValidationError(errors)
-
+    def _validate_seeding_requirement(self, attrs, errors):
         seeding_requirement = attrs.get('seeding_requirement', getattr(self.instance, 'seeding_requirement', None) if self.instance else None)
         seeding_requirement_type = attrs.get('seeding_requirement_type', getattr(self.instance, 'seeding_requirement_type', '') if self.instance else '')
         if seeding_requirement is None and seeding_requirement_type:
@@ -969,9 +1016,8 @@ class CultureSerializer(serializers.ModelSerializer):
         if seeding_requirement is not None and not seeding_requirement_type:
             errors['seeding_requirement_type'] = 'Seeding requirement type is required when seeding requirement is set.'
 
-        if errors:
-            raise serializers.ValidationError(errors)
-
+    def _run_model_clean(self, attrs):
+        """Run Culture.clean on a throwaway instance without mutating the real one."""
         try:
             model_field_names = {field.name for field in Culture._meta.fields}
 
@@ -986,13 +1032,11 @@ class CultureSerializer(serializers.ModelSerializer):
                 temp_instance.pk = self.instance.pk
             else:
                 temp_instance = Culture(**{k: v for k, v in attrs.items() if k in model_field_names})
-            
+
             # Validate without mutating the real instance.
             temp_instance.clean()
         except ValidationError as e:
             raise serializers.ValidationError(e.message_dict) from e
-        
-        return attrs
 
 
 class CultureImportPreviewItemSerializer(serializers.Serializer):
