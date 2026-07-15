@@ -61,6 +61,13 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
         return round(obj.area_usage_sqm * plants_per_m2)
 
     def validate(self, attrs):
+        self._validate_project_scope(attrs)
+        self._apply_area_input_conversion(attrs)
+        self._run_model_clean(attrs)
+        return attrs
+
+    def _validate_project_scope(self, attrs):
+        """Culture and bed must belong to the active project."""
         project = _resolve_active_project_from_serializer(self)
         culture = attrs.get('culture') or (self.instance.culture if self.instance else None)
         bed = attrs.get('bed') or (self.instance.bed if self.instance else None)
@@ -68,57 +75,65 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'culture': 'Culture does not belong to the active project.'})
         if project is not None and bed is not None and bed.project_id != project.id:
             raise serializers.ValidationError({'bed': 'Bed does not belong to the active project.'})
-        
-        # Handle area input conversion
+
+    def _apply_area_input_conversion(self, attrs):
+        """Convert the M2/PLANTS area input into area_usage_sqm on attrs."""
         area_input_value = attrs.pop('area_input_value', None)
         area_input_unit = attrs.pop('area_input_unit', None)
-        
-        # Validate area input fields
-        if area_input_value is not None:
-            # Value must be positive
-            if area_input_value <= 0:
-                raise serializers.ValidationError({
-                    'area_input_value': 'Area input value must be greater than 0.'
-                })
-            
-            # Unit is required when value is provided
-            if not area_input_unit:
-                raise serializers.ValidationError({
-                    'area_input_unit': (
-                        'Area input unit is required when '
-                        'area_input_value is provided.'
-                    )
-                })
-            
-            # Get culture (could be from attrs for create, or from instance for update)
-            culture = attrs.get('culture')
-            if not culture and self.instance:
-                culture = self.instance.culture
-            
-            # Convert based on unit
-            if area_input_unit == 'M2':
-                # Direct assignment
-                attrs['area_usage_sqm'] = area_input_value
-            elif area_input_unit == 'PLANTS':
-                # Validate culture is present
-                if not culture:
-                    raise serializers.ValidationError({
-                        'area_input_unit': 'Culture must be selected to input area as plant count.'
-                    })
-                
-                # Validate culture has valid spacing
-                plants_per_m2 = culture.plants_per_m2
-                if plants_per_m2 is None or plants_per_m2 <= 0:
-                    raise serializers.ValidationError({
-                        'area_input_unit': (
-                            'Culture spacing data is missing or invalid. '
-                            'Cannot calculate area from plant count.'
-                        )
-                    })
-                
-                # Calculate area in m²: plants / (plants_per_m2)
-                attrs['area_usage_sqm'] = area_input_value / plants_per_m2
-        
+
+        if area_input_value is None:
+            return
+
+        # Value must be positive
+        if area_input_value <= 0:
+            raise serializers.ValidationError({
+                'area_input_value': 'Area input value must be greater than 0.'
+            })
+
+        # Unit is required when value is provided
+        if not area_input_unit:
+            raise serializers.ValidationError({
+                'area_input_unit': (
+                    'Area input unit is required when '
+                    'area_input_value is provided.'
+                )
+            })
+
+        # Get culture (could be from attrs for create, or from instance for update)
+        culture = attrs.get('culture')
+        if not culture and self.instance:
+            culture = self.instance.culture
+
+        # Convert based on unit
+        if area_input_unit == 'M2':
+            # Direct assignment
+            attrs['area_usage_sqm'] = area_input_value
+        elif area_input_unit == 'PLANTS':
+            attrs['area_usage_sqm'] = self._plants_to_area(area_input_value, culture)
+
+    def _plants_to_area(self, plant_count, culture):
+        """Convert a plant count into an area in m² using the culture's spacing."""
+        # Validate culture is present
+        if not culture:
+            raise serializers.ValidationError({
+                'area_input_unit': 'Culture must be selected to input area as plant count.'
+            })
+
+        # Validate culture has valid spacing
+        plants_per_m2 = culture.plants_per_m2
+        if plants_per_m2 is None or plants_per_m2 <= 0:
+            raise serializers.ValidationError({
+                'area_input_unit': (
+                    'Culture spacing data is missing or invalid. '
+                    'Cannot calculate area from plant count.'
+                )
+            })
+
+        # Calculate area in m²: plants / (plants_per_m2)
+        return plant_count / plants_per_m2
+
+    def _run_model_clean(self, attrs):
+        """Run PlantingPlan.clean on a throwaway instance without mutating the real one."""
         model_field_names = {field.name for field in PlantingPlan._meta.fields}
         if self.instance:
             validation_attrs = {}
@@ -138,8 +153,6 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
             instance.clean()
         except ValidationError as e:
             raise serializers.ValidationError(e.message_dict) from e
-        
-        return attrs
 
 
 class TaskSerializer(serializers.ModelSerializer):

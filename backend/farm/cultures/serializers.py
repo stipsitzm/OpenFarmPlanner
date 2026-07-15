@@ -625,44 +625,58 @@ class CultureSerializer(serializers.ModelSerializer):
         seed_packages = validated_data.pop('seed_packages', None)
         culture = super().update(instance, validated_data)
         if supplier_data_input is not None:
-            existing_by_id = {row.id: row for row in culture.supplier_data.all()}
-            seen_ids: set[int] = set()
-            if isinstance(supplier_data_input, list):
-                for row in supplier_data_input:
-                    if not isinstance(row, dict):
-                        continue
-                    row_data = dict(row)
-                    if _is_empty_supplier_data_payload(row_data):
-                        continue
-                    raw_row_id = row_data.get('id')
-                    try:
-                        row_id = int(raw_row_id)
-                    except (TypeError, ValueError):
-                        row_id = None
-                    instance_row = existing_by_id.get(row_id) if row_id is not None else None
-                    serializer = CultureSupplierDataSerializer(
-                        instance=instance_row,
-                        data=row_data,
-                        context={**self.context, 'parent_culture': culture},
-                        partial=instance_row is not None,
-                    )
-                    serializer.is_valid(raise_exception=True)
-                    saved_row = serializer.save(culture=culture, project=culture.project)
-                    seen_ids.add(saved_row.id)
-
-            ids_to_delete = [row_id for row_id in existing_by_id if row_id not in seen_ids]
-            if ids_to_delete:
-                CultureSupplierData.objects.filter(id__in=ids_to_delete).delete()
+            self._sync_supplier_data_rows(culture, supplier_data_input)
         if seed_packages is not None:
-            culture.seed_packages.all().delete()
-            if isinstance(seed_packages, list):
-                for package_data in seed_packages:
-                    if isinstance(package_data, dict):
-                        package_data = dict(package_data)
-                        package_data.pop('culture', None)
-                        package_data.setdefault('project', culture.project)
-                        SeedPackage.objects.create(culture=culture, **package_data)
+            self._replace_seed_packages(culture, seed_packages)
         return culture
+
+    def _sync_supplier_data_rows(self, culture, supplier_data_input):
+        """Upsert the supplied supplier-data rows and delete rows no longer present."""
+        existing_by_id = {row.id: row for row in culture.supplier_data.all()}
+        seen_ids: set[int] = set()
+        if isinstance(supplier_data_input, list):
+            for row in supplier_data_input:
+                saved_id = self._save_supplier_data_row(culture, row, existing_by_id)
+                if saved_id is not None:
+                    seen_ids.add(saved_id)
+
+        ids_to_delete = [row_id for row_id in existing_by_id if row_id not in seen_ids]
+        if ids_to_delete:
+            CultureSupplierData.objects.filter(id__in=ids_to_delete).delete()
+
+    def _save_supplier_data_row(self, culture, row, existing_by_id) -> int | None:
+        """Upsert one supplier-data row; returns its id, or None if skipped."""
+        if not isinstance(row, dict):
+            return None
+        row_data = dict(row)
+        if _is_empty_supplier_data_payload(row_data):
+            return None
+        raw_row_id = row_data.get('id')
+        try:
+            row_id = int(raw_row_id)
+        except (TypeError, ValueError):
+            row_id = None
+        instance_row = existing_by_id.get(row_id) if row_id is not None else None
+        serializer = CultureSupplierDataSerializer(
+            instance=instance_row,
+            data=row_data,
+            context={**self.context, 'parent_culture': culture},
+            partial=instance_row is not None,
+        )
+        serializer.is_valid(raise_exception=True)
+        saved_row = serializer.save(culture=culture, project=culture.project)
+        return saved_row.id
+
+    def _replace_seed_packages(self, culture, seed_packages):
+        """Delete all existing seed packages and recreate them from the payload."""
+        culture.seed_packages.all().delete()
+        if isinstance(seed_packages, list):
+            for package_data in seed_packages:
+                if isinstance(package_data, dict):
+                    package_data = dict(package_data)
+                    package_data.pop('culture', None)
+                    package_data.setdefault('project', culture.project)
+                    SeedPackage.objects.create(culture=culture, **package_data)
 
     def validate_origin_type(self, value):
         if value in {None, ''}:

@@ -90,21 +90,65 @@ def _build_metrics(
     )
 
 
-def compute_seed_package_suggestion(required_amount: Decimal, packages: Iterable[PackageOption], unit: str) -> SeedPackageSuggestion:
-    if required_amount <= 0:
-        return SeedPackageSuggestion(selection=[], total_amount=Decimal('0'), overage=Decimal('0'), pack_count=0)
+def _empty_suggestion() -> SeedPackageSuggestion:
+    return SeedPackageSuggestion(selection=[], total_amount=Decimal('0'), overage=Decimal('0'), pack_count=0)
 
+
+def _normalize_packages(packages: Iterable[PackageOption], unit: str) -> list[PackageOption]:
+    """Deduplicate valid packages for the requested unit, sorted ascending by size."""
     unique_packages: dict[tuple[Decimal, str], PackageOption] = {}
     for package in packages:
         if package.size_unit != unit or package.size_value <= 0:
             continue
         unique_packages[(package.size_value, package.size_unit)] = package
-
     normalized = list(unique_packages.values())
-    if not normalized:
-        return SeedPackageSuggestion(selection=[], total_amount=Decimal('0'), overage=Decimal('0'), pack_count=0)
-
     normalized.sort(key=lambda p: p.size_value)
+    return normalized
+
+
+def _count_vectors(total_count: int, dimension_count: int) -> Iterable[list[int]]:
+    """Yield every non-negative integer vector of the given length summing to total_count."""
+    current = [0] * dimension_count
+
+    def build(index: int, remaining: int) -> Iterable[list[int]]:
+        if index == dimension_count - 1:
+            current[index] = remaining
+            yield current.copy()
+            return
+        for count in range(remaining + 1):
+            current[index] = count
+            yield from build(index + 1, remaining - count)
+
+    yield from build(0, total_count)
+
+
+def _candidates_for_pack_count(
+    pack_count: int,
+    normalized: list[PackageOption],
+    required_amount: Decimal,
+) -> Iterable[tuple[SeedPackageSuggestion, Decimal]]:
+    """Yield (suggestion, overage) for every selection of exactly pack_count packs
+    that meets the required amount."""
+    for counts in _count_vectors(pack_count, len(normalized)):
+        total = sum((normalized[i].size_value * Decimal(counts[i]) for i in range(len(normalized))), Decimal('0'))
+        if total < required_amount:
+            continue
+        overage = total - required_amount
+        selection = [
+            PackageSelection(size_value=normalized[i].size_value, size_unit=normalized[i].size_unit, count=counts[i])
+            for i in range(len(normalized)) if counts[i] > 0
+        ]
+        yield SeedPackageSuggestion(selection=selection, total_amount=total, overage=overage, pack_count=pack_count), overage
+
+
+def compute_seed_package_suggestion(required_amount: Decimal, packages: Iterable[PackageOption], unit: str) -> SeedPackageSuggestion:
+    if required_amount <= 0:
+        return _empty_suggestion()
+
+    normalized = _normalize_packages(packages, unit)
+    if not normalized:
+        return _empty_suggestion()
+
     min_pack_count = int((required_amount / normalized[-1].size_value).to_integral_value(rounding=ROUND_CEILING))
     max_pack_count = int((required_amount / normalized[0].size_value).to_integral_value(rounding=ROUND_CEILING)) + 2
 
@@ -112,41 +156,10 @@ def compute_seed_package_suggestion(required_amount: Decimal, packages: Iterable
     best: SeedPackageSuggestion | None = None
     best_metrics: _SuggestionMetrics | None = None
 
-    def count_vectors(total_count: int, dimension_count: int) -> Iterable[list[int]]:
-        current = [0] * dimension_count
-
-        def build(index: int, remaining: int) -> Iterable[list[int]]:
-            if index == dimension_count - 1:
-                current[index] = remaining
-                yield current.copy()
-                return
-            for count in range(remaining + 1):
-                current[index] = count
-                yield from build(index + 1, remaining - count)
-
-        yield from build(0, total_count)
-
     for pack_count in range(max(1, min_pack_count), max_pack_count + 1):
-        for counts in count_vectors(pack_count, len(normalized)):
-            total = sum((normalized[i].size_value * Decimal(counts[i]) for i in range(len(normalized))), Decimal('0'))
-            if total < required_amount:
-                continue
-            overage = total - required_amount
-            selection = [
-                PackageSelection(size_value=normalized[i].size_value, size_unit=normalized[i].size_unit, count=counts[i])
-                for i in range(len(normalized)) if counts[i] > 0
-            ]
-            candidate = SeedPackageSuggestion(selection=selection, total_amount=total, overage=overage, pack_count=pack_count)
-            metrics = _build_metrics(selection=selection, overage=overage, smallest_size=smallest_size)
-            if best is None:
-                best = candidate
-                best_metrics = metrics
-                continue
-
-            cand_key = _metrics_sort_key(metrics)
-            assert best_metrics is not None  # for type checkers; best and best_metrics are paired.
-            best_key = _metrics_sort_key(best_metrics)
-            if cand_key < best_key:
+        for candidate, overage in _candidates_for_pack_count(pack_count, normalized, required_amount):
+            metrics = _build_metrics(selection=candidate.selection, overage=overage, smallest_size=smallest_size)
+            if best_metrics is None or _metrics_sort_key(metrics) < _metrics_sort_key(best_metrics):
                 best = candidate
                 best_metrics = metrics
 
@@ -155,4 +168,4 @@ def compute_seed_package_suggestion(required_amount: Decimal, packages: Iterable
             if lower_bound_next_pack_count > best_metrics.weighted_score:
                 break
 
-    return best or SeedPackageSuggestion(selection=[], total_amount=Decimal('0'), overage=Decimal('0'), pack_count=0)
+    return best or _empty_suggestion()
