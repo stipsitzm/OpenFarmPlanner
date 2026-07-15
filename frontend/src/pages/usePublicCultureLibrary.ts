@@ -86,14 +86,16 @@ export function usePublicCultureLibrary({
     }
   };
 
-  const handlePublishCurrentCulture = async () => {
+  const handlePublishCurrentCulture = async (acceptedPublicLibraryTerms = false) => {
     if (!selectedCulture?.id) {
       return;
     }
 
     try {
       setPublishingCultureId(selectedCulture.id);
-      const response = await cultureAPI.publishPublic(selectedCulture.id);
+      const response = await cultureAPI.publishPublic(selectedCulture.id, {
+        accepted_public_library_terms: acceptedPublicLibraryTerms,
+      });
       if (response.data.operation === 'updated') {
         showSnackbar(t('library.updateSuccess', { name: selectedCulture.name }), 'success');
       } else {

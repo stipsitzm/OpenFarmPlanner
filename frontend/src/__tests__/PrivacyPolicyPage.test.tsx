@@ -34,7 +34,8 @@ describe('PrivacyPolicyPage', () => {
     renderPrivacyPolicyPage();
 
     expect(screen.getByRole('heading', { name: /Öffentliche Kulturbibliothek/ })).toBeInTheDocument();
-    expect(screen.getByText(/derzeit nicht möglich/)).toBeInTheDocument();
+    expect(screen.getByText(/dauerhaft bestehende Wissensdatenbank/)).toBeInTheDocument();
+    expect(screen.getByText(/Eine Entfernung ist nicht als normale Benutzerfunktion vorgesehen/)).toBeInTheDocument();
   });
 
   it('states that public attribution uses an opt-in public display name, never the email address', () => {
@@ -60,13 +61,15 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/nicht über persönliche Kontaktdaten anderer Nutzer/)).toBeInTheDocument();
   });
 
-  it('bases the public library section solely on consent (Art. 6 Abs. 1 lit. a)', () => {
+  it('bases the public library section on publication terms and durable knowledge-base integrity', () => {
     renderPrivacyPolicyPage();
 
     const legalBasisLines = screen.getAllByText(/Rechtsgrundlage:/);
-    const publicLibraryBasis = legalBasisLines.find((el) => el.textContent?.includes('lit. a'));
+    const publicLibraryBasis = legalBasisLines.find((el) => el.textContent?.includes('öffentlichen Kulturbibliothek'));
     expect(publicLibraryBasis).toBeDefined();
-    expect(publicLibraryBasis?.textContent).not.toMatch(/lit\. f/);
+    expect(publicLibraryBasis?.textContent).toMatch(/Art\. 6 Abs\. 1 lit\. b/);
+    expect(publicLibraryBasis?.textContent).toMatch(/Art\. 6 Abs\. 1 lit\. f/);
+    expect(publicLibraryBasis?.textContent).not.toMatch(/lit\. a/);
   });
 
   it('separates cookies from local/session storage into distinct sections', () => {
@@ -131,6 +134,6 @@ describe('PrivacyPolicyPage', () => {
   it('uses a concrete revision date instead of a generic month/year stamp', () => {
     renderPrivacyPolicyPage();
 
-    expect(screen.getByText(/Stand: 14\. Juli 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Stand: 15\. Juli 2026/)).toBeInTheDocument();
   });
 });

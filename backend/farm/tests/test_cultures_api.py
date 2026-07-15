@@ -5,6 +5,7 @@ from datetime import date
 from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
 
+from accounts.models import DocumentConsent
 from farm.models import (
     Culture,
     CultureSupplierData,
@@ -831,8 +832,15 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         )
         SeedPackage.objects.create(culture=self.culture, project=self.project, size_value='25.0', size_unit='g')
 
+    def publish_current_culture(self):
+        return self.client.post(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/',
+            {'accepted_public_library_terms': True},
+            format='json',
+        )
+
     def test_publish_project_culture_creates_separate_public_culture(self):
-        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+        response = self.publish_current_culture()
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['operation'], 'created')
@@ -843,6 +851,14 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.assertEqual(public_culture.source_project_culture, self.culture)
         self.assertEqual(public_culture.seed_packages[0]['size_value'], 25.0)
         self.assertEqual(response.data['duplicates'], [])
+        self.assertTrue(DocumentConsent.objects.filter(user=self.user, document=DocumentConsent.DOCUMENT_PUBLIC_LIBRARY).exists())
+
+    def test_publish_requires_public_library_contribution_terms(self):
+        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['code'], 'public_library_terms_required')
+        self.assertEqual(PublicCulture.objects.count(), 0)
 
     def test_publish_rejects_duplicates_with_conflict_response(self):
         other_culture = Culture.objects.create(
@@ -862,7 +878,7 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.culture.seed_supplier = 'Reinsaat'
         self.culture.save(update_fields=['seed_supplier', 'name_normalized', 'variety_normalized', 'updated_at'])
 
-        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+        response = self.publish_current_culture()
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(response.data['code'], 'duplicate_public_culture')
@@ -875,14 +891,14 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.assertEqual(PublicCulture.objects.count(), 1)
 
     def test_second_publish_updates_own_linked_public_culture_and_increments_version(self):
-        first_publish = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+        first_publish = self.publish_current_culture()
         self.assertEqual(first_publish.status_code, status.HTTP_201_CREATED)
         public_culture_id = first_publish.data['public_culture']['id']
 
         self.culture.notes = 'Updated local notes'
         self.culture.save()
 
-        second_publish = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+        second_publish = self.publish_current_culture()
 
         self.assertEqual(second_publish.status_code, status.HTTP_201_CREATED)
         self.assertEqual(second_publish.data['operation'], 'updated')
@@ -909,7 +925,7 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.culture.seed_supplier = 'Reinsaat'
         self.culture.save()
 
-        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+        response = self.publish_current_culture()
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['operation'], 'updated')
@@ -935,7 +951,7 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.culture.seed_supplier = 'Reinsaat'
         self.culture.save()
 
-        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+        response = self.publish_current_culture()
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(response.data['code'], 'duplicate_public_culture')
@@ -957,7 +973,7 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.culture.seed_supplier = 'rein saat'
         self.culture.save()
 
-        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+        response = self.publish_current_culture()
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(len(response.data['duplicates']), 1)
@@ -982,7 +998,7 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.culture.seed_supplier = 'Reinsaat'
         self.culture.save()
 
-        response = self.client.post(f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/', {}, format='json')
+        response = self.publish_current_culture()
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(PublicCulture.objects.count(), 2)
@@ -1124,4 +1140,3 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         response = self.client.post(f'/openfarmplanner/api/public-cultures/{public_culture.id}/import/', {}, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-

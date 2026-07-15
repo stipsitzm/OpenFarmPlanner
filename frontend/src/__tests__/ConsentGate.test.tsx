@@ -37,8 +37,8 @@ vi.mock('../i18n', () => ({
         'reconsent.privacy.body': 'Bitte lies und bestätige die aktuelle Fassung, bevor du OpenFarmPlanner weiter nutzt.',
         'reconsent.privacy.linkLabel': 'Datenschutzerklärung lesen',
         'reconsent.privacy.acceptButton': 'Akzeptieren',
-        'home:legal.terms.version': 'Stand: 14. Juli 2026',
-        'home:legal.privacy.version': 'Stand: 14. Juli 2026',
+        'home:legal.terms.version': 'Stand: 15. Juli 2026',
+        'home:legal.privacy.version': 'Stand: 15. Juli 2026',
       };
       return map[key] ?? key;
     },
@@ -65,7 +65,7 @@ describe('ConsentGate', () => {
 
     expect(screen.getByRole('heading', { name: 'Die Nutzungsbedingungen wurden aktualisiert' })).toBeInTheDocument();
     expect(screen.getByText(/bevor du OpenFarmPlanner weiter nutzt/)).toBeInTheDocument();
-    expect(screen.getByText('Aktuelle Fassung: Stand: 14. Juli 2026')).toBeInTheDocument();
+    expect(screen.getByText('Aktuelle Fassung: Stand: 15. Juli 2026')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Nutzungsbedingungen lesen' })).toHaveAttribute('href', '/nutzungsbedingungen');
     expect(screen.getByRole('button', { name: 'Akzeptieren' })).toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
@@ -109,7 +109,7 @@ describe('ConsentGate', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Die Datenschutzerklärung wurde aktualisiert' })).toBeInTheDocument();
-    expect(screen.getByText('Aktuelle Fassung: Stand: 14. Juli 2026')).toBeInTheDocument();
+    expect(screen.getByText('Aktuelle Fassung: Stand: 15. Juli 2026')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Datenschutzerklärung lesen' })).toHaveAttribute('href', '/datenschutz');
 
     await user.click(screen.getByRole('button', { name: 'Akzeptieren' }));

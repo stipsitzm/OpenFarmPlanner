@@ -113,9 +113,11 @@ class DocumentConsent(models.Model):
 
     DOCUMENT_TERMS = 'terms'
     DOCUMENT_PRIVACY = 'privacy'
+    DOCUMENT_PUBLIC_LIBRARY = 'public_library_terms'
     DOCUMENT_CHOICES = [
         (DOCUMENT_TERMS, 'Terms of Service'),
         (DOCUMENT_PRIVACY, 'Privacy Policy'),
+        (DOCUMENT_PUBLIC_LIBRARY, 'Public Library Contribution Terms'),
     ]
 
     user = models.ForeignKey(

@@ -22,12 +22,14 @@ import { PublicCultureLibraryDialog } from '../crops/components/PublicCultureLib
 import {
   Box,
   Button,
+  Checkbox,
   Chip,
   Divider,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   List,
   ListItem,
   ListItemText,
@@ -244,19 +246,18 @@ function Cultures() {
   });
 
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
+  const [publicLibraryTermsAccepted, setPublicLibraryTermsAccepted] = useState(false);
 
   const handleRequestPublishCulture = useCallback(() => {
-    if (isUpdatingOwnPublicCulture) {
-      void handlePublishCurrentCulture();
-      return;
-    }
+    setPublicLibraryTermsAccepted(false);
     setPublishConfirmOpen(true);
-  }, [handlePublishCurrentCulture, isUpdatingOwnPublicCulture]);
+  }, []);
 
   const handlePublishConfirm = useCallback(() => {
     setPublishConfirmOpen(false);
-    void handlePublishCurrentCulture();
-  }, [handlePublishCurrentCulture]);
+    void handlePublishCurrentCulture(publicLibraryTermsAccepted);
+    setPublicLibraryTermsAccepted(false);
+  }, [handlePublishCurrentCulture, publicLibraryTermsAccepted]);
 
   // Fetch cultures on mount
   useEffect(() => {
@@ -631,7 +632,10 @@ function Cultures() {
 
       <Dialog
         open={publishConfirmOpen}
-        onClose={() => setPublishConfirmOpen(false)}
+        onClose={() => {
+          setPublishConfirmOpen(false);
+          setPublicLibraryTermsAccepted(false);
+        }}
         fullWidth
         maxWidth="xs"
       >
@@ -648,7 +652,19 @@ function Cultures() {
               <li>{t('library.publishConfirm.neverPublished')}</li>
               <li>{t('library.publishConfirm.attribution')}</li>
               <li>{t('library.publishConfirm.persistence')}</li>
+              <li>{t('library.publishConfirm.license')}</li>
+              <li>{t('library.publishConfirm.noRemoval')}</li>
             </Box>
+            <FormControlLabel
+              control={(
+                <Checkbox
+                  checked={publicLibraryTermsAccepted}
+                  onChange={(event) => setPublicLibraryTermsAccepted(event.target.checked)}
+                />
+              )}
+              label={t('library.publishConfirm.acceptLicense')}
+              sx={{ alignItems: 'flex-start', color: 'text.secondary' }}
+            />
             <Typography variant="body2" color="text.secondary">
               {t('library.publishConfirm.linkPrefix')}
               <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener">
@@ -663,10 +679,16 @@ function Cultures() {
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-          <Button variant="outlined" onClick={() => setPublishConfirmOpen(false)}>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setPublishConfirmOpen(false);
+              setPublicLibraryTermsAccepted(false);
+            }}
+          >
             {t('common:actions.cancel')}
           </Button>
-          <Button variant="contained" onClick={handlePublishConfirm}>
+          <Button variant="contained" onClick={handlePublishConfirm} disabled={!publicLibraryTermsAccepted}>
             {t('library.publishConfirm.confirmButton')}
           </Button>
         </DialogActions>

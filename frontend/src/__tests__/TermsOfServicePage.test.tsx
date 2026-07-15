@@ -87,9 +87,18 @@ describe('TermsOfServicePage', () => {
     expect(screen.getByText(/GNU Affero General Public License/)).toBeInTheDocument();
   });
 
+  it('describes the public crop library as a durable CC BY-SA knowledge base', () => {
+    renderTermsOfServicePage();
+
+    expect(screen.getByText(/dauerhaft bestehende Wissensdatenbank/)).toBeInTheDocument();
+    expect(screen.getByText(/Creative Commons Attribution-ShareAlike 4\.0 International/)).toBeInTheDocument();
+    expect(screen.getByText(/unwiderruflich/)).toBeInTheDocument();
+    expect(screen.getByText(/nicht als normale Benutzerfunktion auf Wunsch wieder entfernt/)).toBeInTheDocument();
+  });
+
   it('uses a concrete revision date instead of a generic month/year stamp', () => {
     renderTermsOfServicePage();
 
-    expect(screen.getByText(/Stand: 14\. Juli 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Stand: 15\. Juli 2026/)).toBeInTheDocument();
   });
 });

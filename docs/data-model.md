@@ -99,7 +99,10 @@ erDiagram
   soft-deleted rows, `all_objects` doesn't (used by restore flows).
 - **`PublicCulture`** is the shared, cross-project "crop library" — it has
   no owning `Project`, only optional *provenance* links back to the project
-  and culture it was published from. See
+  and culture it was published from. Published rows are intended to be
+  durable open-data knowledge-base entries under the public-library
+  contribution terms, not ordinary user-owned records with self-service
+  deletion. See
   [crop-library-architecture.md](./crop-library-architecture.md) for the
   full story of how this split is formalized into the `crops` Django app.
 - **`CultureSupplierData`** is the join between one `Culture` and one

@@ -215,15 +215,16 @@ describe('Cultures action area', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
 
     const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /CC BY-SA 4\.0/ }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Veröffentlichen' }));
 
     await waitFor(() => {
-      expect(publishPublicMock).toHaveBeenCalledWith(1);
+      expect(publishPublicMock).toHaveBeenCalledWith(1, { accepted_public_library_terms: true });
       expect(screen.getByText('Diese Kultur ist bereits öffentlich vorhanden: Tomate (Roma)')).toBeInTheDocument();
     });
   });
 
-  it('shows a confirmation dialog before the first publish, explaining what gets published', async () => {
+  it('shows a confirmation dialog before publishing, explaining permanence and requiring license acceptance', async () => {
     renderCultures();
 
     await waitFor(() => {
@@ -234,6 +235,12 @@ describe('Cultures action area', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Kultur veröffentlichen?')).toBeInTheDocument();
+    expect(within(dialog).getByText(/dauerhaft bestehenden Wissensdatenbank/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Creative Commons Attribution-ShareAlike 4\.0 International/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/grundsätzlich nicht auf Wunsch wieder entfernt/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Veröffentlichen' })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /CC BY-SA 4\.0/ }));
+    expect(within(dialog).getByRole('button', { name: 'Veröffentlichen' })).toBeEnabled();
     expect(publishPublicMock).not.toHaveBeenCalled();
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Abbrechen' }));

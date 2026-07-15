@@ -3,10 +3,39 @@
 Date: 2026-07-03
 Scope: `backend/`, `frontend/src/`
 
-Goal: prepare the architecture for a future public Crop Library
-(`/crops`) without splitting the repository, changing any data, or
-changing anything a user can currently see or do. This documents what
-already existed, what was added, and what was deliberately left alone.
+Goal: prepare and evolve the architecture for a public Crop Library
+(`/crops`) without splitting the repository unnecessarily. The library is
+now treated as a long-lived, community-built knowledge base for crop data,
+not as a personal publishing shelf that users can normally withdraw from
+at will.
+
+## 0. Product and legal model
+
+The public Crop Library follows an open-data model:
+
+- Published crop data becomes part of a shared knowledge base intended to
+  persist beyond the contributing user's project or account.
+- Normal user-driven deletion/unpublishing is not part of the product
+  model. Removal should be reserved for exceptional cases such as unlawful
+  content, personal data in a published record, spam, obvious abuse, or a
+  moderation decision.
+- Public crop data is intended to be reusable through the app, future
+  public APIs, future downloads/exports, and external open-source or
+  commercial projects.
+- Contributions are licensed under Creative Commons
+  Attribution-ShareAlike 4.0 International (CC BY-SA 4.0). The license is
+  suitable here because it allows copying, adaptation, redistribution, and
+  commercial use while preserving attribution and share-alike conditions.
+- A user's first publication must be a conscious act: the UI explains the
+  persistence and license terms, and the backend records acceptance as
+  `DocumentConsent.DOCUMENT_PUBLIC_LIBRARY`. This contribution consent is
+  separate from the global Terms consent so it can be versioned and audited
+  without blocking users who never publish.
+
+Future moderation should prefer non-destructive state transitions
+(`hidden`, `removed`, `needs_review`) over hard deletes, so attribution,
+license evidence, import lineage, and revision history remain auditable
+where legally permissible.
 
 ## 1. The current situation (before this pass)
 
