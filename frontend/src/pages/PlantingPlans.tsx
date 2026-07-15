@@ -109,6 +109,7 @@ export {
   filterFieldOptionsByLocation,
 } from "../components/planting-plans/areaHierarchySelection";
 
+import { useAreaValidationDialog, type AreaValidationDialogState } from "./useAreaValidationDialog";
 export { buildAreaColumnHeaderLabel } from "./plantingPlansUtils";
 export {
   buildMobileCreateForm,
@@ -140,18 +141,6 @@ const DATA_GRID_HEADER_LABEL_SX = { fontWeight: 600 };
  * Row data type for Data Grid
  */
 
-interface AreaValidationDialogState {
-  rowId: number;
-  requestedArea: number;
-  availableArea: number;
-  bedArea: number;
-  occupiedArea: number;
-  cultureId?: number;
-  plantsCount?: number | null;
-  mode: "bedLimit" | "remainingLimit" | "noRemainingArea";
-}
-
-const AREA_VALIDATION_CLOSE_SUPPRESSION_MS = 250;
 const CULTURE_COLUMN_MAX_WIDTH = 280;
 const BED_COLUMN_MAX_WIDTH = 220;
 
@@ -274,7 +263,6 @@ function PlantingPlans() {
     message: string;
     severity: "info" | "warning";
   } | null>(null);
-  const [areaValidationDialog, setAreaValidationDialog] = useState<AreaValidationDialogState | null>(null);
   const urlParamProcessedRef = useRef<boolean>(false);
   const gridCommandApiRef = useRef<EditableDataGridCommandApi | null>(null);
   const plantingPlanGridAPI = useMemo<DataGridAPI<PlantingPlanRow>>(() => ({
@@ -362,43 +350,15 @@ function PlantingPlans() {
 
   // Track which field was last edited (for determining API payload)
   const lastEditedFieldRef = useRef<"area_m2" | "plants_count" | null>(null);
-  const areaValidationDialogRef = useRef<AreaValidationDialogState | null>(null);
-  const suppressAreaValidationSaveRef = useRef(false);
-  const areaValidationCloseTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
-
-  const clearAreaValidationCloseTimer = useCallback((): void => {
-    if (areaValidationCloseTimerRef.current === null) {
-      return;
-    }
-    window.clearTimeout(areaValidationCloseTimerRef.current);
-    areaValidationCloseTimerRef.current = null;
-  }, []);
-
-  const suppressAreaValidationSaveCycle = useCallback((): void => {
-    suppressAreaValidationSaveRef.current = true;
-    clearAreaValidationCloseTimer();
-    areaValidationCloseTimerRef.current = window.setTimeout(() => {
-      suppressAreaValidationSaveRef.current = false;
-      areaValidationCloseTimerRef.current = null;
-    }, AREA_VALIDATION_CLOSE_SUPPRESSION_MS);
-  }, [clearAreaValidationCloseTimer]);
-
-  const openAreaValidationDialog = useCallback((dialog: AreaValidationDialogState): void => {
-    clearAreaValidationCloseTimer();
-    suppressAreaValidationSaveRef.current = false;
-    areaValidationDialogRef.current = dialog;
-    setAreaValidationDialog(dialog);
-  }, [clearAreaValidationCloseTimer]);
-
-  const closeAreaValidationDialog = useCallback((): void => {
-    areaValidationDialogRef.current = null;
-    suppressAreaValidationSaveCycle();
-    setAreaValidationDialog(null);
-  }, [suppressAreaValidationSaveCycle]);
-
-  useEffect(() => () => {
-    clearAreaValidationCloseTimer();
-  }, [clearAreaValidationCloseTimer]);
+  const {
+    areaValidationDialog,
+    setAreaValidationDialog,
+    areaValidationDialogRef,
+    suppressAreaValidationSaveRef,
+    clearAreaValidationCloseTimer,
+    openAreaValidationDialog,
+    closeAreaValidationDialog,
+  } = useAreaValidationDialog();
 
   const getBedLabelForRow = useCallback(
     (row: PlantingPlanRow | null | undefined): string => {
