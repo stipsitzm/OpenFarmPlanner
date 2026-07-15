@@ -1009,6 +1009,20 @@ class Culture(TimestampedModel):
         if self.display_color and not re.match(r'^#[0-9A-Fa-f]{6}$', self.display_color):
             errors['display_color'] = 'Display color must be in hex format (#RRGGBB).'
 
+    # Fields whose change marks an imported culture as diverged from its source.
+    _SOURCE_DIVERGENCE_TRACKED_FIELDS = {
+        'name', 'variety', 'notes', 'seed_supplier', 'crop_family', 'nutrient_demand', 'cultivation_types',
+        'cultivation_type', 'growth_duration_days', 'harvest_duration_days', 'propagation_duration_days',
+        'harvest_method', 'expected_yield', 'allow_deviation_delivery_weeks', 'distance_within_row_m',
+        'row_spacing_m', 'sowing_depth_m', 'seed_rate_value', 'seed_rate_unit', 'seed_rate_by_cultivation',
+        'sowing_calculation_safety_percent', 'seed_rate_direct_value', 'seed_rate_direct_unit',
+        'sowing_calculation_safety_percent_direct', 'seed_rate_pre_cultivation_value',
+        'seed_rate_pre_cultivation_unit', 'sowing_calculation_safety_percent_pre_cultivation',
+        'thousand_kernel_weight_g', 'seeding_requirement',
+        'seeding_requirement_type', 'display_color', 'supplier_id', 'supplier_product_url', 'image_file_id',
+        'selected_seed_demand_supplier_id',
+    }
+
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the culture and auto-generate display color and normalized fields."""
         from .utils import normalize_text
@@ -1017,21 +1031,7 @@ class Culture(TimestampedModel):
         if self.pk:
             previous = Culture.all_objects.filter(pk=self.pk).values().first()
 
-        if previous and previous.get('source_public_culture_id') and not previous.get('is_modified_from_source'):
-            tracked_fields = {
-                'name', 'variety', 'notes', 'seed_supplier', 'crop_family', 'nutrient_demand', 'cultivation_types',
-                'cultivation_type', 'growth_duration_days', 'harvest_duration_days', 'propagation_duration_days',
-                'harvest_method', 'expected_yield', 'allow_deviation_delivery_weeks', 'distance_within_row_m',
-                'row_spacing_m', 'sowing_depth_m', 'seed_rate_value', 'seed_rate_unit', 'seed_rate_by_cultivation',
-                'sowing_calculation_safety_percent', 'seed_rate_direct_value', 'seed_rate_direct_unit',
-                'sowing_calculation_safety_percent_direct', 'seed_rate_pre_cultivation_value',
-                'seed_rate_pre_cultivation_unit', 'sowing_calculation_safety_percent_pre_cultivation',
-                'thousand_kernel_weight_g', 'seeding_requirement',
-                'seeding_requirement_type', 'display_color', 'supplier_id', 'supplier_product_url', 'image_file_id',
-                'selected_seed_demand_supplier_id',
-            }
-            if any(previous.get(field) != getattr(self, field) for field in tracked_fields):
-                self.is_modified_from_source = True
+        self._flag_source_divergence(previous)
 
         # Generate display color on creation if not set.
         if not self.pk and not self.display_color:
@@ -1044,20 +1044,37 @@ class Culture(TimestampedModel):
         super().save(*args, **kwargs)
 
         current = Culture.all_objects.filter(pk=self.pk).values().first() or {}
+        changed_fields = self._compute_changed_fields(previous, current)
+        self._record_save_revision(current, previous, changed_fields)
+
+        if any(field in changed_fields for field in ('growth_duration_days', 'harvest_duration_days')):
+            self._recalculate_related_planting_plan_dates()
+
+    def _flag_source_divergence(self, previous: dict[str, Any] | None) -> None:
+        """Mark an imported, still-pristine culture as modified if a tracked field changed."""
+        if not (previous and previous.get('source_public_culture_id') and not previous.get('is_modified_from_source')):
+            return
+        if any(previous.get(field) != getattr(self, field) for field in self._SOURCE_DIVERGENCE_TRACKED_FIELDS):
+            self.is_modified_from_source = True
+
+    @staticmethod
+    def _compute_changed_fields(previous: dict[str, Any] | None, current: dict[str, Any]) -> list[str]:
+        if not previous:
+            return ['created']
+        return [
+            key for key, value in current.items()
+            if key not in {'created_at', 'updated_at'} and previous.get(key) != value
+        ]
+
+    def _record_save_revision(
+        self,
+        current: dict[str, Any],
+        previous: dict[str, Any] | None,
+        changed_fields: list[str],
+    ) -> None:
         serializable_snapshot: dict[str, Any] = json.loads(
             json.dumps(current, cls=DjangoJSONEncoder)
         )
-
-        changed_fields: list[str] = []
-        if previous:
-            for key, value in current.items():
-                if key in {'created_at', 'updated_at'}:
-                    continue
-                if previous.get(key) != value:
-                    changed_fields.append(key)
-        else:
-            changed_fields.append('created')
-
         history_action = getattr(self, '_history_action', None)
         if hasattr(self, '_history_action'):
             del self._history_action
@@ -1073,9 +1090,6 @@ class Culture(TimestampedModel):
             snapshot=serializable_snapshot,
             changed_fields=changed_fields,
         )
-
-        if any(field in changed_fields for field in ('growth_duration_days', 'harvest_duration_days')):
-            self._recalculate_related_planting_plan_dates()
 
     def _recalculate_related_planting_plan_dates(self) -> None:
         """Update stored planting-plan harvest dates after culture timing changes."""
