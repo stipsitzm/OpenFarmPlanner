@@ -14,7 +14,7 @@ The domain split the long-term vision asks for — a public Crop Library
 vs. project-scoped Farm Planning — **already existed at the data model
 level**, just not as a formalized service/app boundary:
 
-- **`Culture`** (`backend/farm/models.py`) is project-owned: it has a
+- **`Culture`** (`backend/farm/models/cultures.py`) is project-owned: it has a
   required `project` FK. Every project has its own private copy of every
   variety it grows, with growing parameters, supplier links, seed
   packages, and revision history (`CultureRevision`). This is Farm

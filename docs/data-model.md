@@ -1,7 +1,7 @@
 # Data Model Overview
 
 This is a conceptual map of OpenFarmPlanner's core Django models
-(`backend/farm/models.py`, `backend/accounts/models.py`) and how they relate.
+(`backend/farm/models/`, `backend/accounts/models.py`) and how they relate.
 It is **not** a full field reference — see the model source for exact fields,
 `help_text`, and validation. The goal here is to help you reason about which
 objects exist, how they're connected, and which relationships matter for
