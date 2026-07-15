@@ -1,9 +1,7 @@
 """API endpoints for the planning domain (planting plans, tasks, yield calendar)."""
 
 import logging
-from collections import defaultdict
-from datetime import date, timedelta
-from decimal import ROUND_HALF_UP, Decimal
+from datetime import date
 
 from django.db.models import Count
 from django.utils.dateparse import parse_date
@@ -15,6 +13,7 @@ from farm.common.mixins import ProjectRevisionMixin, ProjectScopedMixin
 from farm.history import _entity_display_name, _serialize_instance
 from farm.models import Bed, EntityRevision, PlantingPlan, Task
 from farm.project_context import get_active_project_or_400
+from farm.services.yield_calendar import build_yield_calendar
 from farm.services_area import calculate_remaining_bed_area
 
 from .serializers import PlantingPlanSerializer, TaskSerializer
@@ -22,15 +21,42 @@ from .serializers import PlantingPlanSerializer, TaskSerializer
 logger = logging.getLogger(__name__)
 
 
-def _week_start_for_iso_year(iso_year: int) -> date:
-    """Return Monday of ISO week 1 for an ISO year."""
-    return date.fromisocalendar(iso_year, 1, 1)
+def _parse_remaining_area_params(query_params) -> tuple[dict | None, str | None]:
+    """Parse/validate the remaining-area query parameters.
 
+    Returns (params, None) on success or (None, error_detail) on failure.
+    """
+    bed_id_param = query_params.get('bed_id')
+    start_date_param = query_params.get('start_date')
+    end_date_param = query_params.get('end_date')
+    exclude_plan_id_param = query_params.get('exclude_plan_id')
 
-def _iso_week_key(day: date) -> str:
-    """Return ISO week key in the format YYYY-Www using ISO year and week."""
-    iso_year, iso_week, _ = day.isocalendar()
-    return f"{iso_year}-W{iso_week:02d}"
+    if not bed_id_param or not start_date_param or not end_date_param:
+        return None, 'bed_id, start_date and end_date are required.'
+
+    try:
+        bed_id = int(bed_id_param)
+    except ValueError:
+        return None, 'bed_id must be an integer.'
+
+    start_date = parse_date(start_date_param)
+    end_date = parse_date(end_date_param)
+    if start_date is None or end_date is None:
+        return None, 'start_date and end_date must use YYYY-MM-DD format.'
+
+    exclude_plan_id: int | None = None
+    if exclude_plan_id_param:
+        try:
+            exclude_plan_id = int(exclude_plan_id_param)
+        except ValueError:
+            return None, 'exclude_plan_id must be an integer.'
+
+    return {
+        'bed_id': bed_id,
+        'start_date': start_date,
+        'end_date': end_date,
+        'exclude_plan_id': exclude_plan_id,
+    }, None
 
 
 class YieldCalendarListView(generics.GenericAPIView):
@@ -47,97 +73,7 @@ class YieldCalendarListView(generics.GenericAPIView):
         if iso_year < 1 or iso_year > 9999:
             return Response({'detail': 'Year out of supported range.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        year_start = _week_start_for_iso_year(iso_year)
-        year_end = _week_start_for_iso_year(iso_year + 1) if iso_year < 9999 else date.max
-
-        plans = (
-            PlantingPlan.objects
-            .select_related('culture')
-            .filter(
-                project=active_project,
-                harvest_date__isnull=False,
-                harvest_end_date__isnull=False,
-                culture__expected_yield__gt=0,
-                harvest_date__lt=year_end,
-                harvest_end_date__gt=year_start,
-            )
-        )
-
-        weekly_data: dict[str, dict[str, object]] = {}
-
-        for plan in plans:
-            harvest_start = plan.harvest_date
-            harvest_end = plan.harvest_end_date
-            if harvest_end <= harvest_start:
-                continue
-
-            total_days = (harvest_end - harvest_start).days
-            if total_days <= 0:
-                continue
-
-            expected_yield = Decimal(plan.culture.expected_yield)
-            first_week_start = harvest_start - timedelta(days=harvest_start.weekday())
-            week_start = first_week_start
-
-            while week_start < harvest_end:
-                week_end = week_start + timedelta(days=7)
-                overlap_start = max(harvest_start, week_start)
-                overlap_end = min(harvest_end, week_end)
-                overlap_days = (overlap_end - overlap_start).days
-
-                if overlap_days > 0:
-                    iso_year_of_week, _, _ = week_start.isocalendar()
-                    if iso_year_of_week == iso_year:
-                        iso_week = _iso_week_key(week_start)
-                        week_entry = weekly_data.setdefault(
-                            iso_week,
-                            {
-                                'iso_week': iso_week,
-                                'week_start': week_start,
-                                'week_end': week_end,
-                                'cultures': defaultdict(Decimal),
-                            },
-                        )
-                        culture_key = (
-                            plan.culture_id,
-                            plan.culture.name,
-                            plan.culture.display_color or '#3b82f6',
-                        )
-                        contribution = expected_yield * Decimal(overlap_days) / Decimal(total_days)
-                        week_entry['cultures'][culture_key] += contribution
-
-                week_start += timedelta(days=7)
-
-        response_data = []
-        for iso_week in sorted(weekly_data.keys()):
-            week_entry = weekly_data[iso_week]
-            cultures_payload = []
-            for (culture_id, culture_name, color), value in sorted(week_entry['cultures'].items(), key=lambda c: c[0][1]):
-                rounded_yield = value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                if rounded_yield <= 0:
-                    continue
-                cultures_payload.append(
-                    {
-                        'culture_id': culture_id,
-                        'culture_name': culture_name,
-                        'color': color,
-                        'yield': float(rounded_yield),
-                    }
-                )
-
-            if not cultures_payload:
-                continue
-
-            response_data.append(
-                {
-                    'iso_week': week_entry['iso_week'],
-                    'week_start': week_entry['week_start'].isoformat(),
-                    'week_end': week_entry['week_end'].isoformat(),
-                    'cultures': cultures_payload,
-                }
-            )
-
-        return Response(response_data)
+        return Response(build_yield_calendar(active_project, iso_year))
 
 
 class PlantingPlanViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
@@ -189,55 +125,25 @@ class PlantingPlanViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.Mod
         :return: Remaining area payload for the requested bed and interval.
         """
         active_project = request.active_project
-        bed_id_param = request.query_params.get('bed_id')
-        start_date_param = request.query_params.get('start_date')
-        end_date_param = request.query_params.get('end_date')
-        exclude_plan_id_param = request.query_params.get('exclude_plan_id')
+        params, error_detail = _parse_remaining_area_params(request.query_params)
+        if error_detail:
+            return Response({'detail': error_detail}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not bed_id_param or not start_date_param or not end_date_param:
-            return Response(
-                {'detail': 'bed_id, start_date and end_date are required.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            bed_id = int(bed_id_param)
-        except ValueError:
-            return Response({'detail': 'bed_id must be an integer.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        start_date = parse_date(start_date_param)
-        end_date = parse_date(end_date_param)
-        if start_date is None or end_date is None:
-            return Response(
-                {'detail': 'start_date and end_date must use YYYY-MM-DD format.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        exclude_plan_id: int | None = None
-        if exclude_plan_id_param:
-            try:
-                exclude_plan_id = int(exclude_plan_id_param)
-            except ValueError:
-                return Response(
-                    {'detail': 'exclude_plan_id must be an integer.'},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-        bed = Bed.objects.filter(id=bed_id, project=active_project).only('id').first()
+        bed = Bed.objects.filter(id=params['bed_id'], project=active_project).only('id').first()
         if bed is None:
             return Response({'detail': 'Bed not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        if exclude_plan_id is not None:
-            plan_exists = PlantingPlan.objects.filter(id=exclude_plan_id, project=active_project).exists()
+        if params['exclude_plan_id'] is not None:
+            plan_exists = PlantingPlan.objects.filter(id=params['exclude_plan_id'], project=active_project).exists()
             if not plan_exists:
                 return Response({'detail': 'exclude_plan_id not found in active project.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             payload = calculate_remaining_bed_area(
-                bed_id=bed_id,
-                start_date=start_date,
-                end_date=end_date,
-                exclude_plan_id=exclude_plan_id,
+                bed_id=params['bed_id'],
+                start_date=params['start_date'],
+                end_date=params['end_date'],
+                exclude_plan_id=params['exclude_plan_id'],
             )
         except ValueError as error:
             return Response({'detail': str(error)}, status=status.HTTP_400_BAD_REQUEST)
@@ -249,8 +155,8 @@ class PlantingPlanViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.Mod
             'bed_area_sqm': float(payload['bed_area_sqm']),
             'overlapping_used_area_sqm': float(payload['overlapping_used_area_sqm']),
             'remaining_area_sqm': float(payload['remaining_area_sqm']),
-            'start_date': start_date.isoformat(),
-            'end_date': end_date.isoformat(),
+            'start_date': params['start_date'].isoformat(),
+            'end_date': params['end_date'].isoformat(),
         })
 
 
