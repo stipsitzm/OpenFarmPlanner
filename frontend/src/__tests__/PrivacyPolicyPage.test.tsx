@@ -94,11 +94,11 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/Art\. 7 Abs\. 3 DSGVO/)).toBeInTheDocument();
   });
 
-  it('covers WKO checklist details for officer, provision duty, third-country transfer, and profiling', () => {
+  it('covers WKO checklist details for provision duty, third-country transfer, and profiling', () => {
     renderPrivacyPolicyPage();
 
-    expect(screen.getByRole('heading', { name: /Datenschutzbeauftragter/ })).toBeInTheDocument();
-    expect(screen.getByText(/kein Datenschutzbeauftragter bestellt/)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Datenschutzbeauftragter/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/kein Datenschutzbeauftragter bestellt/)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Bereitstellung personenbezogener Daten/ })).toBeInTheDocument();
     expect(screen.getByText(/ohne diese Daten können wir kein Benutzerkonto bereitstellen/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Drittlandübermittlung/ })).toBeInTheDocument();

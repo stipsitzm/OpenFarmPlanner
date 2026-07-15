@@ -4,7 +4,6 @@ import { useTranslation } from '../../i18n';
 
 const privacySections = [
   'controller',
-  'dataProtectionOfficer',
   'generalNotice',
   'hosting',
   'registration',
