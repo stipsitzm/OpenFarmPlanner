@@ -43,7 +43,7 @@ pdm run compilemessages
 ```
 
 ### Making Model Changes
-1. Edit models in `farm/models.py`
+1. Edit models in `farm/models/` (one module per domain)
 2. Create migrations:
    ```bash
    pdm run makemigrations

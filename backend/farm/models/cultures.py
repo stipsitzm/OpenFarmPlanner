@@ -1,22 +1,18 @@
+"""Cultures, suppliers, supplier data, public library, and seed packages."""
+
 import json
-import hashlib
 import re
-import secrets
-import uuid
-from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 from urllib.parse import urlparse
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.conf import settings
 from django.db import models
-from django.db.models import Q, Sum
-from django.db.models.functions import Coalesce
 from django.utils import timezone
 
-from .seed_units import (
+from farm.seed_units import (
     SEED_PACKAGE_UNIT_GRAMS,
     SEED_PACKAGE_UNIT_SEEDS,
     SEED_RATE_UNIT_G_PER_LFM,
@@ -27,237 +23,9 @@ from .seed_units import (
     SEED_RATE_UNITS,
 )
 
-
-def note_attachment_upload_path(instance: 'NoteAttachment', filename: str) -> str:
-    """Build a deterministic storage path for note attachments."""
-    extension = (filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'bin')
-    return f"notes/{instance.planting_plan_id}/{uuid.uuid4().hex}.{extension}"
-
-
-
-
-def culture_media_upload_path(instance: 'MediaFile', filename: str) -> str:
-    """Build unique storage path for culture files."""
-    extension = (filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'bin')
-    return f"culture-media/{timezone.now().strftime('%Y/%m')}/{uuid.uuid4().hex}.{extension}"
-
-
-class MediaFile(models.Model):
-    """Stored media metadata used as file references in domain models."""
-
-    storage_path = models.CharField(max_length=500, unique=True)
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-    orphaned_at = models.DateTimeField(null=True, blank=True)
-    sha256 = models.CharField(max_length=64, blank=True)
-
-    class Meta:
-        ordering = ['-uploaded_at']
-
-class TimestampedModel(models.Model):
-    """Abstract base model with created/updated timestamps."""
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True
-
-
-class Project(TimestampedModel):
-    """A collaborative workspace that owns farm planning data."""
-
-    name = models.CharField(max_length=200)
-    slug = models.SlugField(max_length=220, unique=True)
-    description = models.TextField(blank=True)
-    is_active = models.BooleanField(default=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        ordering = ['name']
-
-    def __str__(self) -> str:
-        """Return project name for admin and debug output."""
-        return self.name
-
-
-class ProjectMembership(models.Model):
-    """Membership relation between a user and a project."""
-
-    ROLE_ADMIN = 'admin'
-    ROLE_MEMBER = 'member'
-    ROLE_CHOICES = [
-        (ROLE_ADMIN, 'Admin'),
-        (ROLE_MEMBER, 'Member'),
-    ]
-
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='project_memberships')
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='memberships')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_MEMBER)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['user', 'project'], name='unique_project_membership'),
-        ]
-
-    @property
-    def is_admin(self) -> bool:
-        """Return True if membership role grants admin permissions."""
-        return self.role == self.ROLE_ADMIN
-
-
-class ProjectInvitation(models.Model):
-    """An invitation token for adding users to projects."""
-
-    STATUS_PENDING = 'pending'
-    STATUS_ACCEPTED = 'accepted'
-    STATUS_REVOKED = 'revoked'
-    STATUS_CHOICES = [
-        (STATUS_PENDING, 'Pending'),
-        (STATUS_ACCEPTED, 'Accepted'),
-        (STATUS_REVOKED, 'Revoked'),
-    ]
-
-    ROLE_ADMIN = ProjectMembership.ROLE_ADMIN
-    ROLE_MEMBER = ProjectMembership.ROLE_MEMBER
-    ROLE_CHOICES = ProjectMembership.ROLE_CHOICES
-
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='invitations')
-    email = models.EmailField()
-    email_normalized = models.EmailField(blank=True, default='')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_MEMBER)
-    token = models.CharField(max_length=128, unique=True, db_index=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
-    invited_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='project_invitations_sent',
-    )
-    accepted_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='project_invitations_accepted',
-    )
-    accepted_at = models.DateTimeField(null=True, blank=True)
-    expires_at = models.DateTimeField()
-    revoked_at = models.DateTimeField(null=True, blank=True)
-    revoked_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='project_invitations_revoked',
-    )
-    message = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ['-created_at']
-        constraints = [
-            models.UniqueConstraint(
-                fields=['project', 'email_normalized'],
-                condition=Q(status='pending'),
-                name='unique_open_project_invitation_per_email',
-            ),
-        ]
-
-    @staticmethod
-    def normalize_email(email: str) -> str:
-        """Normalize an invitation email for canonical comparisons.
-
-        :param email: Raw email value from input.
-        :return: Lower-cased, trimmed email value.
-        """
-        return (email or '').strip().lower()
-
-    @property
-    def resolved_status(self) -> str:
-        """Resolve runtime status including expiry for pending invitations.
-
-        :return: Resolved invitation status.
-        """
-        if self.status == self.STATUS_PENDING and self.is_expired:
-            return 'expired'
-        return self.status
-
-    @property
-    def is_expired(self) -> bool:
-        """Return True if invitation expiry is in the past."""
-        return timezone.now() >= self.expires_at
-
-    @property
-    def is_open(self) -> bool:
-        """Return True if invitation can still be accepted."""
-        return self.resolved_status == self.STATUS_PENDING
-
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        """Persist normalized email before writing invitation records.
-
-        :param args: Positional arguments for model save.
-        :param kwargs: Keyword arguments for model save.
-        :return: None.
-        """
-        self.email_normalized = self.normalize_email(self.email)
-        self.email = self.email_normalized
-        super().save(*args, **kwargs)
-
-
-class AgentLoginToken(models.Model):
-    """Reusable project-bound login token for superuser-only agent sessions."""
-
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='agent_login_tokens_created',
-    )
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='agent_login_tokens')
-    token_hash = models.CharField(max_length=64, unique=True, db_index=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    used_at = models.DateTimeField(null=True, blank=True, db_index=True)
-    used_by_ip = models.GenericIPAddressField(null=True, blank=True)
-    used_user_agent = models.CharField(max_length=512, blank=True)
-
-    class Meta:
-        ordering = ['-created_at']
-
-    @staticmethod
-    def hash_token(raw_token: str) -> str:
-        """Return SHA256 hash for opaque token storage."""
-        return hashlib.sha256(raw_token.encode('utf-8')).hexdigest()
-
-    @classmethod
-    def create_token(
-        cls,
-        *,
-        created_by,
-        project: Project,
-        expires_at=None,
-    ) -> tuple['AgentLoginToken', str]:
-        """Create and persist a new one-time token for superusers."""
-        if not getattr(created_by, 'is_superuser', False):
-            raise PermissionError('Only superusers can create agent login tokens.')
-
-        raw_token = secrets.token_urlsafe(48)
-        token = cls.objects.create(
-            created_by=created_by,
-            project=project,
-            token_hash=cls.hash_token(raw_token),
-            expires_at=expires_at,
-        )
-        return token, raw_token
-
-    @property
-    def is_usable(self) -> bool:
-        """Return True when token has not expired."""
-        if self.expires_at is None:
-            return True
-        return timezone.now() < self.expires_at
+from .base import TimestampedModel
+from .history import EntityRevision
+from .projects import Project
 
 
 class Supplier(TimestampedModel):
@@ -360,7 +128,7 @@ class Supplier(TimestampedModel):
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save supplier and auto-generate normalized helper fields."""
-        from .utils import normalize_supplier_name
+        from farm.utils import normalize_supplier_name
 
         if self.name:
             self.name = ' '.join(self.name.split())
@@ -382,7 +150,6 @@ class Supplier(TimestampedModel):
         constraints = [
             models.UniqueConstraint(fields=['project', 'name_normalized'], name='unique_supplier_name_per_project'),
         ]
-
 
 
 def format_culture_display_name(name: str | None, variety: str | None) -> str | None:
@@ -410,217 +177,6 @@ def is_supplier_domain(url: str, supplier: Supplier | None) -> bool:
         return False
     domains = [Supplier._normalize_domain(domain) for domain in (supplier.allowed_domains or []) if domain]
     return any(host == domain or host.endswith(f'.{domain}') for domain in domains)
-
-
-class Location(TimestampedModel):
-    """A physical farm location that can contain multiple fields."""
-    SOIL_TYPE_SAND = 'sand'
-    SOIL_TYPE_LOAM = 'loam'
-    SOIL_TYPE_CLAY = 'clay'
-    SOIL_TYPE_CHOICES = [
-        (SOIL_TYPE_SAND, 'Sand'),
-        (SOIL_TYPE_LOAM, 'Loam'),
-        (SOIL_TYPE_CLAY, 'Clay'),
-    ]
-
-    EXPOSURE_NORTH = 'north'
-    EXPOSURE_SOUTH = 'south'
-    EXPOSURE_EAST = 'east'
-    EXPOSURE_WEST = 'west'
-    EXPOSURE_FLAT = 'flat'
-    EXPOSURE_CHOICES = [
-        (EXPOSURE_NORTH, 'North'),
-        (EXPOSURE_SOUTH, 'South'),
-        (EXPOSURE_EAST, 'East'),
-        (EXPOSURE_WEST, 'West'),
-        (EXPOSURE_FLAT, 'Flat'),
-    ]
-
-    name = models.CharField(max_length=200)
-    address = models.TextField(blank=True)
-    description = models.TextField(blank=True)
-    soil_type = models.CharField(max_length=20, choices=SOIL_TYPE_CHOICES, null=True, blank=True)
-    exposure = models.CharField(max_length=20, choices=EXPOSURE_CHOICES, null=True, blank=True)
-    latitude = models.FloatField(null=True, blank=True)
-    longitude = models.FloatField(null=True, blank=True)
-    notes = models.TextField(blank=True)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='locations')
-
-    def clean(self) -> None:
-        """Validate optional geographic coordinates."""
-        super().clean()
-        if self.latitude is not None and not (-90 <= self.latitude <= 90):
-            raise ValidationError({'latitude': 'Latitude must be between -90 and 90.'})
-        if self.longitude is not None and not (-180 <= self.longitude <= 180):
-            raise ValidationError({'longitude': 'Longitude must be between -180 and 180.'})
-
-    def __str__(self) -> str:
-        """Return the location name."""
-        return self.name
-
-    class Meta:
-        ordering = ['name']
-
-
-class Field(TimestampedModel):
-    """A field within a location that can contain multiple beds."""
-    # Validation constants.
-    MIN_AREA_SQM = Decimal('0.01')  # Minimum 0.01 sqm (10cm x 10cm)
-    MAX_AREA_SQM = Decimal('1000000.00')  # Maximum 100 hectares (safe value within
-    # DecimalField constraints)
-    
-    name = models.CharField(max_length=200)
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='fields')
-    area_sqm = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
-    length_m = models.FloatField(null=True, blank=True)
-    width_m = models.FloatField(null=True, blank=True)
-    notes = models.TextField(blank=True)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='fields')
-
-    def clean(self) -> None:
-        """Validate area and optional field dimensions."""
-        super().clean()
-        if self.area_sqm is not None:
-            if self.area_sqm < self.MIN_AREA_SQM:
-                raise ValidationError({
-                    'area_sqm': f'Area must be at least {self.MIN_AREA_SQM} sqm.'
-                })
-            if self.area_sqm > self.MAX_AREA_SQM:
-                raise ValidationError({
-                    'area_sqm': f'Area must not exceed {self.MAX_AREA_SQM} sqm (100 hectares).'
-                })
-
-        if self.length_m is not None and self.length_m < 0:
-            raise ValidationError({'length_m': 'Length must be greater than or equal to 0.'})
-        if self.width_m is not None and self.width_m < 0:
-            raise ValidationError({'width_m': 'Width must be greater than or equal to 0.'})
-
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        """Persist field and derive area from dimensions when both values are set."""
-        if self.length_m is not None and self.width_m is not None:
-            computed_area = Decimal(str(self.length_m * self.width_m)).quantize(Decimal('0.1'))
-            self.area_sqm = computed_area
-        super().save(*args, **kwargs)
-
-    def __str__(self) -> str:
-        """Return a string combining location and field name."""
-        return f"{self.location.name} - {self.name}"
-
-    class Meta:
-        ordering = ['location', 'name']
-        verbose_name = 'Parzelle'
-        verbose_name_plural = 'Parzellen'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['location', 'name'],
-                name='unique_field_name_per_location',
-            ),
-        ]
-
-
-class Bed(TimestampedModel):
-    """A bed within a field that stores optional area in square meters."""
-    # Validation constants.
-    MIN_AREA_SQM = Decimal('0.01')  # Minimum 0.01 sqm (10cm x 10cm)
-    MAX_AREA_SQM = Decimal('10000.00')  # Maximum 10,000 sqm (~1 hectare, reasonable for a bed)
-    
-    name = models.CharField(max_length=200)
-    field = models.ForeignKey(Field, on_delete=models.CASCADE, related_name='beds', verbose_name='Parzelle')
-    area_sqm = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
-    length_m = models.FloatField(null=True, blank=True)
-    width_m = models.FloatField(null=True, blank=True)
-    notes = models.TextField(blank=True)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='beds')
-
-    def clean(self) -> None:
-        """Validate area and optional bed dimensions."""
-        super().clean()
-        if self.area_sqm is not None:
-            if self.area_sqm < self.MIN_AREA_SQM:
-                raise ValidationError({'area_sqm': f'Area must be at least {self.MIN_AREA_SQM} sqm.'})
-            if self.area_sqm > self.MAX_AREA_SQM:
-                raise ValidationError({'area_sqm': f'Area must not exceed {self.MAX_AREA_SQM} sqm (1 hectare).'})
-
-        if self.length_m is not None and self.length_m < 0:
-            raise ValidationError({'length_m': 'Length must be greater than or equal to 0.'})
-        if self.width_m is not None and self.width_m < 0:
-            raise ValidationError({'width_m': 'Width must be greater than or equal to 0.'})
-
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        """Persist bed and derive area from dimensions when both values are set."""
-        if self.length_m is not None and self.width_m is not None:
-            computed_area = Decimal(str(self.length_m * self.width_m)).quantize(Decimal('0.1'))
-            self.area_sqm = computed_area
-        super().save(*args, **kwargs)
-
-    def get_total_area(self) -> float | None:
-        """Return the bed area in square meters, or None if not set."""
-        if self.area_sqm:
-            return float(self.area_sqm)
-        return None
-
-    def __str__(self) -> str:
-        """Return a string combining field and bed name."""
-        return f"{self.field.name} - {self.name}"
-
-    class Meta:
-        ordering = ['field', 'name']
-        constraints = [
-            models.UniqueConstraint(
-                fields=['field', 'name'],
-                name='unique_bed_name_per_field',
-            ),
-        ]
-
-
-class BedLayout(TimestampedModel):
-    """Persisted bed layout coordinates for the graphical field view."""
-
-    bed = models.OneToOneField(Bed, on_delete=models.CASCADE, related_name='layout')
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='bed_layouts')
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='bed_layouts')
-    x = models.FloatField(default=0.0)
-    y = models.FloatField(default=0.0)
-    version = models.PositiveIntegerField(default=1)
-    scale = models.FloatField(null=True, blank=True)
-
-    def clean(self) -> None:
-        """Validate that location matches the bed's location."""
-        super().clean()
-        if self.bed_id and self.location_id and self.bed.field.location_id != self.location_id:
-            raise ValidationError({'location': 'Layout location must match the bed location.'})
-
-    def __str__(self) -> str:
-        """Return a compact textual representation."""
-        return f"BedLayout bed={self.bed_id} location={self.location_id}"
-
-    class Meta:
-        ordering = ['location', 'bed']
-
-
-class FieldLayout(TimestampedModel):
-    """Persisted field layout coordinates for the graphical field view."""
-
-    field = models.OneToOneField(Field, on_delete=models.CASCADE, related_name='layout')
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='field_layouts')
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='field_layouts')
-    x = models.FloatField(default=0.0)
-    y = models.FloatField(default=0.0)
-    version = models.PositiveIntegerField(default=1)
-    scale = models.FloatField(null=True, blank=True)
-
-    def clean(self) -> None:
-        """Validate that location matches the field's location."""
-        super().clean()
-        if self.field_id and self.location_id and self.field.location_id != self.location_id:
-            raise ValidationError({'location': 'Layout location must match the field location.'})
-
-    def __str__(self) -> str:
-        """Return a compact textual representation."""
-        return f"FieldLayout field={self.field_id} location={self.location_id}"
-
-    class Meta:
-        ordering = ['location', 'field']
 
 
 class ActiveCultureManager(models.Manager):
@@ -1025,7 +581,7 @@ class Culture(TimestampedModel):
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         """Save the culture and auto-generate display color and normalized fields."""
-        from .utils import normalize_text
+        from farm.utils import normalize_text
 
         previous = None
         if self.pk:
@@ -1107,6 +663,7 @@ class Culture(TimestampedModel):
                 plans_to_update.append(plan)
 
         if plans_to_update:
+            from .planning import PlantingPlan
             PlantingPlan.objects.bulk_update(
                 plans_to_update,
                 ['harvest_date', 'harvest_end_date', 'updated_at'],
@@ -1207,6 +764,7 @@ class Culture(TimestampedModel):
                 )
             )
         ]
+
 
 class CultureSupplierData(TimestampedModel):
     """Supplier-specific seed metadata attached to one culture."""
@@ -1314,7 +872,7 @@ class PublicCulture(TimestampedModel):
         ordering = ['name', 'variety']
 
     def save(self, *args: Any, **kwargs: Any) -> None:
-        from .utils import normalize_text
+        from farm.utils import normalize_text
 
         self.name_normalized = normalize_text(self.name) or ''
         self.variety_normalized = normalize_text(self.variety) or ''
@@ -1339,80 +897,6 @@ class PublicCulture(TimestampedModel):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.variety})" if self.variety else self.name
-
-
-class CultureRevision(models.Model):
-    """Deprecated: superseded by EntityRevision. Retained only so existing rows
-    can drain via the cleanup_history command; no new rows are written here."""
-
-    culture = models.ForeignKey('Culture', on_delete=models.CASCADE, related_name='revisions')
-    snapshot = models.JSONField()
-    changed_fields = models.JSONField(default=list)
-    created_at = models.DateTimeField(auto_now_add=True)
-    user_name = models.CharField(max_length=150, blank=True)
-
-    class Meta:
-        ordering = ['-created_at']
-
-
-
-class ProjectRevision(models.Model):
-    """Deprecated: superseded by EntityRevision. Retained only so existing rows
-    can drain via the cleanup_history command; no new rows are written here."""
-
-    snapshot = models.JSONField()
-    summary = models.CharField(max_length=255, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='project_revisions')
-
-    class Meta:
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['project', '-created_at']),
-        ]
-
-
-
-class EntityRevision(models.Model):
-    """Per-entity snapshot recorded on every create/update/delete/restore.
-
-    Replaces the old ProjectRevision (full-project JSON dump per mutation) and
-    CultureRevision (per-culture only) with one generic, per-entity-sized
-    record. A revision's `snapshot` holds the full field dict of the single
-    entity at that point in time (not the whole project), so write cost scales
-    with entity size instead of project size. Point-in-time project restore is
-    reconstructed by taking, for every (entity_type, object_id), the latest
-    revision at or before the target time.
-    """
-
-    ACTION_CREATED = 'created'
-    ACTION_UPDATED = 'updated'
-    ACTION_DELETED = 'deleted'
-    ACTION_RESTORED = 'restored'
-    ACTION_CHOICES = [
-        (ACTION_CREATED, 'Created'),
-        (ACTION_UPDATED, 'Updated'),
-        (ACTION_DELETED, 'Deleted'),
-        (ACTION_RESTORED, 'Restored'),
-    ]
-
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='entity_revisions')
-    entity_type = models.CharField(max_length=32)
-    object_id = models.PositiveIntegerField()
-    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
-    display_name = models.CharField(max_length=255, blank=True)
-    snapshot = models.JSONField()
-    changed_fields = models.JSONField(default=list)
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    user_name = models.CharField(max_length=150, blank=True)
-
-    class Meta:
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['project', '-created_at']),
-            models.Index(fields=['project', 'entity_type', 'object_id', '-created_at']),
-        ]
-
 
 
 class SeedPackage(TimestampedModel):
@@ -1450,207 +934,3 @@ class SeedPackage(TimestampedModel):
 
     def __str__(self) -> str:
         return f"{self.culture.name} {self.size_value} {self.size_unit}"
-
-
-class PlantingPlan(TimestampedModel):
-    """A planting schedule linking a culture to a bed with dates."""
-    CULTIVATION_TYPE_CHOICES = Culture.CULTIVATION_TYPE_CHOICES
-
-    culture = models.ForeignKey(Culture, on_delete=models.CASCADE, related_name='planting_plans')
-    bed = models.ForeignKey(Bed, on_delete=models.CASCADE, related_name='planting_plans')
-    cultivation_type = models.CharField(
-        max_length=30,
-        choices=CULTIVATION_TYPE_CHOICES,
-        blank=True,
-        help_text="Cultivation type used for this plan",
-    )
-    planting_date = models.DateField()
-    harvest_date = models.DateField(
-        blank=True,
-        null=True,
-        help_text="Harvest start date (Erntebeginn)",
-    )
-    harvest_end_date = models.DateField(
-        blank=True,
-        null=True,
-        help_text="Harvest end date (Ernteende)",
-    )
-    quantity = models.IntegerField(null=True, blank=True, help_text="Number of plants or seeds")
-    area_usage_sqm = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        null=True, 
-        blank=True,
-        help_text="Area in square meters used by this planting plan"
-    )
-    notes = models.TextField(blank=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='created_planting_plans',
-    )
-    updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='updated_planting_plans',
-    )
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='planting_plans')
-
-    def _get_active_period(self) -> tuple[date, date] | None:
-        """Return inclusive active period used for overlap validations."""
-        if self.planting_date is None:
-            return None
-
-        active_start = self.planting_date
-        active_end = self.harvest_end_date or self.harvest_date
-
-        if active_end is None and self.culture_id:
-            if self.culture.growth_duration_days:
-                harvest_date = active_start + timedelta(days=self.culture.growth_duration_days)
-            else:
-                harvest_date = active_start
-
-            if self.culture.growth_duration_days and self.culture.harvest_duration_days:
-                active_end = harvest_date + timedelta(days=self.culture.harvest_duration_days)
-            else:
-                active_end = harvest_date
-
-        if active_end is None:
-            active_end = active_start
-
-        return active_start, active_end
-
-    def clean(self) -> None:
-        """Run default model validation."""
-        super().clean()
-
-
-    def save(self, *args: Any, **kwargs: Any) -> None:
-        """Save the plan and auto-calculate harvest dates if needed."""
-        # Detect if planting_date or culture has changed.
-        should_recalculate = False
-        
-        if self.pk:
-            # Existing instance - check if planting_date or culture changed.
-            try:
-                prev = PlantingPlan.objects.get(pk=self.pk)
-                if prev.planting_date != self.planting_date or prev.culture_id != self.culture_id:
-                    should_recalculate = True
-            except PlantingPlan.DoesNotExist:
-                # Should not happen, but treat as new instance.
-                should_recalculate = True
-        else:
-            # New instance - always calculate.
-            should_recalculate = True
-        
-        if not self.cultivation_type and self.culture:
-            if self.culture.cultivation_types and len(self.culture.cultivation_types) > 0:
-                self.cultivation_type = self.culture.cultivation_types[0]
-            elif self.culture.cultivation_type:
-                self.cultivation_type = self.culture.cultivation_type
-
-        if should_recalculate and self.planting_date and self.culture:
-            self.recalculate_harvest_dates()
-        
-        super().save(*args, **kwargs)
-
-    def recalculate_harvest_dates(self) -> None:
-        """Calculate stored harvest dates from the current culture timing values."""
-        if not self.planting_date or not self.culture:
-            return
-
-        if self.culture.growth_duration_days:
-            self.harvest_date = self.planting_date + timedelta(
-                days=self.culture.growth_duration_days
-            )
-        else:
-            self.harvest_date = self.planting_date
-
-        if self.culture.growth_duration_days and self.culture.harvest_duration_days:
-            self.harvest_end_date = self.harvest_date + timedelta(
-                days=self.culture.harvest_duration_days
-            )
-        else:
-            self.harvest_end_date = self.harvest_date
-
-    def __str__(self) -> str:
-        """Return a string combining culture, bed, and planting date."""
-        return f"{self.culture.name} in {self.bed.name} - {self.planting_date}"
-
-    class Meta:
-        ordering = ['-planting_date']
-        indexes = [
-            models.Index(fields=['project', '-planting_date']),
-            models.Index(fields=['project', 'bed', 'planting_date', 'harvest_end_date']),
-            models.Index(fields=['project', 'culture']),
-        ]
-
-
-class Task(TimestampedModel):
-    """A farm management task optionally linked to a planting plan."""
-    STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('in_progress', 'In Progress'),
-        ('completed', 'Completed'),
-        ('cancelled', 'Cancelled'),
-    ]
-
-    title = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
-    planting_plan = models.ForeignKey(
-        PlantingPlan,
-        on_delete=models.CASCADE,
-        related_name='tasks',
-        null=True,
-        blank=True,
-    )
-    due_date = models.DateField(null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='tasks')
-
-    def __str__(self) -> str:
-        """Return a string combining task title and status."""
-        return f"{self.title} ({self.status})"
-
-    class Meta:
-        ordering = ['due_date', '-created_at']
-
-
-class NoteAttachment(models.Model):
-    """Image attachment linked to a planting plan note."""
-
-    planting_plan = models.ForeignKey(
-        PlantingPlan,
-        on_delete=models.CASCADE,
-        related_name='attachments',
-    )
-    image = models.FileField(upload_to=note_attachment_upload_path)
-    caption = models.CharField(max_length=255, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='created_note_attachments',
-    )
-    updated_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='updated_note_attachments',
-    )
-    width = models.PositiveIntegerField(null=True, blank=True)
-    height = models.PositiveIntegerField(null=True, blank=True)
-    size_bytes = models.PositiveIntegerField(null=True, blank=True)
-    mime_type = models.CharField(max_length=100, blank=True)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='note_attachments')
-
-    class Meta:
-        ordering = ['-created_at']

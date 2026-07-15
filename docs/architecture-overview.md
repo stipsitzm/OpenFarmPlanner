@@ -48,9 +48,11 @@ docs/                  # This documentation
 
 - **`farm`** is the main domain app: nearly every model and viewset for
   locations, fields, beds, cultures, suppliers, planting plans, tasks, seed
-  demand, and history/versioning lives here. All models live in
-  `backend/farm/models.py`; views and serializers are organized into
-  domain packages inside the app:
+  demand, and history/versioning lives here. Models live in the
+  `backend/farm/models/` package (one module per domain: `base.py`,
+  `projects.py`, `structure.py`, `cultures.py`, `planning.py`, `notes.py`,
+  `history.py`, all re-exported from `models/__init__.py`); views and
+  serializers are organized into matching domain packages inside the app:
   - `farm/common/` — shared API plumbing: `ProjectScopedMixin`/
     `ProjectRevisionMixin` (`mixins.py`), shared serializer fields
     (`serializer_fields.py`), and the version endpoint (`views.py`).

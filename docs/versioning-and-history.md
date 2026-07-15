@@ -7,7 +7,7 @@ entity's fields, not a delta to replay.
 
 ## The model
 
-`EntityRevision` (`backend/farm/models.py`) is the current, generic
+`EntityRevision` (`backend/farm/models/history.py`) is the current, generic
 mechanism: one row per `(entity_type, object_id)` per mutation
 (`created` / `updated` / `deleted` / `restored`), holding a full JSON
 `snapshot` of the entity's fields at that moment plus a `changed_fields`
