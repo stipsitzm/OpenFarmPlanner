@@ -99,15 +99,16 @@
         },
         "hosting": {
           "title": "Hosting",
-          "content": "Diese Anwendung wird bei folgendem Anbieter gehostet, der als Auftragsverarbeiter für uns tätig wird:\n\nUberspace GmbH\nKaiserstraße 15\n55116 Mainz\nDeutschland\n\nBeim Aufruf der Anwendung erfasst der Server automatisch technische Informationen (Server-Logfiles):",
+          "content": "Diese Anwendung wird bei folgendem Anbieter gehostet, der als Auftragsverarbeiter für uns tätig wird:\n\nUberspace GmbH\nKaiserstraße 15\n55116 Mainz\nDeutschland\n\nBeim Aufruf der Anwendung können Webserver-Logfiles des Hosting-Anbieters entstehen. Nach der Uberspace-Standardkonfiguration enthalten nutzerzugängliche Webserver-Access-Logs insbesondere:",
           "bullets": {
-            "ipAddress": "IP-Adresse",
+            "ipAddress": "gekürzte IP-Adresse (bei IPv4 werden nur die ersten 16 Bit, bei IPv6 nur die ersten 32 Bit gespeichert)",
             "requestTime": "Datum und Uhrzeit der Anfrage",
+            "requestedResource": "angeforderte Seite bzw. Ressource",
             "browser": "Browsertyp und Version",
             "operatingSystem": "Betriebssystem",
-            "referrerUrl": "Referrer-URL"
+            "referrerUrl": "Referrer-URL, sofern übermittelt"
           },
-          "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Unser berechtigtes Interesse liegt im sicheren und stabilen Betrieb der Anwendung (vgl. Erwägungsgrund 49 DSGVO zur Netz- und Informationssicherheit)."
+          "legalBasis": "Uberspace rotiert diese Webserver-Logfiles täglich und löscht sie automatisch nach 7 Tagen. Zusätzlich können technische Django- bzw. Gunicorn-Fehlerlogs zur Fehlerdiagnose anfallen; diese dienen ausschließlich dem sicheren und stabilen Betrieb der Anwendung und können technische Fehlermeldungen, Zeitstempel und betroffene Anfragen enthalten.\n\nRechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Unser berechtigtes Interesse liegt im sicheren und stabilen Betrieb der Anwendung (vgl. Erwägungsgrund 49 DSGVO zur Netz- und Informationssicherheit)."
         },
         "registration": {
           "title": "Registrierung und Benutzerkonto",

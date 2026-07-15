@@ -99,15 +99,16 @@
         },
         "hosting": {
           "title": "Hosting",
-          "content": "This website is hosted by:\n\nUberspace GmbH\nKaiserstraße 15\n55116 Mainz\nGermany\n\nWhen you visit the website, the server automatically records:",
+          "content": "This application is hosted by the following provider, which acts as our processor:\n\nUberspace GmbH\nKaiserstraße 15\n55116 Mainz\nGermany\n\nWhen the application is accessed, web server log files may be created by the hosting provider. Under the Uberspace standard configuration, user-accessible web server access logs contain in particular:",
           "bullets": {
-            "ipAddress": "IP address",
+            "ipAddress": "shortened IP address (for IPv4 only the first 16 bits, for IPv6 only the first 32 bits are stored)",
             "requestTime": "Date and time of the request",
+            "requestedResource": "requested page or resource",
             "browser": "Browser type and version",
             "operatingSystem": "Operating system",
-            "referrerUrl": "Referrer URL"
+            "referrerUrl": "Referrer URL, if transmitted"
           },
-          "legalBasis": "Legal basis: Art. 6(1)(f) GDPR (legitimate interest)"
+          "legalBasis": "Uberspace rotates these web server log files daily and deletes them automatically after 7 days. In addition, technical Django or Gunicorn error logs may be generated for troubleshooting; these are used exclusively for secure and stable operation of the application and may contain technical error messages, timestamps, and affected requests.\n\nLegal basis: Art. 6(1)(f) GDPR (legitimate interest in secure and stable operation of the application)."
         },
         "registration": {
           "title": "Registration and user account",

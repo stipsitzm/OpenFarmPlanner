@@ -79,6 +79,16 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/Session-Storage-Daten werden in der Regel beim Schließen des Browser-Tabs gelöscht/)).toBeInTheDocument();
   });
 
+  it('describes Uberspace hosting logs with shortened IPs, requested resources, retention, and application error logs', () => {
+    renderPrivacyPolicyPage();
+
+    expect(screen.getByText(/gekürzte IP-Adresse/)).toBeInTheDocument();
+    expect(screen.getByText(/angeforderte Seite bzw\. Ressource/)).toBeInTheDocument();
+    expect(screen.getByText(/Referrer-URL, sofern übermittelt/)).toBeInTheDocument();
+    expect(screen.getByText(/rotiert diese Webserver-Logfiles täglich und löscht sie automatisch nach 7 Tagen/)).toBeInTheDocument();
+    expect(screen.getByText(/Django- bzw\. Gunicorn-Fehlerlogs zur Fehlerdiagnose/)).toBeInTheDocument();
+  });
+
   it('does not claim data is never shared with third parties', () => {
     renderPrivacyPolicyPage();
 
