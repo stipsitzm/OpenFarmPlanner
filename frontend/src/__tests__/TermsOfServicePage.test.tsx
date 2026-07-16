@@ -46,7 +46,10 @@ describe('TermsOfServicePage', () => {
     expect(screen.queryByText(/Zahlungsabwicklung/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Preisen, Versandkosten, Zahlungsmitteln/)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Vertragssprache/ })).toBeInTheDocument();
-    expect(screen.getByText(/Maßgeblich ist die deutsche Fassung/)).toBeInTheDocument();
+    expect(screen.getByText(/mehreren Sprachfassungen bereitgestellt/)).toBeInTheDocument();
+    expect(screen.getByText(/Die deutsche Fassung ist das Original/)).toBeInTheDocument();
+    expect(screen.getByText(/bei Abweichungen zwischen Sprachfassungen maßgeblich/)).toBeInTheDocument();
+    expect(screen.queryByText(/Die Vertragssprache.*ist Deutsch/)).not.toBeInTheDocument();
   });
 
   it('offers a print action so the terms can be saved or printed from the browser', () => {
