@@ -53,20 +53,11 @@ def parse_selected_suppliers(raw_value: str | None) -> dict[int, int]:
     return selected
 
 
-def select_seed_rate(
+def _cultivation_type_specific_rate(
     culture: Culture,
     cultivation_type: str | None,
 ) -> tuple[Decimal | None, str | None]:
-    """Pick the seed rate for a plan's cultivation type.
-
-    Precedence: the cultivation-type-specific fields (direct sowing /
-    pre-cultivation), then the ``seed_rate_by_cultivation`` JSON map, then the
-    legacy single rate field. A plan whose cultivation type is set but not
-    among the culture's enabled ``cultivation_types`` gets no rate at all.
-    """
-    active_types = set(culture.cultivation_types or [])
-    if cultivation_type and active_types and cultivation_type not in active_types:
-        return None, None
+    """Rate from the explicit per-cultivation-type fields, if fully set."""
     if (
         cultivation_type == 'direct_sowing'
         and culture.seed_rate_direct_value is not None
@@ -82,6 +73,14 @@ def select_seed_rate(
             Decimal(str(culture.seed_rate_pre_cultivation_value)),
             culture.seed_rate_pre_cultivation_unit,
         )
+    return None, None
+
+
+def _rate_from_cultivation_map(
+    culture: Culture,
+    cultivation_type: str | None,
+) -> tuple[Decimal | None, str | None]:
+    """Rate from the ``seed_rate_by_cultivation`` JSON map, if valid."""
     if cultivation_type and isinstance(culture.seed_rate_by_cultivation, dict):
         payload = culture.seed_rate_by_cultivation.get(cultivation_type)
         if isinstance(payload, dict):
@@ -89,6 +88,29 @@ def select_seed_rate(
             unit = payload.get('unit')
             if isinstance(value, int | float | str) and unit:
                 return Decimal(str(value)), str(unit)
+    return None, None
+
+
+def select_seed_rate(
+    culture: Culture,
+    cultivation_type: str | None,
+) -> tuple[Decimal | None, str | None]:
+    """Pick the seed rate for a plan's cultivation type.
+
+    Precedence: the cultivation-type-specific fields (direct sowing /
+    pre-cultivation), then the ``seed_rate_by_cultivation`` JSON map, then the
+    legacy single rate field. A plan whose cultivation type is set but not
+    among the culture's enabled ``cultivation_types`` gets no rate at all.
+    """
+    active_types = set(culture.cultivation_types or [])
+    if cultivation_type and active_types and cultivation_type not in active_types:
+        return None, None
+    value, unit = _cultivation_type_specific_rate(culture, cultivation_type)
+    if value is not None:
+        return value, unit
+    value, unit = _rate_from_cultivation_map(culture, cultivation_type)
+    if value is not None:
+        return value, unit
     if culture.seed_rate_value is None or not culture.seed_rate_unit:
         return None, None
     return Decimal(str(culture.seed_rate_value)), culture.seed_rate_unit
@@ -188,6 +210,36 @@ def apply_germination_rate(
     return {unit: amount * factor for unit, amount in amounts_by_unit.items()}
 
 
+def _m2_based_requirement(
+    unit: str,
+    value: Decimal,
+    area: Decimal,
+) -> tuple[Decimal | None, str | None]:
+    if area <= 0:
+        return None, 'Missing area usage for m²-based seed requirement.'
+    amount_unit = (
+        SEED_PACKAGE_UNIT_GRAMS if unit == SEED_RATE_UNIT_G_PER_M2 else SEED_PACKAGE_UNIT_SEEDS
+    )
+    return area * value, amount_unit
+
+
+def _lfm_based_requirement(
+    unit: str,
+    value: Decimal,
+    area: Decimal,
+    row_spacing: Decimal,
+) -> tuple[Decimal | None, str | None]:
+    if row_spacing <= 0:
+        return None, 'Missing row spacing for lfm-based seed requirement.'
+    if area <= 0:
+        return None, 'Missing area usage for lfm-based seed requirement.'
+    lfm = area / row_spacing
+    amount_unit = (
+        SEED_PACKAGE_UNIT_GRAMS if unit == SEED_RATE_UNIT_G_PER_LFM else SEED_PACKAGE_UNIT_SEEDS
+    )
+    return lfm * value, amount_unit
+
+
 def compute_plan_requirement(plan: PlantingPlan) -> tuple[Decimal | None, str | None]:
     """Compute one plan's raw seed requirement; returns (value, unit) on
     success or (None, warning) when a precondition is missing."""
@@ -200,23 +252,10 @@ def compute_plan_requirement(plan: PlantingPlan) -> tuple[Decimal | None, str | 
     row_spacing = Decimal(str(plan.culture.row_spacing_m or 0))
 
     if unit in {SEED_RATE_UNIT_G_PER_M2, SEED_RATE_UNIT_SEEDS_PER_M2}:
-        if area <= 0:
-            return None, 'Missing area usage for m²-based seed requirement.'
-        amount_unit = (
-            SEED_PACKAGE_UNIT_GRAMS if unit == SEED_RATE_UNIT_G_PER_M2 else SEED_PACKAGE_UNIT_SEEDS
-        )
-        return area * value, amount_unit
+        return _m2_based_requirement(unit, value, area)
 
     if unit in {SEED_RATE_UNIT_G_PER_LFM, SEED_RATE_UNIT_SEEDS_PER_LFM}:
-        if row_spacing <= 0:
-            return None, 'Missing row spacing for lfm-based seed requirement.'
-        if area <= 0:
-            return None, 'Missing area usage for lfm-based seed requirement.'
-        lfm = area / row_spacing
-        amount_unit = (
-            SEED_PACKAGE_UNIT_GRAMS if unit == SEED_RATE_UNIT_G_PER_LFM else SEED_PACKAGE_UNIT_SEEDS
-        )
-        return lfm * value, amount_unit
+        return _lfm_based_requirement(unit, value, area, row_spacing)
 
     if unit == SEED_RATE_UNIT_SEEDS_PER_PLANT:
         if quantity <= 0:
@@ -323,6 +362,132 @@ def _valid_packages(selected_supplier: CultureSupplierData | None) -> list[dict]
     return packages
 
 
+def _supplier_options_by_culture(
+    project: Project,
+    culture_ids: list[int],
+) -> dict[int, list[CultureSupplierData]]:
+    """Load each culture's supplier-data rows, ordered by supplier name."""
+    supplier_rows = (
+        CultureSupplierData.objects
+        .filter(project=project, culture_id__in=culture_ids)
+        .select_related('supplier')
+        .order_by('culture_id', 'supplier__name')
+    )
+    suppliers_map: dict[int, list[CultureSupplierData]] = defaultdict(list)
+    for supplier_row in supplier_rows:
+        suppliers_map[supplier_row.culture_id].append(supplier_row)
+    return suppliers_map
+
+
+def _base_row(
+    *,
+    entry: dict,
+    supplier_options: list[CultureSupplierData],
+    selected_supplier: CultureSupplierData | None,
+    display_required_amount: Decimal | None,
+    required_amount_warning: str | None,
+    has_required_amount: bool,
+    packages: list[dict],
+) -> dict:
+    """Build one culture's display row without any package suggestion yet."""
+    row = {
+        'culture_id': entry['culture_id'],
+        'culture_name': entry['culture_name'],
+        'variety': entry['variety'],
+        'supplier': (
+            selected_supplier.supplier.name
+            if selected_supplier and selected_supplier.supplier
+            else (selected_supplier.supplier_name if selected_supplier else '')
+        ),
+        'selected_supplier_id': selected_supplier.supplier_id if selected_supplier else None,
+        'supplier_options': [
+            {
+                'supplier_id': item.supplier_id,
+                'supplier_name': item.supplier.name if item.supplier else item.supplier_name,
+            }
+            for item in supplier_options
+        ],
+        'required_amount_value': (
+            float(display_required_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+            if display_required_amount is not None
+            else None
+        ),
+        'required_amount_unit': SEED_PACKAGE_UNIT_GRAMS if has_required_amount else None,
+        'required_amount_warning': required_amount_warning,
+        'total_grams': (
+            float(display_required_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+            if display_required_amount is not None
+            else None
+        ),
+        'seed_packages': packages,
+        'package_suggestion': None,
+        'packages_needed': None,
+        'warning': entry['warning'],
+    }
+    if not supplier_options:
+        row['warning'] = row['warning'] or 'Keine Lieferantendaten vorhanden.'
+    return row
+
+
+def _attach_package_suggestion(
+    row: dict,
+    *,
+    germination_adjusted_amounts: dict[str, Decimal],
+    selected_tkg: Decimal | None,
+    packages: list[dict],
+) -> None:
+    """Compute the package suggestion for a row and attach it in place.
+
+    Prefers gram-sized packages when both units are offered; sets the row's
+    warning instead when the required amount cannot be converted to the
+    package unit.
+    """
+    target_unit = (
+        SEED_PACKAGE_UNIT_GRAMS
+        if any(pkg['size_unit'] == SEED_PACKAGE_UNIT_GRAMS for pkg in packages)
+        else packages[0]['size_unit']
+    )
+    same_unit_packages = [pkg for pkg in packages if pkg['size_unit'] == target_unit]
+    target_amount, conversion_warning = get_required_amount_in_unit(
+        amounts_by_unit=germination_adjusted_amounts,
+        target_unit=target_unit,
+        tkg=selected_tkg,
+    )
+    if target_amount is None:
+        row['warning'] = (
+            conversion_warning or 'Cannot convert required amount to package units.'
+        )
+        return
+
+    suggestion = compute_seed_package_suggestion(
+        required_amount=target_amount,
+        packages=[
+            PackageOption(
+                size_value=Decimal(str(pkg['size_value'])),
+                size_unit=pkg['size_unit'],
+            )
+            for pkg in same_unit_packages
+        ],
+        unit=target_unit,
+    )
+    if suggestion.pack_count > 0:
+        row['package_suggestion'] = {
+            'selection': [
+                {
+                    'size_value': float(item.size_value),
+                    'size_unit': item.size_unit,
+                    'count': item.count,
+                }
+                for item in suggestion.selection
+            ],
+            'total_amount': float(suggestion.total_amount),
+            'overage': float(suggestion.overage),
+            'pack_count': suggestion.pack_count,
+            'unit': target_unit,
+        }
+        row['packages_needed'] = suggestion.pack_count
+
+
 def build_seed_demand_rows(
     *,
     project: Project,
@@ -330,26 +495,15 @@ def build_seed_demand_rows(
 ) -> list[dict]:
     """Build the display-ready seed-demand rows for a project, one per culture."""
     grouped = _aggregate_requirements_by_culture(project)
-
-    supplier_rows = (
-        CultureSupplierData.objects
-        .filter(project=project, culture_id__in=list(grouped.keys()))
-        .select_related('supplier')
-        .order_by('culture_id', 'supplier__name')
-    )
-    suppliers_map: dict[int, list[CultureSupplierData]] = defaultdict(list)
-    for supplier_row in supplier_rows:
-        suppliers_map[supplier_row.culture_id].append(supplier_row)
+    suppliers_map = _supplier_options_by_culture(project, list(grouped.keys()))
 
     rows: list[dict] = []
     for culture_id, entry in grouped.items():
         required_amounts_by_unit = entry['required_amount_by_unit']
         has_required_amount = any(amount > 0 for amount in required_amounts_by_unit.values())
-        warning = entry['warning']
-        culture = entry['culture']
         supplier_options = suppliers_map.get(culture_id, [])
         selected_supplier = _resolve_selected_supplier(
-            culture=culture,
+            culture=entry['culture'],
             supplier_options=supplier_options,
             requested_supplier_id=selected_supplier_by_culture.get(culture_id),
         )
@@ -365,92 +519,22 @@ def build_seed_demand_rows(
             tkg=selected_tkg,
         )
         packages = _valid_packages(selected_supplier)
-        row = {
-            'culture_id': entry['culture_id'],
-            'culture_name': entry['culture_name'],
-            'variety': entry['variety'],
-            'supplier': (
-                selected_supplier.supplier.name
-                if selected_supplier and selected_supplier.supplier
-                else (selected_supplier.supplier_name if selected_supplier else '')
-            ),
-            'selected_supplier_id': selected_supplier.supplier_id if selected_supplier else None,
-            'supplier_options': [
-                {
-                    'supplier_id': item.supplier_id,
-                    'supplier_name': item.supplier.name if item.supplier else item.supplier_name,
-                }
-                for item in supplier_options
-            ],
-            'required_amount_value': (
-                float(display_required_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
-                if display_required_amount is not None
-                else None
-            ),
-            'required_amount_unit': SEED_PACKAGE_UNIT_GRAMS if has_required_amount else None,
-            'required_amount_warning': required_amount_warning,
-            'total_grams': (
-                float(display_required_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
-                if display_required_amount is not None
-                else None
-            ),
-            'seed_packages': packages,
-            'package_suggestion': None,
-            'packages_needed': None,
-            'warning': warning,
-        }
-        if not supplier_options:
-            row['warning'] = row['warning'] or 'Keine Lieferantendaten vorhanden.'
-
-        if warning or not has_required_amount or not packages:
-            rows.append(row)
-            continue
-
-        target_unit = (
-            SEED_PACKAGE_UNIT_GRAMS
-            if any(pkg['size_unit'] == SEED_PACKAGE_UNIT_GRAMS for pkg in packages)
-            else packages[0]['size_unit']
+        row = _base_row(
+            entry=entry,
+            supplier_options=supplier_options,
+            selected_supplier=selected_supplier,
+            display_required_amount=display_required_amount,
+            required_amount_warning=required_amount_warning,
+            has_required_amount=has_required_amount,
+            packages=packages,
         )
-        same_unit_packages = [pkg for pkg in packages if pkg['size_unit'] == target_unit]
-        target_amount, conversion_warning = get_required_amount_in_unit(
-            amounts_by_unit=germination_adjusted_amounts,
-            target_unit=target_unit,
-            tkg=selected_tkg,
-        )
-        if target_amount is None:
-            row['warning'] = (
-                conversion_warning or 'Cannot convert required amount to package units.'
+        if not entry['warning'] and has_required_amount and packages:
+            _attach_package_suggestion(
+                row,
+                germination_adjusted_amounts=germination_adjusted_amounts,
+                selected_tkg=selected_tkg,
+                packages=packages,
             )
-            rows.append(row)
-            continue
-
-        suggestion = compute_seed_package_suggestion(
-            required_amount=target_amount,
-            packages=[
-                PackageOption(
-                    size_value=Decimal(str(pkg['size_value'])),
-                    size_unit=pkg['size_unit'],
-                )
-                for pkg in same_unit_packages
-            ],
-            unit=target_unit,
-        )
-        if suggestion.pack_count > 0:
-            row['package_suggestion'] = {
-                'selection': [
-                    {
-                        'size_value': float(item.size_value),
-                        'size_unit': item.size_unit,
-                        'count': item.count,
-                    }
-                    for item in suggestion.selection
-                ],
-                'total_amount': float(suggestion.total_amount),
-                'overage': float(suggestion.overage),
-                'pack_count': suggestion.pack_count,
-                'unit': target_unit,
-            }
-            row['packages_needed'] = suggestion.pack_count
         rows.append(row)
 
     rows.sort(key=lambda item: (item['culture_name'] or '', item['variety'] or ''))
