@@ -10,10 +10,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useContext, useRef, useLayoutEffect } from 'react';
 import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import CloseIcon from '@mui/icons-material/Close';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
-import TuneIcon from '@mui/icons-material/Tune';
 import { useTranslation } from '../i18n';
 import {
   Alert,
@@ -21,18 +19,14 @@ import {
   Button,
   ButtonGroup,
   Divider,
-  IconButton,
-  InputAdornment,
   MenuItem,
   Select,
   Stack,
-  TextField,
   Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
 import {
   shouldOpenCustomContextMenu,
   suppressNativeContextMenu,
@@ -138,6 +132,7 @@ import { HierarchyLevelButtons } from '../components/hierarchy/HierarchyLevelTog
 import { CalendarFiltersPopover } from '../components/gantt/CalendarFiltersPopover';
 import { OccupancyFilterRow } from '../components/gantt/OccupancyFilterRow';
 import { SeedlingFilters } from '../components/gantt/SeedlingFilters';
+import { OccupancyMobileFilterBar } from '../components/gantt/OccupancyMobileFilterBar';
 
 const GanttChartWithFocusMode = GanttChart as React.ComponentType<
   React.ComponentProps<typeof GanttChart> & { focusMode?: boolean }
@@ -2074,92 +2069,17 @@ function GanttChartPage() {
             >
               {useMobileFilterLayout ? (
                 <Stack spacing={0}>
-                  {mobileSearchOpen || activeSearchText ? (
-                    <Stack direction="row" spacing={0.75} alignItems="center">
-                      <TextField
-                        size="small"
-                        placeholder={t('ganttChart:treeFilters.searchPlaceholder')}
-                        value={occupancySearchText}
-                        onChange={(event) => setOccupancySearchText(event.target.value)}
-                        inputRef={searchInputRef}
-                        slotProps={{
-                          input: {
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <SearchIcon fontSize="small" />
-                              </InputAdornment>
-                            ),
-                          },
-                        }}
-                        sx={{ flex: '1 1 auto', minWidth: 0 }}
-                      />
-                      <Tooltip title={t('ganttChart:treeFilters.clearSearch')}>
-                        <IconButton
-                          size="small"
-                          aria-label={t('ganttChart:treeFilters.clearSearch')}
-                          onClick={clearActiveSearch}
-                          sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="inherit"
-                        startIcon={<TuneIcon fontSize="small" />}
-                        onClick={(event) => setCalendarFilterAnchorEl(event.currentTarget)}
-                        aria-expanded={isCalendarFilterPopoverOpen}
-                        aria-haspopup="dialog"
-                        aria-controls={isCalendarFilterPopoverOpen ? 'calendar-filters-popover' : undefined}
-                        sx={{
-                          minHeight: 40,
-                          minWidth: 0,
-                          px: 1,
-                          whiteSpace: 'nowrap',
-                          borderColor: activeHierarchyFilterCount > 0 ? 'text.secondary' : 'divider',
-                          bgcolor: activeHierarchyFilterCount > 0 ? 'action.selected' : 'transparent',
-                        }}
-                      >
-                        {activeHierarchyFilterCount > 0
-                          ? t('ganttChart:treeFilters.filterButtonWithCount', { count: activeHierarchyFilterCount })
-                          : t('ganttChart:treeFilters.filterButton')}
-                      </Button>
-                    </Stack>
-                  ) : (
-                    <Stack direction="row" spacing={0.75} alignItems="center">
-                      <Tooltip title={t('common:actions.search')}>
-                        <IconButton
-                          size="small"
-                          aria-label={t('common:actions.search')}
-                          onClick={() => setMobileSearchOpen(true)}
-                          sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}
-                        >
-                          <SearchIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="inherit"
-                        startIcon={<TuneIcon fontSize="small" />}
-                        onClick={(event) => setCalendarFilterAnchorEl(event.currentTarget)}
-                        aria-expanded={isCalendarFilterPopoverOpen}
-                        aria-haspopup="dialog"
-                        aria-controls={isCalendarFilterPopoverOpen ? 'calendar-filters-popover' : undefined}
-                        sx={{
-                          minHeight: 40,
-                          whiteSpace: 'nowrap',
-                          borderColor: activeHierarchyFilterCount > 0 ? 'text.secondary' : 'divider',
-                          bgcolor: activeHierarchyFilterCount > 0 ? 'action.selected' : 'transparent',
-                        }}
-                      >
-                        {activeHierarchyFilterCount > 0
-                          ? t('ganttChart:treeFilters.filterButtonWithCount', { count: activeHierarchyFilterCount })
-                          : t('ganttChart:treeFilters.filterButton')}
-                      </Button>
-                    </Stack>
-                  )}
+                  <OccupancyMobileFilterBar
+                    searchExpanded={Boolean(mobileSearchOpen || activeSearchText)}
+                    searchText={occupancySearchText}
+                    onSearchTextChange={setOccupancySearchText}
+                    searchInputRef={searchInputRef}
+                    onClearSearch={clearActiveSearch}
+                    onOpenSearch={() => setMobileSearchOpen(true)}
+                    filterPopoverOpen={isCalendarFilterPopoverOpen}
+                    activeFilterCount={activeHierarchyFilterCount}
+                    onOpenFilterPopover={(event) => setCalendarFilterAnchorEl(event.currentTarget)}
+                  />
                   <CalendarFiltersPopover
                     anchorEl={calendarFilterAnchorEl}
                     onClose={() => setCalendarFilterAnchorEl(null)}

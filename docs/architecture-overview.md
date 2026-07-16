@@ -117,6 +117,13 @@ docs/                  # This documentation
   implementation superseded by `InvitationAcceptPage.tsx`, was confirmed
   dead — nothing in `App.tsx`'s router referenced it — and removed.)
 
+- **Page sub-components**: the largest pages are being decomposed by
+  extracting purely presentational blocks (dialogs, menus, filter bars)
+  into per-domain component folders — `components/planting-plans/` for
+  `PlantingPlans.tsx`, `components/gantt/` for `GanttChart.tsx`. The
+  pattern is deliberate: all state and handlers stay in the page; the
+  extracted components only render props. Stateful-hook extraction from
+  these pages is avoided because it breaks React Compiler analysis.
 - **API layer** (`frontend/src/api/`): `httpClient.ts` is the one shared
   axios instance; a single request interceptor attaches `X-Project-Id`
   (read fresh from `localStorage` per request) and `X-CSRFToken`.
