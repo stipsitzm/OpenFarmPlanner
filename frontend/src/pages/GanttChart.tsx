@@ -137,6 +137,7 @@ import { useHierarchyLevelToggle } from '../components/hierarchy/hooks/useHierar
 import { HierarchyLevelButtons } from '../components/hierarchy/HierarchyLevelToggle';
 import { CalendarFiltersPopover } from '../components/gantt/CalendarFiltersPopover';
 import { OccupancyFilterRow } from '../components/gantt/OccupancyFilterRow';
+import { SeedlingFilters } from '../components/gantt/SeedlingFilters';
 
 const GanttChartWithFocusMode = GanttChart as React.ComponentType<
   React.ComponentProps<typeof GanttChart> & { focusMode?: boolean }
@@ -2200,86 +2201,15 @@ function GanttChartPage() {
             </Box>
           )}
           {calendarMode === 'seedlings' && (
-            <Box
-              data-testid="seedling-filters"
-              sx={{
-                mb: { xs: 0, md: 1.5 },
-              }}
-            >
-              {useMobileFilterLayout ? (
-                <Stack spacing={0}>
-                  {mobileSearchOpen || activeSearchText ? (
-                    <Stack direction="row" spacing={0.75} alignItems="center">
-                      <TextField
-                        size="small"
-                        placeholder={t('ganttChart:treeFilters.searchPlaceholderSeedlings')}
-                        value={seedlingSearchText}
-                        onChange={(event) => setSeedlingSearchText(event.target.value)}
-                        inputRef={searchInputRef}
-                        slotProps={{
-                          input: {
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <SearchIcon fontSize="small" />
-                              </InputAdornment>
-                            ),
-                          },
-                        }}
-                        sx={{ flex: '1 1 auto', minWidth: 0 }}
-                      />
-                      <Tooltip title={t('ganttChart:treeFilters.clearSearch')}>
-                        <IconButton
-                          size="small"
-                          aria-label={t('ganttChart:treeFilters.clearSearch')}
-                          onClick={clearActiveSearch}
-                          sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
-                  ) : (
-                    <Tooltip title={t('common:actions.search')}>
-                      <IconButton
-                        size="small"
-                        aria-label={t('common:actions.search')}
-                        onClick={() => setMobileSearchOpen(true)}
-                        sx={{ width: 40, height: 40, border: '1px solid', borderColor: 'divider' }}
-                      >
-                        <SearchIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Stack>
-              ) : (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 1.5,
-                    alignItems: 'center',
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    placeholder={t('ganttChart:treeFilters.searchPlaceholderSeedlings')}
-                    value={seedlingSearchText}
-                    onChange={(event) => setSeedlingSearchText(event.target.value)}
-                    inputRef={searchInputRef}
-                    slotProps={{
-                      input: {
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <SearchIcon fontSize="small" />
-                          </InputAdornment>
-                        ),
-                      },
-                    }}
-                    sx={{ minWidth: 240, flex: '1 1 240px' }}
-                  />
-                </Box>
-              )}
-            </Box>
+            <SeedlingFilters
+              useMobileLayout={useMobileFilterLayout}
+              searchExpanded={Boolean(mobileSearchOpen || activeSearchText)}
+              searchText={seedlingSearchText}
+              onSearchTextChange={setSeedlingSearchText}
+              searchInputRef={searchInputRef}
+              onClearSearch={clearActiveSearch}
+              onOpenSearch={() => setMobileSearchOpen(true)}
+            />
           )}
           <Box
             className={`gantt-container-wrapper gantt-container-wrapper--${calendarMode}`}
