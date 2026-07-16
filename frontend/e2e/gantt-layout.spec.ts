@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { submitLoginFormAndAwaitApp } from './utils';
 
 const backendPort = process.env.BACKEND_PORT ?? '8000';
 const e2eToken = process.env.E2E_TEST_TOKEN || 'openfarmplanner-e2e-token';
@@ -50,8 +51,7 @@ async function loginWithFreshProject(page: Page, request: APIRequestContext, sce
   await page.goto('/login');
   await page.getByLabel('E-Mail').fill(setup.admin.email);
   await page.locator('input[type="password"]').fill(setup.admin.password);
-  await page.getByRole('button', { name: 'Anmelden' }).click();
-  await expect(page).toHaveURL(/\/app\//, { timeout: 10_000 });
+  await submitLoginFormAndAwaitApp(page);
   await expect.poll(() => page.evaluate(() => window.localStorage.getItem('activeProjectId'))).toBeTruthy();
 }
 

@@ -46,6 +46,25 @@ export async function setupUserWithoutProjects(
   return fixture.user;
 }
 
+// Submits the already-filled login form and waits for the app shell. A
+// transiently failed login request (backend/network hiccup under CI load)
+// keeps the login form on screen with an error alert instead of navigating,
+// so one resubmit is attempted before failing the test. Anything else — e.g.
+// a slow but ongoing navigation where the form is already gone — rethrows.
+export async function submitLoginFormAndAwaitApp(page: Page): Promise<void> {
+  const submit = page.getByRole('button', { name: 'Anmelden' });
+  await submit.click();
+  try {
+    await expect(page).toHaveURL(/\/app\//, { timeout: 10_000 });
+  } catch (error) {
+    if (!(await submit.isVisible().catch(() => false))) {
+      throw error;
+    }
+    await submit.click();
+    await expect(page).toHaveURL(/\/app\//, { timeout: 10_000 });
+  }
+}
+
 export async function loginWithDeterministicProject(
   page: Page,
   request: APIRequestContext,
@@ -66,8 +85,7 @@ export async function loginWithDeterministicProject(
   await page.goto(options.loginAsAdmin ? '/login' : fixture.inviteUrl);
   await page.getByLabel('E-Mail').fill(loginUser.email);
   await page.locator('input[type="password"]').fill(loginUser.password);
-  await page.getByRole('button', { name: 'Anmelden' }).click();
-  await expect.poll(() => page.evaluate(() => window.location.pathname)).toMatch(/^\/app\//);
+  await submitLoginFormAndAwaitApp(page);
 }
 
 // Saves a fields-beds hierarchy row by tabbing through the editable cells, then
