@@ -119,6 +119,18 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/nicht über diese Self-Service-Funktionen abgedeckt/)).toBeInTheDocument();
   });
 
+  it('explains the right to lodge a complaint with the competent supervisory authority', () => {
+    renderPrivacyPolicyPage();
+
+    expect(screen.getByRole('heading', { name: /Beschwerderecht/ })).toBeInTheDocument();
+    expect(screen.getByText(/wenn Sie der Ansicht sind, dass die Verarbeitung Ihrer personenbezogenen Daten/)).toBeInTheDocument();
+    expect(screen.getByText(/gewöhnlichen Aufenthaltsorts, Ihres Arbeitsplatzes oder des Orts des mutmaßlichen Verstoßes/)).toBeInTheDocument();
+    expect(screen.getByText(/Für OpenFarmPlanner ist die österreichische Datenschutzbehörde/)).toBeInTheDocument();
+    expect(screen.getByText(/Österreichische Datenschutzbehörde/)).toBeInTheDocument();
+    expect(screen.getByText(/Barichgasse 40-42/)).toBeInTheDocument();
+    expect(screen.getByText(/https:\/\/www\.dsb\.gv\.at/)).toBeInTheDocument();
+  });
+
   it('covers WKO checklist details for provision duty and third-country transfer', () => {
     renderPrivacyPolicyPage();
 

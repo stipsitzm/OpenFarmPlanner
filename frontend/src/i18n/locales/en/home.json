@@ -180,7 +180,7 @@
         },
         "complaint": {
           "title": "Right to lodge a complaint",
-          "content": "You have the right to lodge a complaint with the data protection authority:\n\nAustrian Data Protection Authority\nBarichgasse 40-42\n1030 Vienna\nhttps://www.dsb.gv.at"
+          "content": "In addition to the rights listed above, you have the right to lodge a complaint with a data protection supervisory authority if you believe that the processing of your personal data infringes the GDPR (Art. 77 GDPR). In particular, you may contact the supervisory authority of your habitual residence, your place of work, or the place of the alleged infringement.\n\nFor OpenFarmPlanner, the Austrian Data Protection Authority is the competent supervisory authority in Austria:\n\nAustrian Data Protection Authority\nBarichgasse 40-42\n1030 Vienna\nhttps://www.dsb.gv.at"
         },
         "changes": {
           "title": "Changes to this privacy policy",
