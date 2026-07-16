@@ -22,13 +22,10 @@ import {
   ButtonGroup,
   Checkbox,
   Divider,
-  FormControl,
   FormControlLabel,
   IconButton,
   InputAdornment,
-  InputLabel,
   MenuItem,
-  Popover,
   Select,
   Stack,
   TextField,
@@ -140,6 +137,7 @@ import { useExpandedState } from '../components/hierarchy/hooks/useExpandedState
 import { collectVisibleIdsWithAncestors, flattenTreeRows } from '../components/hierarchy/utils/treeRows';
 import { useHierarchyLevelToggle } from '../components/hierarchy/hooks/useHierarchyLevelToggle';
 import { HierarchyLevelButtons } from '../components/hierarchy/HierarchyLevelToggle';
+import { CalendarFiltersPopover } from '../components/gantt/CalendarFiltersPopover';
 
 const GanttChartWithFocusMode = GanttChart as React.ComponentType<
   React.ComponentProps<typeof GanttChart> & { focusMode?: boolean }
@@ -2162,75 +2160,25 @@ function GanttChartPage() {
                       </Button>
                     </Stack>
                   )}
-                  <Popover
-                    id="calendar-filters-popover"
-                    open={isCalendarFilterPopoverOpen}
+                  <CalendarFiltersPopover
                     anchorEl={calendarFilterAnchorEl}
                     onClose={() => setCalendarFilterAnchorEl(null)}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                    PaperProps={{ sx: { width: 'min(92vw, 360px)', p: 1.5 } }}
-                  >
-                    <Stack spacing={1.25}>
-                      <FormControl size="small" sx={{ minWidth: '100%' }}>
-                        <InputLabel id="calendar-location-filter-label">{t('ganttChart:treeFilters.locationLabel')}</InputLabel>
-                        <Select
-                          labelId="calendar-location-filter-label"
-                          value={occupancyLocationFilter === 'all' ? 'all' : String(occupancyLocationFilter)}
-                          label={t('ganttChart:treeFilters.locationLabel')}
-                          onChange={(event) => {
-                            const { value } = event.target;
-                            setOccupancyLocationFilter(value === 'all' ? 'all' : Number(value));
-                            setOccupancyFieldFilter('all');
-                          }}
-                        >
-                          <MenuItem value="all">{t('ganttChart:treeFilters.allLocations')}</MenuItem>
-                          {locations.filter((location) => location.id).map((location) => (
-                            <MenuItem key={location.id} value={String(location.id)}>{location.name}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      <FormControl size="small" sx={{ minWidth: '100%' }}>
-                        <InputLabel id="calendar-field-filter-label">{t('ganttChart:treeFilters.fieldLabel')}</InputLabel>
-                        <Select
-                          labelId="calendar-field-filter-label"
-                          value={occupancyFieldFilter === 'all' ? 'all' : String(occupancyFieldFilter)}
-                          label={t('ganttChart:treeFilters.fieldLabel')}
-                          onChange={(event) => {
-                            const { value } = event.target;
-                            setOccupancyFieldFilter(value === 'all' ? 'all' : Number(value));
-                          }}
-                          disabled={occupancyLocationFilter === 'all'}
-                        >
-                          <MenuItem value="all">{t('ganttChart:treeFilters.allFields')}</MenuItem>
-                          {occupancyFieldOptions.map((field) => (
-                            <MenuItem key={field.id} value={String(field.fieldId)}>{field.name}</MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      <FormControlLabel
-                        control={(
-                          <Checkbox
-                            size="small"
-                            checked={onlyOccupiedBeds}
-                            onChange={(event) => setOnlyOccupiedBeds(event.target.checked)}
-                          />
-                        )}
-                        label={t('ganttChart:treeFilters.onlyOccupiedBeds')}
-                      />
-                      <Button
-                        variant="text"
-                        size="small"
-                        onClick={() => {
-                          resetOccupancyHierarchyFilters();
-                          setCalendarFilterAnchorEl(null);
-                        }}
-                        sx={{ alignSelf: 'flex-end', whiteSpace: 'nowrap' }}
-                      >
-                        {t('ganttChart:treeFilters.resetFilters')}
-                      </Button>
-                    </Stack>
-                  </Popover>
+                    locations={locations}
+                    fieldOptions={occupancyFieldOptions}
+                    locationFilter={occupancyLocationFilter}
+                    onLocationFilterChange={(value) => {
+                      setOccupancyLocationFilter(value);
+                      setOccupancyFieldFilter('all');
+                    }}
+                    fieldFilter={occupancyFieldFilter}
+                    onFieldFilterChange={setOccupancyFieldFilter}
+                    onlyOccupiedBeds={onlyOccupiedBeds}
+                    onOnlyOccupiedBedsChange={setOnlyOccupiedBeds}
+                    onReset={() => {
+                      resetOccupancyHierarchyFilters();
+                      setCalendarFilterAnchorEl(null);
+                    }}
+                  />
                 </Stack>
               ) : (
                 <Box
