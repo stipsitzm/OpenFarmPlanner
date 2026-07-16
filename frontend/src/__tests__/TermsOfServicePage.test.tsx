@@ -32,15 +32,19 @@ describe('TermsOfServicePage', () => {
     expect(sectionHeadings[0].textContent).toMatch(/^1\./);
   });
 
-  it('identifies the provider, contract language, and current no-payment scope', () => {
+  it('identifies the provider, service scope, and contract language', () => {
     renderTermsOfServicePage();
 
     expect(screen.getByRole('heading', { name: /Anbieter und Kontakt/ })).toBeInTheDocument();
     expect(screen.getByText(/Martin Stipsitz/)).toBeInTheDocument();
     expect(screen.getByText(/Eine Umsatzsteuer-Identifikationsnummer besteht derzeit nicht/)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Leistungsumfang, Kosten und Lieferung/ })).toBeInTheDocument();
-    expect(screen.getByText(/keine Zahlungsabwicklung/)).toBeInTheDocument();
-    expect(screen.getByText(/keine Waren geliefert/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Leistungsumfang/ })).toBeInTheDocument();
+    expect(screen.getByText(/digitale Planungsfunktionen als gehostete Webanwendung/)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Kosten und Lieferung/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/kostenpflichtige Funktionen/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/gesonderter Bedingungen/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Zahlungsabwicklung/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Preisen, Versandkosten, Zahlungsmitteln/)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Vertragssprache/ })).toBeInTheDocument();
     expect(screen.getByText(/Maßgeblich ist die deutsche Fassung/)).toBeInTheDocument();
   });

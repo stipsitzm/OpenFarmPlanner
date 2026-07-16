@@ -202,8 +202,8 @@
           "content": "These Terms of Service apply to the use of OpenFarmPlanner, a web application for planning agricultural and horticultural cultivation. By registering a user account or using the application, you accept these Terms of Service.\n\nOpenFarmPlanner is intended for private individuals as well as agricultural and horticultural businesses that want to organize their cultivation planning digitally. Information on the processing of personal data can be found in the Privacy Policy."
         },
         "serviceAndCosts": {
-          "title": "Service scope, costs, and delivery",
-          "content": "OpenFarmPlanner provides digital planning functions as a hosted web application. No goods are delivered and no payment processing takes place through OpenFarmPlanner.\n\nUse of the application available at openfarmplanner.org is currently free of charge. If paid features are introduced in the future, we will inform you in advance; such features will only be provided on the basis of separate terms or explicit consent.\n\nBecause no paid services, goods deliveries, or digital purchases are currently offered, these Terms of Service do not contain provisions on prices, shipping costs, payment methods, delivery territories, after-sales service, or statutory withdrawal and warranty information for purchases."
+          "title": "Service scope",
+          "content": "OpenFarmPlanner provides digital planning functions as a hosted web application."
         },
         "contractLanguage": {
           "title": "Contract language",
