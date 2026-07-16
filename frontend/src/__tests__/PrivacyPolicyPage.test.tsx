@@ -113,6 +113,10 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/Widerruf einer erteilten Einwilligung/)).toBeInTheDocument();
     expect(screen.getByText(/Art\. 15 DSGVO/)).toBeInTheDocument();
     expect(screen.getByText(/Art\. 7 Abs\. 3 DSGVO/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Datenexport und Kontolöschung können Sie direkt in den Kontoeinstellungen ausüben/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/nicht über diese Self-Service-Funktionen abgedeckt/)).toBeInTheDocument();
   });
 
   it('covers WKO checklist details for provision duty and third-country transfer', () => {

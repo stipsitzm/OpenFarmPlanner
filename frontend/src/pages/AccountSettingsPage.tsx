@@ -18,7 +18,13 @@ import {
 } from '@mui/material';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { changePassword, requestEmailChange, updateProfile, updatePublicDisplayName } from '../auth/authApi';
+import {
+  changePassword,
+  getAccountDataExport,
+  requestEmailChange,
+  updateProfile,
+  updatePublicDisplayName,
+} from '../auth/authApi';
 import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
 import { useNavigationBlocker } from '../hooks/useNavigationBlocker';
@@ -140,6 +146,7 @@ export default function AccountSettingsPage() {
   const publicProfileSection = useSectionSubmit(t('errors.generic'));
   const emailSection = useSectionSubmit(t('errors.generic'));
   const passwordSection = useSectionSubmit(t('errors.generic'));
+  const dataExportSection = useSectionSubmit(t('errors.generic'));
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
@@ -224,6 +231,21 @@ export default function AccountSettingsPage() {
 
   const handlePasswordChange = (): Promise<void> =>
     passwordSection.submit(() => changePassword(currentPassword, newPassword, repeatPassword), closePasswordEditor);
+
+  const handleDataExport = (): Promise<void> =>
+    dataExportSection.submit(async () => {
+      const payload = await getAccountDataExport();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'openfarmplanner-data-export.json';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      return { detail: t('dataExport.success') };
+    });
 
   const handleResetHints = (): void => {
     localStorage.removeItem('ofp.shortcutHintSeen');
@@ -408,6 +430,18 @@ export default function AccountSettingsPage() {
               onChange={(event) => setRepeatPassword(event.target.value)}
             />
           </InlineEditor>
+        </SettingsCard>
+
+        <SettingsCard title={t('sections.privacy')} description={t('dataExport.description')}>
+          <SectionAlerts message={dataExportSection.message} error={dataExportSection.error} />
+          <Button
+            variant="outlined"
+            onClick={() => void handleDataExport()}
+            disabled={dataExportSection.submitting}
+            sx={actionButtonSx}
+          >
+            {t('dataExport.downloadButton')}
+          </Button>
         </SettingsCard>
 
         {import.meta.env.DEV ? (

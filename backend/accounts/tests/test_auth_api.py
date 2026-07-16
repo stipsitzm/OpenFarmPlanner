@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 from io import StringIO
+import json
 import re
 from unittest.mock import patch
 
@@ -659,6 +660,39 @@ class AuthApiTest(APITestCase):
         response = self.client.get('/openfarmplanner/api/auth/me/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['public_display_name'], '')
+
+    def test_account_data_export_returns_structured_self_service_export(self) -> None:
+        project = Project.objects.create(name='Export Project', slug='export-project')
+        ProjectMembership.objects.create(user=self.user, project=project, role=ProjectMembership.ROLE_ADMIN)
+        location = Location.objects.create(name='Export Location', project=project)
+        culture = Culture.objects.create(name='Export Kale', variety='Winter', project=project)
+        PublicCulture.objects.create(
+            name='Export Kale',
+            variety='Winter',
+            status=PublicCulture.STATUS_PUBLISHED,
+            source_project=project,
+            source_project_culture=culture,
+            created_by=self.user,
+        )
+
+        login_response = self.client.post(
+            '/openfarmplanner/api/auth/login/',
+            {'email': self.user.email, 'password': self.password},
+            format='json',
+        )
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+        response = self.client.get('/openfarmplanner/api/auth/account/data-export/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Disposition'], 'attachment; filename="openfarmplanner-data-export.json"')
+        payload = json.loads(response.content)
+        self.assertEqual(payload['account']['email'], self.user.email)
+        self.assertNotIn('password', payload['account'])
+        self.assertEqual(payload['memberships'][0]['project_id'], project.id)
+        self.assertEqual(payload['projects'][0]['project']['name'], 'Export Project')
+        self.assertEqual(payload['projects'][0]['locations'][0]['id'], location.id)
+        self.assertEqual(payload['projects'][0]['cultures'][0]['name'], 'Export Kale')
+        self.assertEqual(payload['public_library_contributions'][0]['name'], 'Export Kale')
 
     def test_email_change_rejects_wrong_password(self) -> None:
         self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')

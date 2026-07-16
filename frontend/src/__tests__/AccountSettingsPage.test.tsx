@@ -37,6 +37,7 @@ vi.mock('../auth/authApi', () => ({
   updatePublicDisplayName: vi.fn(async () => ({ detail: 'Profil aktualisiert.', user: authState.user })),
   requestEmailChange: vi.fn(async () => ({ detail: 'Bestätigungslink gesendet.' })),
   changePassword: vi.fn(async () => ({ detail: 'Passwort geändert.' })),
+  getAccountDataExport: vi.fn(async () => ({ account: { email: 'demo@example.com' } })),
 }));
 
 function LocationProbe() {
@@ -45,8 +46,17 @@ function LocationProbe() {
 }
 
 describe('AccountSettingsPage', () => {
+  const createObjectURLMock = vi.fn(() => 'blob:openfarmplanner-data-export');
+  const revokeObjectURLMock = vi.fn();
+  const anchorClickMock = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
   beforeEach(() => {
     localStorage.clear();
+    createObjectURLMock.mockClear();
+    revokeObjectURLMock.mockClear();
+    anchorClickMock.mockClear();
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURLMock });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURLMock });
   });
 
   it('renders compact sections and keeps delete disabled until confirmation phrase is present', async () => {
@@ -55,6 +65,7 @@ describe('AccountSettingsPage', () => {
     expect(screen.getByText('Profil')).toBeInTheDocument();
     expect(screen.getByText('Öffentliche Kulturbibliothek')).toBeInTheDocument();
     expect(screen.getByText('Login & Sicherheit')).toBeInTheDocument();
+    expect(screen.getByText('Datenschutz & Datenexport')).toBeInTheDocument();
     expect(screen.getByText('Konto')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Anzeigename ändern' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Namen festlegen' })).toBeInTheDocument();
@@ -64,6 +75,12 @@ describe('AccountSettingsPage', () => {
     expect(screen.getByText(/veröffentlichte Kulturbibliotheks-Einträge bleiben bestehen/)).toBeInTheDocument();
     expect(screen.queryByLabelText('Neue E-Mail-Adresse')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Neues Passwort')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Meine Daten herunterladen' }));
+    expect(await screen.findByText('Datenexport wurde erstellt.')).toBeInTheDocument();
+    expect(createObjectURLMock).toHaveBeenCalledOnce();
+    expect(anchorClickMock).toHaveBeenCalledOnce();
+    expect(revokeObjectURLMock).toHaveBeenCalledWith('blob:openfarmplanner-data-export');
 
     fireEvent.click(screen.getByRole('button', { name: 'Konto löschen' }));
     const dialog = await screen.findByRole('dialog');

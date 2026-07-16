@@ -10,6 +10,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sessions.models import Session
 from django.core.mail import send_mail
 from django.db import IntegrityError
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.utils import timezone, translation
@@ -25,6 +26,7 @@ from rest_framework.views import APIView
 from config.frontend_urls import build_public_frontend_url
 
 from .consent import record_acceptance
+from .data_export import build_personal_data_export
 from .models import AccountDeletionRequest, AccountEmailChangeRequest, PendingActivation, PublicProfile
 from .serializers import (
     AccountEmailChangeConfirmSerializer,
@@ -534,6 +536,18 @@ class AccountStatusView(APIView):
                 'deleted_at': deletion.deleted_at.isoformat() if deletion and deletion.deleted_at else None,
             }
         )
+
+
+class AccountDataExportView(APIView):
+    """Return a structured JSON export of the authenticated user's data."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request: Request) -> JsonResponse:
+        payload = build_personal_data_export(request.user)
+        response = JsonResponse(payload, json_dumps_params={'indent': 2})
+        response['Content-Disposition'] = 'attachment; filename="openfarmplanner-data-export.json"'
+        return response
 
 
 class ResendActivationView(APIView):

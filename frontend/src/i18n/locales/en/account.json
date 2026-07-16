@@ -6,7 +6,13 @@
     "profile": "Profile",
     "publicProfile": "Public culture library",
     "security": "Login & security",
+    "privacy": "Privacy & data export",
     "account": "Account"
+  },
+  "dataExport": {
+    "description": "Download a structured copy of your account, project, and public library data as a JSON file.",
+    "downloadButton": "Download my data",
+    "success": "Data export was created."
   },
   "publicProfile": {
     "description": "This name belongs to your account and is shown as the author on every culture you have published, or will publish, to the public culture library.",

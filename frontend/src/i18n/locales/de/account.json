@@ -6,7 +6,13 @@
     "profile": "Profil",
     "publicProfile": "Öffentliche Kulturbibliothek",
     "security": "Login & Sicherheit",
+    "privacy": "Datenschutz & Datenexport",
     "account": "Konto"
+  },
+  "dataExport": {
+    "description": "Lade eine strukturierte Kopie deiner Konto-, Projekt- und Kulturbibliotheksdaten als JSON-Datei herunter.",
+    "downloadButton": "Meine Daten herunterladen",
+    "success": "Datenexport wurde erstellt."
   },
   "publicProfile": {
     "description": "Dieser Name gehört zu deinem Konto und wird als Urheber:in bei allen Kulturen angezeigt, die du in der öffentlichen Kulturbibliothek veröffentlicht hast oder noch veröffentlichst.",
