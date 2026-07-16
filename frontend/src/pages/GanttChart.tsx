@@ -20,9 +20,7 @@ import {
   Box,
   Button,
   ButtonGroup,
-  Checkbox,
   Divider,
-  FormControlLabel,
   IconButton,
   InputAdornment,
   MenuItem,
@@ -138,6 +136,7 @@ import { collectVisibleIdsWithAncestors, flattenTreeRows } from '../components/h
 import { useHierarchyLevelToggle } from '../components/hierarchy/hooks/useHierarchyLevelToggle';
 import { HierarchyLevelButtons } from '../components/hierarchy/HierarchyLevelToggle';
 import { CalendarFiltersPopover } from '../components/gantt/CalendarFiltersPopover';
+import { OccupancyFilterRow } from '../components/gantt/OccupancyFilterRow';
 
 const GanttChartWithFocusMode = GanttChart as React.ComponentType<
   React.ComponentProps<typeof GanttChart> & { focusMode?: boolean }
@@ -2181,72 +2180,22 @@ function GanttChartPage() {
                   />
                 </Stack>
               ) : (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 1.5,
-                    alignItems: 'center',
+                <OccupancyFilterRow
+                  searchText={occupancySearchText}
+                  onSearchTextChange={setOccupancySearchText}
+                  searchInputRef={searchInputRef}
+                  locations={locations}
+                  fieldOptions={occupancyFieldOptions}
+                  locationFilter={occupancyLocationFilter}
+                  onLocationFilterChange={(value) => {
+                    setOccupancyLocationFilter(value);
+                    setOccupancyFieldFilter('all');
                   }}
-                >
-                  <TextField
-                    size="small"
-                    placeholder={t('ganttChart:treeFilters.searchPlaceholder')}
-                    value={occupancySearchText}
-                    onChange={(event) => setOccupancySearchText(event.target.value)}
-                    inputRef={searchInputRef}
-                    slotProps={{
-                      input: {
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <SearchIcon fontSize="small" />
-                          </InputAdornment>
-                        ),
-                      },
-                    }}
-                    sx={{ minWidth: 240, flex: '1 1 240px' }}
-                  />
-                  <Select
-                    size="small"
-                    value={occupancyLocationFilter === 'all' ? 'all' : String(occupancyLocationFilter)}
-                    onChange={(event) => {
-                      const { value } = event.target;
-                      setOccupancyLocationFilter(value === 'all' ? 'all' : Number(value));
-                      setOccupancyFieldFilter('all');
-                    }}
-                    sx={{ minWidth: 160 }}
-                  >
-                    <MenuItem value="all">{t('ganttChart:treeFilters.allLocations')}</MenuItem>
-                    {locations.filter((location) => location.id).map((location) => (
-                      <MenuItem key={location.id} value={String(location.id)}>{location.name}</MenuItem>
-                    ))}
-                  </Select>
-                  <Select
-                    size="small"
-                    value={occupancyFieldFilter === 'all' ? 'all' : String(occupancyFieldFilter)}
-                    onChange={(event) => {
-                      const { value } = event.target;
-                      setOccupancyFieldFilter(value === 'all' ? 'all' : Number(value));
-                    }}
-                    disabled={occupancyLocationFilter === 'all'}
-                    sx={{ minWidth: 160 }}
-                  >
-                    <MenuItem value="all">{t('ganttChart:treeFilters.allFields')}</MenuItem>
-                    {occupancyFieldOptions.map((field) => (
-                      <MenuItem key={field.id} value={String(field.fieldId)}>{field.name}</MenuItem>
-                    ))}
-                  </Select>
-                  <FormControlLabel
-                    control={(
-                      <Checkbox
-                        size="small"
-                        checked={onlyOccupiedBeds}
-                        onChange={(event) => setOnlyOccupiedBeds(event.target.checked)}
-                      />
-                    )}
-                    label={t('ganttChart:treeFilters.onlyOccupiedBeds')}
-                  />
-                </Box>
+                  fieldFilter={occupancyFieldFilter}
+                  onFieldFilterChange={setOccupancyFieldFilter}
+                  onlyOccupiedBeds={onlyOccupiedBeds}
+                  onOnlyOccupiedBedsChange={setOnlyOccupiedBeds}
+                />
               )}
             </Box>
           )}
