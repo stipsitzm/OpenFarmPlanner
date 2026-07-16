@@ -10,6 +10,10 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link as RouterLink, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import PublicIcon from '@mui/icons-material/Public';
+import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
 import { bedAPI, cultureAPI, fieldAPI, type Culture } from '../api/api';
@@ -84,6 +88,13 @@ const PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_CONTAINER_SX: SxProps<Theme> = {
   py: 1.25,
   px: 1.5,
 };
+
+const PUBLIC_LIBRARY_CONFIRM_ITEMS = [
+  { key: 'permanent', icon: <PublicIcon fontSize="small" /> },
+  { key: 'privateData', icon: <LockOutlinedIcon fontSize="small" /> },
+  { key: 'reuse', icon: <CheckCircleOutlineIcon fontSize="small" /> },
+  { key: 'license', icon: <VerifiedOutlinedIcon fontSize="small" /> },
+] as const;
 
 const PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_TITLE_SX: SxProps<Theme> = {
   fontWeight: 500,
@@ -653,14 +664,24 @@ function Cultures() {
             <Typography color="text.secondary">
               {t('library.publishConfirm.intro', { name: selectedCulture?.name ?? '' })}
             </Typography>
-            <Box component="ul" sx={{ mt: 0, mb: 0, pl: 3, color: 'text.secondary' }}>
-              <li>{t('library.publishConfirm.published')}</li>
-              <li>{t('library.publishConfirm.neverPublished')}</li>
-              <li>{t('library.publishConfirm.attribution')}</li>
-              <li>{t('library.publishConfirm.persistence')}</li>
-              <li>{t('library.publishConfirm.license')}</li>
-              <li>{t('library.publishConfirm.noRemoval')}</li>
-            </Box>
+            <Stack spacing={1}>
+              {PUBLIC_LIBRARY_CONFIRM_ITEMS.map((item) => (
+                <Stack
+                  key={item.key}
+                  direction="row"
+                  spacing={1.25}
+                  alignItems="flex-start"
+                  sx={{ color: 'text.secondary' }}
+                >
+                  <Box sx={{ color: 'success.main', display: 'flex', pt: 0.25 }}>
+                    {item.icon}
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    {t(`library.publishConfirm.items.${item.key}`)}
+                  </Typography>
+                </Stack>
+              ))}
+            </Stack>
             <FormControlLabel
               control={(
                 <Checkbox

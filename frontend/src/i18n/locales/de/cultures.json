@@ -480,14 +480,14 @@
     "anonymousAuthor": "Anonym",
     "publishConfirm": {
       "title": "Kultur veröffentlichen?",
-      "intro": "„{{name}}“ wird Teil der öffentlichen Kulturbibliothek: einer gemeinschaftlich aufgebauten, dauerhaft bestehenden Wissensdatenbank für Kulturdaten.",
-      "published": "Veröffentlicht werden die Anbaudaten der Kultur, z. B. Name, Sorte, Wachstums- und Erntedauer, Pflanzabstände, Saatgutmenge und Lieferant.",
-      "neverPublished": "Ihre E-Mail-Adresse sowie private Notizen mit Fotos aus Ihrem Projekt werden niemals mitveröffentlicht.",
-      "attribution": "Als Urheber wird ausschließlich Ihr öffentlicher Benutzername angezeigt.",
-      "persistence": "Andere Nutzer können den Datensatz dauerhaft importieren, weiterverwenden und künftig gemeinschaftlich weiterentwickeln.",
-      "license": "Die Veröffentlichung erfolgt unter der Creative Commons Attribution-ShareAlike 4.0 International Lizenz (CC BY-SA 4.0), auch für künftige öffentliche APIs, Datenexporte und die Nutzung durch andere Projekte.",
-      "noRemoval": "Veröffentlichte Einträge werden grundsätzlich nicht auf Wunsch wieder entfernt; eine Entfernung ist nur in Ausnahmefällen wie Rechtsverletzungen, personenbezogenen Daten, Spam, Missbrauch oder Moderationsentscheidungen vorgesehen.",
-      "acceptLicense": "Ich bestätige, dass ich zur Veröffentlichung berechtigt bin und den Datensatz dauerhaft unter CC BY-SA 4.0 zur öffentlichen Kulturbibliothek beitrage.",
+      "intro": "„{{name}}“ wird als Anbaudatensatz veröffentlicht.",
+      "items": {
+        "permanent": "Der Datensatz wird dauerhaft Teil der öffentlichen Kulturbibliothek.",
+        "privateData": "Private Daten wie E-Mail-Adresse, private Notizen und Fotos werden nicht veröffentlicht. Sichtbar ist nur Ihr öffentlicher Anzeigename, falls Sie einen festgelegt haben.",
+        "reuse": "Andere können den Datensatz dauerhaft importieren, nutzen und weiterentwickeln.",
+        "license": "Lizenz: CC BY-SA 4.0. Praktisch bedeutet das: Nutzung und Bearbeitung sind erlaubt, wenn die Quelle genannt wird und Verbesserungen wieder unter denselben Bedingungen geteilt werden."
+      },
+      "acceptLicense": "Ich darf diesen Datensatz veröffentlichen und bin einverstanden, dass er dauerhaft unter CC BY-SA 4.0 Teil der öffentlichen Kulturbibliothek wird.",
       "linkPrefix": "Details dazu finden Sie in der ",
       "privacyLinkLabel": "Datenschutzerklärung",
       "linkMiddle": " und den ",

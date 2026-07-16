@@ -237,7 +237,7 @@ describe('Cultures action area', () => {
     expect(refreshUserMock).not.toHaveBeenCalled();
   });
 
-  it('shows a confirmation dialog before publishing, explaining permanence and requiring license acceptance', async () => {
+  it('shows a concise confirmation dialog before publishing, explaining permanence, privacy, reuse, and license acceptance', async () => {
     renderCultures();
 
     await waitFor(() => {
@@ -248,9 +248,12 @@ describe('Cultures action area', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Kultur veröffentlichen?')).toBeInTheDocument();
-    expect(within(dialog).getByText(/dauerhaft bestehenden Wissensdatenbank/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Creative Commons Attribution-ShareAlike 4\.0 International/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/grundsätzlich nicht auf Wunsch wieder entfernt/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/dauerhaft Teil der öffentlichen Kulturbibliothek/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Private Daten wie E-Mail-Adresse/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/öffentlicher Anzeigename/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/dauerhaft importieren, nutzen und weiterentwickeln/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Lizenz: CC BY-SA 4\.0/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Quelle genannt wird/)).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Veröffentlichen' })).toBeDisabled();
     fireEvent.click(within(dialog).getByRole('checkbox', { name: /CC BY-SA 4\.0/ }));
     expect(within(dialog).getByRole('button', { name: 'Veröffentlichen' })).toBeEnabled();
