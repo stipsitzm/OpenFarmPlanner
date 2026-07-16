@@ -17,21 +17,13 @@ import type {
   GridValueOptionsParams,
 } from "@mui/x-data-grid";
 import {
-  Alert,
   Box,
   Button,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
-  FormControl,
   IconButton,
-  InputLabel,
   Menu,
   MenuItem,
-  Select,
   Stack,
   TextField,
   Tooltip,
@@ -111,6 +103,7 @@ export {
 
 import { useAreaValidationDialog, type AreaValidationDialogState } from "./useAreaValidationDialog";
 import { AreaValidationDialog } from "../components/planting-plans/AreaValidationDialog";
+import { MobilePlanFormDialog } from "../components/planting-plans/MobilePlanFormDialog";
 export { buildAreaColumnHeaderLabel } from "./plantingPlansUtils";
 export {
   buildMobileCreateForm,
@@ -1002,6 +995,11 @@ function PlantingPlans() {
     setMobileCreateError("");
     setMobileEditId(null);
     setMobileLastEditedField(null);
+  };
+
+  const handleMobileLinkedFieldEdited = (field: "area_m2" | "plants_count"): void => {
+    setMobileLastEditedField(field);
+    setAreaNotice(null);
   };
 
   useEffect(() => {
@@ -1951,136 +1949,21 @@ function PlantingPlans() {
 
       </Box>
 
-      <Dialog open={isMobileCreateOpen} onClose={closeMobileCreateDialog} fullWidth maxWidth="sm">
-        <DialogTitle>
-          {mobileEditId ? t("plantingPlans:mobile.editTitle") : t("plantingPlans:mobile.createTitle")}
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {mobileCreateError ? <Alert severity="error">{mobileCreateError}</Alert> : null}
-            <FormControl fullWidth>
-              <InputLabel>{t("plantingPlans:columns.culture")}</InputLabel>
-              <Select
-                value={mobileCreateForm.culture}
-                label={t("plantingPlans:columns.culture")}
-                onChange={(event) =>
-                  setMobileCreateForm((previous) => ({ ...previous, culture: String(event.target.value) }))
-                }
-              >
-                {cultureOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>{t("plantingPlans:columns.bed")}</InputLabel>
-              <Select
-                value={mobileCreateForm.bed}
-                label={t("plantingPlans:columns.bed")}
-                onChange={(event) =>
-                  setMobileCreateForm((previous) => ({ ...previous, bed: String(event.target.value) }))
-                }
-              >
-                {bedOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel>{t("plantingPlans:columns.cultivationType")}</InputLabel>
-              <Select
-                value={mobileCreateForm.cultivation_type}
-                label={t("plantingPlans:columns.cultivationType")}
-                onChange={(event) =>
-                  setMobileCreateForm((previous) => ({ ...previous, cultivation_type: event.target.value as CultivationType }))
-                }
-              >
-                {cultivationTypeOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              type="text"
-              label={t("plantingPlans:columns.plantingDate")}
-              placeholder="TT.MM.JJJJ"
-              InputLabelProps={{ shrink: true }}
-              value={mobileCreateForm.planting_date}
-              onChange={(event) =>
-                setMobileCreateForm((previous) => ({ ...previous, planting_date: event.target.value }))
-              }
-            />
-            <TextField
-              type="text"
-              inputMode="decimal"
-              label={t("plantingPlans:columns.areaM2")}
-              value={mobileCreateForm.area_m2}
-              onChange={(event) => {
-                const nextArea = event.target.value;
-                const plantsPerSqm = getPlantsPerSqmForCulture(mobileCreateForm.culture);
-                const normalizedArea = nextArea.trim().toLowerCase();
-                const maxKeyword = t("plantingPlans:placeholders.maxKeyword").toLowerCase();
-                const parsedArea = normalizedArea === maxKeyword ? null : parseLocalizedNumber(nextArea, numberLocale);
-                setMobileCreateForm((previous) => ({
-                  ...previous,
-                  area_m2: nextArea,
-                  plants_count:
-                    plantsPerSqm && parsedArea !== null
-                      ? formatNumberForInput(
-                          Math.round(parsedArea * plantsPerSqm),
-                          { maximumFractionDigits: 0 },
-                        )
-                      : previous.plants_count,
-                }));
-                setMobileLastEditedField("area_m2");
-                setAreaNotice(null);
-              }}
-              placeholder={t("plantingPlans:placeholders.maxKeyword")}
-              helperText={t("plantingPlans:tooltips.areaAutoMax")}
-              slotProps={{ htmlInput: { inputMode: "decimal" } }}
-            />
-            <TextField
-              type="text"
-              inputMode="numeric"
-              label={t("plantingPlans:columns.plantsCount")}
-              value={mobileCreateForm.plants_count}
-              onChange={(event) => {
-                const nextPlants = event.target.value;
-                const plantsPerSqm = getPlantsPerSqmForCulture(mobileCreateForm.culture);
-                const parsedPlants = parseLocalizedNumber(nextPlants, numberLocale);
-                setMobileCreateForm((previous) => ({
-                  ...previous,
-                  plants_count: nextPlants,
-                  area_m2:
-                    plantsPerSqm && parsedPlants !== null
-                      ? formatNumberForInput(parsedPlants / plantsPerSqm, {
-                          maximumFractionDigits: 2,
-                        })
-                      : previous.area_m2,
-                }));
-                setMobileLastEditedField("plants_count");
-                setAreaNotice(null);
-              }}
-              slotProps={{ htmlInput: { inputMode: "numeric" } }}
-            />
-            <TextField
-              label={t("common:fields.notes")}
-              multiline
-              minRows={3}
-              value={mobileCreateForm.notes}
-              onChange={(event) =>
-                setMobileCreateForm((previous) => ({ ...previous, notes: event.target.value }))
-              }
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeMobileCreateDialog}>{t("common:actions.cancel")}</Button>
-          <Button onClick={() => void (mobileEditId ? handleMobileUpdate() : handleMobileCreate())} variant="contained">
-            {mobileEditId ? t("common:actions.save") : t("common:actions.add")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <MobilePlanFormDialog
+        open={isMobileCreateOpen}
+        isEdit={mobileEditId !== null}
+        form={mobileCreateForm}
+        setForm={setMobileCreateForm}
+        error={mobileCreateError}
+        cultureOptions={cultureOptions}
+        bedOptions={bedOptions}
+        cultivationTypeOptions={cultivationTypeOptions}
+        numberLocale={numberLocale}
+        getPlantsPerSqm={getPlantsPerSqmForCulture}
+        onLinkedFieldEdited={handleMobileLinkedFieldEdited}
+        onClose={closeMobileCreateDialog}
+        onSubmit={() => void (mobileEditId ? handleMobileUpdate() : handleMobileCreate())}
+      />
       {areaValidationDialog && (
         <AreaValidationDialog
           dialog={areaValidationDialog}
