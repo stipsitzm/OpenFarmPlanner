@@ -16,7 +16,6 @@ const privacySections = [
   'thirdCountryTransfers',
   'mandatoryProvision',
   'storageDuration',
-  'automatedDecisionMaking',
   'rights',
   'complaint',
   'changes',

@@ -115,7 +115,7 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/Art\. 7 Abs\. 3 DSGVO/)).toBeInTheDocument();
   });
 
-  it('covers WKO checklist details for provision duty, third-country transfer, and profiling', () => {
+  it('covers WKO checklist details for provision duty and third-country transfer', () => {
     renderPrivacyPolicyPage();
 
     expect(screen.queryByRole('heading', { name: /Datenschutzbeauftragter/ })).not.toBeInTheDocument();
@@ -125,8 +125,8 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/ohne Veröffentlichung können Sie die übrigen Funktionen weiterhin nutzen/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Drittlandübermittlung/ })).toBeInTheDocument();
     expect(screen.getByText(/außerhalb der Europäischen Union oder des Europäischen Wirtschaftsraums findet/)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Automatisierte Entscheidungsfindung/ })).toBeInTheDocument();
-    expect(screen.getByText(/einschließlich Profiling im Sinne des Art\. 22 DSGVO/)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Automatisierte Entscheidungsfindung/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/einschließlich Profiling im Sinne des Art\. 22 DSGVO/)).not.toBeInTheDocument();
   });
 
   it('states concrete retention windows visible from account and invitation flows', () => {
