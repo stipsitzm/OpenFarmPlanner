@@ -89,7 +89,7 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/gekürzte IP-Adresse/)).toBeInTheDocument();
     expect(screen.getByText(/angeforderte Seite bzw\. Ressource/)).toBeInTheDocument();
     expect(screen.getByText(/Referrer-URL, sofern übermittelt/)).toBeInTheDocument();
-    expect(screen.getByText(/Webserver-Logfiles werden täglich rotiert und automatisch nach 7 Tagen gelöscht/)).toBeInTheDocument();
+    expect(screen.getByText(/Webserver-Logfiles werden automatisch nach 7 Tagen gelöscht/)).toBeInTheDocument();
     expect(screen.getByText(/technische Anwendungsprotokolle.*Django- oder Gunicorn-Fehlerlogs/)).toBeInTheDocument();
     expect(screen.getByText(/Fehlerdiagnose sowie dem sicheren und stabilen Betrieb/)).toBeInTheDocument();
     expect(screen.getByText(/sicheren und stabilen Betrieb der Anwendung.*Erwägungsgrund 49 DSGVO/s)).toBeInTheDocument();
@@ -133,7 +133,7 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/E-Mail-Änderungslinks sind derzeit 24 Stunden gültig/)).toBeInTheDocument();
     expect(screen.getByText(/Projekt-Einladungen sind derzeit 14 Tage gültig/)).toBeInTheDocument();
     expect(screen.getByText(/für 14 Tage als „zur Löschung vorgemerkt“/)).toBeInTheDocument();
-    expect(screen.getByText(/Server-Logfiles des Hosting-Anbieters werden täglich rotiert und nach 7 Tagen gelöscht/)).toBeInTheDocument();
+    expect(screen.getByText(/Server-Logfiles des Hosting-Anbieters werden nach 7 Tagen gelöscht/)).toBeInTheDocument();
     expect(screen.getByText(/Eigene technische Cron- und Anwendungslogs speichern wir höchstens 14 Tage/)).toBeInTheDocument();
   });
 
