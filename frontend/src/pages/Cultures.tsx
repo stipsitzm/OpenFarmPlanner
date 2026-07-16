@@ -249,14 +249,20 @@ function Cultures() {
   const [publicLibraryTermsAccepted, setPublicLibraryTermsAccepted] = useState(false);
 
   const handleRequestPublishCulture = useCallback(() => {
+    if (user?.public_library_terms_accepted) {
+      void handlePublishCurrentCulture();
+      return;
+    }
     setPublicLibraryTermsAccepted(false);
     setPublishConfirmOpen(true);
-  }, []);
+  }, [handlePublishCurrentCulture, user?.public_library_terms_accepted]);
 
   const handlePublishConfirm = useCallback(() => {
     setPublishConfirmOpen(false);
-    void handlePublishCurrentCulture(publicLibraryTermsAccepted);
-    setPublicLibraryTermsAccepted(false);
+    void (async () => {
+      await handlePublishCurrentCulture(publicLibraryTermsAccepted);
+      setPublicLibraryTermsAccepted(false);
+    })();
   }, [handlePublishCurrentCulture, publicLibraryTermsAccepted]);
 
   // Fetch cultures on mount

@@ -815,6 +815,7 @@ class ConsentApiTest(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['pending_consents'], ['terms'])
+        self.assertFalse(response.data['public_library_terms_accepted'])
 
     def test_existing_user_who_accepted_an_older_version_is_flagged_as_pending(self) -> None:
         DocumentConsent.objects.create(user=self.user, document=DocumentConsent.DOCUMENT_TERMS, version='2020-01-01')
@@ -855,6 +856,19 @@ class ConsentApiTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         record = DocumentConsent.objects.get(user=self.user, document=DocumentConsent.DOCUMENT_PRIVACY)
         self.assertEqual(record.version, CURRENT_VERSIONS[DocumentConsent.DOCUMENT_PRIVACY])
+
+    def test_me_endpoint_reports_public_library_terms_acceptance(self) -> None:
+        DocumentConsent.objects.create(
+            user=self.user,
+            document=DocumentConsent.DOCUMENT_PUBLIC_LIBRARY,
+            version=CURRENT_VERSIONS[DocumentConsent.DOCUMENT_PUBLIC_LIBRARY],
+        )
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+
+        response = self.client.get('/openfarmplanner/api/auth/me/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['public_library_terms_accepted'])
 
     def test_accept_endpoint_requires_authentication(self) -> None:
         response = self.client.post('/openfarmplanner/api/auth/consent/accept/', {'document': 'terms'}, format='json')

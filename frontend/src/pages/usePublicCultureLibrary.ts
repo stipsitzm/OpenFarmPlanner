@@ -5,6 +5,7 @@ import { cultureAPI, publicCultureAPI } from '../api/api';
 import type { Culture } from '../api/api';
 import type { PublicCulture, PublishPublicCultureDuplicateError } from '../api/types';
 import { useTranslation } from '../i18n';
+import { useAuth } from '../auth/useAuth';
 import { extractApiErrorMessage } from '../api/errors';
 import { dedupePublicCultures } from './publicCultureUtils';
 
@@ -24,6 +25,7 @@ export function usePublicCultureLibrary({
   showSnackbar,
 }: UsePublicCultureLibraryConfig) {
   const { t } = useTranslation(['cultures', 'common']);
+  const { refreshUser } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -86,9 +88,9 @@ export function usePublicCultureLibrary({
     }
   };
 
-  const handlePublishCurrentCulture = async (acceptedPublicLibraryTerms = false) => {
+  const handlePublishCurrentCulture = async (acceptedPublicLibraryTerms = false): Promise<boolean> => {
     if (!selectedCulture?.id) {
-      return;
+      return false;
     }
 
     try {
@@ -101,6 +103,10 @@ export function usePublicCultureLibrary({
       } else {
         showSnackbar(t('library.publishSuccess', { name: selectedCulture.name }), 'success');
       }
+      if (acceptedPublicLibraryTerms) {
+        await refreshUser();
+      }
+      return true;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 409) {
         const duplicateError = error.response.data as PublishPublicCultureDuplicateError | undefined;
@@ -112,10 +118,11 @@ export function usePublicCultureLibrary({
         } else {
           showSnackbar(t('library.publishDuplicateError'), 'info');
         }
-        return;
+        return false;
       }
       console.error('Error publishing culture:', error);
       showSnackbar(extractApiErrorMessage(error, t, t('library.publishError')), 'error');
+      return false;
     } finally {
       setPublishingCultureId(null);
     }

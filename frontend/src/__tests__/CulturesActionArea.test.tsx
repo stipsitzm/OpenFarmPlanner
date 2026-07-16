@@ -16,6 +16,8 @@ const {
   publishPublicMock,
   deleteMock,
   undeleteMock,
+  refreshUserMock,
+  authUser,
 } = vi.hoisted(() => ({
   listMock: vi.fn(),
   locationListMock: vi.fn(),
@@ -25,6 +27,13 @@ const {
   publishPublicMock: vi.fn(),
   deleteMock: vi.fn(),
   undeleteMock: vi.fn(),
+  refreshUserMock: vi.fn(),
+  authUser: {
+    id: 1,
+    email: 'tester@example.com',
+    display_name: 'Tester',
+    public_library_terms_accepted: false,
+  },
 }));
 
 vi.mock('../api/api', async () => {
@@ -98,7 +107,8 @@ vi.mock('../cultures/CultureDetail', () => ({
 
 vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({
-    user: { id: 1, email: 'tester@example.com', display_name: 'Tester' },
+    user: authUser,
+    refreshUser: refreshUserMock,
   }),
 }));
 
@@ -133,6 +143,8 @@ const waitForDeleteDialogToClose = async (): Promise<void> => {
 describe('Cultures action area', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authUser.public_library_terms_accepted = false;
+    refreshUserMock.mockResolvedValue(authUser);
 
     listMock.mockResolvedValue({
       data: {
@@ -222,6 +234,7 @@ describe('Cultures action area', () => {
       expect(publishPublicMock).toHaveBeenCalledWith(1, { accepted_public_library_terms: true });
       expect(screen.getByText('Diese Kultur ist bereits öffentlich vorhanden: Tomate (Roma)')).toBeInTheDocument();
     });
+    expect(refreshUserMock).not.toHaveBeenCalled();
   });
 
   it('shows a confirmation dialog before publishing, explaining permanence and requiring license acceptance', async () => {
@@ -249,6 +262,22 @@ describe('Cultures action area', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
     expect(publishPublicMock).not.toHaveBeenCalled();
+  });
+
+  it('publishes directly after the current public-library terms were already accepted', async () => {
+    authUser.public_library_terms_accepted = true;
+    renderCultures();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Veröffentlichen' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
+
+    await waitFor(() => {
+      expect(publishPublicMock).toHaveBeenCalledWith(1, { accepted_public_library_terms: false });
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('does not attempt to render public-library entries without a trigger', async () => {
