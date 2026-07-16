@@ -99,7 +99,7 @@
         },
         "hosting": {
           "title": "Hosting",
-          "content": "This application is hosted by the following provider, which acts as our processor:\n\nUberspace GmbH\nKaiserstraße 15\n55116 Mainz\nGermany\n\nWhen the application is accessed, web server log files may be created by the hosting provider. Under the Uberspace standard configuration, user-accessible web server access logs contain in particular:",
+          "content": "This application is hosted by the following provider, which acts as our processor:\n\nUberspace GmbH\nKaiserstraße 15\n55116 Mainz\nGermany\n\nWhen the application is accessed, the web server processes technical access data:",
           "bullets": {
             "ipAddress": "shortened IP address (for IPv4 only the first 16 bits, for IPv6 only the first 32 bits are stored)",
             "requestTime": "Date and time of the request",
@@ -108,7 +108,7 @@
             "operatingSystem": "Operating system",
             "referrerUrl": "Referrer URL, if transmitted"
           },
-          "legalBasis": "Uberspace rotates these web server log files daily and deletes them automatically after 7 days. In addition, technical Django or Gunicorn error logs may be generated for troubleshooting; these are used exclusively for secure and stable operation of the application and may contain technical error messages, timestamps, and affected requests.\n\nLegal basis: Art. 6(1)(f) GDPR (legitimate interest in secure and stable operation of the application)."
+          "legalBasis": "The web server log files are rotated daily and deleted automatically after 7 days. In addition, we process technical application logs (for example Django or Gunicorn error logs). These contain only technical information such as error messages, timestamps, and affected requests, and are used exclusively for troubleshooting and secure, stable operation of the application.\n\nLegal basis: Art. 6(1)(f) GDPR (legitimate interest in secure and stable operation of the application)."
         },
         "registration": {
           "title": "Registration and user account",
@@ -136,17 +136,6 @@
             "systemNotifications": "System notifications"
           },
           "legalBasis": "Legal basis: Art. 6(1)(b) GDPR"
-        },
-        "logFiles": {
-          "title": "Log files",
-          "content": "Technical log files are stored to ensure reliable operation. These may include:",
-          "bullets": {
-            "ipAddress": "IP address",
-            "errorMessages": "Error messages",
-            "accessData": "Access data",
-            "timestamps": "Timestamps"
-          },
-          "legalBasis": "Legal basis: Art. 6(1)(f) GDPR"
         },
         "cookies": {
           "title": "Cookies",

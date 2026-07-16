@@ -82,14 +82,20 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/Session-Storage-Daten werden in der Regel beim Schließen des Browser-Tabs gelöscht/)).toBeInTheDocument();
   });
 
-  it('describes Uberspace hosting logs with shortened IPs, requested resources, retention, and application error logs', () => {
+  it('describes hosting logs and application logs without a separate log-files section', () => {
     renderPrivacyPolicyPage();
 
+    expect(screen.getByText(/Beim Aufruf der Anwendung verarbeitet der Webserver technische Zugriffsdaten/)).toBeInTheDocument();
     expect(screen.getByText(/gekürzte IP-Adresse/)).toBeInTheDocument();
     expect(screen.getByText(/angeforderte Seite bzw\. Ressource/)).toBeInTheDocument();
     expect(screen.getByText(/Referrer-URL, sofern übermittelt/)).toBeInTheDocument();
-    expect(screen.getByText(/rotiert diese Webserver-Logfiles täglich und löscht sie automatisch nach 7 Tagen/)).toBeInTheDocument();
-    expect(screen.getByText(/Django- bzw\. Gunicorn-Fehlerlogs zur Fehlerdiagnose/)).toBeInTheDocument();
+    expect(screen.getByText(/Webserver-Logfiles werden täglich rotiert und automatisch nach 7 Tagen gelöscht/)).toBeInTheDocument();
+    expect(screen.getByText(/technische Anwendungsprotokolle.*Django- oder Gunicorn-Fehlerlogs/)).toBeInTheDocument();
+    expect(screen.getByText(/Fehlerdiagnose sowie dem sicheren und stabilen Betrieb/)).toBeInTheDocument();
+    expect(screen.getByText(/sicheren und stabilen Betrieb der Anwendung.*Erwägungsgrund 49 DSGVO/s)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Log-Dateien/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Standardkonfiguration/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/können Webserver-Logfiles/)).not.toBeInTheDocument();
   });
 
   it('does not claim data is never shared with third parties', () => {
