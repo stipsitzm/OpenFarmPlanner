@@ -20,9 +20,7 @@ import {
   Box,
   Button,
   CircularProgress,
-  Divider,
   IconButton,
-  Menu,
   MenuItem,
   Stack,
   TextField,
@@ -31,8 +29,6 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
@@ -48,7 +44,6 @@ import {
 import { usePlantingPlanHierarchy, type CultivationTypeSelectOption } from "./usePlantingPlanHierarchy";
 import PageContainer from "../components/layout/PageContainer";
 import PageSurface from "../components/layout/PageSurface";
-import { ContextMenuActionItem } from "../components/contextMenu/ContextMenuActionItem";
 import { AlertSnackbar } from "../components/feedback/AlertSnackbar";
 import {
   plantingPlanAPI,
@@ -104,6 +99,7 @@ export {
 import { useAreaValidationDialog, type AreaValidationDialogState } from "./useAreaValidationDialog";
 import { AreaValidationDialog } from "../components/planting-plans/AreaValidationDialog";
 import { MobilePlanFormDialog } from "../components/planting-plans/MobilePlanFormDialog";
+import { MobilePlanActionsMenu } from "../components/planting-plans/MobilePlanActionsMenu";
 export { buildAreaColumnHeaderLabel } from "./plantingPlansUtils";
 export {
   buildMobileCreateForm,
@@ -1594,55 +1590,15 @@ function PlantingPlans() {
                 </Box>
               )}
             />
-            <Menu
-              id="planting-plan-mobile-actions-menu"
+            <MobilePlanActionsMenu
               anchorEl={mobileActionMenuAnchor}
-              open={Boolean(mobileActionMenuAnchor)}
+              row={mobileActionMenuRow}
               onClose={closeMobileActionMenu}
-            >
-              <ContextMenuActionItem
-                label={t("common:actions.edit")}
-                icon={<EditIcon fontSize="small" />}
-                onClick={() => {
-                  if (mobileActionMenuRow) {
-                    openMobileEditDialog(mobileActionMenuRow);
-                  }
-                  closeMobileActionMenu();
-                }}
-              />
-              <ContextMenuActionItem
-                label={t("common:actions.duplicate")}
-                icon={<ContentCopyIcon fontSize="small" />}
-                onClick={() => {
-                  if (mobileActionMenuRow) {
-                    openMobileDuplicateDialog(mobileActionMenuRow);
-                  }
-                  closeMobileActionMenu();
-                }}
-              />
-              <ContextMenuActionItem
-                label={t("plantingPlans:actions.copyPlantingPlan")}
-                icon={<ContentCopyIcon fontSize="small" />}
-                onClick={() => {
-                  if (mobileActionMenuRow) {
-                    handleCopyPlantingPlan(mobileActionMenuRow);
-                  }
-                  closeMobileActionMenu();
-                }}
-              />
-              <Divider role="separator" />
-              <ContextMenuActionItem
-                label={t("common:actions.delete")}
-                icon={<DeleteIcon fontSize="small" />}
-                color="error"
-                onClick={() => {
-                  if (mobileActionMenuRow) {
-                    gridCommandApiRef.current?.deleteRow(mobileActionMenuRow.id);
-                  }
-                  closeMobileActionMenu();
-                }}
-              />
-            </Menu>
+              onEdit={openMobileEditDialog}
+              onDuplicate={openMobileDuplicateDialog}
+              onCopy={handleCopyPlantingPlan}
+              onDelete={(row) => gridCommandApiRef.current?.deleteRow(row.id)}
+            />
           </Box>
         ) : null}
 
