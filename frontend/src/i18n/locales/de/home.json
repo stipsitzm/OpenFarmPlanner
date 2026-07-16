@@ -172,7 +172,7 @@
         },
         "mandatoryProvision": {
           "title": "Bereitstellung personenbezogener Daten",
-          "content": "Die Bereitstellung personenbezogener Daten ist weder gesetzlich noch vertraglich vorgeschrieben, soweit Sie nur die öffentliche Startseite aufrufen. Für die Registrierung und Nutzung der Anwendung sind E-Mail-Adresse, Passwort und die technisch notwendigen Cookies erforderlich; ohne diese Daten können wir kein Benutzerkonto bereitstellen und keine Anmeldung ermöglichen. Projekt- und Anwendungsdaten stellen Sie freiwillig bereit, soweit Sie die jeweiligen Funktionen nutzen möchten; ohne diese Angaben können die entsprechenden Planungsfunktionen nicht oder nur eingeschränkt verwendet werden. Die Veröffentlichung in der öffentlichen Kulturbibliothek ist freiwillig und für die Nutzung der übrigen Anwendung nicht erforderlich."
+          "content": "Die Bereitstellung personenbezogener Daten ist weder gesetzlich noch vertraglich vorgeschrieben, soweit Sie nur die öffentliche Startseite aufrufen. Für die Registrierung und Nutzung der Anwendung sind E-Mail-Adresse, Passwort und die technisch notwendigen Cookies erforderlich; ohne diese Daten können wir kein Benutzerkonto bereitstellen und keine Anmeldung ermöglichen. Projekt- und Anwendungsdaten stellen Sie freiwillig bereit, soweit Sie die jeweiligen Funktionen nutzen möchten; ohne diese Angaben können die entsprechenden Planungsfunktionen nicht oder nur eingeschränkt verwendet werden. Die Veröffentlichung in der öffentlichen Kulturbibliothek ist freiwillig; ohne Veröffentlichung können Sie die übrigen Funktionen weiterhin nutzen."
         },
         "storageDuration": {
           "title": "Speicherdauer",

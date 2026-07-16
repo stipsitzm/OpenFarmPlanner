@@ -122,6 +122,7 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.queryByText(/kein Datenschutzbeauftragter bestellt/)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Bereitstellung personenbezogener Daten/ })).toBeInTheDocument();
     expect(screen.getByText(/ohne diese Daten können wir kein Benutzerkonto bereitstellen/)).toBeInTheDocument();
+    expect(screen.getByText(/ohne Veröffentlichung können Sie die übrigen Funktionen weiterhin nutzen/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Drittlandübermittlung/ })).toBeInTheDocument();
     expect(screen.getByText(/außerhalb der Europäischen Union oder des Europäischen Wirtschaftsraums findet/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Automatisierte Entscheidungsfindung/ })).toBeInTheDocument();
