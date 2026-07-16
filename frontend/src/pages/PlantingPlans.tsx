@@ -110,6 +110,7 @@ export {
 } from "../components/planting-plans/areaHierarchySelection";
 
 import { useAreaValidationDialog, type AreaValidationDialogState } from "./useAreaValidationDialog";
+import { AreaValidationDialog } from "../components/planting-plans/AreaValidationDialog";
 export { buildAreaColumnHeaderLabel } from "./plantingPlansUtils";
 export {
   buildMobileCreateForm,
@@ -2081,57 +2082,12 @@ function PlantingPlans() {
         </DialogActions>
       </Dialog>
       {areaValidationDialog && (
-        <Dialog open onClose={closeAreaValidationDialog} fullWidth maxWidth="xs">
-          <DialogTitle>
-            {areaValidationDialog.mode === "bedLimit"
-              ? t("plantingPlans:areaValidation.bedLimitTitle")
-              : areaValidationDialog.mode === "noRemainingArea"
-                ? t("plantingPlans:areaValidation.noRemainingTitle")
-                : t("plantingPlans:areaValidation.remainingLimitTitle")}
-          </DialogTitle>
-          <DialogContent>
-            <Stack spacing={1}>
-              {areaValidationDialog.mode !== "bedLimit" && (
-                <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.availableArea", { area: formatAreaM2(areaValidationDialog.availableArea, numberLocale) })}</Typography>
-              )}
-              <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.bedArea", { area: formatAreaM2(areaValidationDialog.bedArea, numberLocale) })}</Typography>
-              {areaValidationDialog.mode !== "bedLimit" && (
-                <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.occupiedArea", { area: formatAreaM2(areaValidationDialog.occupiedArea, numberLocale) })}</Typography>
-              )}
-              {areaValidationDialog.mode !== "noRemainingArea" && (
-                <Typography sx={{ whiteSpace: "nowrap" }}>{t("plantingPlans:areaValidation.requestedArea", { area: formatAreaM2(areaValidationDialog.requestedArea, numberLocale) })}</Typography>
-              )}
-              {areaValidationDialog.mode !== "noRemainingArea" && (
-                <Typography sx={{ whiteSpace: "nowrap", fontWeight: 700 }}>
-                  {t("plantingPlans:areaValidation.acceptedArea", {
-                    area: formatAreaM2(
-                      areaValidationDialog.mode === "bedLimit"
-                        ? areaValidationDialog.bedArea
-                        : areaValidationDialog.availableArea,
-                      numberLocale,
-                    ),
-                  })}
-                </Typography>
-              )}
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={closeAreaValidationDialog}>{t("common:actions.cancel")}</Button>
-            {areaValidationDialog.mode !== "noRemainingArea" && (
-              <Button
-                variant="contained"
-                color="success"
-                onClick={async () => {
-                  await commitAreaValidationDialogValue(areaValidationDialog);
-                }}
-              >
-                {areaValidationDialog.mode === "bedLimit"
-                  ? t("plantingPlans:areaValidation.applyBedArea")
-                  : t("plantingPlans:areaValidation.applyRemainingArea")}
-              </Button>
-            )}
-          </DialogActions>
-        </Dialog>
+        <AreaValidationDialog
+          dialog={areaValidationDialog}
+          numberLocale={numberLocale}
+          onClose={closeAreaValidationDialog}
+          onCommit={commitAreaValidationDialogValue}
+        />
       )}
 
       <NotesDrawer
