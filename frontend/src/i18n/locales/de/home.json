@@ -164,7 +164,7 @@
         },
         "dataSharing": {
           "title": "Weitergabe von Daten",
-          "content": "Über die in Auftragsverarbeitung erfolgende Zusammenarbeit mit unserem Hosting-Anbieter (siehe Abschnitt „Hosting“) hinaus geben wir Ihre personenbezogenen Daten nur weiter, wenn:\n\n– dies für den technischen E-Mail-Versand im Zusammenhang mit Ihrem Konto oder Projekt-Einladungen erforderlich ist; der Versand erfolgt über die bei Uberspace betriebene Mail-Infrastruktur,\n– Sie durch das aktive Veröffentlichen einer Kultur in der öffentlichen Kulturbibliothek deren Sichtbarkeit für andere Nutzer und perspektivisch über öffentliche APIs oder Datenexporte wählen, gegebenenfalls einschließlich Ihres öffentlichen Anzeigenamens, sofern Sie einen solchen festgelegt haben (siehe Abschnitt „Öffentliche Kulturbibliothek“), oder\n– wir gesetzlich dazu verpflichtet sind, etwa gegenüber Behörden."
+          "content": "Über die in Auftragsverarbeitung erfolgende Zusammenarbeit mit unserem Hosting-Anbieter (siehe Abschnitt „Hosting“) hinaus geben wir Ihre personenbezogenen Daten nur weiter, wenn:\n\n– dies für den technischen E-Mail-Versand im Zusammenhang mit Ihrem Konto oder Projekt-Einladungen erforderlich ist; der Versand erfolgt über die bei Uberspace betriebene Mail-Infrastruktur,\n– Sie durch das aktive Veröffentlichen einer Kultur in der öffentlichen Kulturbibliothek deren Sichtbarkeit für andere Nutzer wählen, gegebenenfalls einschließlich Ihres öffentlichen Anzeigenamens, sofern Sie einen solchen festgelegt haben (siehe Abschnitt „Öffentliche Kulturbibliothek“), oder\n– wir gesetzlich dazu verpflichtet sind, etwa gegenüber Behörden."
         },
         "thirdCountryTransfers": {
           "title": "Drittlandübermittlung",

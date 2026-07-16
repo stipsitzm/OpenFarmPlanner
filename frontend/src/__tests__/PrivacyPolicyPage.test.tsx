@@ -103,6 +103,8 @@ describe('PrivacyPolicyPage', () => {
 
     expect(screen.queryByText(/werden nicht an Dritte weitergegeben/)).not.toBeInTheDocument();
     expect(screen.getByText(/Auftragsverarbeitung/)).toBeInTheDocument();
+    expect(screen.getByText(/deren Sichtbarkeit für andere Nutzer wählen/)).toBeInTheDocument();
+    expect(screen.queryByText(/perspektivisch über öffentliche APIs oder Datenexporte/)).not.toBeInTheDocument();
   });
 
   it('lists the right to withdraw consent and cites GDPR article numbers', () => {
