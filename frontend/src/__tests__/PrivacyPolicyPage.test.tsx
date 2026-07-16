@@ -164,4 +164,14 @@ describe('PrivacyPolicyPage', () => {
 
     expect(screen.getByText(/Stand: 15\. Juli 2026/)).toBeInTheDocument();
   });
+
+  it('explains privacy policy changes and points to the revision date at the end', () => {
+    renderPrivacyPolicyPage();
+
+    expect(screen.getByRole('heading', { name: /Änderungen dieser Datenschutzerklärung/ })).toBeInTheDocument();
+    expect(screen.getByText(/Verarbeitung personenbezogener Daten durch neue Funktionen/)).toBeInTheDocument();
+    expect(screen.getByText(/Den Stand der letzten Änderung finden Sie am Ende dieser Datenschutzerklärung/)).toBeInTheDocument();
+    expect(screen.getByText(/Über wesentliche Änderungen informieren wir aktive Nutzer in geeigneter Weise/)).toBeInTheDocument();
+    expect(screen.queryByText(/oben auf dieser Seite/)).not.toBeInTheDocument();
+  });
 });
