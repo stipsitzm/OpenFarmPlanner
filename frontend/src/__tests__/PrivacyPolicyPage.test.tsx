@@ -69,7 +69,10 @@ describe('PrivacyPolicyPage', () => {
     expect(publicLibraryBasis).toBeDefined();
     expect(publicLibraryBasis?.textContent).toMatch(/Art\. 6 Abs\. 1 lit\. b/);
     expect(publicLibraryBasis?.textContent).toMatch(/Art\. 6 Abs\. 1 lit\. f/);
+    expect(publicLibraryBasis?.textContent).toMatch(/personenbezogene Bezüge/);
+    expect(publicLibraryBasis?.textContent).toMatch(/Rein sachliche oder anonymisierte Kulturdaten fallen nicht unter die DSGVO/);
     expect(publicLibraryBasis?.textContent).not.toMatch(/lit\. a/);
+    expect(publicLibraryBasis?.textContent).not.toMatch(/nicht oder nicht mehr personenbezogene/);
   });
 
   it('separates cookies from local/session storage into distinct sections', () => {
