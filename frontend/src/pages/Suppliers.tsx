@@ -31,7 +31,11 @@ import { ContextMenuIndicator } from '../components/contextMenu/ContextMenuIndic
 import { contextMenuActionsOverlaySx } from '../components/contextMenu/contextMenuIndicatorStyles';
 import { CustomContextMenu } from '../components/contextMenu/CustomContextMenu';
 import TableSurface from '../components/layout/TableSurface';
-import type { Supplier, SupplierDeleteUndoPayload, SupplierDeleteUsage } from '../api/types';
+import type { Supplier, SupplierDeleteUndoPayload } from '../api/types';
+import {
+  SupplierDeleteUsageDialog,
+  type SupplierDeleteUsageDialogState,
+} from '../components/suppliers/SupplierDeleteUsageDialog';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
@@ -66,11 +70,6 @@ interface PendingSupplierDeletion {
   visible: boolean;
   message: string;
   undoPayload?: SupplierDeleteUndoPayload;
-}
-
-interface SupplierDeleteUsageDialogState {
-  supplier: Supplier;
-  usage: SupplierDeleteUsage;
 }
 
 const normalizeUrl = (input: string): string => {
@@ -752,75 +751,13 @@ export default function Suppliers() {
         </Box>
       </Dialog>
 
-      <Dialog
-        open={deleteUsageDialog !== null}
+      <SupplierDeleteUsageDialog
+        dialog={deleteUsageDialog}
+        unlinkDeletingSupplierId={unlinkDeletingSupplierId}
         onClose={() => setDeleteUsageDialog(null)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle sx={{ pb: 1 }}>{t('deleteUsageDialog.title')}</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
-            {deleteUsageDialog
-              ? t('deleteUsageDialog.summary', { count: deleteUsageDialog.usage.total_culture_count })
-              : ''}
-          </Typography>
-          {deleteUsageDialog ? (
-            <Box
-              sx={{
-                p: 2,
-                borderRadius: 1,
-                border: '1px solid',
-                borderColor: 'surface.surfaceSoftBorder',
-                bgcolor: 'surface.surfaceSubtleBackground',
-              }}
-            >
-              <Typography sx={{ fontWeight: 700, mb: 1 }}>
-                {deleteUsageDialog.supplier.name}
-              </Typography>
-              <Box component="ul" sx={{ m: 0, pl: 2.5, color: 'text.secondary' }}>
-                {deleteUsageDialog.usage.culture_count > 0 ? (
-                  <Typography component="li" variant="body2">
-                    {t('deleteUsageDialog.cultureUsage', { count: deleteUsageDialog.usage.culture_count })}
-                  </Typography>
-                ) : null}
-                {deleteUsageDialog.usage.supplier_data_culture_count > 0 ? (
-                  <Typography component="li" variant="body2">
-                    {t('deleteUsageDialog.supplierDataUsage', {
-                      cultureCount: deleteUsageDialog.usage.supplier_data_culture_count,
-                      rowCount: deleteUsageDialog.usage.supplier_data_count,
-                    })}
-                  </Typography>
-                ) : null}
-                {deleteUsageDialog.usage.seed_demand_culture_count > 0 ? (
-                  <Typography component="li" variant="body2">
-                    {t('deleteUsageDialog.seedDemandUsage', { count: deleteUsageDialog.usage.seed_demand_culture_count })}
-                  </Typography>
-                ) : null}
-              </Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-                {t('deleteUsageDialog.unlinkExplanation')}
-              </Typography>
-            </Box>
-          ) : null}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1, gap: 1, flexWrap: 'wrap' }}>
-          <Button onClick={openAffectedCultures} variant="outlined">
-            {t('deleteUsageDialog.openAffectedCultures')}
-          </Button>
-          <Button
-            onClick={() => void unlinkAndDeleteSupplier()}
-            color="error"
-            variant="contained"
-            disabled={unlinkDeletingSupplierId === deleteUsageDialog?.supplier.id}
-          >
-            {t('deleteUsageDialog.unlinkAndDelete')}
-          </Button>
-          <Button onClick={() => setDeleteUsageDialog(null)}>
-            {t('common:actions.cancel')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onOpenAffectedCultures={openAffectedCultures}
+        onUnlinkAndDelete={() => void unlinkAndDeleteSupplier()}
+      />
 
       {pendingSupplierDeletions.map((deletion, index) => (
         <DeleteUndoSnackbar
