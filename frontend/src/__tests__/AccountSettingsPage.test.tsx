@@ -60,11 +60,14 @@ describe('AccountSettingsPage', () => {
     expect(screen.getByRole('button', { name: 'Namen festlegen' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'E-Mail-Adresse ändern' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Passwort ändern' })).toBeInTheDocument();
+    expect(screen.getByText(/Projekte ohne verbleibende Mitglieder werden dann einschließlich Projektdaten gelöscht/)).toBeInTheDocument();
+    expect(screen.getByText(/veröffentlichte Kulturbibliotheks-Einträge bleiben bestehen/)).toBeInTheDocument();
     expect(screen.queryByLabelText('Neue E-Mail-Adresse')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Neues Passwort')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Konto löschen' }));
     const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/Projekte ohne verbleibende Mitglieder werden dann gelöscht/)).toBeInTheDocument();
     const confirmButton = within(dialog).getByRole('button', { name: 'Konto zur Löschung vormerken' });
     expect(confirmButton).toBeDisabled();
 

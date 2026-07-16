@@ -2,13 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from accounts.models import AccountDeletionRequest, PublicProfile
-
-User = get_user_model()
+from accounts.models import AccountDeletionRequest
+from accounts.services import finalize_account_deletion
 
 
 class Command(BaseCommand):
@@ -33,19 +31,7 @@ class Command(BaseCommand):
 
         processed = 0
         for deletion in queryset.iterator():
-            user: User = deletion.user
-            anonymized_email = f'deleted-user-{user.pk}@deleted.local'
-            if user.email != anonymized_email or user.is_active:
-                user.email = anonymized_email
-                user.first_name = ''
-                user.last_name = ''
-                user.is_active = False
-                user.set_unusable_password()
-                user.save(update_fields=['email', 'first_name', 'last_name', 'is_active', 'password'])
-                PublicProfile.objects.filter(user=user).update(public_display_name='')
-
-            deletion.deleted_at = now
-            deletion.save(update_fields=['deleted_at', 'updated_at'])
+            finalize_account_deletion(deletion=deletion, finalized_at=now)
             processed += 1
 
         self.stdout.write(self.style.SUCCESS(f'Finalized {processed} accounts.'))

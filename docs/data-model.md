@@ -40,6 +40,13 @@ erDiagram
   role, remove a member, send invitations, restore-from-history) requires
   the `admin` role — enforced in view code (`require_project_admin()` in
   `backend/farm/project_context.py`), not a DB constraint.
+- Final account deletion removes the user's `ProjectMembership` rows. Any
+  project that is left with zero memberships is hard-deleted together with
+  its project-scoped data. If members remain but the deleted account was the
+  last admin, one remaining member is promoted to admin so the project stays
+  manageable. Shared `PublicCulture` entries are not owned by a project and
+  use nullable provenance links (`on_delete=SET_NULL`), so they remain part
+  of the public knowledge base even when the source project is deleted.
 - Every API request that touches project-scoped data must send an
   `X-Project-Id` header; `ProjectScopedMixin` (`backend/farm/common/mixins.py`)
   resolves and validates it once per request (`initial()`), then

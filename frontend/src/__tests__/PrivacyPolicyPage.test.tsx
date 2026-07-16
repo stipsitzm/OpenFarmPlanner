@@ -136,6 +136,9 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/E-Mail-Änderungslinks sind derzeit 24 Stunden gültig/)).toBeInTheDocument();
     expect(screen.getByText(/Projekt-Einladungen sind derzeit 14 Tage gültig/)).toBeInTheDocument();
     expect(screen.getByText(/für 14 Tage als „zur Löschung vorgemerkt“/)).toBeInTheDocument();
+    expect(screen.getByText(/Projekte bleiben bestehen, solange mindestens ein Mitglied vorhanden ist/)).toBeInTheDocument();
+    expect(screen.getByText(/kein Mitglied mehr, löschen wir das Projekt einschließlich der projektspezifischen Daten/)).toBeInTheDocument();
+    expect(screen.getByText(/Veröffentlichte Einträge in der öffentlichen Kulturbibliothek sind davon nicht betroffen/)).toBeInTheDocument();
     expect(screen.getByText(/Server-Logfiles des Hosting-Anbieters werden nach 7 Tagen gelöscht/)).toBeInTheDocument();
     expect(screen.getByText(/Eigene technische Cron- und Anwendungslogs speichern wir höchstens 14 Tage/)).toBeInTheDocument();
   });

@@ -16,7 +16,14 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.consent import CURRENT_VERSIONS
-from accounts.models import AccountDeletionRequest, AccountEmailChangeRequest, DocumentConsent, PendingActivation, PublicProfile
+from accounts.models import (
+    AccountDeletionRequest,
+    AccountEmailChangeRequest,
+    DocumentConsent,
+    PendingActivation,
+    PublicProfile,
+)
+from farm.models import Culture, Location, Project, ProjectMembership, PublicCulture
 
 User = get_user_model()
 
@@ -761,6 +768,58 @@ class AuthApiTest(APITestCase):
         second = StringIO()
         call_command('purge_deleted_accounts', stdout=second)
         self.assertIn('Finalized 0 accounts.', second.getvalue())
+
+    def test_purge_deleted_accounts_deletes_projects_without_remaining_members(self) -> None:
+        solo_project = Project.objects.create(name='Solo Project', slug='solo-project')
+        ProjectMembership.objects.create(user=self.user, project=solo_project, role=ProjectMembership.ROLE_ADMIN)
+        Location.objects.create(name='Solo Location', project=solo_project)
+        source_culture = Culture.objects.create(name='Kale', project=solo_project)
+        public_culture = PublicCulture.objects.create(
+            name='Kale',
+            status=PublicCulture.STATUS_PUBLISHED,
+            source_project=solo_project,
+            source_project_culture=source_culture,
+            created_by=self.user,
+        )
+        AccountDeletionRequest.objects.create(
+            user=self.user,
+            deletion_requested_at=timezone.now() - timedelta(days=20),
+            scheduled_deletion_at=timezone.now() - timedelta(days=2),
+        )
+
+        call_command('purge_deleted_accounts')
+
+        self.assertFalse(Project.objects.filter(id=solo_project.id).exists())
+        self.assertFalse(Location.objects.filter(project_id=solo_project.id).exists())
+        public_culture.refresh_from_db()
+        self.assertIsNone(public_culture.source_project)
+        self.assertIsNone(public_culture.source_project_culture)
+        self.assertEqual(public_culture.status, PublicCulture.STATUS_PUBLISHED)
+
+    def test_purge_deleted_accounts_keeps_projects_with_remaining_members(self) -> None:
+        other_user = User.objects.create_user(
+            username='other-member',
+            email='other-member@example.com',
+            password=self.password,
+            is_active=True,
+        )
+        shared_project = Project.objects.create(name='Shared Project', slug='shared-project')
+        ProjectMembership.objects.create(user=self.user, project=shared_project, role=ProjectMembership.ROLE_ADMIN)
+        ProjectMembership.objects.create(user=other_user, project=shared_project, role=ProjectMembership.ROLE_MEMBER)
+        Location.objects.create(name='Shared Location', project=shared_project)
+        AccountDeletionRequest.objects.create(
+            user=self.user,
+            deletion_requested_at=timezone.now() - timedelta(days=20),
+            scheduled_deletion_at=timezone.now() - timedelta(days=2),
+        )
+
+        call_command('purge_deleted_accounts')
+
+        self.assertTrue(Project.objects.filter(id=shared_project.id).exists())
+        self.assertTrue(Location.objects.filter(project=shared_project, name='Shared Location').exists())
+        self.assertFalse(ProjectMembership.objects.filter(user=self.user, project=shared_project).exists())
+        remaining_membership = ProjectMembership.objects.get(user=other_user, project=shared_project)
+        self.assertEqual(remaining_membership.role, ProjectMembership.ROLE_ADMIN)
 
     def test_delete_expired_inactive_users_removes_only_expired_accounts(self) -> None:
         expired = User.objects.create_user(
