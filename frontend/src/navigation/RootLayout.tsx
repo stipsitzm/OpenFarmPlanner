@@ -28,7 +28,6 @@ import {
   Stack,
   SvgIcon,
   type SvgIconProps,
-  TextField,
   Drawer,
   ListItemButton,
   ListItemIcon,
@@ -72,6 +71,9 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { cultureAPI, projectAPI } from '../api/api';
 import type { CultureHistoryEntry } from '../api/types';
+import { MobileProjectSwitcherDialog } from './MobileProjectSwitcherDialog';
+import { RestoreVersionDialog } from './RestoreVersionDialog';
+import { CreateProjectDialog } from './CreateProjectDialog';
 import { useAuth } from '../auth/useAuth';
 import type { RootLayoutOutletContext, TopbarContextAction } from '../navigation/topbarTypes';
 import AppLogo from '../components/layout/AppLogo';
@@ -1910,120 +1912,32 @@ function RootLayout() {
       </Dialog>
 
       <HelpDialog open={globalHelpOpen} onClose={closeGlobalHelp} />
-      <Dialog open={mobileProjectSwitcherOpen} onClose={handleCloseMobileProjectSwitcher} fullWidth maxWidth="sm">
-        <DialogTitle>{t('projectSwitcher.ariaLabel')}</DialogTitle>
-        <DialogContent>
-          <Typography variant="caption" sx={{ display: 'block', mb: 1.25, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-            {t('projectSwitcher.activeProject')}
-          </Typography>
-          <Paper variant="outlined" sx={{ p: 1.25, mb: 2 }}>
-            <Stack direction="row" alignItems="center" spacing={1}>
-              <CheckIcon fontSize="small" color="success" />
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>{activeProjectLabel}</Typography>
-            </Stack>
-          </Paper>
-          <Typography variant="caption" sx={{ display: 'block', mb: 1.25, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-            {t('projectSwitcher.projects')}
-          </Typography>
-          <List dense sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, py: 0 }}>
-            {memberships.length === 0 ? (
-              <ListItem><ListItemText primary={t('projectSwitcher.zeroProjects')} /></ListItem>
-            ) : memberships.map((membership) => (
-              <ListItemButton
-                key={`switcher-${membership.project_id}`}
-                onClick={() => void handleSwitchProject(membership.project_id)}
-                selected={membership.project_id === activeProjectId}
-                disabled={isSwitchingProject}
-              >
-                <ListItemIcon sx={{ minWidth: 28 }}>
-                  {membership.project_id === activeProjectId ? <CheckIcon fontSize="small" color="success" /> : null}
-                </ListItemIcon>
-                <ListItemText primary={membership.project_name} />
-              </ListItemButton>
-            ))}
-          </List>
-          <Button
-            startIcon={<AddIcon fontSize="small" />}
-            variant="outlined"
-            onClick={handleOpenCreateProject}
-            sx={{ mt: 2, textTransform: 'none' }}
-          >
-            {t('project.create')}
-          </Button>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={Boolean(pendingRestoreEntry)} onClose={() => setPendingRestoreEntry(null)} fullWidth maxWidth="xs">
-        <DialogTitle>Version wiederherstellen?</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 1.5 }}>
-            Du stellst eine frühere Version wieder her.
-          </Typography>
-          {pendingRestoreEntry ? (
-            <Box sx={{ mb: 1.5 }}>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {pendingRestoreEntry.object_display_name?.trim() || getHistoryEntryTitle(pendingRestoreEntry, tCultures)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Bearbeitet am {formatHistoryTimestamp(pendingRestoreEntry.history_date)}
-              </Typography>
-            </Box>
-          ) : null}
-          <Box
-            sx={{
-              borderRadius: 1.5,
-              border: '1px solid',
-              borderColor: 'success.light',
-              bgcolor: 'rgba(76, 175, 80, 0.08)',
-              px: 1.25,
-              py: 1,
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              Die aktuelle Version bleibt erhalten. Vor der Wiederherstellung wird automatisch eine neue Version erstellt, sodass du jederzeit wieder zurückwechseln kannst.
-            </Typography>
-          </Box>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-            Es gehen keine Daten verloren.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button autoFocus variant="outlined" onClick={() => setPendingRestoreEntry(null)}>Abbrechen</Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              if (pendingRestoreEntry) {
-                void handleRestoreProjectVersion(pendingRestoreEntry.history_id);
-              }
-            }}
-          >
-            Version wiederherstellen
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <MobileProjectSwitcherDialog
+        open={mobileProjectSwitcherOpen}
+        onClose={handleCloseMobileProjectSwitcher}
+        activeProjectLabel={activeProjectLabel}
+        memberships={memberships}
+        activeProjectId={activeProjectId}
+        isSwitchingProject={isSwitchingProject}
+        onSwitchProject={(projectId) => void handleSwitchProject(projectId)}
+        onOpenCreateProject={handleOpenCreateProject}
+      />
+      <RestoreVersionDialog
+        entry={pendingRestoreEntry}
+        getEntryTitle={(entry) => getHistoryEntryTitle(entry, tCultures)}
+        formatTimestamp={formatHistoryTimestamp}
+        onClose={() => setPendingRestoreEntry(null)}
+        onConfirm={(historyId) => void handleRestoreProjectVersion(historyId)}
+      />
 
-
-      <Dialog open={isCreateProjectOpen} onClose={closeCreateProjectDialog} fullWidth maxWidth="xs">
-        <Box component="form" onSubmit={handleCreateProjectSubmit}>
-          <DialogTitle>{t('projectSwitcher.createDialogTitle')}</DialogTitle>
-          <DialogContent sx={{ pt: 1, pb: 1 }}>
-            <Stack spacing={1.5} sx={{ mt: 0.5 }}>
-              <TextField
-                label={t('projectSwitcher.createNameLabel')}
-                value={newProjectName}
-                onChange={(event) => setNewProjectName(event.target.value)}
-                autoFocus
-                fullWidth
-              />
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button type="button" onClick={closeCreateProjectDialog}>{t('projectSwitcher.createCancel')}</Button>
-            <Button type="submit" variant="contained" disabled={!newProjectName.trim() || isCreatingProject}>
-              {t('projectSwitcher.createSubmit')}
-            </Button>
-          </DialogActions>
-        </Box>
-      </Dialog>
+      <CreateProjectDialog
+        open={isCreateProjectOpen}
+        name={newProjectName}
+        onNameChange={setNewProjectName}
+        isCreating={isCreatingProject}
+        onClose={closeCreateProjectDialog}
+        onSubmit={handleCreateProjectSubmit}
+      />
 
       <AlertSnackbar
         open={snackbar.open}

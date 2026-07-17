@@ -9,11 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Link as RouterLink, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import PublicIcon from '@mui/icons-material/Public';
-import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined';
+import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import { useTranslation } from '../i18n';
 import PageContainer from '../components/layout/PageContainer';
 import { bedAPI, cultureAPI, fieldAPI, type Culture } from '../api/api';
@@ -25,22 +21,6 @@ import { CultureForm } from '../cultures/CultureForm';
 import { PublicCultureLibraryDialog } from '../crops/components/PublicCultureLibraryDialog';
 import {
   Box,
-  Button,
-  Checkbox,
-  Chip,
-  Divider,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControlLabel,
-  List,
-  ListItem,
-  ListItemText,
-  Paper,
-  Typography,
-  Link,
-  Stack,
   type SxProps,
   type Theme,
   useMediaQuery,
@@ -52,15 +32,7 @@ import {
 } from './culturesPageUtils';
 import { createCulturesCommandSpecs } from './culturesCommandSpecs';
 import { buildCultureSavePayload } from './culturesSaveUtils';
-import {
-  formatHistoryChangeValue,
-  getHistoryChangeFieldLabel,
-  getHistoryEntryMeta,
-  getHistoryEntryTarget,
-  getHistoryEntryTitle,
-  isCurrentHistoryEntry,
-  type HistoryScope,
-} from './culturesHistoryUtils';
+import { type HistoryScope } from './culturesHistoryUtils';
 import { useSelectedCultureSync } from './useSelectedCultureSync';
 import { useAuth } from '../auth/useAuth';
 import { usePublicCultureLibrary } from './usePublicCultureLibrary';
@@ -69,6 +41,8 @@ import { useCultureImportExport } from './useCultureImportExport';
 import { CulturesImportDialog } from './CulturesImportDialog';
 import { CulturesImportStartDialog } from './CulturesImportStartDialog';
 import { CulturesExportDialog } from './CulturesExportDialog';
+import { CulturesPublishConfirmDialog } from './CulturesPublishConfirmDialog';
+import { CulturesHistoryDialog } from './CulturesHistoryDialog';
 import { AlertSnackbar } from '../components/feedback/AlertSnackbar';
 import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
@@ -88,13 +62,6 @@ const PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_CONTAINER_SX: SxProps<Theme> = {
   py: 1.25,
   px: 1.5,
 };
-
-const PUBLIC_LIBRARY_CONFIRM_ITEMS = [
-  { key: 'permanent', icon: <PublicIcon fontSize="small" /> },
-  { key: 'privateData', icon: <LockOutlinedIcon fontSize="small" /> },
-  { key: 'reuse', icon: <CheckCircleOutlineIcon fontSize="small" /> },
-  { key: 'license', icon: <VerifiedOutlinedIcon fontSize="small" /> },
-] as const;
 
 const PLANTING_PLAN_REQUIREMENT_EMPTY_STATE_TITLE_SX: SxProps<Theme> = {
   fontWeight: 500,
@@ -647,79 +614,18 @@ function Cultures() {
         confirmButtonProps={{ color: 'error', variant: 'contained' }}
       />
 
-      <Dialog
+      <CulturesPublishConfirmDialog
         open={publishConfirmOpen}
+        cultureName={selectedCulture?.name ?? ''}
+        accepted={publicLibraryTermsAccepted}
+        onAcceptedChange={setPublicLibraryTermsAccepted}
         onClose={() => {
           setPublishConfirmOpen(false);
           setPublicLibraryTermsAccepted(false);
         }}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle sx={{ pb: 1 }}>
-          {t('library.publishConfirm.title')}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <Stack spacing={1.5}>
-            <Typography color="text.secondary">
-              {t('library.publishConfirm.intro', { name: selectedCulture?.name ?? '' })}
-            </Typography>
-            <Stack spacing={1}>
-              {PUBLIC_LIBRARY_CONFIRM_ITEMS.map((item) => (
-                <Stack
-                  key={item.key}
-                  direction="row"
-                  spacing={1.25}
-                  alignItems="flex-start"
-                  sx={{ color: 'text.secondary' }}
-                >
-                  <Box sx={{ color: 'success.main', display: 'flex', pt: 0.25 }}>
-                    {item.icon}
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    {t(`library.publishConfirm.items.${item.key}`)}
-                  </Typography>
-                </Stack>
-              ))}
-            </Stack>
-            <FormControlLabel
-              control={(
-                <Checkbox
-                  checked={publicLibraryTermsAccepted}
-                  onChange={(event) => setPublicLibraryTermsAccepted(event.target.checked)}
-                />
-              )}
-              label={t('library.publishConfirm.acceptLicense')}
-              sx={{ alignItems: 'flex-start', color: 'text.secondary' }}
-            />
-            <Typography variant="body2" color="text.secondary">
-              {t('library.publishConfirm.linkPrefix')}
-              <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener">
-                {t('library.publishConfirm.privacyLinkLabel')}
-              </Link>
-              {t('library.publishConfirm.linkMiddle')}
-              <Link component={RouterLink} to="/nutzungsbedingungen" target="_blank" rel="noopener">
-                {t('library.publishConfirm.termsLinkLabel')}
-              </Link>
-              {t('library.publishConfirm.linkSuffix')}
-            </Typography>
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setPublishConfirmOpen(false);
-              setPublicLibraryTermsAccepted(false);
-            }}
-          >
-            {t('common:actions.cancel')}
-          </Button>
-          <Button variant="contained" onClick={handlePublishConfirm} disabled={!publicLibraryTermsAccepted}>
-            {t('library.publishConfirm.confirmButton')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handlePublishConfirm}
+        t={t}
+      />
 
       {showForm ? (
         <CultureForm
@@ -758,199 +664,16 @@ function Cultures() {
 
       {/* Snackbar for notifications */}
 
-      <Dialog open={historyOpen} onClose={() => setHistoryOpen(false)} fullWidth maxWidth="sm"> 
-        <DialogTitle>
-          {historyScope === 'project'
-            ? t('history.titles.project')
-            : historyScope === 'global'
-              ? t('history.titles.global')
-              : t('history.titles.culture')}
-        </DialogTitle>
-        <DialogContent sx={{ pt: historyItems.length === 0 ? 1 : 2, pb: historyItems.length === 0 ? 1 : 2 }}>
-          {historyItems.length === 0 ? (
-            <Box sx={{ py: isMobile ? 0.5 : 1 }}>
-              <Typography variant="body2" color="text.secondary">
-                {t('history.emptyState.title')}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                {t('history.emptyState.description')}
-              </Typography>
-            </Box>
-          ) : (
-            <>
-            <List>
-              {historyItems.map((item, index) => {
-                const isCurrentVersion = isCurrentHistoryEntry(item, index);
-                const isCultureHistory = historyScope === 'culture';
-                const historyTarget = getHistoryEntryTarget(item);
-                const mobileTitle = getHistoryEntryTitle(item, t);
-                const mobileMeta = getHistoryEntryMeta(item, t, fallbackHistoryActorLabel);
-                const changes = item.changes ?? [];
-                const changeList = changes.length > 0 ? (
-                  <Stack spacing={0.5} sx={{ mt: 0.5 }}>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                      {t('history.changedFields')}
-                    </Typography>
-                    <Stack component="ul" spacing={0.25} sx={{ m: 0, pl: 2 }}>
-                      {changes.map((change) => (
-                        <Typography
-                          key={`${item.history_id}-${change.field}`}
-                          component="li"
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ lineHeight: 1.35 }}
-                        >
-                          <Typography component="span" variant="caption" sx={{ color: 'text.primary', fontWeight: 600 }}>
-                            {getHistoryChangeFieldLabel(change, t)}
-                          </Typography>
-                          {': '}
-                          {change.field === 'created'
-                            ? formatHistoryChangeValue(change.new_value, change.field, t)
-                            : `${formatHistoryChangeValue(change.old_value, change.field, t)} → ${formatHistoryChangeValue(change.new_value, change.field, t)}`}
-                        </Typography>
-                      ))}
-                    </Stack>
-                  </Stack>
-                ) : null;
-                return (
-                  <ListItem key={item.history_id} disableGutters sx={{ mb: isMobile ? 1 : 0 }}>
-                    {isMobile ? (
-                      <Paper variant="outlined" sx={{ width: '100%', p: 1.25, borderRadius: 1.5 }}>
-                        <Stack spacing={1}>
-                          {!isCultureHistory ? (
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                              <Chip
-                                size="small"
-                                label={item.object_type === 'culture' ? t('history.objectTypes.culture') : t('history.objectTypes.plantingPlan')}
-                                variant="outlined"
-                              />
-                              {historyTarget ? (
-                                <Link
-                                  component={RouterLink}
-                                  to={historyTarget}
-                                  underline="hover"
-                                  onClick={() => setHistoryOpen(false)}
-                                  sx={{ fontSize: '0.78rem', color: 'text.secondary', flexShrink: 0 }}
-                                >
-                                  {t('history.objectTypes.openTarget')}
-                                </Link>
-                              ) : null}
-                            </Box>
-                          ) : null}
-                          {!isCultureHistory ? (
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                fontWeight: 600,
-                                lineHeight: 1.35,
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                wordBreak: 'normal',
-                                overflowWrap: 'break-word',
-                              }}
-                            >
-                              {mobileTitle}
-                            </Typography>
-                          ) : null}
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            sx={{
-                              lineHeight: 1.3,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              wordBreak: 'normal',
-                              overflowWrap: 'break-word',
-                            }}
-                          >
-                            {mobileMeta}
-                          </Typography>
-                          {isCultureHistory ? changeList : null}
-                          <Divider />
-                          {isCurrentVersion ? (
-                            <Chip
-                              label={t('history.currentVersion')}
-                              size="small"
-                              color="success"
-                              variant="outlined"
-                              sx={{ alignSelf: 'flex-start' }}
-                            />
-                          ) : (
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              onClick={() => handleRestoreVersion(item.history_id)}
-                              sx={{ alignSelf: 'flex-start', minHeight: 34 }}
-                            >
-                              {t('history.restoreButton')}
-                            </Button>
-                          )}
-                        </Stack>
-                      </Paper>
-                    ) : (
-                      <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: '100%' }}>
-                        <ListItemText
-                          sx={{ mr: 1 }}
-                          disableTypography
-                          primary={!isCultureHistory ? (
-                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.35 }}>
-                              {mobileTitle}
-                              {historyTarget ? (
-                                <>
-                                  {' · '}
-                                  <Link component={RouterLink} to={historyTarget} underline="hover" onClick={() => setHistoryOpen(false)}>
-                                    {item.object_type === 'culture' ? t('history.objectTypes.culture') : t('history.objectTypes.plantingPlan')}
-                                  </Link>
-                                </>
-                              ) : null}
-                            </Typography>
-                          ) : (
-                            <Typography variant="caption" color="text.secondary">
-                              {mobileMeta}
-                            </Typography>
-                          )}
-                          secondary={isCultureHistory ? changeList : (
-                            <Typography variant="caption" color="text.secondary">
-                              {mobileMeta}
-                            </Typography>
-                          )}
-                        />
-                        {isCurrentVersion ? (
-                          <Chip
-                            label={t('history.currentVersion')}
-                            size="small"
-                            color="success"
-                            variant="outlined"
-                          />
-                        ) : (
-                          <Button onClick={() => handleRestoreVersion(item.history_id)} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
-                            {t('history.restoreButton')}
-                          </Button>
-                        )}
-                      </Stack>
-                    )}
-                  </ListItem>
-                );
-              })}
-            </List>
-            {historyItems.length === 1 && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5, pt: 1, borderTop: 1, borderColor: 'divider' }}>
-                {t('history.emptyState.onlyCurrentVersion')}
-              </Typography>
-            )}
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setHistoryOpen(false)}>{t('history.closeButton')}</Button>
-        </DialogActions>
-      </Dialog>
+      <CulturesHistoryDialog
+        open={historyOpen}
+        scope={historyScope}
+        items={historyItems}
+        isMobile={isMobile}
+        fallbackActorLabel={fallbackHistoryActorLabel}
+        onClose={() => setHistoryOpen(false)}
+        onRestore={handleRestoreVersion}
+        t={t}
+      />
 
 
 

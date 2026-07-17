@@ -7,26 +7,34 @@ from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.tokens import default_token_generator
-from django.contrib.sessions.models import Session
-from django.core.mail import send_mail
 from django.db import IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from django.template.loader import render_to_string
 from django.utils import timezone, translation
 from django.utils.decorators import method_decorator
-from django.utils.encoding import force_str
-from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.utils.translation import gettext as _
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import permissions, serializers, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from config.frontend_urls import build_public_frontend_url
 
 from .consent import record_acceptance
 from .data_export import build_personal_data_export
+from .emails import (
+    _send_activation_email,
+    _send_email_change_confirmation_email,
+    _send_password_reset_email,
+    _uses_local_non_delivery_email_backend,
+)
+from .services import (
+    _clear_activation_expiry,
+    _decode_uid,
+    _logout_all_user_sessions,
+    _normalize_email,
+    _set_activation_expiry,
+    _validate_serializer_in_german,
+)
 from .models import AccountDeletionRequest, AccountEmailChangeRequest, PendingActivation, PublicProfile
 from .serializers import (
     AccountEmailChangeConfirmSerializer,
@@ -44,11 +52,9 @@ from .serializers import (
     RegisterSerializer,
     ResendActivationSerializer,
     UserSerializer,
-    normalize_email_lower,
 )
 
 User = get_user_model()
-ACTIVATION_EXPIRY_DAYS = 7
 ACCOUNT_DELETION_GRACE_DAYS = 14
 logger = logging.getLogger(__name__)
 
@@ -82,154 +88,8 @@ PASSWORD_UPDATED_MESSAGE = _de('Dein Passwort wurde erfolgreich geändert.')
 PROFILE_UPDATED_MESSAGE = _de('Dein Profil wurde erfolgreich gespeichert.')
 
 
-def _uses_local_non_delivery_email_backend() -> bool:
-    return settings.EMAIL_BACKEND in {
-        'django.core.mail.backends.console.EmailBackend',
-        'django.core.mail.backends.filebased.EmailBackend',
-        'django.core.mail.backends.dummy.EmailBackend',
-    }
-
-
-def _normalize_email(email: str) -> str:
-    return normalize_email_lower(email)
-
-
-def _activation_deadline() -> timezone.datetime:
-    """
-    Return the activation deadline for newly registered inactive users.
-
-    :return: Datetime representing now plus the configured activation window.
-    """
-    return timezone.now() + timedelta(days=ACTIVATION_EXPIRY_DAYS)
-
-
-def _set_activation_expiry(user: User) -> None:
-    """
-    Create or refresh the activation expiry record for a user.
-
-    :param user: User awaiting activation.
-    :return: None.
-    """
-    PendingActivation.objects.update_or_create(
-        user=user,
-        defaults={'activation_expires_at': _activation_deadline()},
-    )
-
-
-def _clear_activation_expiry(user: User) -> None:
-    """
-    Remove activation expiry metadata after successful activation.
-
-    :param user: Activated user.
-    :return: None.
-    """
-    PendingActivation.objects.filter(user=user).delete()
-
-
-def _build_frontend_link(path_with_query: str) -> str:
-    return build_public_frontend_url(path_with_query)
-
-
-def _build_frontend_token_link(path: str, user: User) -> str:
-    uid = urlsafe_base64_encode(str(user.pk).encode('utf-8'))
-    token = default_token_generator.make_token(user)
-    return _build_frontend_link(f'{path}?uid={uid}&token={token}')
-
-
 def _registration_success_message() -> str:
     return REGISTRATION_LOCAL_EMAIL_MESSAGE if _uses_local_non_delivery_email_backend() else REGISTRATION_EMAIL_SENT_MESSAGE
-
-
-def _logout_all_user_sessions(user_id: int) -> None:
-    """
-    Delete all active sessions for a specific user.
-
-    :param user_id: User primary key to invalidate sessions for.
-    :return: None.
-    """
-    for session in Session.objects.filter(expire_date__gte=timezone.now()).iterator():
-        try:
-            session_user_id = session.get_decoded().get('_auth_user_id')
-        except Exception:  # noqa: BLE001
-            continue
-        if str(session_user_id) == str(user_id):
-            session.delete()
-
-
-def _send_activation_email(user: User) -> None:
-    """
-    Send multipart activation email with explicit sender metadata.
-
-    Deliverability note: multipart (text + HTML) improves compatibility across clients
-    and avoids HTML-only spam signals. We intentionally avoid no-reply senders so
-    recipients can contact support via a monitored sender mailbox and mailbox providers
-    see a trustworthy identity.
-    """
-    activation_link = _build_frontend_token_link('/activate', user)
-    with translation.override('de'):
-        subject = 'OpenFarmPlanner – Registrierung bestätigen'
-        text_body = render_to_string('accounts/emails/activation_email.txt', {
-            'activation_link': activation_link,
-            'contact_email': settings.SUPPORT_CONTACT_EMAIL,
-            'project_website': 'https://openfarmplanner.org',
-            'project_name': 'OpenFarmPlanner',
-            'user': user,
-        })
-        html_body = render_to_string('accounts/emails/activation_email.html', {
-            'activation_link': activation_link,
-            'contact_email': settings.SUPPORT_CONTACT_EMAIL,
-            'project_website': 'https://openfarmplanner.org',
-            'project_name': 'OpenFarmPlanner',
-            'user': user,
-        })
-    send_mail(
-        subject=subject,
-        message=text_body,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        html_message=html_body,
-        fail_silently=False,
-    )
-
-
-def _send_password_reset_email(user: User) -> None:
-    reset_link = _build_frontend_token_link('/reset-password', user)
-    with translation.override('de'):
-        subject = _('Reset your OpenFarmPlanner password')
-        body = render_to_string('accounts/emails/password_reset_email.txt', {
-            'reset_link': reset_link,
-            'user': user,
-        })
-    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email])
-
-
-def _send_email_change_confirmation_email(user: User, request_obj: AccountEmailChangeRequest) -> None:
-    confirmation_link = _build_frontend_link(
-        f'/confirm-email-change?uid={urlsafe_base64_encode(str(user.pk).encode("utf-8"))}'
-        f'&token={default_token_generator.make_token(user)}'
-        f'&request_id={request_obj.id}'
-    )
-    with translation.override('de'):
-        subject = _('Confirm your OpenFarmPlanner email change')
-        body = render_to_string('accounts/emails/email_change_confirmation_email.txt', {
-            'confirmation_link': confirmation_link,
-            'new_email': request_obj.new_email,
-            'user': user,
-        })
-    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [request_obj.new_email])
-
-
-def _decode_uid(uid: str) -> int | None:
-    try:
-        return int(force_str(urlsafe_base64_decode(uid)))
-    except (TypeError, ValueError, OverflowError):
-        return None
-
-
-def _validate_serializer_in_german(serializer) -> None:
-    """Run DRF serializer validation with German locale activated."""
-    with translation.override('de'):
-        serializer.is_valid(raise_exception=True)
 
 
 @method_decorator(ensure_csrf_cookie, name='dispatch')

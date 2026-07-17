@@ -1,218 +1,41 @@
-"""API endpoints for the cultures domain (cultures, suppliers, seeds, public library)."""
+"""API endpoints for cultures (CRUD, history, publish, undelete)."""
 
-import logging
 from datetime import timedelta
 
-from django.db import IntegrityError, transaction
-from django.db.models import Prefetch, Q
+from django.db import transaction
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import generics, permissions, status, viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError as DRFValidationError
-from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.consent import has_accepted_current, record_acceptance
 from accounts.models import DocumentConsent
-from farm.common.mixins import ProjectRevisionMixin, ProjectScopedMixin
+from farm.common.mixins import ProjectScopedMixin
 from farm.history import (
     _build_entity_revision_changes,
     _current_actor_label,
-    _entity_display_name,
-    _serialize_instance,
 )
 from farm.history.serializers import CultureHistoryEntrySerializer, CultureRestoreSerializer
 from farm.models import (
     Culture,
-    CultureSupplierData,
     EntityRevision,
     MediaFile,
     PublicCulture,
-    SeedPackage,
     Supplier,
 )
 from farm.project_context import get_active_project_or_400
 from farm.services.public_cultures import (
     DuplicatePublicCultureError,
-    import_public_culture_into_project,
     publish_culture_to_public_library,
 )
-from farm.services.seed_demand import build_seed_demand_rows, parse_selected_suppliers
-from farm.services.suppliers import (
-    DuplicateSupplierNameError,
-    SupplierPayloadError,
-    SupplierRestoreConflictError,
-    SupplierRestoreFailedError,
-    build_delete_undo_payload,
-    build_delete_usage,
-    create_supplier,
-    normalize_new_supplier_payload,
-    restore_unlinked_supplier,
-    unlink_supplier_references,
-)
 
-from .serializers import (
+from ..serializers import (
     CultureSerializer,
-    CultureSupplierDataSerializer,
     PublicCultureSerializer,
-    SeedDemandSerializer,
-    SeedPackageSerializer,
-    SupplierSerializer,
 )
-
-logger = logging.getLogger(__name__)
-
-
-class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
-    """ViewSet for Supplier model providing CRUD operations.
-    
-    Provides list, create, retrieve, update, and delete operations
-    for seed suppliers. Supports filtering by name via query parameter.
-    POST endpoint rejects duplicate names within the active project.
-    
-    Attributes:
-        queryset: All Supplier objects ordered by name
-        serializer_class: SupplierSerializer for serialization
-    """
-    queryset = Supplier.objects.all()
-    serializer_class = SupplierSerializer
-
-    def perform_update(self, serializer):
-        previous_snapshot = _serialize_instance(serializer.instance)
-        try:
-            instance = serializer.save()
-        except IntegrityError as exc:
-            raise DRFValidationError({'name': ['Ein Lieferant mit diesem Namen existiert bereits.']}) from exc
-        self.record_revision(instance, EntityRevision.ACTION_UPDATED, previous_snapshot=previous_snapshot)
-
-    @action(detail=True, methods=['get'], url_path='delete-usage')
-    def delete_usage(self, request: Request, pk: int | None = None) -> Response:
-        supplier = self.get_object()
-        return Response(build_delete_usage(supplier))
-
-    def destroy(self, request: Request, *args: object, **kwargs: object) -> Response:
-        instance = self.get_object()
-        usage = build_delete_usage(instance)
-        if not usage['can_delete']:
-            return Response(
-                {
-                    'detail': 'Supplier is still used and cannot be deleted.',
-                    'usage': usage,
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
-        self.perform_destroy(instance)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(detail=True, methods=['post'], url_path='unlink-and-delete')
-    def unlink_and_delete(self, request: Request, pk: int | None = None) -> Response:
-        supplier = self.get_object()
-        usage = build_delete_usage(supplier)
-        undo_payload = build_delete_undo_payload(supplier)
-
-        with transaction.atomic():
-            unlink_supplier_references(supplier)
-            supplier_id = supplier.pk
-            supplier_snapshot = _serialize_instance(supplier)
-            supplier_name = supplier.name
-            supplier.delete()
-            self.record_revision(
-                supplier, EntityRevision.ACTION_DELETED,
-                object_id=supplier_id, snapshot=supplier_snapshot, display_name=supplier_name, changed_fields=[],
-            )
-
-        return Response({
-            'affected_culture_count': usage['total_culture_count'],
-            'undo_payload': undo_payload,
-        })
-
-    @action(detail=False, methods=['post'], url_path='restore-unlinked-delete')
-    def restore_unlinked_delete(self, request: Request) -> Response:
-        payload = request.data if isinstance(request.data, dict) else {}
-        try:
-            result = restore_unlinked_supplier(
-                project=request.active_project,
-                payload=payload,
-                record_restore=lambda supplier: self.record_revision(supplier, EntityRevision.ACTION_RESTORED),
-            )
-        except SupplierPayloadError as exc:
-            raise DRFValidationError(exc.errors) from exc
-        except SupplierRestoreConflictError:
-            return Response(
-                {'detail': 'Supplier cannot be restored because the id is already in use.'},
-                status=status.HTTP_409_CONFLICT,
-            )
-        except SupplierRestoreFailedError as exc:
-            raise DRFValidationError({'detail': ['Supplier could not be restored.']}) from exc
-
-        serializer = self.get_serializer(result.supplier)
-        return Response({
-            'supplier': serializer.data,
-            'restored_culture_count': result.restored_culture_count,
-            'restored_supplier_data_count': result.restored_supplier_data_count,
-        })
-
-    def perform_destroy(self, instance: Supplier) -> None:
-        instance_id = instance.pk
-        snapshot = _serialize_instance(instance)
-        name = instance.name
-        instance.delete()
-        self.record_revision(
-            instance, EntityRevision.ACTION_DELETED,
-            object_id=instance_id, snapshot=snapshot, display_name=name, changed_fields=[],
-        )
-
-    
-    def get_queryset(self):
-        """Filter suppliers by name if query parameter is provided.
-        
-        :return: Filtered queryset based on query parameters
-        """
-        queryset = super().get_queryset()
-        query = self.request.query_params.get('q', None)
-
-        if query:
-            # Case-insensitive search in name
-            queryset = queryset.filter(name__icontains=query)
-
-        queryset = queryset.order_by('name')
-
-        # Limit only list responses for autocomplete-like usage.
-        # Detail/update/delete must be able to resolve any existing supplier by PK.
-        if getattr(self, 'action', None) == 'list':
-            return queryset[:20]
-
-        return queryset
-    
-    def create(self, request, *args, **kwargs):
-        """Create a supplier with project-scoped duplicate-name validation.
-
-        :param request: HTTP request containing supplier data
-        :return: Response with supplier data and created flag
-        """
-        try:
-            fields = normalize_new_supplier_payload(
-                name=request.data.get('name'),
-                homepage_url=request.data.get('homepage_url'),
-                allowed_domains=request.data.get('allowed_domains', []),
-            )
-            supplier = create_supplier(project=request.active_project, **fields)
-        except SupplierPayloadError as exc:
-            return Response(exc.errors, status=status.HTTP_400_BAD_REQUEST)
-        except DuplicateSupplierNameError as exc:
-            raise DRFValidationError({'name': ['Ein Lieferant mit diesem Namen existiert bereits.']}) from exc
-
-        serializer = self.get_serializer(supplier)
-        data = serializer.data
-        data['created'] = True
-
-        self.record_revision(supplier, EntityRevision.ACTION_CREATED)
-        return Response(
-            data,
-            status=status.HTTP_201_CREATED
-        )
 
 
 class CultureViewSet(ProjectScopedMixin, viewsets.ModelViewSet):
@@ -717,118 +540,6 @@ class CultureViewSet(ProjectScopedMixin, viewsets.ModelViewSet):
         }, status=status.HTTP_201_CREATED)
 
 
-class CultureSupplierDataViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
-    queryset = CultureSupplierData.objects.select_related('culture', 'supplier')
-    serializer_class = CultureSupplierDataSerializer
-
-    def get_queryset(self):
-        return self.queryset.filter(project=self.request.active_project)
-
-    def perform_create(self, serializer):
-        instance = serializer.save(project=self.request.active_project)
-        self.record_revision(instance, EntityRevision.ACTION_CREATED)
-
-    def perform_update(self, serializer):
-        previous_snapshot = _serialize_instance(serializer.instance)
-        instance = serializer.save()
-        self.record_revision(instance, EntityRevision.ACTION_UPDATED, previous_snapshot=previous_snapshot)
-
-    def perform_destroy(self, instance):
-        instance_id = instance.pk
-        snapshot = _serialize_instance(instance)
-        display_name = _entity_display_name(instance)
-        instance.delete()
-        self.record_revision(
-            instance, EntityRevision.ACTION_DELETED,
-            object_id=instance_id, snapshot=snapshot, display_name=display_name, changed_fields=[],
-        )
-
-
-class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
-    """Read-only public library for published cultures with project import action.
-
-    Candidate for extraction into a separate service consumed by OFP over an
-    API (under discussion as of 2026-07) — avoid deepening its coupling to
-    project-scoped concerns like EntityRevision/history.
-    """
-
-    queryset = PublicCulture.objects.filter(status=PublicCulture.STATUS_PUBLISHED).order_by('name', 'variety')
-    serializer_class = PublicCultureSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        queryset = super().get_queryset().select_related('created_by__public_profile')
-        query = (self.request.query_params.get('q') or '').strip()
-        name = (self.request.query_params.get('name') or '').strip()
-        variety = (self.request.query_params.get('variety') or '').strip()
-
-        if query:
-            queryset = queryset.filter(Q(name__icontains=query) | Q(variety__icontains=query))
-        if name:
-            queryset = queryset.filter(name__icontains=name)
-        if variety:
-            queryset = queryset.filter(variety__icontains=variety)
-        return queryset
-
-    @action(detail=False, methods=['get'], url_path='match')
-    def match(self, request):
-        """Check whether an exact normalized public culture match exists."""
-        from farm.utils import normalize_text
-
-        normalized_name = normalize_text(request.query_params.get('name'))
-        normalized_variety = normalize_text(request.query_params.get('variety'))
-        if not normalized_name or not normalized_variety:
-            return Response({'exists': False, 'culture': None})
-
-        culture = self.queryset.filter(
-            name_normalized=normalized_name,
-            variety_normalized=normalized_variety,
-        ).only('id', 'name', 'variety', 'published_at').order_by('-published_at', '-id').first()
-        if culture is None:
-            return Response({'exists': False, 'culture': None})
-
-        return Response({
-            'exists': True,
-            'culture': {
-                'id': culture.id,
-                'name': culture.name,
-                'variety': culture.variety,
-            },
-        })
-
-    @action(detail=True, methods=['post'], url_path='import')
-    def import_to_project(self, request, pk=None):
-        public_culture = self.get_object()
-        request.active_project = get_active_project_or_400(request)
-        imported = import_public_culture_into_project(public_culture=public_culture, project=request.active_project)
-        serializer = CultureSerializer(imported)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
-class SeedPackageViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
-    queryset = SeedPackage.objects.select_related('culture').all().order_by('size_unit', 'size_value')
-    serializer_class = SeedPackageSerializer
-
-    def perform_create(self, serializer):
-        instance = serializer.save(project=self.request.active_project)
-        self.record_revision(instance, EntityRevision.ACTION_CREATED)
-
-    def perform_update(self, serializer):
-        previous_snapshot = _serialize_instance(serializer.instance)
-        instance = serializer.save()
-        self.record_revision(instance, EntityRevision.ACTION_UPDATED, previous_snapshot=previous_snapshot)
-
-    def perform_destroy(self, instance):
-        package_id = instance.pk
-        snapshot = _serialize_instance(instance)
-        display_name = _entity_display_name(instance)
-        instance.delete()
-        self.record_revision(
-            instance, EntityRevision.ACTION_DELETED,
-            object_id=package_id, snapshot=snapshot, display_name=display_name, changed_fields=[],
-        )
-
-
 class CultureUndeleteView(APIView):
     """Undelete a soft-deleted culture by ID."""
 
@@ -841,59 +552,3 @@ class CultureUndeleteView(APIView):
         if culture.image_file_id:
             MediaFile.objects.filter(id=culture.image_file_id).update(orphaned_at=None)
         return Response(CultureSerializer(culture).data, status=status.HTTP_200_OK)
-
-
-class SeedDemandListView(ProjectScopedMixin, generics.ListAPIView):
-    """Read-only endpoint returning typed seed demand aggregated by culture.
-
-    The calculation itself lives in farm.services.seed_demand (see
-    docs/seed-demand-calculation.md); this view only parses the request,
-    delegates, and serializes the result.
-    """
-
-    serializer_class = SeedDemandSerializer
-
-    def list(self, request, *args, **kwargs):
-        rows = build_seed_demand_rows(
-            project=request.active_project,
-            selected_supplier_by_culture=parse_selected_suppliers(
-                request.query_params.get('supplier_selection')
-            ),
-        )
-        serializer = self.get_serializer(rows, many=True)
-        return Response({'count': len(rows), 'next': None, 'previous': None, 'results': serializer.data})
-
-    def post(self, request, *args, **kwargs):
-        culture_id = request.data.get('culture_id')
-        supplier_id = request.data.get('supplier_id')
-        try:
-            culture_id = int(culture_id)
-        except (TypeError, ValueError):
-            return Response({'detail': 'culture_id must be a positive integer.'}, status=status.HTTP_400_BAD_REQUEST)
-        if culture_id <= 0:
-            return Response({'detail': 'culture_id must be a positive integer.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        culture = get_object_or_404(Culture, id=culture_id, project=request.active_project)
-
-        if supplier_id in (None, ''):
-            culture.selected_seed_demand_supplier = None
-            culture.save(update_fields=['selected_seed_demand_supplier', 'updated_at'])
-            return Response({'culture_id': culture.id, 'selected_supplier_id': None}, status=status.HTTP_200_OK)
-
-        try:
-            supplier_id = int(supplier_id)
-        except (TypeError, ValueError):
-            return Response({'detail': 'supplier_id must be an integer or null.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        supplier = get_object_or_404(Supplier, id=supplier_id, project=request.active_project)
-        has_supplier_data = CultureSupplierData.objects.filter(
-            project=request.active_project,
-            culture=culture,
-            supplier=supplier,
-        ).exists()
-        if not has_supplier_data:
-            return Response({'detail': 'Supplier is not available for this culture.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        culture.selected_seed_demand_supplier = supplier
-        culture.save(update_fields=['selected_seed_demand_supplier', 'updated_at'])
-        return Response({'culture_id': culture.id, 'selected_supplier_id': supplier.id}, status=status.HTTP_200_OK)
