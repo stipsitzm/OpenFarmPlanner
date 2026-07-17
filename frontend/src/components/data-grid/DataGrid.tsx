@@ -113,12 +113,55 @@ type DataGridKeyboardEvent = KeyboardEvent & {
 };
 
 const CONTINUOUS_SCROLL_PAGE_SIZE = 100;
-const CONTINUOUS_SCROLL_ROW_HEIGHT_PX = 36;
+const CONTINUOUS_SCROLL_ROW_HEIGHT_PX = 44;
 const CONTINUOUS_SCROLL_HEADER_HEIGHT_PX = 56;
-const CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX = 44;
+const CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX = 61;
+const CONTINUOUS_SCROLL_BORDER_HEIGHT_PX = 2;
 const CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX = 24;
 const CONTINUOUS_SCROLL_MIN_HEIGHT_PX = 240;
 const DATA_GRID_VIRTUAL_SCROLLER_SELECTOR = '.MuiDataGrid-virtualScroller';
+const DATA_GRID_CONTINUOUS_SCROLL_FOOTER_CLASS = 'ofp-data-grid-continuous-footer';
+const CONTINUOUS_SCROLL_FIT_EPSILON_PX = 2;
+
+type ContinuousScrollLayoutHeights = {
+  header: number;
+  footer: number;
+  border: number;
+};
+
+const DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS: ContinuousScrollLayoutHeights = {
+  header: CONTINUOUS_SCROLL_HEADER_HEIGHT_PX,
+  footer: CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX,
+  border: CONTINUOUS_SCROLL_BORDER_HEIGHT_PX,
+};
+
+const getElementHeight = (element: Element | null, fallback: number): number => {
+  if (!(element instanceof HTMLElement)) {
+    return fallback;
+  }
+
+  const measuredHeight = element.getBoundingClientRect().height;
+  return measuredHeight > 0 ? measuredHeight : fallback;
+};
+
+const getVerticalBorderHeight = (element: Element | null, fallback: number): number => {
+  if (!(element instanceof HTMLElement)) {
+    return fallback;
+  }
+
+  const styles = window.getComputedStyle(element);
+  const borderHeight = Number.parseFloat(styles.borderTopWidth || '0') + Number.parseFloat(styles.borderBottomWidth || '0');
+  return Number.isFinite(borderHeight) ? borderHeight : fallback;
+};
+
+const continuousScrollLayoutHeightsEqual = (
+  current: ContinuousScrollLayoutHeights,
+  next: ContinuousScrollLayoutHeights,
+): boolean => (
+  current.header === next.header
+  && current.footer === next.footer
+  && current.border === next.border
+);
 
 export function EditableDataGrid<T extends EditableRow>({
   columns,
@@ -226,12 +269,29 @@ export function EditableDataGrid<T extends EditableRow>({
       ),
     )
     : rowsForGrid.length;
-  const continuousScrollContentHeight = useMemo(() => (
-    CONTINUOUS_SCROLL_HEADER_HEIGHT_PX
-    + CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX
+  const [continuousScrollLayoutHeights, setContinuousScrollLayoutHeights] = useState<ContinuousScrollLayoutHeights>(
+    DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS,
+  );
+  const measuredContinuousScrollContentHeight = useMemo(() => Math.ceil(
+    continuousScrollLayoutHeights.header
+    + continuousScrollLayoutHeights.footer
+    + continuousScrollLayoutHeights.border
     + currentWindowRowCount * CONTINUOUS_SCROLL_ROW_HEIGHT_PX
-  ), [currentWindowRowCount]);
+    + CONTINUOUS_SCROLL_FIT_EPSILON_PX,
+  ), [continuousScrollLayoutHeights, currentWindowRowCount]);
   const [availableGridHeight, setAvailableGridHeight] = useState<number | null>(null);
+  const resolvedContinuousScrollHeight = isContinuousScroll && !isMobile
+    ? Math.min(
+      measuredContinuousScrollContentHeight,
+      availableGridHeight ?? measuredContinuousScrollContentHeight,
+    )
+    : undefined;
+  const shouldHideContinuousVerticalOverflow = Boolean(
+    isContinuousScroll
+    && !isMobile
+    && resolvedContinuousScrollHeight !== undefined
+    && measuredContinuousScrollContentHeight <= resolvedContinuousScrollHeight + CONTINUOUS_SCROLL_FIT_EPSILON_PX,
+  );
   const ensureRowVisible = useCallback((rowId: GridRowId): boolean => {
     if (!isContinuousScroll) {
       return false;
@@ -282,6 +342,72 @@ export function EditableDataGrid<T extends EditableRow>({
       resizeObserver?.disconnect();
     };
   }, [isContinuousScroll, isMobile]);
+
+  useLayoutEffect(() => {
+    if (!isContinuousScroll || isMobile) {
+      return undefined;
+    }
+
+    const measure = (): void => {
+      const surface = gridSurfaceRef.current;
+      if (!surface) {
+        return;
+      }
+
+      const root = surface.querySelector('.MuiDataGrid-root');
+      const header = surface.querySelector('.MuiDataGrid-columnHeaders');
+      const footer = surface.querySelector(`.${DATA_GRID_CONTINUOUS_SCROLL_FOOTER_CLASS}`);
+      const nextHeights = {
+        header: getElementHeight(header, DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS.header),
+        footer: getElementHeight(footer, DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS.footer),
+        border: getVerticalBorderHeight(root, DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS.border),
+      };
+
+      setContinuousScrollLayoutHeights((currentHeights) => (
+        continuousScrollLayoutHeightsEqual(currentHeights, nextHeights)
+          ? currentHeights
+          : nextHeights
+      ));
+    };
+
+    measure();
+
+    let resizeObserver: ResizeObserver | undefined;
+    const observedElement = gridSurfaceRef.current;
+    if (observedElement && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(measure);
+      resizeObserver.observe(observedElement);
+    }
+
+    window.addEventListener('resize', measure);
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [currentWindowRowCount, isContinuousScroll, isMobile]);
+
+  useLayoutEffect(() => {
+    if (!shouldHideContinuousVerticalOverflow) {
+      return undefined;
+    }
+
+    const scroller = gridSurfaceRef.current?.querySelector<HTMLElement>(DATA_GRID_VIRTUAL_SCROLLER_SELECTOR);
+    if (!scroller) {
+      return undefined;
+    }
+
+    const keepAtTop = (): void => {
+      if (scroller.scrollTop !== 0) {
+        scroller.scrollTop = 0;
+      }
+    };
+
+    keepAtTop();
+    scroller.addEventListener('scroll', keepAtTop);
+    return () => {
+      scroller.removeEventListener('scroll', keepAtTop);
+    };
+  }, [shouldHideContinuousVerticalOverflow]);
   useEffect(() => {
     if (!import.meta.env.DEV || (!showPaginationControls && !isContinuousScroll) || loading) {
       return;
@@ -1559,6 +1685,7 @@ export function EditableDataGrid<T extends EditableRow>({
 
     return (
       <Box
+        className={DATA_GRID_CONTINUOUS_SCROLL_FOOTER_CLASS}
         sx={
           showPaginationControls
             ? { ...dataGridFooterSx, justifyContent: 'space-between' }
@@ -2032,10 +2159,10 @@ export function EditableDataGrid<T extends EditableRow>({
             ...(
               isContinuousScroll && !isMobile
                 ? {
-                    height: `${Math.min(
-                      continuousScrollContentHeight,
-                      availableGridHeight ?? continuousScrollContentHeight,
-                    )}px`,
+                    height: `${resolvedContinuousScrollHeight}px`,
+                    '& .MuiDataGrid-virtualScroller': {
+                      overflowY: shouldHideContinuousVerticalOverflow ? 'clip !important' : undefined,
+                    },
                   }
                 : {}
             ),
