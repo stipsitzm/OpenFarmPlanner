@@ -74,7 +74,7 @@ class AuthApiTest(APITestCase):
         )
         self.assertEqual(duplicate.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @patch('accounts.views.send_mail', side_effect=RuntimeError('SMTP 500: trace details'))
+    @patch('accounts.emails.send_mail', side_effect=RuntimeError('SMTP 500: trace details'))
     def test_registration_returns_safe_message_when_activation_mail_fails(self, mocked_send_mail) -> None:
         response = self.client.post(
             '/openfarmplanner/api/auth/register/',
@@ -426,7 +426,7 @@ class AuthApiTest(APITestCase):
         self.assertIn('/activate?uid=', mail.outbox[0].body)
         self.assertIn('&token=', mail.outbox[0].body)
 
-    @patch('accounts.views.send_mail', side_effect=RuntimeError('SMTP exploded'))
+    @patch('accounts.emails.send_mail', side_effect=RuntimeError('SMTP exploded'))
     def test_resend_activation_returns_safe_error_when_mail_fails(self, _mocked_send_mail) -> None:
         inactive = User.objects.create_user(
             username='pending_mail_failed',
@@ -470,7 +470,7 @@ class AuthApiTest(APITestCase):
         self.assertEqual(inactive_response.data.get('detail'), unknown_response.data.get('detail'))
         self.assertEqual(len(mail.outbox), 0)
 
-    @patch('accounts.views.send_mail', side_effect=RuntimeError('SMTP timeout detail'))
+    @patch('accounts.emails.send_mail', side_effect=RuntimeError('SMTP timeout detail'))
     def test_password_reset_returns_safe_error_when_mail_fails(self, _mocked_send_mail) -> None:
         response = self.client.post('/openfarmplanner/api/auth/password-reset/', {'email': self.user.email}, format='json')
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
