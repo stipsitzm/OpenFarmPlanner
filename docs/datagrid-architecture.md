@@ -84,6 +84,12 @@ scroll area. The full row array remains in component state, so sorting,
 filtering, copy operations, and page-level mobile mirrors still operate on
 the complete loaded dataset.
 
+Continuous scroll uses `hooks/useScrollDrivenRowWindow.ts` for the internal
+100-row window and `hooks/useStableDataGridScrollbar.ts` for the visible
+thumb. The same stable-scrollbar hook is re-exported for the raw
+Standort/Parzelle/Beet hierarchy so both large table styles keep matching
+scrollbar behavior without parallel implementations.
+
 `setDraftValues`/`commitDraftValues` let external code push field values
 into a row that's already mid-edit (e.g. a calculated side-effect from
 another field), either staying in edit mode or committing immediately.

@@ -71,6 +71,7 @@ import { useDataGridDelete } from './hooks/useDataGridDelete';
 import { useDataGridRowActionMenu } from './hooks/useDataGridRowActionMenu';
 import { useDataGridRowCommands } from './hooks/useDataGridRowCommands';
 import { useScrollDrivenRowWindow } from './hooks/useScrollDrivenRowWindow';
+import { useStableDataGridScrollbar } from './hooks/useStableDataGridScrollbar';
 import {
   getSortedRowIds,
   isSaveBlockedError,
@@ -120,6 +121,7 @@ const CONTINUOUS_SCROLL_BORDER_HEIGHT_PX = 2;
 const CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX = 24;
 const CONTINUOUS_SCROLL_MIN_HEIGHT_PX = 240;
 const DATA_GRID_VIRTUAL_SCROLLER_SELECTOR = '.MuiDataGrid-virtualScroller';
+const DATA_GRID_MAIN_SELECTOR = '.MuiDataGrid-main';
 const DATA_GRID_CONTINUOUS_SCROLL_FOOTER_CLASS = 'ofp-data-grid-continuous-footer';
 const CONTINUOUS_SCROLL_FIT_EPSILON_PX = 2;
 
@@ -232,7 +234,9 @@ export function EditableDataGrid<T extends EditableRow>({
   const canceledRowIdsRef = useRef<Set<string>>(new Set());
   const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
   const pageContentRef = useRef<HTMLDivElement | null>(null);
+  const stableScrollbarTrackRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery('(max-width:900px)');
+  const shouldUseBlockGridSurface = isContinuousScroll && !isMobile;
   
   const { t } = useTranslation('common');
   const { sortModel, setSortModel, filterModel, setFilterModel } = usePersistentSortModel({
@@ -269,6 +273,10 @@ export function EditableDataGrid<T extends EditableRow>({
       ),
     )
     : rowsForGrid.length;
+  const stableScrollbarRowHeights = useMemo(
+    () => (isContinuousScroll && !isMobile ? rowsForGrid.map(() => CONTINUOUS_SCROLL_ROW_HEIGHT_PX) : []),
+    [isContinuousScroll, isMobile, rowsForGrid],
+  );
   const [continuousScrollLayoutHeights, setContinuousScrollLayoutHeights] = useState<ContinuousScrollLayoutHeights>(
     DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS,
   );
@@ -291,6 +299,14 @@ export function EditableDataGrid<T extends EditableRow>({
     && !isMobile
     && resolvedContinuousScrollHeight !== undefined
     && measuredContinuousScrollContentHeight <= resolvedContinuousScrollHeight + CONTINUOUS_SCROLL_FIT_EPSILON_PX,
+  );
+  const stableScrollbar = useStableDataGridScrollbar(
+    stableScrollbarRowHeights,
+    scrollDrivenRowWindow,
+    DATA_GRID_VIRTUAL_SCROLLER_SELECTOR,
+    gridSurfaceRef,
+    stableScrollbarTrackRef,
+    0,
   );
   const ensureRowVisible = useCallback((rowId: GridRowId): boolean => {
     if (!isContinuousScroll) {
@@ -385,6 +401,46 @@ export function EditableDataGrid<T extends EditableRow>({
       window.removeEventListener('resize', measure);
     };
   }, [currentWindowRowCount, isContinuousScroll, isMobile]);
+
+  useLayoutEffect(() => {
+    if (!isContinuousScroll || isMobile) {
+      return undefined;
+    }
+
+    const surface = gridSurfaceRef.current;
+    const main = surface?.querySelector<HTMLElement>(DATA_GRID_MAIN_SELECTOR);
+    const scroller = surface?.querySelector<HTMLElement>(DATA_GRID_VIRTUAL_SCROLLER_SELECTOR);
+    if (!main || !scroller) {
+      return undefined;
+    }
+
+    const bodyHeight = `calc(100% - ${continuousScrollLayoutHeights.footer + continuousScrollLayoutHeights.border}px)`;
+    const applyHeight = (): void => {
+      main.style.setProperty('height', bodyHeight, 'important');
+      main.style.setProperty('max-height', bodyHeight, 'important');
+      main.style.setProperty('overflow', 'hidden');
+      scroller.style.setProperty('height', '100%', 'important');
+      scroller.style.setProperty('max-height', '100%', 'important');
+    };
+
+    applyHeight();
+    const rafId = window.requestAnimationFrame(applyHeight);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      main.style.removeProperty('height');
+      main.style.removeProperty('max-height');
+      main.style.removeProperty('overflow');
+      scroller.style.removeProperty('height');
+      scroller.style.removeProperty('max-height');
+    };
+  }, [
+    continuousScrollLayoutHeights.border,
+    continuousScrollLayoutHeights.footer,
+    isContinuousScroll,
+    isMobile,
+    scrollDrivenRowWindow.page,
+  ]);
 
   useLayoutEffect(() => {
     if (!shouldHideContinuousVerticalOverflow) {
@@ -2155,13 +2211,23 @@ export function EditableDataGrid<T extends EditableRow>({
             ...dataGridSx,
             width: isContentSizedSurface ? 'fit-content' : '100%',
             minWidth: isContentSizedSurface ? 0 : '100%',
-            display: isContentSizedSurface ? 'inline-block' : 'block',
+            display: isContentSizedSurface && !shouldUseBlockGridSurface ? 'inline-block' : 'block',
             ...(
               isContinuousScroll && !isMobile
                 ? {
                     height: `${resolvedContinuousScrollHeight}px`,
+                    '& .MuiDataGrid-main': {
+                      height: `calc(100% - ${continuousScrollLayoutHeights.footer + continuousScrollLayoutHeights.border}px) !important`,
+                      maxHeight: `calc(100% - ${continuousScrollLayoutHeights.footer + continuousScrollLayoutHeights.border}px) !important`,
+                      overflow: 'hidden',
+                    },
                     '& .MuiDataGrid-virtualScroller': {
+                      height: '100% !important',
+                      maxHeight: '100% !important',
                       overflowY: shouldHideContinuousVerticalOverflow ? 'clip !important' : undefined,
+                    },
+                    '& .MuiDataGrid-scrollbar--vertical': {
+                      display: 'none',
                     },
                   }
                 : {}
@@ -2332,6 +2398,37 @@ export function EditableDataGrid<T extends EditableRow>({
           localeText={germanDataGridLocaleText}
           apiRef={gridApiRef}
           />
+          {!isMobile && isContinuousScroll && stableScrollbar.isActive && (
+            <Box
+              ref={stableScrollbarTrackRef}
+              data-testid="continuous-scrollbar-track"
+              onPointerDown={stableScrollbar.onTrackPointerDown}
+              sx={{
+                position: 'absolute',
+                top: `${CONTINUOUS_SCROLL_HEADER_HEIGHT_PX}px`,
+                bottom: `${continuousScrollLayoutHeights.footer + continuousScrollLayoutHeights.border}px`,
+                right: 0,
+                width: '10px',
+                zIndex: 60,
+              }}
+            >
+              <Box
+                data-testid="continuous-scrollbar-thumb"
+                onPointerDown={stableScrollbar.onThumbPointerDown}
+                sx={{
+                  position: 'absolute',
+                  top: `${stableScrollbar.thumbTop}px`,
+                  height: `${stableScrollbar.thumbHeight}px`,
+                  left: '2px',
+                  right: '2px',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                  cursor: 'pointer',
+                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.45)' },
+                }}
+              />
+            </Box>
+          )}
           </Box>
           </Box>
         </Box>

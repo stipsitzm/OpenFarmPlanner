@@ -796,8 +796,8 @@ function PlantingPlans() {
         field: "notes",
         headerName: t("common:fields.notes"),
         width: 72,
-        minWidth: 56,
-        maxWidth: 90,
+        minWidth: 72,
+        flex: 1,
         align: "center",
         headerAlign: "center",
         // Notes field will be overridden by NotesCell in EditableDataGrid

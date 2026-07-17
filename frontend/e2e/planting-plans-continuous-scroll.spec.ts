@@ -94,6 +94,7 @@ test.describe('planting plans continuous scroll', () => {
     const metrics = await getVirtualScrollerMetrics(page, { attemptScroll: true });
     expect(metrics.scrollHeight - metrics.clientHeight).toBeLessThanOrEqual(1);
     expect(metrics.scrollTopAfterScrollAttempt).toBe(0);
+    await expect(page.getByTestId('continuous-scrollbar-thumb')).toHaveCount(0);
   });
 
   test('keeps the virtual scroller active when rows exceed the available height', async ({ page, request }) => {
@@ -102,15 +103,20 @@ test.describe('planting plans continuous scroll', () => {
 
     await page.goto('/app/planting-plans');
     await expect(page.getByText('Scrollkultur (Sorte A)').first()).toBeVisible({ timeout: 10_000 });
+    await page.evaluate(async () => {
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    });
 
     const beforeScroll = await getVirtualScrollerMetrics(page);
+    await expect(page.getByTestId('continuous-scrollbar-thumb')).toBeVisible();
 
     await page.locator('.MuiDataGrid-virtualScroller').first().hover();
     await page.mouse.wheel(0, 1400);
 
     await expect.poll(async () => {
       const afterScroll = await getVirtualScrollerMetrics(page);
-      return afterScroll.firstRenderedRowId;
-    }).not.toBe(beforeScroll.firstRenderedRowId);
+      return afterScroll.scrollTopAfterScrollAttempt;
+    }).toBeGreaterThan(beforeScroll.scrollTopAfterScrollAttempt);
   });
 });
