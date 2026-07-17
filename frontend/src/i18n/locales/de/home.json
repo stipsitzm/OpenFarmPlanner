@@ -87,7 +87,7 @@
     },
     "privacy": {
       "title": "Datenschutzerklärung",
-      "version": "Stand: 15. Juli 2026",
+      "version": "Stand: 17. Juli 2026",
       "sections": {
         "controller": {
           "title": "Verantwortlicher",
@@ -205,7 +205,7 @@
     "terms": {
       "title": "Nutzungsbedingungen",
       "print": "Drucken / als PDF speichern",
-      "version": "Stand: 15. Juli 2026",
+      "version": "Stand: 17. Juli 2026",
       "sections": {
         "provider": {
           "title": "Anbieter und Kontakt",
@@ -275,7 +275,7 @@
         },
         "changes": {
           "title": "Änderungen dieser Nutzungsbedingungen",
-          "content": "Wir passen diese Nutzungsbedingungen an, wenn sich die angebotenen Funktionen oder rechtliche Rahmenbedingungen ändern. Maßgeblich ist die zum Zeitpunkt Ihrer Nutzung innerhalb der Anwendung veröffentlichte Fassung; das Datum der letzten Änderung finden Sie oben auf dieser Seite. Bei wesentlichen Änderungen informieren wir aktive Nutzer in geeigneter Weise, etwa per E-Mail oder durch einen Hinweis in der Anwendung."
+          "content": "Wir passen diese Nutzungsbedingungen an, wenn sich die angebotenen Funktionen oder rechtliche Rahmenbedingungen ändern. Maßgeblich ist die zum Zeitpunkt Ihrer Nutzung innerhalb der Anwendung veröffentlichte Fassung; das Datum der letzten Änderung finden Sie am Ende dieser Seite. Bei wesentlichen Änderungen informieren wir aktive Nutzer in geeigneter Weise, etwa per E-Mail oder durch einen Hinweis in der Anwendung."
         }
       }
     }
