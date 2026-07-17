@@ -83,6 +83,28 @@ async function getVirtualScrollerMetrics(page: Page, options: { attemptScroll?: 
   }, Boolean(options.attemptScroll));
 }
 
+async function getDesktopGridLayoutMetrics(page: Page): Promise<{
+  gridLeft: number;
+  gridWidth: number;
+  notesHeaderWidth: number;
+  viewportWidth: number;
+}> {
+  const grid = page.locator('.MuiDataGrid-root').first();
+  await expect(grid).toBeVisible();
+
+  return grid.evaluate((element) => {
+    const gridRect = element.getBoundingClientRect();
+    const notesHeader = Array.from(element.querySelectorAll<HTMLElement>('[role="columnheader"]'))
+      .find((header) => header.textContent?.includes('Notizen'));
+    return {
+      gridLeft: gridRect.left,
+      gridWidth: gridRect.width,
+      notesHeaderWidth: notesHeader?.getBoundingClientRect().width ?? 0,
+      viewportWidth: window.innerWidth,
+    };
+  });
+}
+
 test.describe('planting plans continuous scroll', () => {
   test('does not leave a vertical scroll range when all rows fit', async ({ page, request }) => {
     await page.setViewportSize({ width: 1400, height: 900 });
@@ -98,7 +120,7 @@ test.describe('planting plans continuous scroll', () => {
   });
 
   test('keeps the virtual scroller active when rows exceed the available height', async ({ page, request }) => {
-    await page.setViewportSize({ width: 1400, height: 900 });
+    await page.setViewportSize({ width: 2048, height: 900 });
     await createPlantingPlanFixtures(page, request, 'planting-plans-long-scroll', 120);
 
     await page.goto('/app/planting-plans');
@@ -110,6 +132,11 @@ test.describe('planting plans continuous scroll', () => {
 
     const beforeScroll = await getVirtualScrollerMetrics(page);
     await expect(page.getByTestId('continuous-scrollbar-thumb')).toBeVisible();
+    const layout = await getDesktopGridLayoutMetrics(page);
+    expect(layout.notesHeaderWidth).toBeGreaterThanOrEqual(56);
+    expect(layout.notesHeaderWidth).toBeLessThanOrEqual(90);
+    expect(layout.gridWidth).toBeLessThan(1400);
+    expect(layout.gridLeft).toBeGreaterThan(350);
 
     await page.locator('.MuiDataGrid-virtualScroller').first().hover();
     await page.mouse.wheel(0, 1400);

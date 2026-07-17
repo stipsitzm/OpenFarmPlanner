@@ -796,8 +796,8 @@ function PlantingPlans() {
         field: "notes",
         headerName: t("common:fields.notes"),
         width: 72,
-        minWidth: 72,
-        flex: 1,
+        minWidth: 56,
+        maxWidth: 90,
         align: "center",
         headerAlign: "center",
         // Notes field will be overridden by NotesCell in EditableDataGrid
@@ -1607,7 +1607,7 @@ function PlantingPlans() {
           sx={isMobile ? { position: 'fixed', top: '-9999px', left: 0, width: '100vw', height: 1, overflow: 'hidden', pointerEvents: 'none', visibility: 'hidden' } : undefined}
         >
           <EditableDataGrid<PlantingPlanRow>
-            surfaceSizing="fullWorkspace"
+            surfaceSizing="contentFit"
             scrollMode="continuous"
             columns={columns}
             api={plantingPlanGridAPI}

@@ -120,6 +120,7 @@ const CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX = 61;
 const CONTINUOUS_SCROLL_BORDER_HEIGHT_PX = 2;
 const CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX = 24;
 const CONTINUOUS_SCROLL_MIN_HEIGHT_PX = 240;
+const DATA_GRID_ROOT_SELECTOR = '.MuiDataGrid-root';
 const DATA_GRID_VIRTUAL_SCROLLER_SELECTOR = '.MuiDataGrid-virtualScroller';
 const DATA_GRID_MAIN_SELECTOR = '.MuiDataGrid-main';
 const DATA_GRID_CONTINUOUS_SCROLL_FOOTER_CLASS = 'ofp-data-grid-continuous-footer';
@@ -236,7 +237,6 @@ export function EditableDataGrid<T extends EditableRow>({
   const pageContentRef = useRef<HTMLDivElement | null>(null);
   const stableScrollbarTrackRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery('(max-width:900px)');
-  const shouldUseBlockGridSurface = isContinuousScroll && !isMobile;
   
   const { t } = useTranslation('common');
   const { sortModel, setSortModel, filterModel, setFilterModel } = usePersistentSortModel({
@@ -294,6 +294,12 @@ export function EditableDataGrid<T extends EditableRow>({
       availableGridHeight ?? measuredContinuousScrollContentHeight,
     )
     : undefined;
+  const resolvedContinuousScrollBodyHeight = resolvedContinuousScrollHeight === undefined
+    ? undefined
+    : Math.max(
+      0,
+      resolvedContinuousScrollHeight - continuousScrollLayoutHeights.footer - continuousScrollLayoutHeights.border,
+    );
   const shouldHideContinuousVerticalOverflow = Boolean(
     isContinuousScroll
     && !isMobile
@@ -408,19 +414,29 @@ export function EditableDataGrid<T extends EditableRow>({
     }
 
     const surface = gridSurfaceRef.current;
+    const root = surface?.querySelector<HTMLElement>(DATA_GRID_ROOT_SELECTOR);
     const main = surface?.querySelector<HTMLElement>(DATA_GRID_MAIN_SELECTOR);
     const scroller = surface?.querySelector<HTMLElement>(DATA_GRID_VIRTUAL_SCROLLER_SELECTOR);
-    if (!main || !scroller) {
+    if (
+      !root
+      || !main
+      || !scroller
+      || resolvedContinuousScrollHeight === undefined
+      || resolvedContinuousScrollBodyHeight === undefined
+    ) {
       return undefined;
     }
 
-    const bodyHeight = `calc(100% - ${continuousScrollLayoutHeights.footer + continuousScrollLayoutHeights.border}px)`;
+    const bodyHeight = `${resolvedContinuousScrollBodyHeight}px`;
+    const rootHeight = `${resolvedContinuousScrollHeight}px`;
     const applyHeight = (): void => {
+      root.style.setProperty('height', rootHeight, 'important');
+      root.style.setProperty('max-height', rootHeight, 'important');
       main.style.setProperty('height', bodyHeight, 'important');
       main.style.setProperty('max-height', bodyHeight, 'important');
       main.style.setProperty('overflow', 'hidden');
-      scroller.style.setProperty('height', '100%', 'important');
-      scroller.style.setProperty('max-height', '100%', 'important');
+      scroller.style.setProperty('height', bodyHeight, 'important');
+      scroller.style.setProperty('max-height', bodyHeight, 'important');
     };
 
     applyHeight();
@@ -428,6 +444,8 @@ export function EditableDataGrid<T extends EditableRow>({
 
     return () => {
       window.cancelAnimationFrame(rafId);
+      root.style.removeProperty('height');
+      root.style.removeProperty('max-height');
       main.style.removeProperty('height');
       main.style.removeProperty('max-height');
       main.style.removeProperty('overflow');
@@ -439,6 +457,8 @@ export function EditableDataGrid<T extends EditableRow>({
     continuousScrollLayoutHeights.footer,
     isContinuousScroll,
     isMobile,
+    resolvedContinuousScrollBodyHeight,
+    resolvedContinuousScrollHeight,
     scrollDrivenRowWindow.page,
   ]);
 
@@ -2133,7 +2153,7 @@ export function EditableDataGrid<T extends EditableRow>({
             sx={{
               display: 'flex',
               flexDirection: 'column',
-              width: isContentSizedSurface ? 'fit-content' : '100%',
+              width: isContentSizedSurface ? 'max-content' : '100%',
               minWidth: isContentSizedSurface ? 0 : '100%',
             }}
           >
@@ -2157,9 +2177,9 @@ export function EditableDataGrid<T extends EditableRow>({
             sx={{
               position: 'relative',
               display: 'block',
-              width: isContentSizedSurface ? 'fit-content' : '100%',
+              width: isContentSizedSurface ? 'max-content' : '100%',
               minWidth: isContentSizedSurface ? 0 : '100%',
-              maxWidth: '100%',
+              maxWidth: isContentSizedSurface ? 'none' : '100%',
               '& [role="row"][data-id]': {
                 WebkitTouchCallout: 'none',
               },
@@ -2209,21 +2229,21 @@ export function EditableDataGrid<T extends EditableRow>({
           }}
           sx={{
             ...dataGridSx,
-            width: isContentSizedSurface ? 'fit-content' : '100%',
+            width: isContentSizedSurface ? 'max-content' : '100%',
             minWidth: isContentSizedSurface ? 0 : '100%',
-            display: isContentSizedSurface && !shouldUseBlockGridSurface ? 'inline-block' : 'block',
+            display: 'block',
             ...(
               isContinuousScroll && !isMobile
                 ? {
                     height: `${resolvedContinuousScrollHeight}px`,
                     '& .MuiDataGrid-main': {
-                      height: `calc(100% - ${continuousScrollLayoutHeights.footer + continuousScrollLayoutHeights.border}px) !important`,
-                      maxHeight: `calc(100% - ${continuousScrollLayoutHeights.footer + continuousScrollLayoutHeights.border}px) !important`,
+                      height: `${resolvedContinuousScrollBodyHeight ?? 0}px !important`,
+                      maxHeight: `${resolvedContinuousScrollBodyHeight ?? 0}px !important`,
                       overflow: 'hidden',
                     },
                     '& .MuiDataGrid-virtualScroller': {
-                      height: '100% !important',
-                      maxHeight: '100% !important',
+                      height: `${resolvedContinuousScrollBodyHeight ?? 0}px !important`,
+                      maxHeight: `${resolvedContinuousScrollBodyHeight ?? 0}px !important`,
                       overflowY: shouldHideContinuousVerticalOverflow ? 'clip !important' : undefined,
                     },
                     '& .MuiDataGrid-scrollbar--vertical': {
