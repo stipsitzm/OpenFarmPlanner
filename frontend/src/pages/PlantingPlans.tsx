@@ -1607,11 +1607,10 @@ function PlantingPlans() {
           sx={isMobile ? { position: 'fixed', top: '-9999px', left: 0, width: '100vw', height: 1, overflow: 'hidden', pointerEvents: 'none', visibility: 'hidden' } : undefined}
         >
           <EditableDataGrid<PlantingPlanRow>
-            surfaceSizing="contentFit"
+            surfaceSizing="fullWorkspace"
+            scrollMode="continuous"
             columns={columns}
             api={plantingPlanGridAPI}
-            paginationPageSizeOptions={[25, 50, 100]}
-            initialPageSize={25}
             commandApiRef={gridCommandApiRef}
             onSelectedRowChange={setSelectedPlan}
             onRowsStateChange={(rows) => {

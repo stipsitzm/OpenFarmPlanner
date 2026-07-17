@@ -21,7 +21,7 @@
  * DataGrid with its own parallel implementation of several of these patterns).
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect, useRef, useMemo, type KeyboardEvent, type ReactNode } from 'react';
 import {
   DataGrid,
   GridPagination,
@@ -70,6 +70,7 @@ import { useDataGridCommandApi } from './hooks/useDataGridCommandApi';
 import { useDataGridDelete } from './hooks/useDataGridDelete';
 import { useDataGridRowActionMenu } from './hooks/useDataGridRowActionMenu';
 import { useDataGridRowCommands } from './hooks/useDataGridRowCommands';
+import { useScrollDrivenRowWindow } from './hooks/useScrollDrivenRowWindow';
 import {
   getSortedRowIds,
   isSaveBlockedError,
@@ -111,6 +112,14 @@ type DataGridKeyboardEvent = KeyboardEvent & {
   defaultMuiPrevented?: boolean;
 };
 
+const CONTINUOUS_SCROLL_PAGE_SIZE = 100;
+const CONTINUOUS_SCROLL_ROW_HEIGHT_PX = 36;
+const CONTINUOUS_SCROLL_HEADER_HEIGHT_PX = 56;
+const CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX = 44;
+const CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX = 24;
+const CONTINUOUS_SCROLL_MIN_HEIGHT_PX = 240;
+const DATA_GRID_VIRTUAL_SCROLLER_SELECTOR = '.MuiDataGrid-virtualScroller';
+
 export function EditableDataGrid<T extends EditableRow>({
   columns,
   api,
@@ -150,6 +159,7 @@ export function EditableDataGrid<T extends EditableRow>({
   surfaceSizing,
   paginationPageSizeOptions,
   initialPageSize = 25,
+  scrollMode = 'autoHeight',
   columnVisibilityModel,
   onColumnVisibilityModelChange,
 }: EditableDataGridProps<T>) {
@@ -158,6 +168,8 @@ export function EditableDataGrid<T extends EditableRow>({
   const isContentSizedSurface = resolvedSurfaceSizing === 'contentFit' || resolvedSurfaceSizing === 'compact';
   const shouldUseCompactContainer = resolvedSurfaceSizing === 'compact';
   const shouldDisableTrailingFiller = isContentSizedSurface;
+  const isContinuousScroll = scrollMode === 'continuous';
+  const showPaginationControls = Boolean(paginationPageSizeOptions) && !isContinuousScroll;
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [stableRowOrder, setStableRowOrder] = useState<GridRowId[]>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -176,6 +188,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const rowSnapshotRef = useRef<Map<string, T>>(new Map());
   const canceledRowIdsRef = useRef<Set<string>>(new Set());
   const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const pageContentRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery('(max-width:900px)');
   
   const { t } = useTranslation('common');
@@ -189,8 +202,88 @@ export function EditableDataGrid<T extends EditableRow>({
     () => orderRowsByStableIds(rows as T[], stableRowOrder),
     [rows, stableRowOrder],
   );
+  const scrollDrivenRowWindow = useScrollDrivenRowWindow(
+    rowsForGrid.length,
+    CONTINUOUS_SCROLL_PAGE_SIZE,
+    DATA_GRID_VIRTUAL_SCROLLER_SELECTOR,
+    gridSurfaceRef,
+    { preservePageOnRowCountChange: true },
+  );
+  const activePaginationModel = useMemo(
+    () => (
+      isContinuousScroll
+        ? { page: scrollDrivenRowWindow.page, pageSize: scrollDrivenRowWindow.pageSize }
+        : paginationModel
+    ),
+    [isContinuousScroll, paginationModel, scrollDrivenRowWindow.page, scrollDrivenRowWindow.pageSize],
+  );
+  const currentWindowRowCount = isContinuousScroll
+    ? Math.max(
+      0,
+      Math.min(
+        scrollDrivenRowWindow.pageSize,
+        rowsForGrid.length - scrollDrivenRowWindow.page * scrollDrivenRowWindow.pageSize,
+      ),
+    )
+    : rowsForGrid.length;
+  const continuousScrollContentHeight = useMemo(() => (
+    CONTINUOUS_SCROLL_HEADER_HEIGHT_PX
+    + CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX
+    + currentWindowRowCount * CONTINUOUS_SCROLL_ROW_HEIGHT_PX
+  ), [currentWindowRowCount]);
+  const [availableGridHeight, setAvailableGridHeight] = useState<number | null>(null);
+  const ensureRowVisible = useCallback((rowId: GridRowId): boolean => {
+    if (!isContinuousScroll) {
+      return false;
+    }
+    const rowIndex = rowsForGrid.findIndex((row) => String(row.id) === String(rowId));
+    return scrollDrivenRowWindow.ensureRowIndexVisible(rowIndex);
+  }, [isContinuousScroll, rowsForGrid, scrollDrivenRowWindow]);
+
+  const runAfterRowVisible = useCallback((rowId: GridRowId, action: () => void): void => {
+    const changedPage = ensureRowVisible(rowId);
+    if (!changedPage) {
+      action();
+      return;
+    }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(action);
+    });
+  }, [ensureRowVisible]);
+
+  useLayoutEffect(() => {
+    if (!isContinuousScroll || isMobile) {
+      return undefined;
+    }
+
+    const measure = (): void => {
+      const surface = gridSurfaceRef.current;
+      if (!surface) {
+        return;
+      }
+      const top = surface.getBoundingClientRect().top;
+      setAvailableGridHeight(
+        Math.max(CONTINUOUS_SCROLL_MIN_HEIGHT_PX, window.innerHeight - top - CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX),
+      );
+    };
+
+    measure();
+    window.addEventListener('resize', measure);
+
+    let resizeObserver: ResizeObserver | undefined;
+    const observedElement = pageContentRef.current;
+    if (observedElement && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(measure);
+      resizeObserver.observe(observedElement);
+    }
+
+    return () => {
+      window.removeEventListener('resize', measure);
+      resizeObserver?.disconnect();
+    };
+  }, [isContinuousScroll, isMobile]);
   useEffect(() => {
-    if (!import.meta.env.DEV || !paginationPageSizeOptions || loading) {
+    if (!import.meta.env.DEV || (!showPaginationControls && !isContinuousScroll) || loading) {
       return;
     }
 
@@ -198,16 +291,16 @@ export function EditableDataGrid<T extends EditableRow>({
       const visibleRowCount = Math.max(
         0,
         Math.min(
-          paginationModel.pageSize,
-          rowsForGrid.length - paginationModel.page * paginationModel.pageSize,
+          activePaginationModel.pageSize,
+          rowsForGrid.length - activePaginationModel.page * activePaginationModel.pageSize,
         ),
       );
       console.debug('[DataGrid diagnostics]', {
         table: tableKey ?? 'editableDataGrid',
         totalRows: rowsForGrid.length,
         visibleRows: visibleRowCount,
-        page: paginationModel.page + 1,
-        pageSize: paginationModel.pageSize,
+        page: activePaginationModel.page + 1,
+        pageSize: activePaginationModel.pageSize,
       });
     });
 
@@ -215,9 +308,10 @@ export function EditableDataGrid<T extends EditableRow>({
   }, [
     gridApiRef,
     loading,
-    paginationModel,
-    paginationPageSizeOptions,
+    activePaginationModel,
+    isContinuousScroll,
     rowsForGrid,
+    showPaginationControls,
     tableKey,
   ]);
   const hasContextMenuHintRows = useMemo(
@@ -299,15 +393,22 @@ export function EditableDataGrid<T extends EditableRow>({
     setSelectedRowIds,
     setRowModesModel,
     rowSnapshotRef,
+    ensureRowVisible,
   });
   const handleSortModelChange = useCallback((nextSortModel: GridSortModel): void => {
     setSortModel(nextSortModel);
     refreshStableRowOrder(rows as T[], nextSortModel);
-  }, [refreshStableRowOrder, rows, setSortModel]);
+    if (isContinuousScroll) {
+      scrollDrivenRowWindow.ensureRowIndexVisible(0);
+    }
+  }, [isContinuousScroll, refreshStableRowOrder, rows, scrollDrivenRowWindow, setSortModel]);
   const handleFilterModelChange = useCallback((nextFilterModel: GridFilterModel): void => {
     setFilterModel(nextFilterModel);
     refreshStableRowOrder(rows as T[]);
-  }, [refreshStableRowOrder, rows, setFilterModel]);
+    if (isContinuousScroll) {
+      scrollDrivenRowWindow.ensureRowIndexVisible(0);
+    }
+  }, [isContinuousScroll, refreshStableRowOrder, rows, scrollDrivenRowWindow, setFilterModel]);
 
   const clearSavedRowInteractionState = useCallback((rowId: GridRowId, savedRowId: GridRowId = rowId): void => {
     const rowKey = String(rowId);
@@ -399,34 +500,37 @@ export function EditableDataGrid<T extends EditableRow>({
     field: string,
     options: { startEdit: boolean },
   ): void => {
-    const api = gridApiRef.current;
-    if (!api) {
-      return;
-    }
     const rowKey = String(rowId);
     const row = rowsById.get(rowKey);
     if (row && !rowSnapshotRef.current.has(rowKey)) {
       rowSnapshotRef.current.set(rowKey, row as T);
     }
 
-    const rowIndex = api.getRowIndexRelativeToVisibleRows(rowId);
-    const colIndex = api.getColumnIndexRelativeToVisibleColumns(field);
-    api.scrollToIndexes({ rowIndex, colIndex });
-    api.setCellFocus(rowId, field);
+    runAfterRowVisible(rowId, () => {
+      const api = gridApiRef.current;
+      if (!api) {
+        return;
+      }
 
-    if (!options.startEdit || notesFieldNames.includes(field)) {
-      return;
-    }
+      const rowIndex = api.getRowIndexRelativeToVisibleRows(rowId);
+      const colIndex = api.getColumnIndexRelativeToVisibleColumns(field);
+      api.scrollToIndexes({ rowIndex, colIndex });
+      api.setCellFocus(rowId, field);
 
-    if (rowModesModel[rowId]?.mode === GridRowModes.Edit) {
-      return;
-    }
+      if (!options.startEdit || notesFieldNames.includes(field)) {
+        return;
+      }
 
-    setRowModesModel((oldModel) => ({
-      ...oldModel,
-      [rowId]: { mode: GridRowModes.Edit, fieldToFocus: field },
-    }));
-  }, [gridApiRef, notesFieldNames, rowModesModel, rowsById]);
+      if (rowModesModel[rowId]?.mode === GridRowModes.Edit) {
+        return;
+      }
+
+      setRowModesModel((oldModel) => ({
+        ...oldModel,
+        [rowId]: { mode: GridRowModes.Edit, fieldToFocus: field },
+      }));
+    });
+  }, [gridApiRef, notesFieldNames, rowModesModel, rowsById, runAfterRowVisible]);
 
   const getHorizontalNavigationTarget = useCallback((
     rowId: GridRowId,
@@ -555,6 +659,9 @@ export function EditableDataGrid<T extends EditableRow>({
       setRows((oldRows) => [...oldRows, newRow]);
       setStableRowOrder((previousOrder) => [...previousOrder, newRow.id]);
       setSelectedRowIds([newRow.id]);
+      if (isContinuousScroll) {
+        scrollDrivenRowWindow.ensureRowIndexVisible(rows.length, { forRowCount: rows.length + 1 });
+      }
       // Set row to edit mode after a small delay to ensure row is added first
       setTimeout(() => {
         const fieldToFocus = columns.find((column) => column.editable !== false)?.field ?? columns[0]?.field;
@@ -567,7 +674,18 @@ export function EditableDataGrid<T extends EditableRow>({
         }
       }, 0);
     }
-  }, [columns, gridApiRef, initialRow, dataFetched, loading, createNewRow, setSelectedRowIds]);
+  }, [
+    columns,
+    createNewRow,
+    dataFetched,
+    gridApiRef,
+    initialRow,
+    isContinuousScroll,
+    loading,
+    rows.length,
+    scrollDrivenRowWindow,
+    setSelectedRowIds,
+  ]);
 
   /**
    * Handle adding a new row to the grid
@@ -580,13 +698,15 @@ export function EditableDataGrid<T extends EditableRow>({
       ...oldModel,
       [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus: columns[0]?.field },
     }));
-    if (paginationPageSizeOptions) {
+    if (isContinuousScroll) {
+      scrollDrivenRowWindow.ensureRowIndexVisible(rows.length, { forRowCount: rows.length + 1 });
+    } else if (showPaginationControls) {
       setPaginationModel((current) => ({
         ...current,
         page: Math.floor(rows.length / current.pageSize),
       }));
     }
-  }, [columns, createNewRow, paginationPageSizeOptions, rows.length]);
+  }, [columns, createNewRow, isContinuousScroll, rows.length, scrollDrivenRowWindow, showPaginationControls]);
 
   const handleDiscardRowChanges = useCallback((rowId: GridRowId): void => {
     const rowKey = String(rowId);
@@ -1440,7 +1560,7 @@ export function EditableDataGrid<T extends EditableRow>({
     return (
       <Box
         sx={
-          paginationPageSizeOptions
+          showPaginationControls
             ? { ...dataGridFooterSx, justifyContent: 'space-between' }
             : dataGridFooterSx
         }
@@ -1481,7 +1601,7 @@ export function EditableDataGrid<T extends EditableRow>({
             </Box>
           )}
         </Box>
-        {paginationPageSizeOptions && <GridPagination />}
+        {showPaginationControls && <GridPagination />}
       </Box>
     );
   };
@@ -1557,7 +1677,7 @@ export function EditableDataGrid<T extends EditableRow>({
     });
   }, [columns, getInlineRowActions, inlineRowActionField, notes, notesEditor, notesFieldNames, notesPreview, renderInlineActionCell, showInlineRowActionMenu]);
 
-  const columnsWithActions: GridColDef[] = [
+  const columnsWithActions: GridColDef[] = useMemo(() => [
     ...processedColumns,
     ...(showRowEditActions
       ? [
@@ -1631,7 +1751,17 @@ export function EditableDataGrid<T extends EditableRow>({
           },
         ]
       : []),
-  ];
+  ], [
+    dirtyRowIds,
+    handleDeleteClick,
+    handleDiscardRowChanges,
+    handleSaveRow,
+    processedColumns,
+    rowModesModel,
+    showDeleteAction,
+    showRowEditActions,
+    t,
+  ]);
 
   const handleViewModeCellNavigation = useCallback((params: GridCellParams<T>, event: DataGridKeyboardEvent): boolean => {
     if (
@@ -1700,9 +1830,11 @@ export function EditableDataGrid<T extends EditableRow>({
     event.preventDefault();
     event.stopPropagation();
     event.defaultMuiPrevented = true;
-    focusDataGridKeyboardNavigableCell<T>({
-      api: gridApiRef.current,
-      cell: target,
+    runAfterRowVisible(target.id, () => {
+      focusDataGridKeyboardNavigableCell<T>({
+        api: gridApiRef.current,
+        cell: target,
+      });
     });
     return true;
   }, [
@@ -1711,6 +1843,7 @@ export function EditableDataGrid<T extends EditableRow>({
     isActionCellKeyboardNavigable,
     rowModesModel,
     rowsForGrid,
+    runAfterRowVisible,
   ]);
 
   const getNotesDrawerTitle = (): string => {
@@ -1793,6 +1926,7 @@ export function EditableDataGrid<T extends EditableRow>({
       ) : null}
       
       <Box
+        ref={pageContentRef}
         sx={{
           position: 'relative',
           width: '100%',
@@ -1866,12 +2000,20 @@ export function EditableDataGrid<T extends EditableRow>({
           loading={loading}
           editMode="row"
           density={isMobile ? 'standard' : 'compact'}
-          autoHeight
+          autoHeight={!isContinuousScroll || isMobile}
           hideFooter={false}
-          pagination={paginationPageSizeOptions ? true : undefined}
-          paginationModel={paginationPageSizeOptions ? paginationModel : undefined}
-          onPaginationModelChange={paginationPageSizeOptions ? setPaginationModel : undefined}
-          pageSizeOptions={paginationPageSizeOptions}
+          pagination={showPaginationControls || isContinuousScroll ? true : undefined}
+          paginationModel={showPaginationControls || isContinuousScroll ? activePaginationModel : undefined}
+          onPaginationModelChange={
+            isContinuousScroll
+              ? () => {}
+              : showPaginationControls
+                ? setPaginationModel
+                : undefined
+          }
+          pageSizeOptions={showPaginationControls ? paginationPageSizeOptions : undefined}
+          rowHeight={isContinuousScroll ? CONTINUOUS_SCROLL_ROW_HEIGHT_PX : undefined}
+          columnHeaderHeight={isContinuousScroll ? CONTINUOUS_SCROLL_HEADER_HEIGHT_PX : undefined}
           sortModel={sortModel}
           onSortModelChange={handleSortModelChange}
           sortingMode="server"
@@ -1887,6 +2029,16 @@ export function EditableDataGrid<T extends EditableRow>({
             width: isContentSizedSurface ? 'fit-content' : '100%',
             minWidth: isContentSizedSurface ? 0 : '100%',
             display: isContentSizedSurface ? 'inline-block' : 'block',
+            ...(
+              isContinuousScroll && !isMobile
+                ? {
+                    height: `${Math.min(
+                      continuousScrollContentHeight,
+                      availableGridHeight ?? continuousScrollContentHeight,
+                    )}px`,
+                  }
+                : {}
+            ),
             '& .MuiDataGrid-row.ofp-row-long-press .MuiDataGrid-cell': {
               bgcolor: 'action.selected',
             },

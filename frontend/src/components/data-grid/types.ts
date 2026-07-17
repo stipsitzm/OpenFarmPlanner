@@ -104,6 +104,7 @@ export interface EditableDataGridProps<T extends EditableRow> {
   surfaceSizing?: 'contentFit' | 'fullWorkspace' | 'compact';
   paginationPageSizeOptions?: number[];
   initialPageSize?: number;
+  scrollMode?: 'autoHeight' | 'continuous';
   /**
    * Column visibility model. Pass `columnVisibilityModel` from
    * `useColumnVisibility`.
