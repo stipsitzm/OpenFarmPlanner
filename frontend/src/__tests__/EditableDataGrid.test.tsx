@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/refs */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -105,6 +106,7 @@ vi.mock('@mui/x-data-grid', async () => {
       <div>
         <div data-testid="row-count">{rows.length}</div>
         <div data-testid="pagination-enabled">{String(Boolean(pagination))}</div>
+        <div data-testid="pagination-page">{paginationModel?.page ?? ''}</div>
         <div data-testid="pagination-page-size">{paginationModel?.pageSize ?? ''}</div>
         <div data-testid="pagination-options">{pageSizeOptions?.join(',') ?? ''}</div>
         {rows.map((row: TestGridRow) => (
@@ -337,6 +339,32 @@ describe('EditableDataGrid', () => {
     expect(screen.getByTestId('pagination-enabled')).toHaveTextContent('true');
     expect(screen.getByTestId('pagination-page-size')).toHaveTextContent('25');
     expect(screen.getByTestId('pagination-options')).toHaveTextContent('25,50,100');
+  });
+
+  it('uses hidden 100-row internal pagination for continuous scroll without rendering pager controls', async () => {
+    const rows = Array.from({ length: 125 }, (_, index) => (
+      createGridRow({ id: index + 1, name: `Plan ${index + 1}`, area_sqm: index + 1 })
+    ));
+    const props = basePropsWithRows(rows);
+
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        scrollMode="continuous"
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('125'));
+    expect(screen.getByTestId('pagination-enabled')).toHaveTextContent('true');
+    expect(screen.getByTestId('pagination-page')).toHaveTextContent('0');
+    expect(screen.getByTestId('pagination-page-size')).toHaveTextContent('100');
+    expect(screen.getByTestId('pagination-options')).toBeEmptyDOMElement();
+    expect(screen.queryByTestId('grid-pagination')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText('Neu'));
+
+    await waitFor(() => expect(screen.getByTestId('pagination-page')).toHaveTextContent('1'));
   });
 
   it('supports add, blur/enter/tab commit flows and calls API save with payload', async () => {

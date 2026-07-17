@@ -41,10 +41,13 @@ result.
 - Analysis pages use `fetchAllPaginated` to follow every backend `next` link.
 - Bulk reads request up to 1,000 records per response through a bounded DRF
   page-size override; normal API lists still default to 100.
-- The planting-plan grid explicitly paginates client-side with page sizes 25,
-  50, and 100. Existing persistent sorting and filtering remain active over the
-  complete loaded dataset.
-- Adding a plan moves the grid to the page containing the new draft row.
+- The planting-plan grid loads the complete paginated API result up front, then
+  uses the same scroll-driven internal DataGrid row window as the field/bed
+  hierarchy. No pager UI is shown; persistent sorting and filtering remain
+  active over the complete loaded dataset, not just the currently mounted
+  internal row window.
+- Adding or deep-linking to a plan moves the internal row window to the row
+  containing the new or targeted record so it is visible and editable.
 - Field planning uses a continuous scroll-driven render window. Only visible
   rows plus overscan, capped by timeline-item count, are passed to
   `react-modern-gantt`. The complete dataset remains in React state.

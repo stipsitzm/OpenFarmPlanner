@@ -21,7 +21,7 @@
  * DataGrid with its own parallel implementation of several of these patterns).
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo, type KeyboardEvent, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect, useRef, useMemo, type KeyboardEvent, type ReactNode } from 'react';
 import {
   DataGrid,
   GridPagination,
@@ -70,6 +70,8 @@ import { useDataGridCommandApi } from './hooks/useDataGridCommandApi';
 import { useDataGridDelete } from './hooks/useDataGridDelete';
 import { useDataGridRowActionMenu } from './hooks/useDataGridRowActionMenu';
 import { useDataGridRowCommands } from './hooks/useDataGridRowCommands';
+import { useScrollDrivenRowWindow } from './hooks/useScrollDrivenRowWindow';
+import { useStableDataGridScrollbar } from './hooks/useStableDataGridScrollbar';
 import {
   getSortedRowIds,
   isSaveBlockedError,
@@ -111,6 +113,59 @@ type DataGridKeyboardEvent = KeyboardEvent & {
   defaultMuiPrevented?: boolean;
 };
 
+const CONTINUOUS_SCROLL_PAGE_SIZE = 100;
+const CONTINUOUS_SCROLL_ROW_HEIGHT_PX = 44;
+const CONTINUOUS_SCROLL_HEADER_HEIGHT_PX = 56;
+const CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX = 61;
+const CONTINUOUS_SCROLL_BORDER_HEIGHT_PX = 2;
+const CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX = 24;
+const CONTINUOUS_SCROLL_MIN_HEIGHT_PX = 240;
+const DATA_GRID_ROOT_SELECTOR = '.MuiDataGrid-root';
+const DATA_GRID_VIRTUAL_SCROLLER_SELECTOR = '.MuiDataGrid-virtualScroller';
+const DATA_GRID_MAIN_SELECTOR = '.MuiDataGrid-main';
+const DATA_GRID_CONTINUOUS_SCROLL_FOOTER_CLASS = 'ofp-data-grid-continuous-footer';
+const CONTINUOUS_SCROLL_FIT_EPSILON_PX = 2;
+
+type ContinuousScrollLayoutHeights = {
+  header: number;
+  footer: number;
+  border: number;
+};
+
+const DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS: ContinuousScrollLayoutHeights = {
+  header: CONTINUOUS_SCROLL_HEADER_HEIGHT_PX,
+  footer: CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX,
+  border: CONTINUOUS_SCROLL_BORDER_HEIGHT_PX,
+};
+
+const getElementHeight = (element: Element | null, fallback: number): number => {
+  if (!(element instanceof HTMLElement)) {
+    return fallback;
+  }
+
+  const measuredHeight = element.getBoundingClientRect().height;
+  return measuredHeight > 0 ? measuredHeight : fallback;
+};
+
+const getVerticalBorderHeight = (element: Element | null, fallback: number): number => {
+  if (!(element instanceof HTMLElement)) {
+    return fallback;
+  }
+
+  const styles = window.getComputedStyle(element);
+  const borderHeight = Number.parseFloat(styles.borderTopWidth || '0') + Number.parseFloat(styles.borderBottomWidth || '0');
+  return Number.isFinite(borderHeight) ? borderHeight : fallback;
+};
+
+const continuousScrollLayoutHeightsEqual = (
+  current: ContinuousScrollLayoutHeights,
+  next: ContinuousScrollLayoutHeights,
+): boolean => (
+  current.header === next.header
+  && current.footer === next.footer
+  && current.border === next.border
+);
+
 export function EditableDataGrid<T extends EditableRow>({
   columns,
   api,
@@ -150,6 +205,7 @@ export function EditableDataGrid<T extends EditableRow>({
   surfaceSizing,
   paginationPageSizeOptions,
   initialPageSize = 25,
+  scrollMode = 'autoHeight',
   columnVisibilityModel,
   onColumnVisibilityModelChange,
 }: EditableDataGridProps<T>) {
@@ -158,6 +214,10 @@ export function EditableDataGrid<T extends EditableRow>({
   const isContentSizedSurface = resolvedSurfaceSizing === 'contentFit' || resolvedSurfaceSizing === 'compact';
   const shouldUseCompactContainer = resolvedSurfaceSizing === 'compact';
   const shouldDisableTrailingFiller = isContentSizedSurface;
+  const isContinuousScroll = scrollMode === 'continuous';
+  const showPaginationControls = Boolean(paginationPageSizeOptions) && !isContinuousScroll;
+  const shouldRenderGridFooter = showAddAction || showFooterEditControls || showPaginationControls;
+  const continuousScrollFooterFallbackHeight = shouldRenderGridFooter ? CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX : 0;
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [stableRowOrder, setStableRowOrder] = useState<GridRowId[]>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -176,6 +236,8 @@ export function EditableDataGrid<T extends EditableRow>({
   const rowSnapshotRef = useRef<Map<string, T>>(new Map());
   const canceledRowIdsRef = useRef<Set<string>>(new Set());
   const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const pageContentRef = useRef<HTMLDivElement | null>(null);
+  const stableScrollbarTrackRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery('(max-width:900px)');
   
   const { t } = useTranslation('common');
@@ -189,8 +251,244 @@ export function EditableDataGrid<T extends EditableRow>({
     () => orderRowsByStableIds(rows as T[], stableRowOrder),
     [rows, stableRowOrder],
   );
+  const scrollDrivenRowWindow = useScrollDrivenRowWindow(
+    rowsForGrid.length,
+    CONTINUOUS_SCROLL_PAGE_SIZE,
+    DATA_GRID_VIRTUAL_SCROLLER_SELECTOR,
+    gridSurfaceRef,
+    { preservePageOnRowCountChange: true },
+  );
+  const activePaginationModel = useMemo(
+    () => (
+      isContinuousScroll
+        ? { page: scrollDrivenRowWindow.page, pageSize: scrollDrivenRowWindow.pageSize }
+        : paginationModel
+    ),
+    [isContinuousScroll, paginationModel, scrollDrivenRowWindow.page, scrollDrivenRowWindow.pageSize],
+  );
+  const currentWindowRowCount = isContinuousScroll
+    ? Math.max(
+      0,
+      Math.min(
+        scrollDrivenRowWindow.pageSize,
+        rowsForGrid.length - scrollDrivenRowWindow.page * scrollDrivenRowWindow.pageSize,
+      ),
+    )
+    : rowsForGrid.length;
+  const stableScrollbarRowHeights = useMemo(
+    () => (isContinuousScroll && !isMobile ? rowsForGrid.map(() => CONTINUOUS_SCROLL_ROW_HEIGHT_PX) : []),
+    [isContinuousScroll, isMobile, rowsForGrid],
+  );
+  const [continuousScrollLayoutHeights, setContinuousScrollLayoutHeights] = useState<ContinuousScrollLayoutHeights>(() => ({
+    ...DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS,
+    footer: continuousScrollFooterFallbackHeight,
+  }));
+  const measuredContinuousScrollContentHeight = useMemo(() => Math.ceil(
+    continuousScrollLayoutHeights.header
+    + continuousScrollLayoutHeights.footer
+    + continuousScrollLayoutHeights.border
+    + currentWindowRowCount * CONTINUOUS_SCROLL_ROW_HEIGHT_PX
+    + CONTINUOUS_SCROLL_FIT_EPSILON_PX,
+  ), [continuousScrollLayoutHeights, currentWindowRowCount]);
+  const [availableGridHeight, setAvailableGridHeight] = useState<number | null>(null);
+  const resolvedContinuousScrollHeight = isContinuousScroll && !isMobile
+    ? Math.min(
+      measuredContinuousScrollContentHeight,
+      availableGridHeight ?? measuredContinuousScrollContentHeight,
+    )
+    : undefined;
+  const resolvedContinuousScrollBodyHeight = resolvedContinuousScrollHeight === undefined
+    ? undefined
+    : Math.max(
+      0,
+      resolvedContinuousScrollHeight - continuousScrollLayoutHeights.footer - continuousScrollLayoutHeights.border,
+    );
+  const shouldHideContinuousVerticalOverflow = Boolean(
+    isContinuousScroll
+    && !isMobile
+    && resolvedContinuousScrollHeight !== undefined
+    && measuredContinuousScrollContentHeight <= resolvedContinuousScrollHeight + CONTINUOUS_SCROLL_FIT_EPSILON_PX,
+  );
+  const stableScrollbar = useStableDataGridScrollbar(
+    stableScrollbarRowHeights,
+    scrollDrivenRowWindow,
+    DATA_GRID_VIRTUAL_SCROLLER_SELECTOR,
+    gridSurfaceRef,
+    stableScrollbarTrackRef,
+    0,
+  );
+  const ensureRowVisible = useCallback((rowId: GridRowId): boolean => {
+    if (!isContinuousScroll) {
+      return false;
+    }
+    const rowIndex = rowsForGrid.findIndex((row) => String(row.id) === String(rowId));
+    return scrollDrivenRowWindow.ensureRowIndexVisible(rowIndex);
+  }, [isContinuousScroll, rowsForGrid, scrollDrivenRowWindow]);
+
+  const runAfterRowVisible = useCallback((rowId: GridRowId, action: () => void): void => {
+    const changedPage = ensureRowVisible(rowId);
+    if (!changedPage) {
+      action();
+      return;
+    }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(action);
+    });
+  }, [ensureRowVisible]);
+
+  useLayoutEffect(() => {
+    if (!isContinuousScroll || isMobile) {
+      return undefined;
+    }
+
+    const measure = (): void => {
+      const surface = gridSurfaceRef.current;
+      if (!surface) {
+        return;
+      }
+      const top = surface.getBoundingClientRect().top;
+      setAvailableGridHeight(
+        Math.max(CONTINUOUS_SCROLL_MIN_HEIGHT_PX, window.innerHeight - top - CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX),
+      );
+    };
+
+    measure();
+    window.addEventListener('resize', measure);
+
+    let resizeObserver: ResizeObserver | undefined;
+    const observedElement = pageContentRef.current;
+    if (observedElement && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(measure);
+      resizeObserver.observe(observedElement);
+    }
+
+    return () => {
+      window.removeEventListener('resize', measure);
+      resizeObserver?.disconnect();
+    };
+  }, [isContinuousScroll, isMobile]);
+
+  useLayoutEffect(() => {
+    if (!isContinuousScroll || isMobile) {
+      return undefined;
+    }
+
+    const measure = (): void => {
+      const surface = gridSurfaceRef.current;
+      if (!surface) {
+        return;
+      }
+
+      const root = surface.querySelector('.MuiDataGrid-root');
+      const header = surface.querySelector('.MuiDataGrid-columnHeaders');
+      const footer = surface.querySelector(`.${DATA_GRID_CONTINUOUS_SCROLL_FOOTER_CLASS}`);
+      const nextHeights = {
+        header: getElementHeight(header, DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS.header),
+        footer: getElementHeight(footer, continuousScrollFooterFallbackHeight),
+        border: getVerticalBorderHeight(root, DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS.border),
+      };
+
+      setContinuousScrollLayoutHeights((currentHeights) => (
+        continuousScrollLayoutHeightsEqual(currentHeights, nextHeights)
+          ? currentHeights
+          : nextHeights
+      ));
+    };
+
+    measure();
+
+    let resizeObserver: ResizeObserver | undefined;
+    const observedElement = gridSurfaceRef.current;
+    if (observedElement && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(measure);
+      resizeObserver.observe(observedElement);
+    }
+
+    window.addEventListener('resize', measure);
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [continuousScrollFooterFallbackHeight, currentWindowRowCount, isContinuousScroll, isMobile]);
+
+  useLayoutEffect(() => {
+    if (!isContinuousScroll || isMobile) {
+      return undefined;
+    }
+
+    const surface = gridSurfaceRef.current;
+    const root = surface?.querySelector<HTMLElement>(DATA_GRID_ROOT_SELECTOR);
+    const main = surface?.querySelector<HTMLElement>(DATA_GRID_MAIN_SELECTOR);
+    const scroller = surface?.querySelector<HTMLElement>(DATA_GRID_VIRTUAL_SCROLLER_SELECTOR);
+    if (
+      !root
+      || !main
+      || !scroller
+      || resolvedContinuousScrollHeight === undefined
+      || resolvedContinuousScrollBodyHeight === undefined
+    ) {
+      return undefined;
+    }
+
+    const bodyHeight = `${resolvedContinuousScrollBodyHeight}px`;
+    const rootHeight = `${resolvedContinuousScrollHeight}px`;
+    const applyHeight = (): void => {
+      root.style.setProperty('height', rootHeight, 'important');
+      root.style.setProperty('max-height', rootHeight, 'important');
+      main.style.setProperty('height', bodyHeight, 'important');
+      main.style.setProperty('max-height', bodyHeight, 'important');
+      main.style.setProperty('overflow', 'hidden');
+      scroller.style.setProperty('height', bodyHeight, 'important');
+      scroller.style.setProperty('max-height', bodyHeight, 'important');
+    };
+
+    applyHeight();
+    const rafId = window.requestAnimationFrame(applyHeight);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      root.style.removeProperty('height');
+      root.style.removeProperty('max-height');
+      main.style.removeProperty('height');
+      main.style.removeProperty('max-height');
+      main.style.removeProperty('overflow');
+      scroller.style.removeProperty('height');
+      scroller.style.removeProperty('max-height');
+    };
+  }, [
+    continuousScrollLayoutHeights.border,
+    continuousScrollLayoutHeights.footer,
+    isContinuousScroll,
+    isMobile,
+    resolvedContinuousScrollBodyHeight,
+    resolvedContinuousScrollHeight,
+    scrollDrivenRowWindow.page,
+  ]);
+
+  useLayoutEffect(() => {
+    if (!shouldHideContinuousVerticalOverflow) {
+      return undefined;
+    }
+
+    const scroller = gridSurfaceRef.current?.querySelector<HTMLElement>(DATA_GRID_VIRTUAL_SCROLLER_SELECTOR);
+    if (!scroller) {
+      return undefined;
+    }
+
+    const keepAtTop = (): void => {
+      if (scroller.scrollTop !== 0) {
+        scroller.scrollTop = 0;
+      }
+    };
+
+    keepAtTop();
+    scroller.addEventListener('scroll', keepAtTop);
+    return () => {
+      scroller.removeEventListener('scroll', keepAtTop);
+    };
+  }, [shouldHideContinuousVerticalOverflow]);
   useEffect(() => {
-    if (!import.meta.env.DEV || !paginationPageSizeOptions || loading) {
+    if (!import.meta.env.DEV || (!showPaginationControls && !isContinuousScroll) || loading) {
       return;
     }
 
@@ -198,16 +496,16 @@ export function EditableDataGrid<T extends EditableRow>({
       const visibleRowCount = Math.max(
         0,
         Math.min(
-          paginationModel.pageSize,
-          rowsForGrid.length - paginationModel.page * paginationModel.pageSize,
+          activePaginationModel.pageSize,
+          rowsForGrid.length - activePaginationModel.page * activePaginationModel.pageSize,
         ),
       );
       console.debug('[DataGrid diagnostics]', {
         table: tableKey ?? 'editableDataGrid',
         totalRows: rowsForGrid.length,
         visibleRows: visibleRowCount,
-        page: paginationModel.page + 1,
-        pageSize: paginationModel.pageSize,
+        page: activePaginationModel.page + 1,
+        pageSize: activePaginationModel.pageSize,
       });
     });
 
@@ -215,9 +513,10 @@ export function EditableDataGrid<T extends EditableRow>({
   }, [
     gridApiRef,
     loading,
-    paginationModel,
-    paginationPageSizeOptions,
+    activePaginationModel,
+    isContinuousScroll,
     rowsForGrid,
+    showPaginationControls,
     tableKey,
   ]);
   const hasContextMenuHintRows = useMemo(
@@ -299,15 +598,22 @@ export function EditableDataGrid<T extends EditableRow>({
     setSelectedRowIds,
     setRowModesModel,
     rowSnapshotRef,
+    ensureRowVisible,
   });
   const handleSortModelChange = useCallback((nextSortModel: GridSortModel): void => {
     setSortModel(nextSortModel);
     refreshStableRowOrder(rows as T[], nextSortModel);
-  }, [refreshStableRowOrder, rows, setSortModel]);
+    if (isContinuousScroll) {
+      scrollDrivenRowWindow.ensureRowIndexVisible(0);
+    }
+  }, [isContinuousScroll, refreshStableRowOrder, rows, scrollDrivenRowWindow, setSortModel]);
   const handleFilterModelChange = useCallback((nextFilterModel: GridFilterModel): void => {
     setFilterModel(nextFilterModel);
     refreshStableRowOrder(rows as T[]);
-  }, [refreshStableRowOrder, rows, setFilterModel]);
+    if (isContinuousScroll) {
+      scrollDrivenRowWindow.ensureRowIndexVisible(0);
+    }
+  }, [isContinuousScroll, refreshStableRowOrder, rows, scrollDrivenRowWindow, setFilterModel]);
 
   const clearSavedRowInteractionState = useCallback((rowId: GridRowId, savedRowId: GridRowId = rowId): void => {
     const rowKey = String(rowId);
@@ -399,34 +705,37 @@ export function EditableDataGrid<T extends EditableRow>({
     field: string,
     options: { startEdit: boolean },
   ): void => {
-    const api = gridApiRef.current;
-    if (!api) {
-      return;
-    }
     const rowKey = String(rowId);
     const row = rowsById.get(rowKey);
     if (row && !rowSnapshotRef.current.has(rowKey)) {
       rowSnapshotRef.current.set(rowKey, row as T);
     }
 
-    const rowIndex = api.getRowIndexRelativeToVisibleRows(rowId);
-    const colIndex = api.getColumnIndexRelativeToVisibleColumns(field);
-    api.scrollToIndexes({ rowIndex, colIndex });
-    api.setCellFocus(rowId, field);
+    runAfterRowVisible(rowId, () => {
+      const api = gridApiRef.current;
+      if (!api) {
+        return;
+      }
 
-    if (!options.startEdit || notesFieldNames.includes(field)) {
-      return;
-    }
+      const rowIndex = api.getRowIndexRelativeToVisibleRows(rowId);
+      const colIndex = api.getColumnIndexRelativeToVisibleColumns(field);
+      api.scrollToIndexes({ rowIndex, colIndex });
+      api.setCellFocus(rowId, field);
 
-    if (rowModesModel[rowId]?.mode === GridRowModes.Edit) {
-      return;
-    }
+      if (!options.startEdit || notesFieldNames.includes(field)) {
+        return;
+      }
 
-    setRowModesModel((oldModel) => ({
-      ...oldModel,
-      [rowId]: { mode: GridRowModes.Edit, fieldToFocus: field },
-    }));
-  }, [gridApiRef, notesFieldNames, rowModesModel, rowsById]);
+      if (rowModesModel[rowId]?.mode === GridRowModes.Edit) {
+        return;
+      }
+
+      setRowModesModel((oldModel) => ({
+        ...oldModel,
+        [rowId]: { mode: GridRowModes.Edit, fieldToFocus: field },
+      }));
+    });
+  }, [gridApiRef, notesFieldNames, rowModesModel, rowsById, runAfterRowVisible]);
 
   const getHorizontalNavigationTarget = useCallback((
     rowId: GridRowId,
@@ -555,6 +864,9 @@ export function EditableDataGrid<T extends EditableRow>({
       setRows((oldRows) => [...oldRows, newRow]);
       setStableRowOrder((previousOrder) => [...previousOrder, newRow.id]);
       setSelectedRowIds([newRow.id]);
+      if (isContinuousScroll) {
+        scrollDrivenRowWindow.ensureRowIndexVisible(rows.length, { forRowCount: rows.length + 1 });
+      }
       // Set row to edit mode after a small delay to ensure row is added first
       setTimeout(() => {
         const fieldToFocus = columns.find((column) => column.editable !== false)?.field ?? columns[0]?.field;
@@ -567,7 +879,18 @@ export function EditableDataGrid<T extends EditableRow>({
         }
       }, 0);
     }
-  }, [columns, gridApiRef, initialRow, dataFetched, loading, createNewRow, setSelectedRowIds]);
+  }, [
+    columns,
+    createNewRow,
+    dataFetched,
+    gridApiRef,
+    initialRow,
+    isContinuousScroll,
+    loading,
+    rows.length,
+    scrollDrivenRowWindow,
+    setSelectedRowIds,
+  ]);
 
   /**
    * Handle adding a new row to the grid
@@ -580,13 +903,15 @@ export function EditableDataGrid<T extends EditableRow>({
       ...oldModel,
       [newRow.id]: { mode: GridRowModes.Edit, fieldToFocus: columns[0]?.field },
     }));
-    if (paginationPageSizeOptions) {
+    if (isContinuousScroll) {
+      scrollDrivenRowWindow.ensureRowIndexVisible(rows.length, { forRowCount: rows.length + 1 });
+    } else if (showPaginationControls) {
       setPaginationModel((current) => ({
         ...current,
         page: Math.floor(rows.length / current.pageSize),
       }));
     }
-  }, [columns, createNewRow, paginationPageSizeOptions, rows.length]);
+  }, [columns, createNewRow, isContinuousScroll, rows.length, scrollDrivenRowWindow, showPaginationControls]);
 
   const handleDiscardRowChanges = useCallback((rowId: GridRowId): void => {
     const rowKey = String(rowId);
@@ -1435,12 +1760,17 @@ export function EditableDataGrid<T extends EditableRow>({
    * Custom footer component with add button
    */
   const CustomFooter = () => {
+    if (!shouldRenderGridFooter) {
+      return null;
+    }
+
     const hasInvalidCell = hasValidationError || hasInvalidRowInEditMode;
 
     return (
       <Box
+        className={DATA_GRID_CONTINUOUS_SCROLL_FOOTER_CLASS}
         sx={
-          paginationPageSizeOptions
+          showPaginationControls
             ? { ...dataGridFooterSx, justifyContent: 'space-between' }
             : dataGridFooterSx
         }
@@ -1481,7 +1811,7 @@ export function EditableDataGrid<T extends EditableRow>({
             </Box>
           )}
         </Box>
-        {paginationPageSizeOptions && <GridPagination />}
+        {showPaginationControls && <GridPagination />}
       </Box>
     );
   };
@@ -1557,7 +1887,7 @@ export function EditableDataGrid<T extends EditableRow>({
     });
   }, [columns, getInlineRowActions, inlineRowActionField, notes, notesEditor, notesFieldNames, notesPreview, renderInlineActionCell, showInlineRowActionMenu]);
 
-  const columnsWithActions: GridColDef[] = [
+  const columnsWithActions: GridColDef[] = useMemo(() => [
     ...processedColumns,
     ...(showRowEditActions
       ? [
@@ -1631,7 +1961,17 @@ export function EditableDataGrid<T extends EditableRow>({
           },
         ]
       : []),
-  ];
+  ], [
+    dirtyRowIds,
+    handleDeleteClick,
+    handleDiscardRowChanges,
+    handleSaveRow,
+    processedColumns,
+    rowModesModel,
+    showDeleteAction,
+    showRowEditActions,
+    t,
+  ]);
 
   const handleViewModeCellNavigation = useCallback((params: GridCellParams<T>, event: DataGridKeyboardEvent): boolean => {
     if (
@@ -1700,9 +2040,11 @@ export function EditableDataGrid<T extends EditableRow>({
     event.preventDefault();
     event.stopPropagation();
     event.defaultMuiPrevented = true;
-    focusDataGridKeyboardNavigableCell<T>({
-      api: gridApiRef.current,
-      cell: target,
+    runAfterRowVisible(target.id, () => {
+      focusDataGridKeyboardNavigableCell<T>({
+        api: gridApiRef.current,
+        cell: target,
+      });
     });
     return true;
   }, [
@@ -1711,6 +2053,7 @@ export function EditableDataGrid<T extends EditableRow>({
     isActionCellKeyboardNavigable,
     rowModesModel,
     rowsForGrid,
+    runAfterRowVisible,
   ]);
 
   const getNotesDrawerTitle = (): string => {
@@ -1793,6 +2136,7 @@ export function EditableDataGrid<T extends EditableRow>({
       ) : null}
       
       <Box
+        ref={pageContentRef}
         sx={{
           position: 'relative',
           width: '100%',
@@ -1816,7 +2160,7 @@ export function EditableDataGrid<T extends EditableRow>({
             sx={{
               display: 'flex',
               flexDirection: 'column',
-              width: isContentSizedSurface ? 'fit-content' : '100%',
+              width: isContentSizedSurface ? 'max-content' : '100%',
               minWidth: isContentSizedSurface ? 0 : '100%',
             }}
           >
@@ -1840,9 +2184,9 @@ export function EditableDataGrid<T extends EditableRow>({
             sx={{
               position: 'relative',
               display: 'block',
-              width: isContentSizedSurface ? 'fit-content' : '100%',
+              width: isContentSizedSurface ? 'max-content' : '100%',
               minWidth: isContentSizedSurface ? 0 : '100%',
-              maxWidth: '100%',
+              maxWidth: isContentSizedSurface ? 'none' : '100%',
               '& [role="row"][data-id]': {
                 WebkitTouchCallout: 'none',
               },
@@ -1866,12 +2210,20 @@ export function EditableDataGrid<T extends EditableRow>({
           loading={loading}
           editMode="row"
           density={isMobile ? 'standard' : 'compact'}
-          autoHeight
-          hideFooter={false}
-          pagination={paginationPageSizeOptions ? true : undefined}
-          paginationModel={paginationPageSizeOptions ? paginationModel : undefined}
-          onPaginationModelChange={paginationPageSizeOptions ? setPaginationModel : undefined}
-          pageSizeOptions={paginationPageSizeOptions}
+          autoHeight={!isContinuousScroll || isMobile}
+          hideFooter={!shouldRenderGridFooter}
+          pagination={showPaginationControls || isContinuousScroll ? true : undefined}
+          paginationModel={showPaginationControls || isContinuousScroll ? activePaginationModel : undefined}
+          onPaginationModelChange={
+            isContinuousScroll
+              ? () => {}
+              : showPaginationControls
+                ? setPaginationModel
+                : undefined
+          }
+          pageSizeOptions={showPaginationControls ? paginationPageSizeOptions : undefined}
+          rowHeight={isContinuousScroll ? CONTINUOUS_SCROLL_ROW_HEIGHT_PX : undefined}
+          columnHeaderHeight={isContinuousScroll ? CONTINUOUS_SCROLL_HEADER_HEIGHT_PX : undefined}
           sortModel={sortModel}
           onSortModelChange={handleSortModelChange}
           sortingMode="server"
@@ -1879,21 +2231,41 @@ export function EditableDataGrid<T extends EditableRow>({
           onFilterModelChange={handleFilterModelChange}
           rowSelectionModel={{ type: "include", ids: new Set(selectedRowIds) }}
           onRowSelectionModelChange={(nextModel) => setSelectedRowIds(Array.from(nextModel.ids))}
-          slots={{
-            footer: CustomFooter,
-          }}
+          slots={shouldRenderGridFooter ? { footer: CustomFooter } : undefined}
           sx={{
             ...dataGridSx,
-            width: isContentSizedSurface ? 'fit-content' : '100%',
+            width: isContentSizedSurface ? 'max-content' : '100%',
             minWidth: isContentSizedSurface ? 0 : '100%',
-            display: isContentSizedSurface ? 'inline-block' : 'block',
+            display: 'block',
+            ...(
+              isContinuousScroll && !isMobile
+                ? {
+                    height: `${resolvedContinuousScrollHeight}px`,
+                    '& .MuiDataGrid-main': {
+                      height: `${resolvedContinuousScrollBodyHeight ?? 0}px !important`,
+                      maxHeight: `${resolvedContinuousScrollBodyHeight ?? 0}px !important`,
+                      overflow: 'hidden',
+                    },
+                    '& .MuiDataGrid-virtualScroller': {
+                      height: `${resolvedContinuousScrollBodyHeight ?? 0}px !important`,
+                      maxHeight: `${resolvedContinuousScrollBodyHeight ?? 0}px !important`,
+                      overflowY: shouldHideContinuousVerticalOverflow ? 'clip !important' : undefined,
+                    },
+                    '& .MuiDataGrid-scrollbar--vertical': {
+                      display: 'none',
+                    },
+                  }
+                : {}
+            ),
             '& .MuiDataGrid-row.ofp-row-long-press .MuiDataGrid-cell': {
               bgcolor: 'action.selected',
             },
             ...(shouldDisableTrailingFiller ? {
               '& .MuiDataGrid-filler': { display: 'none' },
               '& .MuiDataGrid-scrollbarFiller': { display: 'none' },
+              '& .MuiDataGrid-scrollbar--horizontal': { display: 'none' },
               '& .MuiDataGrid-main': { width: 'fit-content' },
+              '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden !important' },
               '& .MuiDataGrid-virtualScrollerContent': { width: 'fit-content !important' },
               '& .MuiDataGrid-columnHeaders': { width: 'fit-content !important' },
             } : {}),
@@ -2053,6 +2425,37 @@ export function EditableDataGrid<T extends EditableRow>({
           localeText={germanDataGridLocaleText}
           apiRef={gridApiRef}
           />
+          {!isMobile && isContinuousScroll && stableScrollbar.isActive && (
+            <Box
+              ref={stableScrollbarTrackRef}
+              data-testid="continuous-scrollbar-track"
+              onPointerDown={stableScrollbar.onTrackPointerDown}
+              sx={{
+                position: 'absolute',
+                top: `${CONTINUOUS_SCROLL_HEADER_HEIGHT_PX}px`,
+                bottom: `${continuousScrollLayoutHeights.footer + continuousScrollLayoutHeights.border}px`,
+                right: 0,
+                width: '10px',
+                zIndex: 60,
+              }}
+            >
+              <Box
+                data-testid="continuous-scrollbar-thumb"
+                onPointerDown={stableScrollbar.onThumbPointerDown}
+                sx={{
+                  position: 'absolute',
+                  top: `${stableScrollbar.thumbTop}px`,
+                  height: `${stableScrollbar.thumbHeight}px`,
+                  left: '2px',
+                  right: '2px',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                  cursor: 'pointer',
+                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.45)' },
+                }}
+              />
+            </Box>
+          )}
           </Box>
           </Box>
         </Box>

@@ -76,6 +76,20 @@ create a duplicate-looking blank plan instead of opening the one clicked.
 If you add deep-linking into another grid page, this is the reference
 pattern to follow, not a one-off to reinvent.
 
+For large editable flat tables, `EditableDataGrid` also supports
+`scrollMode="continuous"`. This keeps the free MUI DataGrid's internal page
+size at 100 rows, hides the pager UI, and advances the internal row window
+from wheel/touch scrolling so the table behaves like a continuous virtualized
+scroll area. The full row array remains in component state, so sorting,
+filtering, copy operations, and page-level mobile mirrors still operate on
+the complete loaded dataset.
+
+Continuous scroll uses `hooks/useScrollDrivenRowWindow.ts` for the internal
+100-row window and `hooks/useStableDataGridScrollbar.ts` for the visible
+thumb. The same stable-scrollbar hook is re-exported for the raw
+Standort/Parzelle/Beet hierarchy so both large table styles keep matching
+scrollbar behavior without parallel implementations.
+
 `setDraftValues`/`commitDraftValues` let external code push field values
 into a row that's already mid-edit (e.g. a calculated side-effect from
 another field), either staying in edit mode or committing immediately.

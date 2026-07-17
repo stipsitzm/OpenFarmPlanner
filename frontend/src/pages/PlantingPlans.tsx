@@ -1608,10 +1608,9 @@ function PlantingPlans() {
         >
           <EditableDataGrid<PlantingPlanRow>
             surfaceSizing="contentFit"
+            scrollMode="continuous"
             columns={columns}
             api={plantingPlanGridAPI}
-            paginationPageSizeOptions={[25, 50, 100]}
-            initialPageSize={25}
             commandApiRef={gridCommandApiRef}
             onSelectedRowChange={setSelectedPlan}
             onRowsStateChange={(rows) => {
@@ -1863,6 +1862,7 @@ function PlantingPlans() {
           clipboardColumns={clipboardColumns}
           addButtonLabel={`${t("plantingPlans:addButton")} (Alt+Shift+N)`}
           addButtonText={t("plantingPlans:addButton")}
+          showAddAction={false}
           showDeleteAction={false}
           showFooterEditControls={false}
           showRowEditActions={false}

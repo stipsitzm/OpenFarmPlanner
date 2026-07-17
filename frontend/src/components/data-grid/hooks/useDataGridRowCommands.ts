@@ -17,20 +17,33 @@ interface ScrollFocusGridApi {
 // since the row may not exist in the grid's virtualized viewport until
 // after the current render pass (e.g. right after an expand/select state
 // change). Shared by focusTable and openRowById below.
-function scrollAndFocusRow(api: ScrollFocusGridApi, rowId: GridRowId, options: { focus?: boolean } = {}): void {
+function scrollAndFocusRow(
+  api: ScrollFocusGridApi,
+  rowId: GridRowId,
+  options: { focus?: boolean; delayFrames?: number } = {},
+): void {
   const firstField = api.getVisibleColumns()
     .find((col) => col.field !== 'actions' && col.field !== 'rowEditActions')?.field;
-  requestAnimationFrame(() => {
-    api.scrollToIndexes(firstField
-      ? {
-          rowIndex: api.getRowIndexRelativeToVisibleRows(rowId),
-          colIndex: api.getColumnIndexRelativeToVisibleColumns(firstField),
-        }
-      : { rowIndex: api.getRowIndexRelativeToVisibleRows(rowId) });
-    if (options.focus !== false && firstField) {
-      api.setCellFocus(rowId, firstField);
-    }
-  });
+  const delayFrames = Math.max(1, options.delayFrames ?? 1);
+  const run = (remainingFrames: number): void => {
+    requestAnimationFrame(() => {
+      if (remainingFrames > 1) {
+        run(remainingFrames - 1);
+        return;
+      }
+
+      api.scrollToIndexes(firstField
+        ? {
+            rowIndex: api.getRowIndexRelativeToVisibleRows(rowId),
+            colIndex: api.getColumnIndexRelativeToVisibleColumns(firstField),
+          }
+        : { rowIndex: api.getRowIndexRelativeToVisibleRows(rowId) });
+      if (options.focus !== false && firstField) {
+        api.setCellFocus(rowId, firstField);
+      }
+    });
+  };
+  run(delayFrames);
 }
 
 interface UseDataGridRowCommandsParams<T extends EditableRow> {
@@ -41,6 +54,7 @@ interface UseDataGridRowCommandsParams<T extends EditableRow> {
   setSelectedRowIds: Dispatch<SetStateAction<GridRowId[]>>;
   setRowModesModel: Dispatch<SetStateAction<GridRowModesModel>>;
   rowSnapshotRef: MutableRefObject<Map<string, T>>;
+  ensureRowVisible?: (rowId: GridRowId) => boolean;
 }
 
 export function useDataGridRowCommands<T extends EditableRow>({
@@ -51,6 +65,7 @@ export function useDataGridRowCommands<T extends EditableRow>({
   setSelectedRowIds,
   setRowModesModel,
   rowSnapshotRef,
+  ensureRowVisible,
 }: UseDataGridRowCommandsParams<T>) {
   const handleEditSelectedRow = useCallback((): void => {
     const selectedRowId = selectedRowIds[0];
@@ -85,8 +100,9 @@ export function useDataGridRowCommands<T extends EditableRow>({
     if (!api) return;
     const targetId = selectedRowIds[0] ?? api.getAllRowIds()[0];
     if (targetId == null) return;
-    scrollAndFocusRow(api, targetId);
-  }, [gridApiRef, selectedRowIds]);
+    const changedPage = ensureRowVisible?.(targetId) ?? false;
+    scrollAndFocusRow(api, targetId, { delayFrames: changedPage ? 2 : 1 });
+  }, [ensureRowVisible, gridApiRef, selectedRowIds]);
 
   // Scrolls to and selects a specific row by id, optionally opening edit
   // mode on it — used by pages that deep-link into this grid (e.g.
@@ -97,14 +113,15 @@ export function useDataGridRowCommands<T extends EditableRow>({
     if (!api || !rowsById.has(String(rowId))) return;
     const shouldStartEdit = options?.startEdit !== false;
     setSelectedRowIds([rowId]);
+    const changedPage = ensureRowVisible?.(rowId) ?? false;
     // Edit mode moves focus into its own input via handleStartRowEdit's
     // `fieldToFocus` below; only move keyboard focus here for the
     // view-only (non-edit) case.
-    scrollAndFocusRow(api, rowId, { focus: !shouldStartEdit });
+    scrollAndFocusRow(api, rowId, { focus: !shouldStartEdit, delayFrames: changedPage ? 2 : 1 });
     if (shouldStartEdit) {
       handleStartRowEdit(rowId);
     }
-  }, [gridApiRef, handleStartRowEdit, rowsById, setSelectedRowIds]);
+  }, [ensureRowVisible, gridApiRef, handleStartRowEdit, rowsById, setSelectedRowIds]);
 
   return {
     handleEditSelectedRow,
