@@ -31,6 +31,11 @@ import {
 } from '@mui/x-data-grid';
 import { dataGridSx, dataGridFooterSx, dataGridAddRowButtonSx, deleteIconButtonSx } from './styles';
 import { handleRowEditStop, handleEditableCellClick } from './handlers';
+import {
+  editModeEditorArrowKeys,
+  getRowIdFromElement,
+  isEnterSaveInputTarget,
+} from './domEventTargets';
 import type { GridColDef, GridRowsProp, GridRowModesModel, GridRowId, GridSortModel, GridFilterModel, GridCellParams, GridRenderCellParams, GridRowParams, GridPaginationModel } from '@mui/x-data-grid';
 import { Box, Alert, IconButton, Chip, Button, Tooltip, useMediaQuery } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -102,24 +107,9 @@ export type {
   NotesFieldConfig,
 } from './types';
 
-const editModeEditorArrowKeys = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
-
 type DataGridKeyboardEvent = KeyboardEvent & {
   defaultMuiPrevented?: boolean;
 };
-
-const isComboboxInteractionTarget = (target: EventTarget | null): boolean => {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-
-  return Boolean(
-    target.closest('[role="combobox"], [aria-haspopup="listbox"], [aria-haspopup="menu"]'),
-  );
-};
-
-const isEnterSaveInputTarget = (target: EventTarget | null): boolean =>
-  target instanceof HTMLInputElement && !isComboboxInteractionTarget(target);
 
 export function EditableDataGrid<T extends EditableRow>({
   columns,
@@ -1160,14 +1150,6 @@ export function EditableDataGrid<T extends EditableRow>({
     onBeforeEdit: rememberRowSnapshotForCellEdit,
     onReplaceValue: (params) => markRowDirty(String(params.id)),
   });
-
-  const getRowIdFromElement = (target: EventTarget | null): GridRowId | null => {
-    if (!(target instanceof HTMLElement)) {
-      return null;
-    }
-    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
-    return rowElement?.dataset.id ?? null;
-  };
 
   const hasContextualRowActions = true;
 
