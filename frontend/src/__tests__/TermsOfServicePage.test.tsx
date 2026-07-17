@@ -106,6 +106,6 @@ describe('TermsOfServicePage', () => {
   it('uses a concrete revision date instead of a generic month/year stamp', () => {
     renderTermsOfServicePage();
 
-    expect(screen.getByText(/Stand: 15\. Juli 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Stand: 17\. Juli 2026/)).toBeInTheDocument();
   });
 });

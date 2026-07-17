@@ -165,7 +165,7 @@ describe('PrivacyPolicyPage', () => {
   it('uses a concrete revision date instead of a generic month/year stamp', () => {
     renderPrivacyPolicyPage();
 
-    expect(screen.getByText(/Stand: 15\. Juli 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Stand: 17\. Juli 2026/)).toBeInTheDocument();
   });
 
   it('explains privacy policy changes and points to the revision date at the end', () => {
