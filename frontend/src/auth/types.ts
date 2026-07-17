@@ -20,6 +20,8 @@ export interface AuthUser {
   scheduled_deletion_at: string | null;
   /** Document keys (e.g. "terms") whose current version this user has not yet accepted. */
   pending_consents: string[];
+  /** Whether the user accepted the current public-library contribution terms. */
+  public_library_terms_accepted: boolean;
 }
 
 export interface ProjectSwitchResponse {

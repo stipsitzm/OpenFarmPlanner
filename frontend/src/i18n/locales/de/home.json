@@ -87,15 +87,11 @@
     },
     "privacy": {
       "title": "Datenschutzerklärung",
-      "version": "Stand: 14. Juli 2026",
+      "version": "Stand: 17. Juli 2026",
       "sections": {
         "controller": {
           "title": "Verantwortlicher",
           "content": "Verantwortlich für die Datenverarbeitung im Sinne der Datenschutz-Grundverordnung (DSGVO) ist:\n\nMartin Stipsitz\nBurgenlandstraße 44A / 9\n9500 Villach\nÖsterreich\n\nE-Mail: info@openfarmplanner.org"
-        },
-        "dataProtectionOfficer": {
-          "title": "Datenschutzbeauftragter",
-          "content": "Es ist kein Datenschutzbeauftragter bestellt, weil dafür nach derzeitigem Stand keine gesetzliche Verpflichtung besteht. Für Datenschutzanfragen erreichen Sie den Verantwortlichen über die oben genannten Kontaktdaten."
         },
         "generalNotice": {
           "title": "Allgemeine Hinweise",
@@ -103,15 +99,16 @@
         },
         "hosting": {
           "title": "Hosting",
-          "content": "Diese Anwendung wird bei folgendem Anbieter gehostet, der als Auftragsverarbeiter für uns tätig wird:\n\nUberspace GmbH\nKaiserstraße 15\n55116 Mainz\nDeutschland\n\nBeim Aufruf der Anwendung erfasst der Server automatisch technische Informationen (Server-Logfiles):",
+          "content": "Diese Anwendung wird bei folgendem Anbieter gehostet, der als Auftragsverarbeiter für uns tätig wird:\n\nUberspace GmbH\nKaiserstraße 15\n55116 Mainz\nDeutschland\n\nBeim Aufruf der Anwendung verarbeitet der Webserver technische Zugriffsdaten:",
           "bullets": {
-            "ipAddress": "IP-Adresse",
+            "ipAddress": "gekürzte IP-Adresse (bei IPv4 werden nur die ersten 16 Bit, bei IPv6 nur die ersten 32 Bit gespeichert)",
             "requestTime": "Datum und Uhrzeit der Anfrage",
+            "requestedResource": "angeforderte Seite bzw. Ressource",
             "browser": "Browsertyp und Version",
             "operatingSystem": "Betriebssystem",
-            "referrerUrl": "Referrer-URL"
+            "referrerUrl": "Referrer-URL, sofern übermittelt"
           },
-          "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Unser berechtigtes Interesse liegt im sicheren und stabilen Betrieb der Anwendung (vgl. Erwägungsgrund 49 DSGVO zur Netz- und Informationssicherheit)."
+          "legalBasis": "Die Webserver-Logfiles werden automatisch nach 7 Tagen gelöscht. Zusätzlich verarbeiten wir technische Anwendungsprotokolle (z. B. Django- oder Gunicorn-Fehlerlogs). Diese enthalten ausschließlich technische Informationen wie Fehlermeldungen, Zeitstempel und betroffene Anfragen und dienen ausschließlich der Fehlerdiagnose sowie dem sicheren und stabilen Betrieb der Anwendung.\n\nRechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Unser berechtigtes Interesse liegt im sicheren und stabilen Betrieb der Anwendung (vgl. Erwägungsgrund 49 DSGVO zur Netz- und Informationssicherheit)."
         },
         "registration": {
           "title": "Registrierung und Benutzerkonto",
@@ -130,16 +127,16 @@
         },
         "publicLibrary": {
           "title": "Öffentliche Kulturbibliothek",
-          "content": "Sie können einzelne Kultur-Datensätze (z. B. Anbauinformationen zu einer Gemüsesorte) aus einem privaten Projekt eigenständig in eine öffentliche Kulturbibliothek veröffentlichen. Diese Bibliothek kann von allen angemeldeten Nutzern eingesehen und in ein eigenes Projekt importiert werden. Die Veröffentlichung ist freiwillig und für die Nutzung von OpenFarmPlanner nicht erforderlich. Welche Nutzungsrechte Sie OpenFarmPlanner damit einräumen, regeln die Nutzungsbedingungen, Abschnitt „Nutzungsrechte an veröffentlichten Kulturdaten“.",
+          "content": "Sie können einzelne Kultur-Datensätze (z. B. Anbauinformationen zu einer Gemüsesorte) aus einem privaten Projekt eigenständig in eine öffentliche Kulturbibliothek veröffentlichen. Diese Bibliothek ist als gemeinschaftlich aufgebaute, dauerhaft bestehende Wissensdatenbank gedacht. Veröffentlichte Einträge können von anderen Nutzern eingesehen, in eigene Projekte importiert und künftig über Funktionen wie Versionshistorien, gemeinschaftliche Bearbeitung, Kommentare, Bewertungen, öffentliche APIs oder Datenexporte weiterverwendet werden. Die Veröffentlichung ist freiwillig und für die Nutzung von OpenFarmPlanner nicht erforderlich. Welche Nutzungsrechte Sie der Allgemeinheit und OpenFarmPlanner damit einräumen, regeln die Nutzungsbedingungen, insbesondere der Abschnitt „Offene Lizenz für veröffentlichte Kulturdaten“.",
           "bullets": {
             "publicContent": "Veröffentlicht werden ausschließlich die landwirtschaftlichen Anbaudaten der Kultur (z. B. Name, Sorte, Wachstums- und Erntedauer, Pflanzabstände, Saatgutmenge, Lieferantenname). Notizen aus dem privaten Projekt werden nicht mitveröffentlicht.",
             "attribution": "Als Urheber eines veröffentlichten Eintrags wird der von Ihnen in den Kontoeinstellungen frei wählbare öffentliche Anzeigename angezeigt. Dieser Name gehört zu Ihrem Konto, nicht zum einzelnen Eintrag: Legen Sie ihn erstmals fest oder ändern ihn, erscheint er automatisch bei allen bereits von Ihnen veröffentlichten Kulturen als Urheber; entfernen Sie ihn wieder, werden diese Einträge wieder anonym angezeigt. Frühere Namen werden dabei nicht an einzelnen Einträgen gespeichert. Haben Sie keinen öffentlichen Anzeigenamen festgelegt, erfolgt die Veröffentlichung anonym, ohne Namensangabe. Der Anzeigename muss eindeutig sein; bei der Vergabe wird technisch geprüft, ob er bereits von einem anderen Konto verwendet wird. Ihr Benutzername und Ihre E-Mail-Adresse sind zu keinem Zeitpunkt Bestandteil eines öffentlichen Eintrags; die E-Mail-Adresse dient ausschließlich der Kontoverwaltung und unserer Kommunikation mit Ihnen (siehe Abschnitt „E-Mail-Kommunikation“).",
             "noReview": "Die Veröffentlichung erfolgt unmittelbar durch Sie selbst; es findet aktuell keine inhaltliche Prüfung oder Freigabe durch uns statt.",
-            "persistence": "Ein veröffentlichter Eintrag bleibt in der öffentlichen Bibliothek bestehen, auch wenn Sie die ursprüngliche Kultur in Ihrem privaten Projekt später ändern oder löschen.",
-            "removal": "Da die Veröffentlichung auf Ihrer Einwilligung beruht, können Sie diese jederzeit mit Wirkung für die Zukunft widerrufen. Eine eigenständige Rücknahme über die Anwendung ist derzeit nicht möglich; melden Sie sich dazu bitte unter info@openfarmplanner.org, wir entfernen den Eintrag dann für Sie.",
-            "futureOutlook": "Langfristig soll die Kulturbibliothek kollaborativ weiterentwickelt werden. Rückmeldungen zu Einträgen sollen künftig über Funktionen innerhalb der Anwendung erfolgen – etwa Kommentare, Bewertungen oder Versionshistorien – und nicht über persönliche Kontaktdaten anderer Nutzer."
+            "persistence": "Ein veröffentlichter Eintrag bleibt grundsätzlich dauerhaft Teil der öffentlichen Bibliothek, auch wenn Sie die ursprüngliche Kultur in Ihrem privaten Projekt später ändern oder löschen.",
+            "removal": "Eine Entfernung ist nicht als normale Benutzerfunktion vorgesehen. Sie kommt nur in Ausnahmefällen in Betracht, etwa bei Rechtsverletzungen, personenbezogenen Daten im veröffentlichten Datensatz, Spam, offensichtlichem Missbrauch oder einer Moderationsentscheidung.",
+            "futureOutlook": "Langfristig soll die Kulturbibliothek kollaborativ weiterentwickelt werden. Rückmeldungen zu Einträgen sollen künftig über Funktionen innerhalb der Anwendung erfolgen – etwa Kommentare, Bewertungen, Versionshistorien, öffentliche APIs oder Datenexporte – und nicht über persönliche Kontaktdaten anderer Nutzer."
           },
-          "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. a DSGVO (Einwilligung). Die Veröffentlichung ist eine bewusste, aktive Entscheidung Ihrerseits und keine für die Nutzung von OpenFarmPlanner erforderliche Vertragsleistung; sie beruht daher allein auf Ihrer Einwilligung, nicht auf einer Vertragserfüllung oder einem berechtigten Interesse."
+          "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO, soweit wir Ihren Beitrag auf Grundlage der Nutzungsbedingungen und Ihrer ausdrücklichen Veröffentlichungshandlung in der öffentlichen Kulturbibliothek bereitstellen. Soweit veröffentlichte Beiträge noch personenbezogene Bezüge enthalten, etwa durch den öffentlichen Anzeigenamen, und wir sie zur Integrität und Nachvollziehbarkeit der gemeinschaftlichen Wissensdatenbank dauerhaft erhalten, stützen wir uns ergänzend auf Art. 6 Abs. 1 lit. f DSGVO. Unser berechtigtes Interesse liegt im Aufbau und Erhalt einer verlässlichen offenen Kulturdatenbank. Rein sachliche oder anonymisierte Kulturdaten fallen nicht unter die DSGVO."
         },
         "emailCommunication": {
           "title": "E-Mail-Kommunikation",
@@ -152,17 +149,6 @@
             "systemNotifications": "sonstige Kommunikation im Zusammenhang mit Ihrem Benutzerkonto, etwa Systembenachrichtigungen"
           },
           "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Erfüllung des Nutzungsvertrags)."
-        },
-        "logFiles": {
-          "title": "Log-Dateien",
-          "content": "Zur Sicherstellung des Betriebs und zur Fehlerdiagnose speichert die Anwendung technische Log-Dateien. Diese können enthalten:",
-          "bullets": {
-            "ipAddress": "IP-Adresse",
-            "errorMessages": "Fehlermeldungen",
-            "accessData": "Zugriffsdaten",
-            "timestamps": "Zeitstempel"
-          },
-          "legalBasis": "Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO. Unser berechtigtes Interesse liegt in der Fehlerdiagnose und der Absicherung des Betriebs (vgl. Erwägungsgrund 49 DSGVO)."
         },
         "cookies": {
           "title": "Cookies",
@@ -178,7 +164,7 @@
         },
         "dataSharing": {
           "title": "Weitergabe von Daten",
-          "content": "Über die in Auftragsverarbeitung erfolgende Zusammenarbeit mit unserem Hosting-Anbieter (siehe Abschnitt „Hosting“) hinaus geben wir Ihre personenbezogenen Daten nur weiter, wenn:\n\n– dies für den technischen E-Mail-Versand im Zusammenhang mit Ihrem Konto oder Projekt-Einladungen erforderlich ist; der Versand erfolgt über die bei Uberspace betriebene Mail-Infrastruktur,\n– Sie durch das aktive Veröffentlichen einer Kultur in der öffentlichen Kulturbibliothek deren Sichtbarkeit für alle angemeldeten Nutzer wählen, gegebenenfalls einschließlich Ihres öffentlichen Anzeigenamens, sofern Sie einen solchen festgelegt haben (siehe Abschnitt „Öffentliche Kulturbibliothek“), oder\n– wir gesetzlich dazu verpflichtet sind, etwa gegenüber Behörden."
+          "content": "Über die in Auftragsverarbeitung erfolgende Zusammenarbeit mit unserem Hosting-Anbieter (siehe Abschnitt „Hosting“) hinaus geben wir Ihre personenbezogenen Daten nur weiter, wenn:\n\n– dies für den technischen E-Mail-Versand im Zusammenhang mit Ihrem Konto oder Projekt-Einladungen erforderlich ist; der Versand erfolgt über die bei Uberspace betriebene Mail-Infrastruktur,\n– Sie durch das aktive Veröffentlichen einer Kultur in der öffentlichen Kulturbibliothek deren Sichtbarkeit für andere Nutzer wählen, gegebenenfalls einschließlich Ihres öffentlichen Anzeigenamens, sofern Sie einen solchen festgelegt haben (siehe Abschnitt „Öffentliche Kulturbibliothek“), oder\n– wir gesetzlich dazu verpflichtet sind, etwa gegenüber Behörden."
         },
         "thirdCountryTransfers": {
           "title": "Drittlandübermittlung",
@@ -186,15 +172,11 @@
         },
         "mandatoryProvision": {
           "title": "Bereitstellung personenbezogener Daten",
-          "content": "Die Bereitstellung personenbezogener Daten ist weder gesetzlich noch vertraglich vorgeschrieben, soweit Sie nur die öffentliche Startseite aufrufen. Für die Registrierung und Nutzung der Anwendung sind E-Mail-Adresse, Passwort und die technisch notwendigen Cookies erforderlich; ohne diese Daten können wir kein Benutzerkonto bereitstellen und keine Anmeldung ermöglichen. Projekt- und Anwendungsdaten stellen Sie freiwillig bereit, soweit Sie die jeweiligen Funktionen nutzen möchten; ohne diese Angaben können die entsprechenden Planungsfunktionen nicht oder nur eingeschränkt verwendet werden. Die Veröffentlichung in der öffentlichen Kulturbibliothek ist freiwillig und für die Nutzung der übrigen Anwendung nicht erforderlich."
+          "content": "Die Bereitstellung personenbezogener Daten ist weder gesetzlich noch vertraglich vorgeschrieben, soweit Sie nur die öffentliche Startseite aufrufen. Für die Registrierung und Nutzung der Anwendung sind E-Mail-Adresse, Passwort und die technisch notwendigen Cookies erforderlich; ohne diese Daten können wir kein Benutzerkonto bereitstellen und keine Anmeldung ermöglichen. Projekt- und Anwendungsdaten stellen Sie freiwillig bereit, soweit Sie die jeweiligen Funktionen nutzen möchten; ohne diese Angaben können die entsprechenden Planungsfunktionen nicht oder nur eingeschränkt verwendet werden. Die Veröffentlichung in der öffentlichen Kulturbibliothek ist freiwillig; ohne Veröffentlichung können Sie die übrigen Funktionen weiterhin nutzen."
         },
         "storageDuration": {
           "title": "Speicherdauer",
-          "content": "Ihre Kontodaten werden gespeichert, solange Ihr Benutzerkonto besteht. Nicht aktivierte Benutzerkonten werden nach Ablauf der Aktivierungsfrist gelöscht; Aktivierungslinks sind derzeit 7 Tage gültig. Passwort-Reset-Links sind zeitlich begrenzt; E-Mail-Änderungslinks sind derzeit 24 Stunden gültig. Projekt-Einladungen sind derzeit 14 Tage gültig.\n\nWenn Sie Ihr Konto löschen lassen, wird es zunächst für 14 Tage als „zur Löschung vorgemerkt“ geführt; in diesem Zeitraum können Sie die Löschung rückgängig machen. Nach Ablauf dieser Frist anonymisieren wir Ihr Konto (E-Mail-Adresse und Anzeigename werden entfernt, das Konto wird deaktiviert), anstatt es vollständig zu löschen, damit die Projekt- und Bibliotheksdaten anderer Nutzer konsistent bleiben – soweit dem keine gesetzlichen Pflichten oder sonstige zwingende Gründe entgegenstehen.\n\nProjektdaten, Anbaupläne und der zugehörige Änderungsverlauf bleiben – sofern das jeweilige Projekt weiterbesteht und nicht separat gelöscht wird – auch nach der Anonymisierung Ihres Kontos bestehen, ebenso von Ihnen bereits veröffentlichte Einträge in der öffentlichen Kulturbibliothek (siehe Abschnitte „Projekt- und Anwendungsdaten“ und „Öffentliche Kulturbibliothek“). Server-Logfiles des Hosting-Anbieters werden täglich rotiert und nach 7 Tagen gelöscht; IP-Adressen werden dabei von Uberspace gekürzt gespeichert. Eigene technische Cron- und Anwendungslogs speichern wir höchstens 14 Tage, soweit sie nicht bereits früher für Betrieb, Fehleranalyse und Sicherheit entbehrlich sind. Darüber hinausgehende gesetzliche Aufbewahrungspflichten bestehen für die von uns verarbeiteten Daten derzeit nicht, da OpenFarmPlanner keine abrechnungs- oder steuerrelevanten Daten verarbeitet."
-        },
-        "automatedDecisionMaking": {
-          "title": "Automatisierte Entscheidungsfindung",
-          "content": "Eine automatisierte Entscheidungsfindung einschließlich Profiling im Sinne des Art. 22 DSGVO findet nicht statt."
+          "content": "Ihre Kontodaten werden gespeichert, solange Ihr Benutzerkonto besteht. Nicht aktivierte Benutzerkonten werden nach Ablauf der Aktivierungsfrist gelöscht; Aktivierungslinks sind derzeit 7 Tage gültig. Passwort-Reset-Links sind zeitlich begrenzt; E-Mail-Änderungslinks sind derzeit 24 Stunden gültig. Projekt-Einladungen sind derzeit 14 Tage gültig.\n\nWenn Sie Ihr Konto löschen lassen, wird es zunächst für 14 Tage als „zur Löschung vorgemerkt“ geführt; in diesem Zeitraum können Sie die Löschung rückgängig machen. Nach Ablauf dieser Frist anonymisieren wir Ihr Konto (E-Mail-Adresse und Anzeigename werden entfernt, das Konto wird deaktiviert) und entfernen Ihre Projektmitgliedschaften – soweit dem keine gesetzlichen Pflichten oder sonstige zwingende Gründe entgegenstehen.\n\nProjekte bleiben bestehen, solange mindestens ein Mitglied vorhanden ist. Hat ein Projekt nach der Kontolöschung kein Mitglied mehr, löschen wir das Projekt einschließlich der projektspezifischen Daten. Veröffentlichte Einträge in der öffentlichen Kulturbibliothek sind davon nicht betroffen und bleiben Bestandteil der öffentlichen Wissensdatenbank (siehe Abschnitte „Projekt- und Anwendungsdaten“ und „Öffentliche Kulturbibliothek“). Server-Logfiles des Hosting-Anbieters werden nach 7 Tagen gelöscht; IP-Adressen werden dabei von Uberspace gekürzt gespeichert. Eigene technische Cron- und Anwendungslogs speichern wir höchstens 14 Tage, soweit sie nicht bereits früher für Betrieb, Fehleranalyse und Sicherheit entbehrlich sind. Darüber hinausgehende gesetzliche Aufbewahrungspflichten bestehen für die von uns verarbeiteten Daten derzeit nicht, da OpenFarmPlanner keine abrechnungs- oder steuerrelevanten Daten verarbeitet."
         },
         "rights": {
           "title": "Ihre Rechte",
@@ -208,22 +190,22 @@
             "objection": "Widerspruch gegen eine auf berechtigtem Interesse beruhende Verarbeitung (Art. 21 DSGVO)",
             "consentWithdrawal": "Widerruf einer erteilten Einwilligung mit Wirkung für die Zukunft, ohne dass die Rechtmäßigkeit der bis dahin erfolgten Verarbeitung berührt wird (Art. 7 Abs. 3 DSGVO)"
           },
-          "contact": "Kontakt: info@openfarmplanner.org"
+          "contact": "Berichtigung Ihrer Kontodaten, Datenexport und Kontolöschung können Sie direkt in den Kontoeinstellungen ausüben. Für Ausnahmefälle, die nicht über diese Self-Service-Funktionen abgedeckt sind, bleibt der Verantwortliche unter info@openfarmplanner.org erreichbar."
         },
         "complaint": {
           "title": "Beschwerderecht",
-          "content": "Unabhängig von den oben genannten Rechten haben Sie das Recht, sich bei einer Datenschutzaufsichtsbehörde zu beschweren (Art. 77 DSGVO), insbesondere bei:\n\nÖsterreichische Datenschutzbehörde\nBarichgasse 40-42\n1030 Wien\nhttps://www.dsb.gv.at"
+          "content": "Unabhängig von den oben genannten Rechten haben Sie das Recht, sich bei einer Datenschutzaufsichtsbehörde zu beschweren, wenn Sie der Ansicht sind, dass die Verarbeitung Ihrer personenbezogenen Daten gegen die DSGVO verstößt (Art. 77 DSGVO). Sie können sich insbesondere an die Aufsichtsbehörde Ihres gewöhnlichen Aufenthaltsorts, Ihres Arbeitsplatzes oder des Orts des mutmaßlichen Verstoßes wenden.\n\nFür OpenFarmPlanner ist die österreichische Datenschutzbehörde die zuständige Aufsichtsbehörde:\n\nÖsterreichische Datenschutzbehörde\nBarichgasse 40-42\n1030 Wien\nhttps://www.dsb.gv.at"
         },
         "changes": {
           "title": "Änderungen dieser Datenschutzerklärung",
-          "content": "Wir passen diese Datenschutzerklärung an, wenn sich die Datenverarbeitung durch neue Funktionen oder geänderte rechtliche Anforderungen ändert. Maßgeblich ist stets die zum Zeitpunkt Ihrer Nutzung innerhalb der Anwendung veröffentlichte Fassung; das Datum der letzten Änderung finden Sie oben auf dieser Seite."
+          "content": "Wir passen diese Datenschutzerklärung an, wenn sich die Verarbeitung personenbezogener Daten durch neue Funktionen oder geänderte rechtliche Anforderungen ändert. Es gilt die jeweils in der Anwendung veröffentlichte Fassung. Den Stand der letzten Änderung finden Sie am Ende dieser Datenschutzerklärung. Über wesentliche Änderungen informieren wir aktive Nutzer in geeigneter Weise, etwa per E-Mail oder durch einen Hinweis in der Anwendung."
         }
       }
     },
     "terms": {
       "title": "Nutzungsbedingungen",
       "print": "Drucken / als PDF speichern",
-      "version": "Stand: 14. Juli 2026",
+      "version": "Stand: 17. Juli 2026",
       "sections": {
         "provider": {
           "title": "Anbieter und Kontakt",
@@ -234,12 +216,12 @@
           "content": "Diese Nutzungsbedingungen gelten für die Nutzung von OpenFarmPlanner, einer Webanwendung zur Planung von landwirtschaftlichem und gärtnerischem Anbau. Mit der Registrierung eines Benutzerkontos oder der Nutzung der Anwendung erkennen Sie diese Nutzungsbedingungen an.\n\nOpenFarmPlanner richtet sich an Privatpersonen sowie landwirtschaftliche und gärtnerische Betriebe, die ihre Anbauplanung digital organisieren möchten. Informationen zur Verarbeitung personenbezogener Daten finden Sie in der Datenschutzerklärung."
         },
         "serviceAndCosts": {
-          "title": "Leistungsumfang, Kosten und Lieferung",
-          "content": "OpenFarmPlanner stellt digitale Planungsfunktionen als gehostete Webanwendung bereit. Es werden keine Waren geliefert und es findet keine Zahlungsabwicklung über OpenFarmPlanner statt.\n\nDie Nutzung der unter openfarmplanner.org bereitgestellten Anwendung ist derzeit unentgeltlich. Sollten künftig kostenpflichtige Funktionen eingeführt werden, informieren wir Sie vorab; solche Funktionen kommen nur auf Grundlage gesonderter Bedingungen oder einer ausdrücklichen Zustimmung zustande.\n\nDa aktuell keine kostenpflichtigen Leistungen, Warenlieferungen oder digitalen Käufe angeboten werden, enthalten diese Nutzungsbedingungen keine Regelungen zu Preisen, Versandkosten, Zahlungsmitteln, Liefergebieten, After-Sales-Service oder kaufrechtlichen Widerrufs- und Gewährleistungsinformationen."
+          "title": "Leistungsumfang",
+          "content": "OpenFarmPlanner stellt digitale Planungsfunktionen als gehostete Webanwendung bereit."
         },
         "contractLanguage": {
           "title": "Vertragssprache",
-          "content": "Die Vertragssprache für die Nutzung der unter openfarmplanner.org bereitgestellten Anwendung ist Deutsch. Maßgeblich ist die deutsche Fassung dieser Nutzungsbedingungen."
+          "content": "Diese Nutzungsbedingungen können in mehreren Sprachfassungen bereitgestellt werden. Die deutsche Fassung ist das Original und bei Abweichungen zwischen Sprachfassungen maßgeblich."
         },
         "accounts": {
           "title": "Benutzerkonten",
@@ -251,11 +233,11 @@
         },
         "publicLibrary": {
           "title": "Öffentliche Kulturbibliothek",
-          "content": "Sie können einzelne Kultur-Datensätze freiwillig aus einem privaten Projekt in die öffentliche Kulturbibliothek veröffentlichen. Diese ist für alle angemeldeten Nutzer sichtbar und in eigene Projekte importierbar. Welche Daten dabei veröffentlicht werden, dass als Urheber nur Ihr frei wählbarer öffentlicher Anzeigename oder – falls nicht gesetzt – keine Namensangabe (anonym) erscheint, und wie Sie eine Veröffentlichung rückgängig machen können, erfahren Sie in der Datenschutzerklärung, Abschnitt „Öffentliche Kulturbibliothek“.\n\nMit der Veröffentlichung bestätigen Sie, dass die veröffentlichten Angaben nach bestem Wissen zutreffend sind und Sie berechtigt sind, diese zu veröffentlichen."
+          "content": "Sie können einzelne Kultur-Datensätze freiwillig aus einem privaten Projekt in die öffentliche Kulturbibliothek veröffentlichen. Die Kulturbibliothek ist als gemeinschaftlich aufgebaute, dauerhaft bestehende Wissensdatenbank für landwirtschaftliche und gärtnerische Kulturdaten gedacht. Veröffentlichte Einträge sind für andere Nutzer sichtbar, können in eigene Projekte importiert und langfristig über Funktionen wie Versionshistorien, gemeinschaftliche Bearbeitung, Kommentare, Bewertungen, öffentliche APIs oder Datenexporte weiterverwendet werden.\n\nMit der Veröffentlichung bestätigen Sie, dass die veröffentlichten Angaben nach bestem Wissen zutreffend sind, keine personenbezogenen Daten Dritter enthalten und Sie berechtigt sind, diese dauerhaft unter der in diesen Nutzungsbedingungen genannten offenen Lizenz zu veröffentlichen."
         },
         "contributionLicense": {
-          "title": "Nutzungsrechte an veröffentlichten Kulturdaten",
-          "content": "Wenn Sie einen Kultur-Datensatz in die öffentliche Kulturbibliothek veröffentlichen, räumen Sie OpenFarmPlanner ein einfaches, zeitlich und räumlich unbeschränktes Recht ein, diese Angaben allen angemeldeten Nutzern anzuzeigen, deren Übernahme (Import) in eigene Projekte zu ermöglichen und die Angaben dafür technisch zu speichern und zu verarbeiten.\n\nSie bleiben Inhaber Ihrer Rechte an den Daten. Sie können die genannte Nutzung jederzeit mit Wirkung für die Zukunft widerrufen (siehe Abschnitt „Entfernung von Inhalten“); Kopien, die andere Nutzer bereits vor einem Widerruf oder einer Entfernung des Eintrags in ihr eigenes Projekt importiert haben, sind davon nicht betroffen, da diese eigenständig im jeweiligen Projekt bestehen bleiben und dort unabhängig weiterbearbeitet werden können."
+          "title": "Offene Lizenz für veröffentlichte Kulturdaten",
+          "content": "Wenn Sie einen Kultur-Datensatz in die öffentliche Kulturbibliothek veröffentlichen, stellen Sie die veröffentlichten Kulturdaten unter die Creative Commons Attribution-ShareAlike 4.0 International Lizenz (CC BY-SA 4.0). Die Lizenz erlaubt Dritten insbesondere, die veröffentlichten Kulturdaten zu vervielfältigen, zu verbreiten, zu bearbeiten, mit anderen Daten zu kombinieren und auch kommerziell zu nutzen, sofern die Lizenzbedingungen eingehalten werden. Dazu gehören insbesondere eine angemessene Namensnennung, ein Hinweis auf die Lizenz und die Weitergabe bearbeiteter Fassungen unter denselben oder kompatiblen Bedingungen.\n\nDie Einräumung der Lizenz ist nach den Lizenzbedingungen unwiderruflich, soweit die Lizenz einmal wirksam erteilt wurde. OpenFarmPlanner darf die veröffentlichten Kulturdaten dauerhaft speichern, anzeigen, in Such- und Importfunktionen einbinden, in öffentlichen Datenexporten oder APIs bereitstellen, technisch aufbereiten und im Rahmen der gemeinschaftlichen Kulturbibliothek weiterentwickeln. Sie bleiben Inhaber etwaiger eigener Rechte an Ihrem Beitrag; die offene Lizenz ermöglicht jedoch die dauerhafte Nutzung durch OpenFarmPlanner und Dritte."
         },
         "prohibitedContent": {
           "title": "Verbotene Inhalte und Verhalten",
@@ -273,7 +255,7 @@
         },
         "contentRemoval": {
           "title": "Entfernung von Inhalten",
-          "content": "Wir behalten uns vor, veröffentlichte Inhalte der öffentlichen Kulturbibliothek ganz oder teilweise zu entfernen oder zu sperren, wenn konkrete Anhaltspunkte für einen Verstoß gegen diese Nutzungsbedingungen oder geltendes Recht vorliegen, etwa nach einem Hinweis im Sinne des Art. 16 der EU-Verordnung über digitale Dienste (Digital Services Act). Hinweise auf mutmaßlich rechtswidrige Inhalte können Sie jederzeit an info@openfarmplanner.org richten. Zu einer anlasslosen, allgemeinen Überwachung veröffentlichter Inhalte sind wir nicht verpflichtet.\n\nSie können die Entfernung eines von Ihnen veröffentlichten Eintrags jederzeit unter info@openfarmplanner.org verlangen."
+          "content": "Veröffentlichte Einträge der Kulturbibliothek sind grundsätzlich auf Dauer angelegt und werden nicht als normale Benutzerfunktion auf Wunsch wieder entfernt. Wir behalten uns jedoch vor, veröffentlichte Inhalte ganz oder teilweise zu entfernen, zu sperren, zu anonymisieren oder in Zukunft durch Moderations- oder Versionsfunktionen zu korrigieren, wenn konkrete Anhaltspunkte für einen Verstoß gegen diese Nutzungsbedingungen oder geltendes Recht vorliegen. Das gilt insbesondere bei Rechtsverletzungen, personenbezogenen Daten im veröffentlichten Datensatz, Spam, offensichtlichem Missbrauch, irreführenden Angaben oder einer Moderationsentscheidung.\n\nHinweise auf mutmaßlich rechtswidrige oder problematische Inhalte können Sie jederzeit an info@openfarmplanner.org richten. Zu einer anlasslosen, allgemeinen Überwachung veröffentlichter Inhalte sind wir nicht verpflichtet."
         },
         "accountSuspension": {
           "title": "Sperrung von Benutzerkonten",
@@ -289,11 +271,11 @@
         },
         "futureFeatures": {
           "title": "Weiterentwicklung der Plattform",
-          "content": "OpenFarmPlanner wird kontinuierlich weiterentwickelt. Diese Nutzungsbedingungen gelten sinngemäß auch für künftige Funktionen rund um von Nutzern bereitgestellte Inhalte, etwa Kommentare, Bewertungen oder Versionshistorien zu Einträgen der öffentlichen Kulturbibliothek. Bei wesentlichen neuen Funktionen dieser Art passen wir diese Nutzungsbedingungen bei Bedarf an (siehe Abschnitt „Änderungen dieser Nutzungsbedingungen“)."
+          "content": "OpenFarmPlanner wird kontinuierlich weiterentwickelt. Die öffentliche Kulturbibliothek soll langfristig Funktionen wie Versionshistorien, gemeinschaftliche Bearbeitung, Kommentare, Bewertungen, öffentliche APIs und Datenexporte unterstützen. Diese Nutzungsbedingungen gelten sinngemäß auch für solche künftigen Funktionen rund um veröffentlichte Kulturdaten und Beiträge der Community. Bei wesentlichen neuen Funktionen dieser Art passen wir diese Nutzungsbedingungen bei Bedarf an (siehe Abschnitt „Änderungen dieser Nutzungsbedingungen“)."
         },
         "changes": {
           "title": "Änderungen dieser Nutzungsbedingungen",
-          "content": "Wir passen diese Nutzungsbedingungen an, wenn sich die angebotenen Funktionen oder rechtliche Rahmenbedingungen ändern. Maßgeblich ist die zum Zeitpunkt Ihrer Nutzung innerhalb der Anwendung veröffentlichte Fassung; das Datum der letzten Änderung finden Sie oben auf dieser Seite. Bei wesentlichen Änderungen informieren wir aktive Nutzer in geeigneter Weise, etwa per E-Mail oder durch einen Hinweis in der Anwendung."
+          "content": "Wir passen diese Nutzungsbedingungen an, wenn sich die angebotenen Funktionen oder rechtliche Rahmenbedingungen ändern. Maßgeblich ist die zum Zeitpunkt Ihrer Nutzung innerhalb der Anwendung veröffentlichte Fassung; das Datum der letzten Änderung finden Sie am Ende dieser Seite. Bei wesentlichen Änderungen informieren wir aktive Nutzer in geeigneter Weise, etwa per E-Mail oder durch einen Hinweis in der Anwendung."
         }
       }
     }

@@ -17,7 +17,7 @@ from farm.models import (
 class SupplierSerializer(serializers.ModelSerializer):
     created = serializers.BooleanField(read_only=True, default=False)
     homepage_url = serializers.CharField(required=False, allow_blank=True, max_length=200)
-    
+
     def get_image_file(self, obj):
         if not obj.image_file_id:
             return None

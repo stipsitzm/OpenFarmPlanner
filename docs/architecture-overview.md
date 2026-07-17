@@ -67,8 +67,9 @@ docs/                  # This documentation
   - `farm/notes/` — media uploads and note image attachments.
 - **`accounts`** owns the Django `User` lifecycle: registration/activation,
   password reset, per-user project settings (`UserProjectSettings`:
-  default/last project), account deletion with a grace period, and
-  document-consent tracking. There is no custom `AUTH_USER_MODEL`.
+  default/last project), account deletion with a grace period, self-service
+  personal data export, and document-consent tracking. There is no custom
+  `AUTH_USER_MODEL`.
 - **`crops`** is a real Django app but defines **no models** — it's a
   read-only API surface (`/api/crops/`) over `farm.PublicCulture`, kept
   deliberately one-directional (crops never imports from farm) in
@@ -111,7 +112,7 @@ docs/                  # This documentation
   | `Suppliers.tsx` | `/app/suppliers` | Manage seed/plant suppliers |
   | `ProjectSelectionPage.tsx` | `/app/project-selection` | Pick/create/restore a project |
   | `ProjectSettingsPage.tsx` | `/app/project-settings` | Rename/delete project, manage members & invitations |
-  | `AccountSettingsPage.tsx` | `/app/account-settings` | Account details, email/password change, deletion |
+  | `AccountSettingsPage.tsx` | `/app/account-settings` | Account details, email/password change, data export, deletion |
 
   (`pages/InvitationPage.tsx`, an earlier, unrouted invitation-accept
   implementation superseded by `InvitationAcceptPage.tsx`, was confirmed

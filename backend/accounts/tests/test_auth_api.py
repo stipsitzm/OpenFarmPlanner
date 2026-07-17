@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 from io import StringIO
+import json
 import re
 from unittest.mock import patch
 
@@ -16,7 +17,14 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.consent import CURRENT_VERSIONS
-from accounts.models import AccountDeletionRequest, AccountEmailChangeRequest, DocumentConsent, PendingActivation, PublicProfile
+from accounts.models import (
+    AccountDeletionRequest,
+    AccountEmailChangeRequest,
+    DocumentConsent,
+    PendingActivation,
+    PublicProfile,
+)
+from farm.models import Culture, Location, Project, ProjectMembership, PublicCulture
 
 User = get_user_model()
 
@@ -653,6 +661,39 @@ class AuthApiTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['public_display_name'], '')
 
+    def test_account_data_export_returns_structured_self_service_export(self) -> None:
+        project = Project.objects.create(name='Export Project', slug='export-project')
+        ProjectMembership.objects.create(user=self.user, project=project, role=ProjectMembership.ROLE_ADMIN)
+        location = Location.objects.create(name='Export Location', project=project)
+        culture = Culture.objects.create(name='Export Kale', variety='Winter', project=project)
+        PublicCulture.objects.create(
+            name='Export Kale',
+            variety='Winter',
+            status=PublicCulture.STATUS_PUBLISHED,
+            source_project=project,
+            source_project_culture=culture,
+            created_by=self.user,
+        )
+
+        login_response = self.client.post(
+            '/openfarmplanner/api/auth/login/',
+            {'email': self.user.email, 'password': self.password},
+            format='json',
+        )
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+        response = self.client.get('/openfarmplanner/api/auth/account/data-export/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Disposition'], 'attachment; filename="openfarmplanner-data-export.json"')
+        payload = json.loads(response.content)
+        self.assertEqual(payload['account']['email'], self.user.email)
+        self.assertNotIn('password', payload['account'])
+        self.assertEqual(payload['memberships'][0]['project_id'], project.id)
+        self.assertEqual(payload['projects'][0]['project']['name'], 'Export Project')
+        self.assertEqual(payload['projects'][0]['locations'][0]['id'], location.id)
+        self.assertEqual(payload['projects'][0]['cultures'][0]['name'], 'Export Kale')
+        self.assertEqual(payload['public_library_contributions'][0]['name'], 'Export Kale')
+
     def test_email_change_rejects_wrong_password(self) -> None:
         self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
         response = self.client.post(
@@ -762,6 +803,58 @@ class AuthApiTest(APITestCase):
         call_command('purge_deleted_accounts', stdout=second)
         self.assertIn('Finalized 0 accounts.', second.getvalue())
 
+    def test_purge_deleted_accounts_deletes_projects_without_remaining_members(self) -> None:
+        solo_project = Project.objects.create(name='Solo Project', slug='solo-project')
+        ProjectMembership.objects.create(user=self.user, project=solo_project, role=ProjectMembership.ROLE_ADMIN)
+        Location.objects.create(name='Solo Location', project=solo_project)
+        source_culture = Culture.objects.create(name='Kale', project=solo_project)
+        public_culture = PublicCulture.objects.create(
+            name='Kale',
+            status=PublicCulture.STATUS_PUBLISHED,
+            source_project=solo_project,
+            source_project_culture=source_culture,
+            created_by=self.user,
+        )
+        AccountDeletionRequest.objects.create(
+            user=self.user,
+            deletion_requested_at=timezone.now() - timedelta(days=20),
+            scheduled_deletion_at=timezone.now() - timedelta(days=2),
+        )
+
+        call_command('purge_deleted_accounts')
+
+        self.assertFalse(Project.objects.filter(id=solo_project.id).exists())
+        self.assertFalse(Location.objects.filter(project_id=solo_project.id).exists())
+        public_culture.refresh_from_db()
+        self.assertIsNone(public_culture.source_project)
+        self.assertIsNone(public_culture.source_project_culture)
+        self.assertEqual(public_culture.status, PublicCulture.STATUS_PUBLISHED)
+
+    def test_purge_deleted_accounts_keeps_projects_with_remaining_members(self) -> None:
+        other_user = User.objects.create_user(
+            username='other-member',
+            email='other-member@example.com',
+            password=self.password,
+            is_active=True,
+        )
+        shared_project = Project.objects.create(name='Shared Project', slug='shared-project')
+        ProjectMembership.objects.create(user=self.user, project=shared_project, role=ProjectMembership.ROLE_ADMIN)
+        ProjectMembership.objects.create(user=other_user, project=shared_project, role=ProjectMembership.ROLE_MEMBER)
+        Location.objects.create(name='Shared Location', project=shared_project)
+        AccountDeletionRequest.objects.create(
+            user=self.user,
+            deletion_requested_at=timezone.now() - timedelta(days=20),
+            scheduled_deletion_at=timezone.now() - timedelta(days=2),
+        )
+
+        call_command('purge_deleted_accounts')
+
+        self.assertTrue(Project.objects.filter(id=shared_project.id).exists())
+        self.assertTrue(Location.objects.filter(project=shared_project, name='Shared Location').exists())
+        self.assertFalse(ProjectMembership.objects.filter(user=self.user, project=shared_project).exists())
+        remaining_membership = ProjectMembership.objects.get(user=other_user, project=shared_project)
+        self.assertEqual(remaining_membership.role, ProjectMembership.ROLE_ADMIN)
+
     def test_delete_expired_inactive_users_removes_only_expired_accounts(self) -> None:
         expired = User.objects.create_user(
             username='expired',
@@ -815,6 +908,7 @@ class ConsentApiTest(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['pending_consents'], ['terms'])
+        self.assertFalse(response.data['public_library_terms_accepted'])
 
     def test_existing_user_who_accepted_an_older_version_is_flagged_as_pending(self) -> None:
         DocumentConsent.objects.create(user=self.user, document=DocumentConsent.DOCUMENT_TERMS, version='2020-01-01')
@@ -855,6 +949,19 @@ class ConsentApiTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         record = DocumentConsent.objects.get(user=self.user, document=DocumentConsent.DOCUMENT_PRIVACY)
         self.assertEqual(record.version, CURRENT_VERSIONS[DocumentConsent.DOCUMENT_PRIVACY])
+
+    def test_me_endpoint_reports_public_library_terms_acceptance(self) -> None:
+        DocumentConsent.objects.create(
+            user=self.user,
+            document=DocumentConsent.DOCUMENT_PUBLIC_LIBRARY,
+            version=CURRENT_VERSIONS[DocumentConsent.DOCUMENT_PUBLIC_LIBRARY],
+        )
+        self.client.post('/openfarmplanner/api/auth/login/', {'email': self.user.email, 'password': self.password}, format='json')
+
+        response = self.client.get('/openfarmplanner/api/auth/me/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['public_library_terms_accepted'])
 
     def test_accept_endpoint_requires_authentication(self) -> None:
         response = self.client.post('/openfarmplanner/api/auth/consent/accept/', {'document': 'terms'}, format='json')

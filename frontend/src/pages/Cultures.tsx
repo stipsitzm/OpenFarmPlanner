@@ -224,19 +224,24 @@ function Cultures() {
   });
 
   const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
+  const [publicLibraryTermsAccepted, setPublicLibraryTermsAccepted] = useState(false);
 
   const handleRequestPublishCulture = useCallback(() => {
-    if (isUpdatingOwnPublicCulture) {
+    if (user?.public_library_terms_accepted) {
       void handlePublishCurrentCulture();
       return;
     }
+    setPublicLibraryTermsAccepted(false);
     setPublishConfirmOpen(true);
-  }, [handlePublishCurrentCulture, isUpdatingOwnPublicCulture]);
+  }, [handlePublishCurrentCulture, user?.public_library_terms_accepted]);
 
   const handlePublishConfirm = useCallback(() => {
     setPublishConfirmOpen(false);
-    void handlePublishCurrentCulture();
-  }, [handlePublishCurrentCulture]);
+    void (async () => {
+      await handlePublishCurrentCulture(publicLibraryTermsAccepted);
+      setPublicLibraryTermsAccepted(false);
+    })();
+  }, [handlePublishCurrentCulture, publicLibraryTermsAccepted]);
 
   // Fetch cultures on mount
   useEffect(() => {
@@ -612,7 +617,12 @@ function Cultures() {
       <CulturesPublishConfirmDialog
         open={publishConfirmOpen}
         cultureName={selectedCulture?.name ?? ''}
-        onClose={() => setPublishConfirmOpen(false)}
+        accepted={publicLibraryTermsAccepted}
+        onAcceptedChange={setPublicLibraryTermsAccepted}
+        onClose={() => {
+          setPublishConfirmOpen(false);
+          setPublicLibraryTermsAccepted(false);
+        }}
         onConfirm={handlePublishConfirm}
         t={t}
       />

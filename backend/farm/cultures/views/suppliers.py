@@ -39,11 +39,11 @@ from ..serializers import (
 
 class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelViewSet):
     """ViewSet for Supplier model providing CRUD operations.
-    
+
     Provides list, create, retrieve, update, and delete operations
     for seed suppliers. Supports filtering by name via query parameter.
     POST endpoint rejects duplicate names within the active project.
-    
+
     Attributes:
         queryset: All Supplier objects ordered by name
         serializer_class: SupplierSerializer for serialization
@@ -136,10 +136,10 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
             object_id=instance_id, snapshot=snapshot, display_name=name, changed_fields=[],
         )
 
-    
+
     def get_queryset(self):
         """Filter suppliers by name if query parameter is provided.
-        
+
         :return: Filtered queryset based on query parameters
         """
         queryset = super().get_queryset()
@@ -157,7 +157,7 @@ class SupplierViewSet(ProjectScopedMixin, ProjectRevisionMixin, viewsets.ModelVi
             return queryset[:20]
 
         return queryset
-    
+
     def create(self, request, *args, **kwargs):
         """Create a supplier with project-scoped duplicate-name validation.
 

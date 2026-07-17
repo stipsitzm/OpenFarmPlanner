@@ -1,14 +1,20 @@
 import {
   Box,
   Button,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   Link,
   Stack,
   Typography,
 } from '@mui/material';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import PublicIcon from '@mui/icons-material/Public';
+import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined';
 import { Link as RouterLink } from 'react-router-dom';
 
 type Translator = (key: string, options?: Record<string, unknown>) => string;
@@ -16,10 +22,19 @@ type Translator = (key: string, options?: Record<string, unknown>) => string;
 type CulturesPublishConfirmDialogProps = {
   open: boolean;
   cultureName: string;
+  accepted: boolean;
+  onAcceptedChange: (accepted: boolean) => void;
   onClose: () => void;
   onConfirm: () => void;
   t: Translator;
 };
+
+const PUBLIC_LIBRARY_CONFIRM_ITEMS = [
+  { key: 'permanent', icon: <PublicIcon fontSize="small" /> },
+  { key: 'privateData', icon: <LockOutlinedIcon fontSize="small" /> },
+  { key: 'reuse', icon: <CheckCircleOutlineIcon fontSize="small" /> },
+  { key: 'license', icon: <VerifiedOutlinedIcon fontSize="small" /> },
+] as const;
 
 /**
  * Presentational confirmation dialog for publishing a culture to the public
@@ -28,6 +43,8 @@ type CulturesPublishConfirmDialogProps = {
 export function CulturesPublishConfirmDialog({
   open,
   cultureName,
+  accepted,
+  onAcceptedChange,
   onClose,
   onConfirm,
   t,
@@ -47,12 +64,34 @@ export function CulturesPublishConfirmDialog({
           <Typography color="text.secondary">
             {t('library.publishConfirm.intro', { name: cultureName })}
           </Typography>
-          <Box component="ul" sx={{ mt: 0, mb: 0, pl: 3, color: 'text.secondary' }}>
-            <li>{t('library.publishConfirm.published')}</li>
-            <li>{t('library.publishConfirm.neverPublished')}</li>
-            <li>{t('library.publishConfirm.attribution')}</li>
-            <li>{t('library.publishConfirm.persistence')}</li>
-          </Box>
+          <Stack spacing={1}>
+            {PUBLIC_LIBRARY_CONFIRM_ITEMS.map((item) => (
+              <Stack
+                key={item.key}
+                direction="row"
+                spacing={1.25}
+                alignItems="flex-start"
+                sx={{ color: 'text.secondary' }}
+              >
+                <Box sx={{ color: 'success.main', display: 'flex', pt: 0.25 }}>
+                  {item.icon}
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  {t(`library.publishConfirm.items.${item.key}`)}
+                </Typography>
+              </Stack>
+            ))}
+          </Stack>
+          <FormControlLabel
+            control={(
+              <Checkbox
+                checked={accepted}
+                onChange={(event) => onAcceptedChange(event.target.checked)}
+              />
+            )}
+            label={t('library.publishConfirm.acceptLicense')}
+            sx={{ alignItems: 'flex-start', color: 'text.secondary' }}
+          />
           <Typography variant="body2" color="text.secondary">
             {t('library.publishConfirm.linkPrefix')}
             <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener">
@@ -70,7 +109,7 @@ export function CulturesPublishConfirmDialog({
         <Button variant="outlined" onClick={onClose}>
           {t('common:actions.cancel')}
         </Button>
-        <Button variant="contained" onClick={onConfirm}>
+        <Button variant="contained" onClick={onConfirm} disabled={!accepted}>
           {t('library.publishConfirm.confirmButton')}
         </Button>
       </DialogActions>

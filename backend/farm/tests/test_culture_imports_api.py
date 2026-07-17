@@ -33,7 +33,7 @@ class CultureImportAPITest(DRFAPITestCase):
             notes="Existing notes",
             project=self.project,
         )
-    
+
     def test_import_preview_new_culture(self):
         """Test preview endpoint for new culture."""
         data = [{
@@ -42,13 +42,13 @@ class CultureImportAPITest(DRFAPITestCase):
             'growth_duration_days': 50,
             'harvest_duration_days': 20
         }]
-        
+
         response = self.client.post('/openfarmplanner/api/cultures/import/preview/', data, format='json')
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data['results']), 1)
         self.assertEqual(response.data['results'][0]['status'], 'create')
-    
+
     def test_import_preview_update_candidate(self):
         """Test preview endpoint for matching culture."""
         data = [{
@@ -59,9 +59,9 @@ class CultureImportAPITest(DRFAPITestCase):
             'harvest_duration_days': 30,
             'notes': 'Updated notes'  # Different value
         }]
-        
+
         response = self.client.post('/openfarmplanner/api/cultures/import/preview/', data, format='json')
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data['results']), 1)
         result = response.data['results'][0]
@@ -69,7 +69,7 @@ class CultureImportAPITest(DRFAPITestCase):
         self.assertEqual(result['matched_culture_id'], self.existing_culture.id)
         self.assertIsInstance(result['diff'], list)
         self.assertGreater(len(result['diff']), 0)
-    
+
     def test_import_preview_supplier_by_name(self):
         """Test preview resolves supplier by name."""
         data = [{
@@ -79,9 +79,9 @@ class CultureImportAPITest(DRFAPITestCase):
             'growth_duration_days': 60,
             'harvest_duration_days': 30
         }]
-        
+
         response = self.client.post('/openfarmplanner/api/cultures/import/preview/', data, format='json')
-        
+
         self.assertEqual(response.status_code, 200)
         result = response.data['results'][0]
         self.assertEqual(result['status'], 'update_candidate')
@@ -144,7 +144,7 @@ class CultureImportAPITest(DRFAPITestCase):
 
         existing.refresh_from_db()
         self.assertEqual(existing.notes, 'After import')
-    
+
     def test_import_apply_create_new(self):
         """Test apply endpoint creates new cultures."""
         data = {
@@ -158,17 +158,17 @@ class CultureImportAPITest(DRFAPITestCase):
             }],
             'confirm_updates': False
         }
-        
+
         response = self.client.post('/openfarmplanner/api/cultures/import/apply/', data, format='json')
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['created_count'], 1)
         self.assertEqual(response.data['updated_count'], 0)
         self.assertEqual(response.data['skipped_count'], 0)
-        
+
         # Verify culture was created
         self.assertTrue(Culture.objects.filter(name_normalized='cucumber').exists())
-    
+
     def test_import_apply_skip_update_without_confirmation(self):
         """Test apply endpoint skips updates without confirmation."""
         data = {
@@ -183,19 +183,19 @@ class CultureImportAPITest(DRFAPITestCase):
             }],
             'confirm_updates': False
         }
-        
+
         response = self.client.post('/openfarmplanner/api/cultures/import/apply/', data, format='json')
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['created_count'], 0)
         self.assertEqual(response.data['updated_count'], 0)
         self.assertEqual(response.data['skipped_count'], 1)
-        
+
         # Verify culture was not updated
         culture = Culture.objects.get(id=self.existing_culture.id)
         self.assertEqual(culture.growth_duration_days, 60)  # Original value
         self.assertEqual(culture.notes, "Existing notes")  # Original value
-    
+
     def test_import_apply_update_with_confirmation(self):
         """Test apply endpoint updates cultures with confirmation."""
         data = {
@@ -211,19 +211,19 @@ class CultureImportAPITest(DRFAPITestCase):
             }],
             'confirm_updates': True
         }
-        
+
         response = self.client.post('/openfarmplanner/api/cultures/import/apply/', data, format='json')
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['created_count'], 0)
         self.assertEqual(response.data['updated_count'], 1)
         self.assertEqual(response.data['skipped_count'], 0)
-        
+
         # Verify culture was updated
         culture = Culture.objects.get(id=self.existing_culture.id)
         self.assertEqual(culture.growth_duration_days, 65)
         self.assertEqual(culture.notes, "Updated notes")
-    
+
     def test_import_apply_mixed_operations(self):
         """Test apply endpoint with both create and update operations."""
         data = {
@@ -248,9 +248,9 @@ class CultureImportAPITest(DRFAPITestCase):
             ],
             'confirm_updates': True
         }
-        
+
         response = self.client.post('/openfarmplanner/api/cultures/import/apply/', data, format='json')
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['created_count'], 1)
         self.assertEqual(response.data['updated_count'], 1)

@@ -14,7 +14,7 @@ from rest_framework import serializers
 
 from farm.models import ProjectMembership
 from farm.project_context import resolve_project_for_user
-from .consent import get_pending_consent_documents, record_acceptance
+from .consent import get_pending_consent_documents, has_accepted_current, record_acceptance
 from .models import AccountDeletionRequest, DocumentConsent, PublicProfile
 
 User = get_user_model()
@@ -66,6 +66,7 @@ class UserSerializer(serializers.ModelSerializer):
     account_pending_deletion = serializers.SerializerMethodField()
     scheduled_deletion_at = serializers.SerializerMethodField()
     pending_consents = serializers.SerializerMethodField()
+    public_library_terms_accepted = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -84,6 +85,7 @@ class UserSerializer(serializers.ModelSerializer):
             'account_pending_deletion',
             'scheduled_deletion_at',
             'pending_consents',
+            'public_library_terms_accepted',
         )
         read_only_fields = fields
 
@@ -148,6 +150,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_pending_consents(self, obj: User) -> list[str]:
         return get_pending_consent_documents(obj)
+
+    def get_public_library_terms_accepted(self, obj: User) -> bool:
+        return has_accepted_current(obj, DocumentConsent.DOCUMENT_PUBLIC_LIBRARY)
 
 
 class ConsentAcceptSerializer(serializers.Serializer):

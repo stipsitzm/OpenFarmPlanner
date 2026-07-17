@@ -118,7 +118,8 @@ export const cultureAPI = {
     skipped_count: number;
     errors: Array<{ index: number; error: unknown }>;
   }>('/cultures/import/apply/', data),
-  publishPublic: (id: number) => http.post<PublishPublicCultureResponse>(`/cultures/${id}/publish-public/`, {}),
+  publishPublic: (id: number, data: { accepted_public_library_terms: boolean }) =>
+    http.post<PublishPublicCultureResponse>(`/cultures/${id}/publish-public/`, data),
 };
 
 

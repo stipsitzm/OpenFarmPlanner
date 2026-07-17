@@ -87,15 +87,11 @@
     },
     "privacy": {
       "title": "Privacy policy",
-      "version": "Status: March 2026",
+      "version": "Status: July 15, 2026",
       "sections": {
         "controller": {
           "title": "Controller",
           "content": "Responsible for data processing on this website:\n\nMartin Stipsitz\nBurgenlandstraße 44A / 9\n9500 Villach\nAustria\n\nEmail: info@openfarmplanner.org"
-        },
-        "dataProtectionOfficer": {
-          "title": "Data protection officer",
-          "content": "No data protection officer has been appointed because, based on the current assessment, there is no legal obligation to do so. For privacy requests, you can contact the controller using the contact details above."
         },
         "generalNotice": {
           "title": "General information on data processing",
@@ -103,15 +99,16 @@
         },
         "hosting": {
           "title": "Hosting",
-          "content": "This website is hosted by:\n\nUberspace GmbH\nKaiserstraße 15\n55116 Mainz\nGermany\n\nWhen you visit the website, the server automatically records:",
+          "content": "This application is hosted by the following provider, which acts as our processor:\n\nUberspace GmbH\nKaiserstraße 15\n55116 Mainz\nGermany\n\nWhen the application is accessed, the web server processes technical access data:",
           "bullets": {
-            "ipAddress": "IP address",
+            "ipAddress": "shortened IP address (for IPv4 only the first 16 bits, for IPv6 only the first 32 bits are stored)",
             "requestTime": "Date and time of the request",
+            "requestedResource": "requested page or resource",
             "browser": "Browser type and version",
             "operatingSystem": "Operating system",
-            "referrerUrl": "Referrer URL"
+            "referrerUrl": "Referrer URL, if transmitted"
           },
-          "legalBasis": "Legal basis: Art. 6(1)(f) GDPR (legitimate interest)"
+          "legalBasis": "The web server log files are deleted automatically after 7 days. In addition, we process technical application logs (for example Django or Gunicorn error logs). These contain only technical information such as error messages, timestamps, and affected requests, and are used exclusively for troubleshooting and secure, stable operation of the application.\n\nLegal basis: Art. 6(1)(f) GDPR (legitimate interest in secure and stable operation of the application)."
         },
         "registration": {
           "title": "Registration and user account",
@@ -140,17 +137,6 @@
           },
           "legalBasis": "Legal basis: Art. 6(1)(b) GDPR"
         },
-        "logFiles": {
-          "title": "Log files",
-          "content": "Technical log files are stored to ensure reliable operation. These may include:",
-          "bullets": {
-            "ipAddress": "IP address",
-            "errorMessages": "Error messages",
-            "accessData": "Access data",
-            "timestamps": "Timestamps"
-          },
-          "legalBasis": "Legal basis: Art. 6(1)(f) GDPR"
-        },
         "cookies": {
           "title": "Cookies",
           "content": "OpenFarmPlanner uses only technically necessary cookies. No analytics, tracking, or marketing cookies are used. The cookies are used only to enable logged-in use of the application and to protect requests technically. The specific storage period depends on the server's session and security configuration; session cookies are deleted at the latest when they expire or when you delete them in your browser.",
@@ -177,11 +163,7 @@
         },
         "storageDuration": {
           "title": "Storage duration",
-          "content": "Your account data is stored as long as your user account exists. User accounts that are not activated are deleted after the activation period expires; activation links are currently valid for 7 days. Password reset links are time-limited; email change links are currently valid for 24 hours. Project invitations are currently valid for 14 days.\n\nIf you request account deletion, the account is first marked for deletion for 14 days; during this period, you can undo the deletion. After that period, we anonymize your account (email address and display name are removed and the account is deactivated) instead of deleting it completely, so that project and library data of other users remains consistent, unless legal obligations or other compelling reasons prevent this.\n\nProject data, cultivation plans, and related change history remain, if the respective project continues to exist and is not deleted separately, even after your account has been anonymized. The same applies to entries you have already published in the public crop library (see the Project and application data and Public crop library sections). Server log files of the hosting provider are rotated daily and deleted after 7 days; IP addresses are stored in shortened form by Uberspace. Our own technical cron and application logs are stored for no more than 14 days, unless they are no longer needed earlier for operation, troubleshooting, and security. There are currently no further statutory retention obligations for the data we process because OpenFarmPlanner does not process billing- or tax-relevant data."
-        },
-        "automatedDecisionMaking": {
-          "title": "Automated decision-making",
-          "content": "Automated decision-making, including profiling within the meaning of Art. 22 GDPR, does not take place."
+          "content": "Your account data is stored as long as your user account exists. User accounts that are not activated are deleted after the activation period expires; activation links are currently valid for 7 days. Password reset links are time-limited; email change links are currently valid for 24 hours. Project invitations are currently valid for 14 days.\n\nIf you request account deletion, the account is first marked for deletion for 14 days; during this period, you can undo the deletion. After that period, we anonymize your account (email address and display name are removed and the account is deactivated) and remove your project memberships, unless legal obligations or other compelling reasons prevent this.\n\nProjects remain as long as at least one member exists. If a project has no members after account deletion, we delete the project including its project-specific data. Published entries in the public crop library are not affected and remain part of the public knowledge base (see the Project and application data and Public crop library sections). Server log files of the hosting provider are deleted after 7 days; IP addresses are stored in shortened form by Uberspace. Our own technical cron and application logs are stored for no more than 14 days, unless they are no longer needed earlier for operation, troubleshooting, and security. There are currently no further statutory retention obligations for the data we process because OpenFarmPlanner does not process billing- or tax-relevant data."
         },
         "rights": {
           "title": "Your rights",
@@ -194,22 +176,22 @@
             "portability": "Data portability",
             "objection": "Objection to processing"
           },
-          "contact": "Contact: info@openfarmplanner.org"
+          "contact": "You can correct your account data, export your data, and request account deletion directly in the account settings. For exceptional cases that are not covered by these self-service functions, the controller remains reachable at info@openfarmplanner.org."
         },
         "complaint": {
           "title": "Right to lodge a complaint",
-          "content": "You have the right to lodge a complaint with the data protection authority:\n\nAustrian Data Protection Authority\nBarichgasse 40-42\n1030 Vienna\nhttps://www.dsb.gv.at"
+          "content": "In addition to the rights listed above, you have the right to lodge a complaint with a data protection supervisory authority if you believe that the processing of your personal data infringes the GDPR (Art. 77 GDPR). In particular, you may contact the supervisory authority of your habitual residence, your place of work, or the place of the alleged infringement.\n\nFor OpenFarmPlanner, the Austrian Data Protection Authority is the competent supervisory authority in Austria:\n\nAustrian Data Protection Authority\nBarichgasse 40-42\n1030 Vienna\nhttps://www.dsb.gv.at"
         },
         "changes": {
           "title": "Changes to this privacy policy",
-          "content": "We reserve the right to adjust this privacy policy to reflect new features or legal requirements."
+          "content": "We update this privacy policy when the processing of personal data changes due to new features or changed legal requirements. The version published in the application applies. The date of the last change is shown at the end of this privacy policy. We inform active users about material changes in an appropriate way, for example by email or through a notice within the application."
         }
       }
     },
     "terms": {
       "title": "Terms of Service",
       "print": "Print / save as PDF",
-      "version": "Status: July 14, 2026",
+      "version": "Status: July 15, 2026",
       "sections": {
         "provider": {
           "title": "Provider and contact",
@@ -220,12 +202,12 @@
           "content": "These Terms of Service apply to the use of OpenFarmPlanner, a web application for planning agricultural and horticultural cultivation. By registering a user account or using the application, you accept these Terms of Service.\n\nOpenFarmPlanner is intended for private individuals as well as agricultural and horticultural businesses that want to organize their cultivation planning digitally. Information on the processing of personal data can be found in the Privacy Policy."
         },
         "serviceAndCosts": {
-          "title": "Service scope, costs, and delivery",
-          "content": "OpenFarmPlanner provides digital planning functions as a hosted web application. No goods are delivered and no payment processing takes place through OpenFarmPlanner.\n\nUse of the application available at openfarmplanner.org is currently free of charge. If paid features are introduced in the future, we will inform you in advance; such features will only be provided on the basis of separate terms or explicit consent.\n\nBecause no paid services, goods deliveries, or digital purchases are currently offered, these Terms of Service do not contain provisions on prices, shipping costs, payment methods, delivery territories, after-sales service, or statutory withdrawal and warranty information for purchases."
+          "title": "Service scope",
+          "content": "OpenFarmPlanner provides digital planning functions as a hosted web application."
         },
         "contractLanguage": {
           "title": "Contract language",
-          "content": "The contract language for using the application available at openfarmplanner.org is German. The German version of these Terms of Service is authoritative."
+          "content": "These Terms of Service may be provided in several language versions. The German version is the original and prevails in the event of differences between language versions."
         },
         "accounts": {
           "title": "User accounts",

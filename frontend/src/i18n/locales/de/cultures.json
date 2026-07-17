@@ -465,7 +465,7 @@
     "importSuccess": "„{{name}}“ wurde in dieses Projekt importiert.",
     "importError": "Die öffentliche Kultur konnte nicht importiert werden.",
     "publishButton": "Veröffentlichen",
-    "publishTooltip": "Veröffentlicht die ausgewählte Kultur in der Kulturbibliothek.",
+    "publishTooltip": "Veröffentlicht die ausgewählte Kultur dauerhaft in der gemeinschaftlichen Kulturbibliothek.",
     "updateButton": "Öffentliche Kulturbibliothek aktualisieren",
     "publishing": "Veröffentliche…",
     "updating": "Aktualisiere…",
@@ -480,11 +480,14 @@
     "anonymousAuthor": "Anonym",
     "publishConfirm": {
       "title": "Kultur veröffentlichen?",
-      "intro": "„{{name}}“ wird in die öffentliche Kulturbibliothek veröffentlicht und ist danach für alle angemeldeten Nutzer sichtbar und importierbar.",
-      "published": "Veröffentlicht werden die Anbaudaten der Kultur, z. B. Name, Sorte, Wachstums- und Erntedauer, Pflanzabstände, Saatgutmenge und Lieferant.",
-      "neverPublished": "Ihre E-Mail-Adresse sowie private Notizen mit Fotos aus Ihrem Projekt werden niemals mitveröffentlicht.",
-      "attribution": "Als Urheber wird ausschließlich Ihr öffentlicher Benutzername angezeigt.",
-      "persistence": "Der veröffentlichte Eintrag bleibt Teil der öffentlichen Kulturbibliothek bestehen, auch wenn Sie diese Kultur später in Ihrem Projekt ändern oder löschen.",
+      "intro": "„{{name}}“ wird als Anbaudatensatz veröffentlicht.",
+      "items": {
+        "permanent": "Der Datensatz wird dauerhaft Teil der öffentlichen Kulturbibliothek.",
+        "privateData": "Private Daten wie E-Mail-Adresse, private Notizen und Fotos werden nicht veröffentlicht. Sichtbar ist nur Ihr öffentlicher Anzeigename, falls Sie einen festgelegt haben.",
+        "reuse": "Andere können den Datensatz dauerhaft importieren, nutzen und weiterentwickeln.",
+        "license": "Lizenz: CC BY-SA 4.0. Praktisch bedeutet das: Nutzung und Bearbeitung sind erlaubt, wenn die Quelle genannt wird und Verbesserungen wieder unter denselben Bedingungen geteilt werden."
+      },
+      "acceptLicense": "Ich darf diesen Datensatz veröffentlichen und bin einverstanden, dass er dauerhaft unter CC BY-SA 4.0 Teil der öffentlichen Kulturbibliothek wird.",
       "linkPrefix": "Details dazu finden Sie in der ",
       "privacyLinkLabel": "Datenschutzerklärung",
       "linkMiddle": " und den ",

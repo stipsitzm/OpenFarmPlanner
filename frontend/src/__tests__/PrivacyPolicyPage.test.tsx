@@ -34,7 +34,8 @@ describe('PrivacyPolicyPage', () => {
     renderPrivacyPolicyPage();
 
     expect(screen.getByRole('heading', { name: /Öffentliche Kulturbibliothek/ })).toBeInTheDocument();
-    expect(screen.getByText(/derzeit nicht möglich/)).toBeInTheDocument();
+    expect(screen.getByText(/dauerhaft bestehende Wissensdatenbank/)).toBeInTheDocument();
+    expect(screen.getByText(/Eine Entfernung ist nicht als normale Benutzerfunktion vorgesehen/)).toBeInTheDocument();
   });
 
   it('states that public attribution uses an opt-in public display name, never the email address', () => {
@@ -60,13 +61,18 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/nicht über persönliche Kontaktdaten anderer Nutzer/)).toBeInTheDocument();
   });
 
-  it('bases the public library section solely on consent (Art. 6 Abs. 1 lit. a)', () => {
+  it('bases the public library section on publication terms and durable knowledge-base integrity', () => {
     renderPrivacyPolicyPage();
 
     const legalBasisLines = screen.getAllByText(/Rechtsgrundlage:/);
-    const publicLibraryBasis = legalBasisLines.find((el) => el.textContent?.includes('lit. a'));
+    const publicLibraryBasis = legalBasisLines.find((el) => el.textContent?.includes('öffentlichen Kulturbibliothek'));
     expect(publicLibraryBasis).toBeDefined();
-    expect(publicLibraryBasis?.textContent).not.toMatch(/lit\. f/);
+    expect(publicLibraryBasis?.textContent).toMatch(/Art\. 6 Abs\. 1 lit\. b/);
+    expect(publicLibraryBasis?.textContent).toMatch(/Art\. 6 Abs\. 1 lit\. f/);
+    expect(publicLibraryBasis?.textContent).toMatch(/personenbezogene Bezüge/);
+    expect(publicLibraryBasis?.textContent).toMatch(/Rein sachliche oder anonymisierte Kulturdaten fallen nicht unter die DSGVO/);
+    expect(publicLibraryBasis?.textContent).not.toMatch(/lit\. a/);
+    expect(publicLibraryBasis?.textContent).not.toMatch(/nicht oder nicht mehr personenbezogene/);
   });
 
   it('separates cookies from local/session storage into distinct sections', () => {
@@ -79,11 +85,29 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/Session-Storage-Daten werden in der Regel beim Schließen des Browser-Tabs gelöscht/)).toBeInTheDocument();
   });
 
+  it('describes hosting logs and application logs without a separate log-files section', () => {
+    renderPrivacyPolicyPage();
+
+    expect(screen.getByText(/Beim Aufruf der Anwendung verarbeitet der Webserver technische Zugriffsdaten/)).toBeInTheDocument();
+    expect(screen.getByText(/gekürzte IP-Adresse/)).toBeInTheDocument();
+    expect(screen.getByText(/angeforderte Seite bzw\. Ressource/)).toBeInTheDocument();
+    expect(screen.getByText(/Referrer-URL, sofern übermittelt/)).toBeInTheDocument();
+    expect(screen.getByText(/Webserver-Logfiles werden automatisch nach 7 Tagen gelöscht/)).toBeInTheDocument();
+    expect(screen.getByText(/technische Anwendungsprotokolle.*Django- oder Gunicorn-Fehlerlogs/)).toBeInTheDocument();
+    expect(screen.getByText(/Fehlerdiagnose sowie dem sicheren und stabilen Betrieb/)).toBeInTheDocument();
+    expect(screen.getByText(/sicheren und stabilen Betrieb der Anwendung.*Erwägungsgrund 49 DSGVO/s)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Log-Dateien/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Standardkonfiguration/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/können Webserver-Logfiles/)).not.toBeInTheDocument();
+  });
+
   it('does not claim data is never shared with third parties', () => {
     renderPrivacyPolicyPage();
 
     expect(screen.queryByText(/werden nicht an Dritte weitergegeben/)).not.toBeInTheDocument();
     expect(screen.getByText(/Auftragsverarbeitung/)).toBeInTheDocument();
+    expect(screen.getByText(/deren Sichtbarkeit für andere Nutzer wählen/)).toBeInTheDocument();
+    expect(screen.queryByText(/perspektivisch über öffentliche APIs oder Datenexporte/)).not.toBeInTheDocument();
   });
 
   it('lists the right to withdraw consent and cites GDPR article numbers', () => {
@@ -92,19 +116,36 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/Widerruf einer erteilten Einwilligung/)).toBeInTheDocument();
     expect(screen.getByText(/Art\. 15 DSGVO/)).toBeInTheDocument();
     expect(screen.getByText(/Art\. 7 Abs\. 3 DSGVO/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Datenexport und Kontolöschung können Sie direkt in den Kontoeinstellungen ausüben/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/nicht über diese Self-Service-Funktionen abgedeckt/)).toBeInTheDocument();
   });
 
-  it('covers WKO checklist details for officer, provision duty, third-country transfer, and profiling', () => {
+  it('explains the right to lodge a complaint with the competent supervisory authority', () => {
     renderPrivacyPolicyPage();
 
-    expect(screen.getByRole('heading', { name: /Datenschutzbeauftragter/ })).toBeInTheDocument();
-    expect(screen.getByText(/kein Datenschutzbeauftragter bestellt/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Beschwerderecht/ })).toBeInTheDocument();
+    expect(screen.getByText(/wenn Sie der Ansicht sind, dass die Verarbeitung Ihrer personenbezogenen Daten/)).toBeInTheDocument();
+    expect(screen.getByText(/gewöhnlichen Aufenthaltsorts, Ihres Arbeitsplatzes oder des Orts des mutmaßlichen Verstoßes/)).toBeInTheDocument();
+    expect(screen.getByText(/Für OpenFarmPlanner ist die österreichische Datenschutzbehörde/)).toBeInTheDocument();
+    expect(screen.getByText(/Österreichische Datenschutzbehörde/)).toBeInTheDocument();
+    expect(screen.getByText(/Barichgasse 40-42/)).toBeInTheDocument();
+    expect(screen.getByText(/https:\/\/www\.dsb\.gv\.at/)).toBeInTheDocument();
+  });
+
+  it('covers WKO checklist details for provision duty and third-country transfer', () => {
+    renderPrivacyPolicyPage();
+
+    expect(screen.queryByRole('heading', { name: /Datenschutzbeauftragter/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/kein Datenschutzbeauftragter bestellt/)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Bereitstellung personenbezogener Daten/ })).toBeInTheDocument();
     expect(screen.getByText(/ohne diese Daten können wir kein Benutzerkonto bereitstellen/)).toBeInTheDocument();
+    expect(screen.getByText(/ohne Veröffentlichung können Sie die übrigen Funktionen weiterhin nutzen/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Drittlandübermittlung/ })).toBeInTheDocument();
     expect(screen.getByText(/außerhalb der Europäischen Union oder des Europäischen Wirtschaftsraums findet/)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Automatisierte Entscheidungsfindung/ })).toBeInTheDocument();
-    expect(screen.getByText(/einschließlich Profiling im Sinne des Art\. 22 DSGVO/)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Automatisierte Entscheidungsfindung/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/einschließlich Profiling im Sinne des Art\. 22 DSGVO/)).not.toBeInTheDocument();
   });
 
   it('states concrete retention windows visible from account and invitation flows', () => {
@@ -114,13 +155,26 @@ describe('PrivacyPolicyPage', () => {
     expect(screen.getByText(/E-Mail-Änderungslinks sind derzeit 24 Stunden gültig/)).toBeInTheDocument();
     expect(screen.getByText(/Projekt-Einladungen sind derzeit 14 Tage gültig/)).toBeInTheDocument();
     expect(screen.getByText(/für 14 Tage als „zur Löschung vorgemerkt“/)).toBeInTheDocument();
-    expect(screen.getByText(/Server-Logfiles des Hosting-Anbieters werden täglich rotiert und nach 7 Tagen gelöscht/)).toBeInTheDocument();
+    expect(screen.getByText(/Projekte bleiben bestehen, solange mindestens ein Mitglied vorhanden ist/)).toBeInTheDocument();
+    expect(screen.getByText(/kein Mitglied mehr, löschen wir das Projekt einschließlich der projektspezifischen Daten/)).toBeInTheDocument();
+    expect(screen.getByText(/Veröffentlichte Einträge in der öffentlichen Kulturbibliothek sind davon nicht betroffen/)).toBeInTheDocument();
+    expect(screen.getByText(/Server-Logfiles des Hosting-Anbieters werden nach 7 Tagen gelöscht/)).toBeInTheDocument();
     expect(screen.getByText(/Eigene technische Cron- und Anwendungslogs speichern wir höchstens 14 Tage/)).toBeInTheDocument();
   });
 
   it('uses a concrete revision date instead of a generic month/year stamp', () => {
     renderPrivacyPolicyPage();
 
-    expect(screen.getByText(/Stand: 14\. Juli 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Stand: 17\. Juli 2026/)).toBeInTheDocument();
+  });
+
+  it('explains privacy policy changes and points to the revision date at the end', () => {
+    renderPrivacyPolicyPage();
+
+    expect(screen.getByRole('heading', { name: /Änderungen dieser Datenschutzerklärung/ })).toBeInTheDocument();
+    expect(screen.getByText(/Verarbeitung personenbezogener Daten durch neue Funktionen/)).toBeInTheDocument();
+    expect(screen.getByText(/Den Stand der letzten Änderung finden Sie am Ende dieser Datenschutzerklärung/)).toBeInTheDocument();
+    expect(screen.getByText(/Über wesentliche Änderungen informieren wir aktive Nutzer in geeigneter Weise/)).toBeInTheDocument();
+    expect(screen.queryByText(/oben auf dieser Seite/)).not.toBeInTheDocument();
   });
 });

@@ -11,6 +11,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.consent import has_accepted_current, record_acceptance
+from accounts.models import DocumentConsent
 from farm.common.mixins import ProjectScopedMixin
 from farm.history import (
     _build_entity_revision_changes,
@@ -491,6 +493,13 @@ class CultureViewSet(ProjectScopedMixin, viewsets.ModelViewSet):
         culture = self.get_object()
         if not culture.name.strip():
             return Response({'detail': 'Name is required for publishing.'}, status=status.HTTP_400_BAD_REQUEST)
+        has_library_consent = has_accepted_current(request.user, DocumentConsent.DOCUMENT_PUBLIC_LIBRARY)
+        accepted_library_terms = request.data.get('accepted_public_library_terms') is True
+        if not has_library_consent and not accepted_library_terms:
+            return Response({
+                'code': 'public_library_terms_required',
+                'detail': 'Public library contribution terms must be accepted before publishing.',
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             public_culture, duplicates, operation = publish_culture_to_public_library(culture=culture, user=request.user)
@@ -511,6 +520,8 @@ class CultureViewSet(ProjectScopedMixin, viewsets.ModelViewSet):
                 ],
                 'normalized_identity': error.normalized_identity,
             }, status=status.HTTP_409_CONFLICT)
+        if not has_library_consent:
+            record_acceptance(request.user, DocumentConsent.DOCUMENT_PUBLIC_LIBRARY)
         serializer = PublicCultureSerializer(public_culture)
         return Response({
             'operation': operation,

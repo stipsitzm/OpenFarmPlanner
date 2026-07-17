@@ -40,6 +40,13 @@ erDiagram
   role, remove a member, send invitations, restore-from-history) requires
   the `admin` role — enforced in view code (`require_project_admin()` in
   `backend/farm/project_context.py`), not a DB constraint.
+- Final account deletion removes the user's `ProjectMembership` rows. Any
+  project that is left with zero memberships is hard-deleted together with
+  its project-scoped data. If members remain but the deleted account was the
+  last admin, one remaining member is promoted to admin so the project stays
+  manageable. Shared `PublicCulture` entries are not owned by a project and
+  use nullable provenance links (`on_delete=SET_NULL`), so they remain part
+  of the public knowledge base even when the source project is deleted.
 - Every API request that touches project-scoped data must send an
   `X-Project-Id` header; `ProjectScopedMixin` (`backend/farm/common/mixins.py`)
   resolves and validates it once per request (`initial()`), then
@@ -99,7 +106,10 @@ erDiagram
   soft-deleted rows, `all_objects` doesn't (used by restore flows).
 - **`PublicCulture`** is the shared, cross-project "crop library" — it has
   no owning `Project`, only optional *provenance* links back to the project
-  and culture it was published from. See
+  and culture it was published from. Published rows are intended to be
+  durable open-data knowledge-base entries under the public-library
+  contribution terms, not ordinary user-owned records with self-service
+  deletion. See
   [crop-library-architecture.md](./crop-library-architecture.md) for the
   full story of how this split is formalized into the `crops` Django app.
 - **`CultureSupplierData`** is the join between one `Culture` and one

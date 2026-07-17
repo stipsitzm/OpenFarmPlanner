@@ -4,32 +4,28 @@ import { useTranslation } from '../../i18n';
 
 const privacySections = [
   'controller',
-  'dataProtectionOfficer',
   'generalNotice',
   'hosting',
   'registration',
   'projectData',
   'publicLibrary',
   'emailCommunication',
-  'logFiles',
   'cookies',
   'localStorage',
   'dataSharing',
   'thirdCountryTransfers',
   'mandatoryProvision',
   'storageDuration',
-  'automatedDecisionMaking',
   'rights',
   'complaint',
   'changes',
 ] as const;
 
 const privacySectionBulletKeys: Partial<Record<(typeof privacySections)[number], readonly string[]>> = {
-  hosting: ['ipAddress', 'requestTime', 'browser', 'operatingSystem', 'referrerUrl'],
+  hosting: ['ipAddress', 'requestTime', 'requestedResource', 'browser', 'operatingSystem', 'referrerUrl'],
   registration: ['emailAddress', 'nameOptional', 'encryptedPassword'],
   publicLibrary: ['publicContent', 'attribution', 'noReview', 'persistence', 'removal', 'futureOutlook'],
   emailCommunication: ['registration', 'accountActivation', 'passwordReset', 'projectInvitations', 'systemNotifications'],
-  logFiles: ['ipAddress', 'errorMessages', 'accessData', 'timestamps'],
   cookies: ['sessionCookies', 'securityCookies'],
   rights: ['access', 'rectification', 'deletion', 'restriction', 'portability', 'objection', 'consentWithdrawal'],
 } as const;

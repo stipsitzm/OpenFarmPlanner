@@ -6,7 +6,13 @@
     "profile": "Profile",
     "publicProfile": "Public culture library",
     "security": "Login & security",
+    "privacy": "Privacy & data export",
     "account": "Account"
+  },
+  "dataExport": {
+    "description": "Download a structured copy of your account, project, and public library data as a JSON file.",
+    "downloadButton": "Download my data",
+    "success": "Data export was created."
   },
   "publicProfile": {
     "description": "This name belongs to your account and is shown as the author on every culture you have published, or will publish, to the public culture library.",
@@ -35,18 +41,18 @@
     "repeatNewPassword": "Repeat new password"
   },
   "dangerZone": "Danger zone",
-  "deleteDescription": "If you delete your account, it is deactivated immediately and permanently anonymized or deleted after 14 days.",
+  "deleteDescription": "If you delete your account, it is deactivated immediately and anonymized after 14 days. Projects without remaining members are then deleted including project data; published public library entries remain.",
   "restoreDescription": "You can undo the deletion within this period.",
   "deleteButton": "Delete account",
   "dialogTitle": "Schedule account for deletion",
-  "dialogWarning": "Please confirm with your current password and the text \"{{phrase}}\". Your account will be deactivated and permanently anonymized after 14 days.",
+  "dialogWarning": "Please confirm with your current password and the text \"{{phrase}}\". Your account will be deactivated and anonymized after 14 days. Projects without remaining members are then deleted.",
   "currentPassword": "Current password",
   "deletePhrase": "DELETE",
   "deletePhraseLabel": "Confirmation text",
   "deletePhraseHelper": "Please enter exactly \"{{phrase}}\" to confirm.",
   "cancel": "Cancel",
   "confirmDelete": "Schedule account for deletion",
-  "deletionScheduled": "Your account has been scheduled for deletion. It will be permanently deleted on {{date}}.",
+  "deletionScheduled": "Your account has been scheduled for deletion. It will be anonymized on {{date}}.",
   "noDisplayName": "—",
   "errors": {
     "generic": "The action could not be performed.",

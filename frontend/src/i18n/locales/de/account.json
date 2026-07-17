@@ -6,7 +6,13 @@
     "profile": "Profil",
     "publicProfile": "Öffentliche Kulturbibliothek",
     "security": "Login & Sicherheit",
+    "privacy": "Datenschutz & Datenexport",
     "account": "Konto"
+  },
+  "dataExport": {
+    "description": "Lade eine strukturierte Kopie deiner Konto-, Projekt- und Kulturbibliotheksdaten als JSON-Datei herunter.",
+    "downloadButton": "Meine Daten herunterladen",
+    "success": "Datenexport wurde erstellt."
   },
   "publicProfile": {
     "description": "Dieser Name gehört zu deinem Konto und wird als Urheber:in bei allen Kulturen angezeigt, die du in der öffentlichen Kulturbibliothek veröffentlicht hast oder noch veröffentlichst.",
@@ -35,18 +41,18 @@
     "repeatNewPassword": "Neues Passwort wiederholen"
   },
   "dangerZone": "Gefährlicher Bereich",
-  "deleteDescription": "Wenn du dein Konto löschst, wird es sofort deaktiviert und nach 14 Tagen endgültig anonymisiert oder gelöscht.",
+  "deleteDescription": "Wenn du dein Konto löschst, wird es sofort deaktiviert und nach 14 Tagen anonymisiert. Projekte ohne verbleibende Mitglieder werden dann einschließlich Projektdaten gelöscht; veröffentlichte Kulturbibliotheks-Einträge bleiben bestehen.",
   "restoreDescription": "Innerhalb dieser Frist kannst du die Löschung rückgängig machen.",
   "deleteButton": "Konto löschen",
   "dialogTitle": "Konto zur Löschung vormerken",
-  "dialogWarning": "Bitte bestätige mit deinem aktuellen Passwort und dem Text „{{phrase}}“. Dein Konto wird deaktiviert und nach 14 Tagen endgültig anonymisiert.",
+  "dialogWarning": "Bitte bestätige mit deinem aktuellen Passwort und dem Text „{{phrase}}“. Dein Konto wird deaktiviert und nach 14 Tagen anonymisiert. Projekte ohne verbleibende Mitglieder werden dann gelöscht.",
   "currentPassword": "Aktuelles Passwort",
   "deletePhrase": "LÖSCHEN",
   "deletePhraseLabel": "Bestätigungstext",
   "deletePhraseHelper": "Bitte gib zur Bestätigung genau „{{phrase}}“ ein.",
   "cancel": "Abbrechen",
   "confirmDelete": "Konto zur Löschung vormerken",
-  "deletionScheduled": "Dein Konto wurde zur Löschung vorgemerkt. Endgültige Löschung am {{date}}.",
+  "deletionScheduled": "Dein Konto wurde zur Löschung vorgemerkt. Anonymisierung am {{date}}.",
   "noDisplayName": "—",
   "errors": {
     "generic": "Aktion konnte nicht ausgeführt werden.",

@@ -32,17 +32,24 @@ describe('TermsOfServicePage', () => {
     expect(sectionHeadings[0].textContent).toMatch(/^1\./);
   });
 
-  it('identifies the provider, contract language, and current no-payment scope', () => {
+  it('identifies the provider, service scope, and contract language', () => {
     renderTermsOfServicePage();
 
     expect(screen.getByRole('heading', { name: /Anbieter und Kontakt/ })).toBeInTheDocument();
     expect(screen.getByText(/Martin Stipsitz/)).toBeInTheDocument();
     expect(screen.getByText(/Eine Umsatzsteuer-Identifikationsnummer besteht derzeit nicht/)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Leistungsumfang, Kosten und Lieferung/ })).toBeInTheDocument();
-    expect(screen.getByText(/keine Zahlungsabwicklung/)).toBeInTheDocument();
-    expect(screen.getByText(/keine Waren geliefert/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Leistungsumfang/ })).toBeInTheDocument();
+    expect(screen.getByText(/digitale Planungsfunktionen als gehostete Webanwendung/)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Kosten und Lieferung/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/kostenpflichtige Funktionen/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/gesonderter Bedingungen/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Zahlungsabwicklung/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Preisen, Versandkosten, Zahlungsmitteln/)).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Vertragssprache/ })).toBeInTheDocument();
-    expect(screen.getByText(/Maßgeblich ist die deutsche Fassung/)).toBeInTheDocument();
+    expect(screen.getByText(/mehreren Sprachfassungen bereitgestellt/)).toBeInTheDocument();
+    expect(screen.getByText(/Die deutsche Fassung ist das Original/)).toBeInTheDocument();
+    expect(screen.getByText(/bei Abweichungen zwischen Sprachfassungen maßgeblich/)).toBeInTheDocument();
+    expect(screen.queryByText(/Die Vertragssprache.*ist Deutsch/)).not.toBeInTheDocument();
   });
 
   it('offers a print action so the terms can be saved or printed from the browser', () => {
@@ -87,9 +94,18 @@ describe('TermsOfServicePage', () => {
     expect(screen.getByText(/GNU Affero General Public License/)).toBeInTheDocument();
   });
 
+  it('describes the public crop library as a durable CC BY-SA knowledge base', () => {
+    renderTermsOfServicePage();
+
+    expect(screen.getByText(/dauerhaft bestehende Wissensdatenbank/)).toBeInTheDocument();
+    expect(screen.getByText(/Creative Commons Attribution-ShareAlike 4\.0 International/)).toBeInTheDocument();
+    expect(screen.getByText(/unwiderruflich/)).toBeInTheDocument();
+    expect(screen.getByText(/nicht als normale Benutzerfunktion auf Wunsch wieder entfernt/)).toBeInTheDocument();
+  });
+
   it('uses a concrete revision date instead of a generic month/year stamp', () => {
     renderTermsOfServicePage();
 
-    expect(screen.getByText(/Stand: 14\. Juli 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Stand: 17\. Juli 2026/)).toBeInTheDocument();
   });
 });

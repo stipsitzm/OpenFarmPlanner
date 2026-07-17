@@ -16,6 +16,8 @@ const {
   publishPublicMock,
   deleteMock,
   undeleteMock,
+  refreshUserMock,
+  authUser,
 } = vi.hoisted(() => ({
   listMock: vi.fn(),
   locationListMock: vi.fn(),
@@ -25,6 +27,13 @@ const {
   publishPublicMock: vi.fn(),
   deleteMock: vi.fn(),
   undeleteMock: vi.fn(),
+  refreshUserMock: vi.fn(),
+  authUser: {
+    id: 1,
+    email: 'tester@example.com',
+    display_name: 'Tester',
+    public_library_terms_accepted: false,
+  },
 }));
 
 vi.mock('../api/api', async () => {
@@ -98,7 +107,8 @@ vi.mock('../cultures/CultureDetail', () => ({
 
 vi.mock('../auth/useAuth', () => ({
   useAuth: () => ({
-    user: { id: 1, email: 'tester@example.com', display_name: 'Tester' },
+    user: authUser,
+    refreshUser: refreshUserMock,
   }),
 }));
 
@@ -133,6 +143,8 @@ const waitForDeleteDialogToClose = async (): Promise<void> => {
 describe('Cultures action area', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authUser.public_library_terms_accepted = false;
+    refreshUserMock.mockResolvedValue(authUser);
 
     listMock.mockResolvedValue({
       data: {
@@ -215,15 +227,17 @@ describe('Cultures action area', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
 
     const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /CC BY-SA 4\.0/ }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Veröffentlichen' }));
 
     await waitFor(() => {
-      expect(publishPublicMock).toHaveBeenCalledWith(1);
+      expect(publishPublicMock).toHaveBeenCalledWith(1, { accepted_public_library_terms: true });
       expect(screen.getByText('Diese Kultur ist bereits öffentlich vorhanden: Tomate (Roma)')).toBeInTheDocument();
     });
+    expect(refreshUserMock).not.toHaveBeenCalled();
   });
 
-  it('shows a confirmation dialog before the first publish, explaining what gets published', async () => {
+  it('shows a concise confirmation dialog before publishing, explaining permanence, privacy, reuse, and license acceptance', async () => {
     renderCultures();
 
     await waitFor(() => {
@@ -234,6 +248,15 @@ describe('Cultures action area', () => {
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Kultur veröffentlichen?')).toBeInTheDocument();
+    expect(within(dialog).getByText(/dauerhaft Teil der öffentlichen Kulturbibliothek/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Private Daten wie E-Mail-Adresse/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/öffentlicher Anzeigename/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/dauerhaft importieren, nutzen und weiterentwickeln/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Lizenz: CC BY-SA 4\.0/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Quelle genannt wird/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Veröffentlichen' })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /CC BY-SA 4\.0/ }));
+    expect(within(dialog).getByRole('button', { name: 'Veröffentlichen' })).toBeEnabled();
     expect(publishPublicMock).not.toHaveBeenCalled();
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Abbrechen' }));
@@ -242,6 +265,22 @@ describe('Cultures action area', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
     expect(publishPublicMock).not.toHaveBeenCalled();
+  });
+
+  it('publishes directly after the current public-library terms were already accepted', async () => {
+    authUser.public_library_terms_accepted = true;
+    renderCultures();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Veröffentlichen' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
+
+    await waitFor(() => {
+      expect(publishPublicMock).toHaveBeenCalledWith(1, { accepted_public_library_terms: false });
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('does not attempt to render public-library entries without a trigger', async () => {

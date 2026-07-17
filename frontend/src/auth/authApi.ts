@@ -248,6 +248,10 @@ export async function requestAccountDeletion(password: string): Promise<AccountD
   });
 }
 
+export function getAccountDataExport(): Promise<Record<string, unknown>> {
+  return request<Record<string, unknown>>('/auth/account/data-export/', { method: 'GET' });
+}
+
 export async function updateProfile(displayName: string): Promise<{ detail: string; user: AuthUser }> {
   await ensureCsrfCookie();
   return request<{ detail: string; user: AuthUser }>('/auth/account/profile/', {
