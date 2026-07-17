@@ -84,9 +84,13 @@ async function getVirtualScrollerMetrics(page: Page, options: { attemptScroll?: 
 }
 
 async function getDesktopGridLayoutMetrics(page: Page): Promise<{
+  footerContainerCount: number;
   gridLeft: number;
   gridWidth: number;
+  hasVisibleMuiHorizontalScrollbar: boolean;
   notesHeaderWidth: number;
+  outerScrollClientWidth: number;
+  outerScrollWidth: number;
   viewportWidth: number;
 }> {
   const grid = page.locator('.MuiDataGrid-root').first();
@@ -96,10 +100,30 @@ async function getDesktopGridLayoutMetrics(page: Page): Promise<{
     const gridRect = element.getBoundingClientRect();
     const notesHeader = Array.from(element.querySelectorAll<HTMLElement>('[role="columnheader"]'))
       .find((header) => header.textContent?.includes('Notizen'));
+    const horizontalScrollbars = Array.from(element.querySelectorAll<HTMLElement>('.MuiDataGrid-scrollbar--horizontal'));
+    const hasVisibleMuiHorizontalScrollbar = horizontalScrollbars.some((scrollbar) => {
+      const styles = window.getComputedStyle(scrollbar);
+      const rect = scrollbar.getBoundingClientRect();
+      return styles.display !== 'none' && styles.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    });
+    let outerScrollContainer: HTMLElement = element;
+    let ancestor = element.parentElement;
+    while (ancestor) {
+      const overflowX = window.getComputedStyle(ancestor).overflowX;
+      if (overflowX === 'auto' || overflowX === 'scroll') {
+        outerScrollContainer = ancestor;
+        break;
+      }
+      ancestor = ancestor.parentElement;
+    }
     return {
+      footerContainerCount: element.querySelectorAll('.MuiDataGrid-footerContainer').length,
       gridLeft: gridRect.left,
       gridWidth: gridRect.width,
+      hasVisibleMuiHorizontalScrollbar,
       notesHeaderWidth: notesHeader?.getBoundingClientRect().width ?? 0,
+      outerScrollClientWidth: outerScrollContainer.clientWidth,
+      outerScrollWidth: outerScrollContainer.scrollWidth,
       viewportWidth: window.innerWidth,
     };
   });
@@ -133,10 +157,17 @@ test.describe('planting plans continuous scroll', () => {
     const beforeScroll = await getVirtualScrollerMetrics(page);
     await expect(page.getByTestId('continuous-scrollbar-thumb')).toBeVisible();
     const layout = await getDesktopGridLayoutMetrics(page);
+    expect(layout.footerContainerCount).toBe(0);
+    expect(layout.hasVisibleMuiHorizontalScrollbar).toBe(false);
     expect(layout.notesHeaderWidth).toBeGreaterThanOrEqual(56);
     expect(layout.notesHeaderWidth).toBeLessThanOrEqual(90);
     expect(layout.gridWidth).toBeLessThan(1400);
     expect(layout.gridLeft).toBeGreaterThan(350);
+
+    await page.setViewportSize({ width: 1000, height: 900 });
+    const narrowLayout = await getDesktopGridLayoutMetrics(page);
+    expect(narrowLayout.hasVisibleMuiHorizontalScrollbar).toBe(false);
+    expect(narrowLayout.outerScrollWidth).toBeGreaterThan(narrowLayout.outerScrollClientWidth);
 
     await page.locator('.MuiDataGrid-virtualScroller').first().hover();
     await page.mouse.wheel(0, 1400);

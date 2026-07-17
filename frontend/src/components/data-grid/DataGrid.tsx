@@ -216,6 +216,8 @@ export function EditableDataGrid<T extends EditableRow>({
   const shouldDisableTrailingFiller = isContentSizedSurface;
   const isContinuousScroll = scrollMode === 'continuous';
   const showPaginationControls = Boolean(paginationPageSizeOptions) && !isContinuousScroll;
+  const shouldRenderGridFooter = showAddAction || showFooterEditControls || showPaginationControls;
+  const continuousScrollFooterFallbackHeight = shouldRenderGridFooter ? CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX : 0;
   const [rows, setRows] = useState<GridRowsProp<T>>([]);
   const [stableRowOrder, setStableRowOrder] = useState<GridRowId[]>([]);
   const [rowModesModel, setRowModesModel] = useState<GridRowModesModel>({});
@@ -277,9 +279,10 @@ export function EditableDataGrid<T extends EditableRow>({
     () => (isContinuousScroll && !isMobile ? rowsForGrid.map(() => CONTINUOUS_SCROLL_ROW_HEIGHT_PX) : []),
     [isContinuousScroll, isMobile, rowsForGrid],
   );
-  const [continuousScrollLayoutHeights, setContinuousScrollLayoutHeights] = useState<ContinuousScrollLayoutHeights>(
-    DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS,
-  );
+  const [continuousScrollLayoutHeights, setContinuousScrollLayoutHeights] = useState<ContinuousScrollLayoutHeights>(() => ({
+    ...DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS,
+    footer: continuousScrollFooterFallbackHeight,
+  }));
   const measuredContinuousScrollContentHeight = useMemo(() => Math.ceil(
     continuousScrollLayoutHeights.header
     + continuousScrollLayoutHeights.footer
@@ -381,7 +384,7 @@ export function EditableDataGrid<T extends EditableRow>({
       const footer = surface.querySelector(`.${DATA_GRID_CONTINUOUS_SCROLL_FOOTER_CLASS}`);
       const nextHeights = {
         header: getElementHeight(header, DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS.header),
-        footer: getElementHeight(footer, DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS.footer),
+        footer: getElementHeight(footer, continuousScrollFooterFallbackHeight),
         border: getVerticalBorderHeight(root, DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS.border),
       };
 
@@ -406,7 +409,7 @@ export function EditableDataGrid<T extends EditableRow>({
       resizeObserver?.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [currentWindowRowCount, isContinuousScroll, isMobile]);
+  }, [continuousScrollFooterFallbackHeight, currentWindowRowCount, isContinuousScroll, isMobile]);
 
   useLayoutEffect(() => {
     if (!isContinuousScroll || isMobile) {
@@ -1757,6 +1760,10 @@ export function EditableDataGrid<T extends EditableRow>({
    * Custom footer component with add button
    */
   const CustomFooter = () => {
+    if (!shouldRenderGridFooter) {
+      return null;
+    }
+
     const hasInvalidCell = hasValidationError || hasInvalidRowInEditMode;
 
     return (
@@ -2204,7 +2211,7 @@ export function EditableDataGrid<T extends EditableRow>({
           editMode="row"
           density={isMobile ? 'standard' : 'compact'}
           autoHeight={!isContinuousScroll || isMobile}
-          hideFooter={false}
+          hideFooter={!shouldRenderGridFooter}
           pagination={showPaginationControls || isContinuousScroll ? true : undefined}
           paginationModel={showPaginationControls || isContinuousScroll ? activePaginationModel : undefined}
           onPaginationModelChange={
@@ -2224,9 +2231,7 @@ export function EditableDataGrid<T extends EditableRow>({
           onFilterModelChange={handleFilterModelChange}
           rowSelectionModel={{ type: "include", ids: new Set(selectedRowIds) }}
           onRowSelectionModelChange={(nextModel) => setSelectedRowIds(Array.from(nextModel.ids))}
-          slots={{
-            footer: CustomFooter,
-          }}
+          slots={shouldRenderGridFooter ? { footer: CustomFooter } : undefined}
           sx={{
             ...dataGridSx,
             width: isContentSizedSurface ? 'max-content' : '100%',
@@ -2258,7 +2263,9 @@ export function EditableDataGrid<T extends EditableRow>({
             ...(shouldDisableTrailingFiller ? {
               '& .MuiDataGrid-filler': { display: 'none' },
               '& .MuiDataGrid-scrollbarFiller': { display: 'none' },
+              '& .MuiDataGrid-scrollbar--horizontal': { display: 'none' },
               '& .MuiDataGrid-main': { width: 'fit-content' },
+              '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden !important' },
               '& .MuiDataGrid-virtualScrollerContent': { width: 'fit-content !important' },
               '& .MuiDataGrid-columnHeaders': { width: 'fit-content !important' },
             } : {}),

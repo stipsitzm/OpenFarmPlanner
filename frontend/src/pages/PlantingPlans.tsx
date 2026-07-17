@@ -1862,6 +1862,7 @@ function PlantingPlans() {
           clipboardColumns={clipboardColumns}
           addButtonLabel={`${t("plantingPlans:addButton")} (Alt+Shift+N)`}
           addButtonText={t("plantingPlans:addButton")}
+          showAddAction={false}
           showDeleteAction={false}
           showFooterEditControls={false}
           showRowEditActions={false}
