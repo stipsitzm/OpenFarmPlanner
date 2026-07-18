@@ -74,7 +74,8 @@ import {
   GANTT_SIDEBAR_RESIZE_HANDLE_DESKTOP_HITBOX_WIDTH,
   GANTT_SIDEBAR_RESIZE_HANDLE_MOBILE_HITBOX_WIDTH,
   GANTT_SIDEBAR_RESIZE_KEYBOARD_STEP,
-  GANTT_VIEWPORT_MAX_HEIGHT_SX,
+  GANTT_VIEWPORT_BOTTOM_MARGIN_PX,
+  GANTT_VIEWPORT_MIN_HEIGHT_PX,
   OCCUPANCY_COMPACT_ROW_HEIGHT,
   OCCUPANCY_TREE_AUTO_EXPAND_ALL_THRESHOLD,
   type SyntheticMousePoint,
@@ -237,6 +238,7 @@ function GanttChartPage() {
   const [ganttRenderKey, setGanttRenderKey] = useState(0);
   const [ganttScrollTop, setGanttScrollTop] = useState(0);
   const [ganttViewportHeight, setGanttViewportHeight] = useState(640);
+  const [ganttMaxHeightPx, setGanttMaxHeightPx] = useState<number | null>(null);
   const ganttViewportRef = useRef<HTMLDivElement | null>(null);
   const [ganttResizeBoundaryNode, setGanttResizeBoundaryNode] = useState<HTMLDivElement | null>(null);
   const ganttSidebarWidthFrameRef = useRef<number | null>(null);
@@ -1865,6 +1867,38 @@ function GanttChartPage() {
     return () => observer.disconnect();
   }, []);
 
+  // Caps the calendar panel's height so its bottom edge sits a fixed
+  // GANTT_VIEWPORT_BOTTOM_MARGIN_PX below the viewport bottom, instead of a
+  // viewport-percentage cap that leaves an oversized gap on tall screens
+  // (or crowds the fold on short ones). Re-measures on window resize and
+  // whenever layout above the panel (filters, banners) can change height.
+  useLayoutEffect(() => {
+    if (useMobileFilterLayout) {
+      return undefined;
+    }
+    const viewport = ganttViewportRef.current;
+    if (!viewport) {
+      return undefined;
+    }
+
+    const measure = (): void => {
+      const top = viewport.getBoundingClientRect().top;
+      setGanttMaxHeightPx(
+        Math.max(GANTT_VIEWPORT_MIN_HEIGHT_PX, window.innerHeight - top - GANTT_VIEWPORT_BOTTOM_MARGIN_PX),
+      );
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [
+    useMobileFilterLayout,
+    calendarMode,
+    error,
+    mobileSearchOpen,
+    isCalendarFilterPopoverOpen,
+    activeTaskGroups.length,
+  ]);
+
   useEffect(() => {
     if (!import.meta.env.DEV || loading) {
       return;
@@ -2164,7 +2198,7 @@ function GanttChartPage() {
                 }}
                 sx={{
                   position: 'relative',
-                  maxHeight: { xs: 'none', ...GANTT_VIEWPORT_MAX_HEIGHT_SX },
+                  maxHeight: { xs: 'none', md: ganttMaxHeightPx ? `${ganttMaxHeightPx}px` : 'none' },
                   overflowY: { xs: 'visible', md: 'auto' },
                   overflowX: 'hidden',
                   overscrollBehavior: { xs: 'auto', md: 'contain' },
