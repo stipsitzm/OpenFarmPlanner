@@ -72,6 +72,7 @@ import { useDataGridRowActionMenu } from './hooks/useDataGridRowActionMenu';
 import { useDataGridRowCommands } from './hooks/useDataGridRowCommands';
 import { useScrollDrivenRowWindow } from './hooks/useScrollDrivenRowWindow';
 import { useStableDataGridScrollbar } from './hooks/useStableDataGridScrollbar';
+import { StableScrollbarTrack } from './StableScrollbarTrack';
 import {
   getSortedRowIds,
   isSaveBlockedError,
@@ -118,7 +119,12 @@ const CONTINUOUS_SCROLL_ROW_HEIGHT_PX = 44;
 const CONTINUOUS_SCROLL_HEADER_HEIGHT_PX = 56;
 const CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX = 61;
 const CONTINUOUS_SCROLL_BORDER_HEIGHT_PX = 2;
-const CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX = 24;
+// Slack kept below the grid so it sits comfortably above the fold. Small
+// margins here are risky: any tiny under-measurement (rounding, a font
+// metrics difference, browser chrome) can push the page a few pixels taller
+// than the viewport, which brings in a second, native page-level scrollbar
+// right alongside the grid's own continuous-scroll thumb.
+const CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX = 35;
 const CONTINUOUS_SCROLL_MIN_HEIGHT_PX = 240;
 const DATA_GRID_ROOT_SELECTOR = '.MuiDataGrid-root';
 const DATA_GRID_VIRTUAL_SCROLLER_SELECTOR = '.MuiDataGrid-virtualScroller';
@@ -237,6 +243,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const canceledRowIdsRef = useRef<Set<string>>(new Set());
   const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
   const pageContentRef = useRef<HTMLDivElement | null>(null);
+  const horizontalScrollRef = useRef<HTMLDivElement | null>(null);
   const stableScrollbarTrackRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery('(max-width:900px)');
   
@@ -291,6 +298,7 @@ export function EditableDataGrid<T extends EditableRow>({
     + CONTINUOUS_SCROLL_FIT_EPSILON_PX,
   ), [continuousScrollLayoutHeights, currentWindowRowCount]);
   const [availableGridHeight, setAvailableGridHeight] = useState<number | null>(null);
+  const [scrollbarRightOffsetPx, setScrollbarRightOffsetPx] = useState<number>(0);
   const resolvedContinuousScrollHeight = isContinuousScroll && !isMobile
     ? Math.min(
       measuredContinuousScrollContentHeight,
@@ -335,38 +343,6 @@ export function EditableDataGrid<T extends EditableRow>({
       requestAnimationFrame(action);
     });
   }, [ensureRowVisible]);
-
-  useLayoutEffect(() => {
-    if (!isContinuousScroll || isMobile) {
-      return undefined;
-    }
-
-    const measure = (): void => {
-      const surface = gridSurfaceRef.current;
-      if (!surface) {
-        return;
-      }
-      const top = surface.getBoundingClientRect().top;
-      setAvailableGridHeight(
-        Math.max(CONTINUOUS_SCROLL_MIN_HEIGHT_PX, window.innerHeight - top - CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX),
-      );
-    };
-
-    measure();
-    window.addEventListener('resize', measure);
-
-    let resizeObserver: ResizeObserver | undefined;
-    const observedElement = pageContentRef.current;
-    if (observedElement && typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(measure);
-      resizeObserver.observe(observedElement);
-    }
-
-    return () => {
-      window.removeEventListener('resize', measure);
-      resizeObserver?.disconnect();
-    };
-  }, [isContinuousScroll, isMobile]);
 
   useLayoutEffect(() => {
     if (!isContinuousScroll || isMobile) {
@@ -487,6 +463,63 @@ export function EditableDataGrid<T extends EditableRow>({
       scroller.removeEventListener('scroll', keepAtTop);
     };
   }, [shouldHideContinuousVerticalOverflow]);
+
+  useLayoutEffect(() => {
+    if (!isContinuousScroll || isMobile) {
+      return undefined;
+    }
+
+    const scrollport = horizontalScrollRef.current;
+    const content = gridSurfaceRef.current;
+    const page = pageContentRef.current;
+    if (!scrollport || !content || !page) {
+      return undefined;
+    }
+
+    // The vertical scrollbar track must sit at the table's *visible* right
+    // edge: the table's own edge when it's narrower than the scrollport
+    // (centered on a wide screen, with empty space to its right), or the
+    // scrollport's edge when the table overflows and is scrolled (so the
+    // track stays glued to the viewport instead of scrolling away with the
+    // wider-than-viewport content). Taking the leftmost of the two edges
+    // covers both cases without needing to special-case which one applies.
+    const measure = (): void => {
+      const scrollportRect = scrollport.getBoundingClientRect();
+      const contentRect = content.getBoundingClientRect();
+      const pageRect = page.getBoundingClientRect();
+      const visibleRight = Math.min(scrollportRect.right, contentRect.right);
+      setScrollbarRightOffsetPx(Math.max(0, pageRect.right - visibleRight));
+    };
+
+    measure();
+
+    let rafId: number | null = null;
+    const scheduleMeasure = (): void => {
+      if (rafId !== null) {
+        return;
+      }
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        measure();
+      });
+    };
+
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleMeasure) : undefined;
+    resizeObserver?.observe(scrollport);
+    resizeObserver?.observe(content);
+    scrollport.addEventListener('scroll', scheduleMeasure, { passive: true });
+    window.addEventListener('resize', scheduleMeasure);
+
+    return () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      resizeObserver?.disconnect();
+      scrollport.removeEventListener('scroll', scheduleMeasure);
+      window.removeEventListener('resize', scheduleMeasure);
+    };
+  }, [isContinuousScroll, isMobile]);
+
   useEffect(() => {
     if (!import.meta.env.DEV || (!showPaginationControls && !isContinuousScroll) || loading) {
       return;
@@ -528,6 +561,48 @@ export function EditableDataGrid<T extends EditableRow>({
     isLoading: loading,
     hasRows: hasContextMenuHintRows,
   });
+
+  useLayoutEffect(() => {
+    if (!isContinuousScroll || isMobile) {
+      return undefined;
+    }
+
+    const measure = (): void => {
+      const surface = gridSurfaceRef.current;
+      if (!surface) {
+        return;
+      }
+      const top = surface.getBoundingClientRect().top;
+      setAvailableGridHeight(
+        Math.max(CONTINUOUS_SCROLL_MIN_HEIGHT_PX, window.innerHeight - top - CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX),
+      );
+    };
+
+    measure();
+    window.addEventListener('resize', measure);
+
+    let resizeObserver: ResizeObserver | undefined;
+    const observedElement = pageContentRef.current;
+    if (observedElement && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(measure);
+      resizeObserver.observe(observedElement);
+    }
+
+    return () => {
+      window.removeEventListener('resize', measure);
+      resizeObserver?.disconnect();
+    };
+    // error and showContextMenuHint aren't read inside the effect, but both
+    // toggle sibling banners rendered above gridSurfaceRef (see the error
+    // Alert / ContextMenuHint in the JSX below) — they shift the surface's
+    // top position without changing pageContentRef's own size, so the
+    // ResizeObserver above never fires for them on its own. Without this,
+    // the hint banner appearing after data loads (a later render than this
+    // effect's first run) left availableGridHeight stale/too-tall, letting
+    // the capped grid height push the whole page taller than the viewport —
+    // a second, native page-level scrollbar alongside the grid's own.
+  }, [isContinuousScroll, isMobile, error, showContextMenuHint]);
+
   const refreshStableRowOrder = useCallback((sourceRows: readonly T[], model: GridSortModel = sortModel): void => {
     setStableRowOrder(getSortedRowIds(sourceRows, model));
   }, [sortModel]);
@@ -2146,6 +2221,7 @@ export function EditableDataGrid<T extends EditableRow>({
         }}
       >
         <Box
+          ref={horizontalScrollRef}
           onKeyDownCapture={handleGridEditNavigation}
           sx={{
             minWidth: 0,
@@ -2425,40 +2501,28 @@ export function EditableDataGrid<T extends EditableRow>({
           localeText={germanDataGridLocaleText}
           apiRef={gridApiRef}
           />
-          {!isMobile && isContinuousScroll && stableScrollbar.isActive && (
-            <Box
-              ref={stableScrollbarTrackRef}
-              data-testid="continuous-scrollbar-track"
-              onPointerDown={stableScrollbar.onTrackPointerDown}
-              sx={{
-                position: 'absolute',
-                top: `${CONTINUOUS_SCROLL_HEADER_HEIGHT_PX}px`,
-                bottom: `${continuousScrollLayoutHeights.footer + continuousScrollLayoutHeights.border}px`,
-                right: 0,
-                width: '10px',
-                zIndex: 60,
-              }}
-            >
-              <Box
-                data-testid="continuous-scrollbar-thumb"
-                onPointerDown={stableScrollbar.onThumbPointerDown}
-                sx={{
-                  position: 'absolute',
-                  top: `${stableScrollbar.thumbTop}px`,
-                  height: `${stableScrollbar.thumbHeight}px`,
-                  left: '2px',
-                  right: '2px',
-                  borderRadius: '4px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  cursor: 'pointer',
-                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.45)' },
-                }}
-              />
-            </Box>
-          )}
           </Box>
           </Box>
         </Box>
+        {!isMobile && isContinuousScroll && (
+          // Deliberately a sibling of the overflowX:'auto' horizontal-scroll
+          // Box above, not a child of gridSurfaceRef inside it: gridSurfaceRef
+          // is sized to the full (possibly viewport-exceeding) table content
+          // under surfaceSizing="contentFit", so a `right: 0` anchored there
+          // sits at the content's right edge, not the visible viewport's —
+          // scrolling the table horizontally carried the track out of view.
+          // pageContentRef (this Box's parent) stays at the fixed visible
+          // width regardless of the inner horizontal scroll position.
+          <StableScrollbarTrack
+            trackRef={stableScrollbarTrackRef}
+            scrollbar={stableScrollbar}
+            top={CONTINUOUS_SCROLL_HEADER_HEIGHT_PX}
+            bottom={continuousScrollLayoutHeights.footer + continuousScrollLayoutHeights.border}
+            right={scrollbarRightOffsetPx}
+            trackTestId="continuous-scrollbar-track"
+            thumbTestId="continuous-scrollbar-thumb"
+          />
+        )}
       </Box>
       <CustomContextMenu
         open={Boolean(rowActionMenuState)}

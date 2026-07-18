@@ -164,6 +164,16 @@ test.describe('planting plans continuous scroll', () => {
     expect(layout.gridWidth).toBeLessThan(1400);
     expect(layout.gridLeft).toBeGreaterThan(350);
 
+    // On a wide screen the table is narrower than its (centered) container,
+    // so the scrollbar track must hug the table's own right edge — not the
+    // container's — or it visibly floats off in the empty space beside the
+    // table.
+    const gridRight = layout.gridLeft + layout.gridWidth;
+    const wideTrackBox = await page.getByTestId('continuous-scrollbar-track').boundingBox();
+    expect(wideTrackBox).not.toBeNull();
+    expect(wideTrackBox!.x + wideTrackBox!.width).toBeGreaterThan(gridRight - 5);
+    expect(wideTrackBox!.x + wideTrackBox!.width).toBeLessThan(gridRight + 5);
+
     await page.setViewportSize({ width: 1000, height: 900 });
     const narrowLayout = await getDesktopGridLayoutMetrics(page);
     expect(narrowLayout.hasVisibleMuiHorizontalScrollbar).toBe(false);
@@ -176,5 +186,35 @@ test.describe('planting plans continuous scroll', () => {
       const afterScroll = await getVirtualScrollerMetrics(page);
       return afterScroll.scrollTopAfterScrollAttempt;
     }).toBeGreaterThan(beforeScroll.scrollTopAfterScrollAttempt);
+  });
+
+  test('keeps the vertical scrollbar track on-screen after scrolling horizontally on a narrow viewport', async ({ page, request }) => {
+    const viewportWidth = 1000;
+    await page.setViewportSize({ width: viewportWidth, height: 900 });
+    await createPlantingPlanFixtures(page, request, 'planting-plans-horizontal-scroll', 120);
+
+    await page.goto('/app/planting-plans');
+    await expect(page.getByText('Scrollkultur (Sorte A)').first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByTestId('continuous-scrollbar-track')).toBeVisible();
+
+    await page.locator('.MuiDataGrid-root').first().evaluate((element) => {
+      let ancestor = element.parentElement;
+      while (ancestor) {
+        const overflowX = window.getComputedStyle(ancestor).overflowX;
+        if (overflowX === 'auto' || overflowX === 'scroll') {
+          ancestor.scrollLeft = ancestor.scrollWidth;
+          return;
+        }
+        ancestor = ancestor.parentElement;
+      }
+      throw new Error('outer horizontal scroll container not found');
+    });
+
+    // The track must stay pinned to the right edge of the visible viewport,
+    // not scroll away with the (wider than viewport) table content.
+    const trackBox = await page.getByTestId('continuous-scrollbar-track').boundingBox();
+    expect(trackBox).not.toBeNull();
+    expect(trackBox!.x).toBeGreaterThanOrEqual(0);
+    expect(trackBox!.x + trackBox!.width).toBeLessThanOrEqual(viewportWidth);
   });
 });

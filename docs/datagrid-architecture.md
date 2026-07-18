@@ -30,6 +30,7 @@ frontend/src/components/data-grid/
     useDataGridRowCommands.ts    addRow/editSelectedRow/openRowById/focusTable
     useDataGridDelete.ts         delete + optional undo-snackbar flow
     useDataGridRowActionMenu.ts  right-click / long-press / keyboard row menu
+  StableScrollbarTrack.tsx       shared track/thumb overlay for useStableDataGridScrollbar
   keyboardEditing.ts       "just start typing" / F2 spreadsheet-edit-start behavior
   keyboardNavigation.ts    Tab/Arrow cell navigation rules, grid-API-agnostic
   contextMenuFocus.ts      Arrow/Home/End/Enter/Esc navigation *inside* an open menu
@@ -88,7 +89,16 @@ Continuous scroll uses `hooks/useScrollDrivenRowWindow.ts` for the internal
 100-row window and `hooks/useStableDataGridScrollbar.ts` for the visible
 thumb. The same stable-scrollbar hook is re-exported for the raw
 Standort/Parzelle/Beet hierarchy so both large table styles keep matching
-scrollbar behavior without parallel implementations.
+scrollbar behavior without parallel implementations; both also render the
+track/thumb overlay itself through the shared `StableScrollbarTrack.tsx`
+rather than each page hand-rolling the same absolutely-positioned Boxes.
+
+`StableScrollbarTrack` must be rendered as a sibling of whatever wrapper Box
+scrolls the table horizontally, not nested inside it — its `right: 0` is
+relative to the nearest positioned ancestor, so nesting it inside content
+that can be wider than the visible viewport (e.g. `surfaceSizing="contentFit"`)
+pins it to the *content's* right edge instead of the *viewport's*, letting it
+scroll out of view as the user scrolls the table horizontally.
 
 `setDraftValues`/`commitDraftValues` let external code push field values
 into a row that's already mid-edit (e.g. a calculated side-effect from
