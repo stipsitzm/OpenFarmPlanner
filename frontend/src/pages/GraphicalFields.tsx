@@ -44,9 +44,11 @@ import { useTranslation } from "../i18n";
 import ModeToggle from "../components/ModeToggle";
 import {
   clampInsideParent,
+  DEFAULT_PLACEMENT_SPACING,
   getBedRectSizeWithinField,
   getFieldRectSize,
   initialAutoLayout,
+  type Rect,
   type RectSize,
 } from "./graphicalLayoutUtils";
 import {
@@ -96,6 +98,10 @@ import {
   type SelectedElement,
 } from "./graphicalFieldsGeometry";
 
+/** Gap used when auto-arranging beds that do not yet have a saved layout. */
+const BED_AUTO_LAYOUT_GAP = DEFAULT_PLACEMENT_SPACING;
+/** Minimum spacing kept between a newly placed bed and existing beds. */
+const BED_PLACEMENT_SPACING = DEFAULT_PLACEMENT_SPACING;
 
 export default function GraphicalFields({
   showTitle = true,
@@ -1527,10 +1533,31 @@ export default function GraphicalFields({
                         const missingBeds = fieldBeds
                           .map((bed) => bed.id!)
                           .filter((bedId) => !layoutsByBed[bedId]);
+                        const occupiedBedRects: Rect[] = fieldBeds
+                          .filter((bed) => layoutsByBed[bed.id!])
+                          .map((bed) => {
+                            const bedId = bed.id!;
+                            const size = bedSizeMap.get(bedId)!;
+                            const saved = layoutsByBed[bedId];
+                            const clamped = clampInsideParent(
+                              { x: saved.x, y: saved.y },
+                              size,
+                              fieldInnerSize,
+                            );
+                            return {
+                              x: clamped.x,
+                              y: clamped.y,
+                              width: size.width,
+                              height: size.height,
+                            };
+                          });
                         const autoLayout = initialAutoLayout(
                           missingBeds,
                           bedSizeMap,
                           fieldInnerSize,
+                          BED_AUTO_LAYOUT_GAP,
+                          occupiedBedRects,
+                          BED_PLACEMENT_SPACING,
                         );
                         const bedViewModels: BedViewModel[] = fieldBeds.map(
                           (bed) => {
