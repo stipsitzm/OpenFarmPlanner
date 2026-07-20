@@ -19,14 +19,12 @@ import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
 import { CultureFiltersPopover } from './CultureFiltersPopover';
 import { CultureMobileSelectorDialog } from './CultureMobileSelectorDialog';
+import { CultureHeaderActionsMenu } from './CultureHeaderActionsMenu';
 import TuneIcon from '@mui/icons-material/Tune';
 import EditIcon from '@mui/icons-material/Edit';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import PublicIcon from '@mui/icons-material/Public';
-import HistoryIcon from '@mui/icons-material/History';
-import DeleteIcon from '@mui/icons-material/Delete';
 import {
   Badge,
   Box,
@@ -45,11 +43,9 @@ import {
   List,
   ListItemButton,
   ListItemText,
-  MenuItem,
   Stack,
   Button,
   IconButton,
-  Menu,
   Tooltip,
 } from '@mui/material';
 import type { Culture } from '../api/api';
@@ -169,7 +165,6 @@ export function CultureDetail({
   const [headerMenuAnchorEl, setHeaderMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [mobileSelectorOpen, setMobileSelectorOpen] = useState(false);
   const isFilterPopoverOpen = Boolean(filterAnchorEl);
-  const isHeaderMenuOpen = Boolean(headerMenuAnchorEl);
   const headerActionButtonSx = {
     width: useUnifiedMobileLayout ? 30 : 34,
     height: useUnifiedMobileLayout ? 30 : 34,
@@ -873,28 +868,16 @@ export function CultureDetail({
                   </IconButton>
                 </Box>
               </Box>
-              <Menu
+              <CultureHeaderActionsMenu
                 anchorEl={headerMenuAnchorEl}
-                open={isHeaderMenuOpen}
                 onClose={() => setHeaderMenuAnchorEl(null)}
-              >
-                <MenuItem onClick={() => { setHeaderMenuAnchorEl(null); onOpenHistory?.(); }}>
-                  <HistoryIcon sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
-                  Versionen
-                </MenuItem>
-                <MenuItem
-                  onClick={() => { setHeaderMenuAnchorEl(null); onPublishCulture?.(); }}
-                  disabled={isPublishingCulture}
-                  sx={{ color: 'text.primary' }}
-                >
-                  <PublicIcon sx={{ fontSize: 18, mr: 1, color: 'rgba(37, 111, 42, 0.78)' }} />
-                  {publishActionLabel ?? t('library.publishButton')}
-                </MenuItem>
-                <MenuItem onClick={() => { setHeaderMenuAnchorEl(null); onDeleteCulture?.(selectedCulture); }} sx={{ color: 'error.main' }}>
-                  <DeleteIcon sx={{ fontSize: 18, mr: 1, color: 'error.main' }} />
-                  {t('buttons.delete')}
-                </MenuItem>
-              </Menu>
+                onOpenHistory={() => onOpenHistory?.()}
+                onPublish={() => onPublishCulture?.()}
+                isPublishing={isPublishingCulture}
+                publishLabel={publishActionLabel ?? t('library.publishButton')}
+                onDelete={() => onDeleteCulture?.(selectedCulture)}
+                t={t}
+              />
             </Box>
 
             <Divider sx={{ mb: 2.5 }} />
