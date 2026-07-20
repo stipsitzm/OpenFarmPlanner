@@ -156,6 +156,12 @@ test.describe('planting plans continuous scroll', () => {
 
     const beforeScroll = await getVirtualScrollerMetrics(page);
     await expect(page.getByTestId('continuous-scrollbar-thumb')).toBeVisible();
+    // On slower CI runners the DataGrid columns are not measured yet at this
+    // point, so the notes column header briefly reports a width of 0. Wait for
+    // the layout to settle before reading the metrics used by the assertions.
+    await expect
+      .poll(async () => (await getDesktopGridLayoutMetrics(page)).notesHeaderWidth)
+      .toBeGreaterThan(0);
     const layout = await getDesktopGridLayoutMetrics(page);
     expect(layout.footerContainerCount).toBe(0);
     expect(layout.hasVisibleMuiHorizontalScrollbar).toBe(false);

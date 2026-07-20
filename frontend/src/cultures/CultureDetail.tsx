@@ -17,6 +17,7 @@ import { useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
+import { CultureFiltersPopover } from './CultureFiltersPopover';
 import TuneIcon from '@mui/icons-material/Tune';
 import EditIcon from '@mui/icons-material/Edit';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
@@ -43,15 +44,10 @@ import {
   List,
   ListItemButton,
   ListItemText,
-  FormControl,
-  InputLabel,
-  Select,
   MenuItem,
   Stack,
   Button,
   IconButton,
-  Popover,
-  TextField,
   Menu,
   Tooltip,
   Dialog,
@@ -625,151 +621,30 @@ export function CultureDetail({
           </Box>
         </Stack>
 
-        <Popover
-          id="culture-filters-popover"
-          open={isFilterPopoverOpen}
+        <CultureFiltersPopover
           anchorEl={filterAnchorEl}
           onClose={() => setFilterAnchorEl(null)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-          PaperProps={{ sx: { width: { xs: 'min(92vw, 360px)', sm: 360 }, p: 1.5 } }}
-        >
-          <Stack
-            direction="column"
-            spacing={1}
-            sx={{ pt: 0.5, pb: 0.5 }}
-          >
-            <FormControl size="small" sx={{ minWidth: '100%' }}>
-              <InputLabel id="culture-family-filter-label">{t('filters.cropFamily')}</InputLabel>
-              <Select
-                labelId="culture-family-filter-label"
-                value={filters.selectedFamilyFilter}
-                label={t('filters.cropFamily')}
-                onChange={(event) => updateFilter('selectedFamilyFilter', event.target.value)}
-              >
-                <MenuItem value="">{t('filters.all')}</MenuItem>
-                {familyOptions.map((family) => (
-                  <MenuItem key={family} value={family}>{family}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: '100%' }}>
-              <InputLabel id="culture-method-filter-label">{t('filters.cultivationType')}</InputLabel>
-              <Select
-                labelId="culture-method-filter-label"
-                value={filters.selectedCultivationFilter}
-                label={t('filters.cultivationType')}
-                onChange={(event) => updateFilter('selectedCultivationFilter', event.target.value)}
-              >
-                <MenuItem value="">{t('filters.all')}</MenuItem>
-                <MenuItem value="direct_sowing">{t('filters.directSowing')}</MenuItem>
-                <MenuItem value="pre_cultivation">{t('filters.preCultivation')}</MenuItem>
-                <MenuItem value="both">{t('filters.both')}</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: '100%' }}>
-              <InputLabel id="culture-nutrient-filter-label">{t('filters.nutrientDemand')}</InputLabel>
-              <Select
-                labelId="culture-nutrient-filter-label"
-                value={filters.selectedNutrientFilter}
-                label={t('filters.nutrientDemand')}
-                onChange={(event) => updateFilter('selectedNutrientFilter', event.target.value)}
-              >
-                <MenuItem value="">{t('filters.all')}</MenuItem>
-                <MenuItem value="low">{t('filters.nutrientLow')}</MenuItem>
-                <MenuItem value="medium">{t('filters.nutrientMedium')}</MenuItem>
-                <MenuItem value="high">{t('filters.nutrientHigh')}</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: '100%' }}>
-              <InputLabel id="culture-supplier-filter-label">{t('filters.supplier')}</InputLabel>
-              <Select
-                labelId="culture-supplier-filter-label"
-                value={filters.selectedSupplierFilter}
-                label={t('filters.supplier')}
-                onChange={(event) => updateFilter('selectedSupplierFilter', event.target.value)}
-              >
-                <MenuItem value="">{t('filters.all')}</MenuItem>
-                {supplierOptions.map((supplier) => (
-                  <MenuItem key={supplier.id} value={supplier.id}>{supplier.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              size="small"
-              type="number"
-              label={t('filters.growthDaysMin')}
-              value={filters.growthDaysMin}
-              onChange={(event) => updateFilter('growthDaysMin', event.target.value)}
-              sx={{ minWidth: '100%' }}
-            />
-            <TextField
-              size="small"
-              type="number"
-              label={t('filters.growthDaysMax')}
-              value={filters.growthDaysMax}
-              onChange={(event) => updateFilter('growthDaysMax', event.target.value)}
-              sx={{ minWidth: '100%' }}
-            />
-            <FormControl size="small" sx={{ minWidth: '100%' }}>
-              <InputLabel id="culture-sowing-month-filter-label">{t('filters.sowingMonths')}</InputLabel>
-              <Select
-                multiple
-                labelId="culture-sowing-month-filter-label"
-                value={filters.selectedSowingMonths}
-                label={t('filters.sowingMonths')}
-                onChange={(event) => updateFilter('selectedSowingMonths', event.target.value as number[])}
-                renderValue={(selected) => (
-                  (selected as number[])
-                    .map((value) => monthOptions.find((option) => option.value === value)?.label ?? value)
-                    .join(', ')
-                )}
-              >
-                {monthOptions.map((month) => (
-                  <MenuItem key={month.value} value={month.value}>{month.label}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              size="small"
-              type="number"
-              label={t('filters.yieldMin')}
-              value={filters.yieldMin}
-              onChange={(event) => updateFilter('yieldMin', event.target.value)}
-              sx={{ minWidth: '100%' }}
-            />
-            <TextField
-              size="small"
-              type="number"
-              label={t('filters.yieldMax')}
-              value={filters.yieldMax}
-              onChange={(event) => updateFilter('yieldMax', event.target.value)}
-              sx={{ minWidth: '100%' }}
-            />
-            <Button
-              variant="text"
-              size="small"
-              onClick={() => {
-                setFilters({
-                  searchQuery: '',
-                  selectedFamilyFilter: '',
-                  selectedCultivationFilter: '',
-                  selectedNutrientFilter: '',
-                  selectedSupplierFilter: '',
-                  growthDaysMin: '',
-                  growthDaysMax: '',
-                  yieldMin: '',
-                  yieldMax: '',
-                  selectedSowingMonths: [],
-                });
-                setFilterAnchorEl(null);
-              }}
-              sx={{ alignSelf: 'flex-end', whiteSpace: 'nowrap' }}
-            >
-              {t('filters.reset')}
-            </Button>
-          </Stack>
-        </Popover>
+          filters={filters}
+          onFilterChange={updateFilter}
+          familyOptions={familyOptions}
+          supplierOptions={supplierOptions}
+          monthOptions={monthOptions}
+          onReset={() => {
+            setFilters({
+              searchQuery: '',
+              selectedFamilyFilter: '',
+              selectedCultivationFilter: '',
+              selectedNutrientFilter: '',
+              selectedSupplierFilter: '',
+              growthDaysMin: '',
+              growthDaysMax: '',
+              yieldMin: '',
+              yieldMax: '',
+              selectedSowingMonths: [],
+            });
+            setFilterAnchorEl(null);
+          }}
+        />
       </Box>
   ) : null;
 
