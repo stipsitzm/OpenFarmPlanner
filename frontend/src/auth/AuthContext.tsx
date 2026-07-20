@@ -138,6 +138,7 @@ export function AuthProvider({
       activate: async (uid, token) => {
         const me = await activateRequest(uid, token);
         applyAuthenticatedUser(me);
+        return me;
       },
       resendActivation: async (email) => {
         const response = await resendActivationRequest(email);

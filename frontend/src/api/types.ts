@@ -348,17 +348,19 @@ export interface LocationLayoutsResponse {
 }
 export interface PlantingPlan {
   id?: number;
-  culture: number;
+  // Optional until the plan is fully filled in — a plan can be saved as a
+  // draft as long as at least one of culture/bed is chosen.
+  culture: number | null;
   cultivation_type?: CultivationType | '';
-  culture_name?: string;
-  culture_variety?: string;
-  culture_display_color?: string;
+  culture_name?: string | null;
+  culture_variety?: string | null;
+  culture_display_color?: string | null;
   culture_propagation_duration_days?: number | null;
-  culture_cultivation_type?: CultivationType | '';
-  culture_cultivation_types?: CultivationType[];
-  bed: number;
-  bed_name?: string;
-  planting_date: string;
+  culture_cultivation_type?: CultivationType | '' | null;
+  culture_cultivation_types?: CultivationType[] | null;
+  bed: number | null;
+  bed_name?: string | null;
+  planting_date: string | null;
   // Read-only, computed.
   harvest_date?: string;
   // Read-only, computed.

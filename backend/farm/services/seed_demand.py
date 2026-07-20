@@ -270,7 +270,9 @@ def _aggregate_requirements_by_culture(project: Project) -> dict[int, dict]:
     requirements into per-unit buckets (grams and seeds separately)."""
     plans = (
         PlantingPlan.objects
-        .filter(project=project)
+        # Draft plans without a culture chosen yet can't contribute to a
+        # per-culture seed requirement — exclude them rather than crashing.
+        .filter(project=project, culture__isnull=False)
         .select_related(
             'culture', 'culture__supplier', 'culture__selected_seed_demand_supplier',
         )

@@ -23,8 +23,8 @@ This document describes the spreadsheet-like autosave functionality implemented 
 
 4. **Navigation Protection**:
    - Browser navigation (tab close/reload) warns if there are unsaved changes
-   - React Router navigation is blocked if there are unsaved invalid changes
-   - User must explicitly confirm before losing data
+   - React Router navigation can run a save callback before continuing
+   - EditableDataGrid uses this to save dirty rows silently before route changes
 
 5. **Race-Safe Operations**:
    - Multiple rapid save operations are handled safely
@@ -104,7 +104,9 @@ Hook for blocking navigation when there are unsaved changes:
 ```typescript
 useNavigationBlocker(
   isDirty && !isValid,  // Block condition
-  'You have unsaved changes. Are you sure you want to leave?'
+  'You have unsaved changes. Are you sure you want to leave?',
+  saveBeforeLeaving,
+  false, // skip confirm dialog for in-app navigation
 );
 ```
 
@@ -158,9 +160,9 @@ Originally moved to save-on-blur; **currently uses an explicit dialog Save/Cance
   - Clicking outside the row
   - Pressing Tab to move to another field
   - Clicking another row
-- **Navigation**: Blocked if any row is in edit mode **OR if there are validation errors**
+- **Navigation**: In-app route changes save dirty/editing rows before navigation continues; browser tab close/reload still gets native `beforeunload` protection
 - **Validation**: Invalid rows cannot be saved (error shown to user, row stays in edit mode)
-- **Data Protection**: Navigation is blocked when required fields are missing, preventing data loss
+- **Data Protection**: Dirty rows are saved before navigation. Save failures keep inline validation/errors available when the user returns to the row.
 
 **Pages currently using `EditableDataGrid`:** `PlantingPlans.tsx` is the only page using it today. `Locations.tsx` moved to a card/dialog form (not a grid), and `FieldsBedsHierarchy.tsx` renders a raw MUI `DataGrid` directly (see [`docs/datagrid-architecture.md`](./docs/datagrid-architecture.md)) rather than `EditableDataGrid`, so it does not get this autosave behavior automatically.
 
@@ -210,31 +212,26 @@ npm run test
 
 ### Data Grids (e.g., Planting Plans)
 
-1. User clicks on a cell → row enters edit mode → **navigation is immediately blocked if row is invalid**
+1. User clicks on a cell → row enters edit mode
 2. User types or selects from dropdown → changes are tracked locally
-3. **Validation runs continuously** - Navigation blocker checks current row state in real-time
-4. User tries to navigate away with incomplete data → **blocked immediately** with German message
-5. User clicks outside row or presses Tab → triggers save attempt
-6. Validation clears previous errors and validates all required fields
-7. If valid → automatic save to server, row exits edit mode, navigation unblocked
-8. If invalid → **detailed error message** shows ALL missing fields (e.g., "Folgende Pflichtfelder müssen ausgefüllt werden: Kultur, Beet, Pflanzdatum")
-9. Navigation remains blocked until either:
-   - All required fields are filled and saved successfully, OR
-   - User cancels editing (Escape key) to discard changes
+3. User clicks outside the row, tabs away, or clicks a different in-app route → triggers a save attempt
+4. For planting plans, incomplete rows can be saved as drafts as long as either a culture or a bed is selected
+5. If valid → automatic save to server, row exits edit mode, navigation proceeds when applicable
+6. If invalid → detailed error message is shown and the row stays editable
 
 ### Key Improvements
 
 - **No Enter key required** - More intuitive, spreadsheet-like behavior
 - **Clear validation feedback** - Errors shown immediately on blur with specific field names
-- **Proactive navigation blocking** - Checks validation state in real-time, not just after save attempt
+- **Silent in-app navigation saves** - Route changes save dirty grid rows first without showing a confirmation dialog
 - **Dropdown selection support** - Selecting from dropdowns properly updates validation state
 - **Complete data protection** - Cannot accidentally lose work or navigate away with invalid data
 - **Better performance** - No server calls while typing
 - **Graceful error handling** - Server errors don't lose user's work
 - **Internationalized messages** - All user-facing messages in German (or configured language)
-- **Navigation blocking on validation errors** - Prevents losing incomplete data when required fields are missing
+- **Navigation save callback** - Lets grids persist current edits before route changes
 - **Detailed error messages** - Shows exactly which fields need to be filled
-- **Real-time validation** - Navigation is blocked as soon as a row enters edit mode with invalid data
+- **Draft row support** - Planting plans can persist partial rows without forcing cultivation type selection
 
 ## Technical Details
 
@@ -283,14 +280,14 @@ const blocker = useBlocker(({ currentLocation, nextLocation }) => {
 
 useEffect(() => {
   if (blocker.state === 'blocked') {
-    const proceed = window.confirm(message);
+    const proceed = confirmBeforeProceed ? window.confirm(message) : true;
     if (proceed) {
-      blocker.proceed();
+      Promise.resolve(onProceed?.()).finally(() => blocker.proceed());
     } else {
       blocker.reset();
     }
   }
-}, [blocker, message]);
+}, [blocker, message, onProceed, confirmBeforeProceed]);
 ```
 
 **Router Compatibility:**

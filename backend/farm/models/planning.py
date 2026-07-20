@@ -16,15 +16,33 @@ class PlantingPlan(TimestampedModel):
     """A planting schedule linking a culture to a bed with dates."""
     CULTIVATION_TYPE_CHOICES = Culture.CULTIVATION_TYPE_CHOICES
 
-    culture = models.ForeignKey(Culture, on_delete=models.CASCADE, related_name='planting_plans')
-    bed = models.ForeignKey(Bed, on_delete=models.CASCADE, related_name='planting_plans')
+    culture = models.ForeignKey(
+        Culture,
+        on_delete=models.CASCADE,
+        related_name='planting_plans',
+        null=True,
+        blank=True,
+        help_text="Optional until the plan is fully filled in — a plan can be saved as a draft before a culture is chosen, as long as a bed is chosen instead.",
+    )
+    bed = models.ForeignKey(
+        Bed,
+        on_delete=models.CASCADE,
+        related_name='planting_plans',
+        null=True,
+        blank=True,
+        help_text="Optional until the plan is fully filled in — a plan can be saved as a draft before a bed is chosen.",
+    )
     cultivation_type = models.CharField(
         max_length=30,
         choices=CULTIVATION_TYPE_CHOICES,
         blank=True,
         help_text="Cultivation type used for this plan",
     )
-    planting_date = models.DateField()
+    planting_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Optional until the plan is fully filled in — a plan can be saved as a draft before a date is chosen.",
+    )
     harvest_date = models.DateField(
         blank=True,
         null=True,
@@ -107,12 +125,6 @@ class PlantingPlan(TimestampedModel):
             # New instance - always calculate.
             should_recalculate = True
         
-        if not self.cultivation_type and self.culture:
-            if self.culture.cultivation_types and len(self.culture.cultivation_types) > 0:
-                self.cultivation_type = self.culture.cultivation_types[0]
-            elif self.culture.cultivation_type:
-                self.cultivation_type = self.culture.cultivation_type
-
         if should_recalculate and self.planting_date and self.culture:
             self.recalculate_harvest_dates()
         
@@ -139,7 +151,10 @@ class PlantingPlan(TimestampedModel):
 
     def __str__(self) -> str:
         """Return a string combining culture, bed, and planting date."""
-        return f"{self.culture.name} in {self.bed.name} - {self.planting_date}"
+        culture_label = self.culture.name if self.culture else '–'
+        bed_label = self.bed.name if self.bed else '–'
+        date_label = self.planting_date or '–'
+        return f"{culture_label} in {bed_label} - {date_label}"
 
     class Meta:
         ordering = ['-planting_date']

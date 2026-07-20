@@ -255,18 +255,23 @@ class PlantingPlanAreaInputTest(DRFAPITestCase):
         self.assertAlmostEqual(float(response.data['area_usage_sqm']), 2.0, places=2)
     
     def test_area_input_plants_fails_when_culture_missing(self):
-        """Test that PLANTS input fails when culture is not provided."""
+        """Test that PLANTS input fails when culture is not provided.
+
+        Culture itself is optional (a plan can be saved as a draft with
+        only a bed chosen), so this now surfaces as an area_input_unit
+        error — plant-count input specifically needs a culture to convert
+        via — rather than a missing-culture field error."""
         data = {
             'bed': self.bed.id,
             'planting_date': '2024-03-01',
             'area_input_value': '10',
             'area_input_unit': 'PLANTS'
         }
-        
+
         response = self.client.post('/openfarmplanner/api/planting-plans/', data, format='json')
-        
+
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('culture', response.data)
+        self.assertIn('area_input_unit', response.data)
     
     def test_area_input_plants_fails_when_spacing_missing(self):
         """Test that PLANTS input fails when culture spacing is missing."""

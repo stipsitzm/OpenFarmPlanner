@@ -3,18 +3,13 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link as RouterLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { projectAPI, type InvitationPublicStatus } from '../../api/api';
-import type { AuthUser } from '../../auth/types';
 import { useAuth } from '../../auth/useAuth';
 import { AuthApiError } from '../../auth/authApi';
+import { getAuthenticatedAppDestination } from '../../auth/authDestination';
 import { useTranslation } from '../../i18n';
 import PasswordVisibilityToggle from '../../components/inputs/PasswordVisibilityToggle';
 import LegalLinks from '../../components/legal/LegalLinks';
 import { getNextFromSearch } from '../invitationAcceptance';
-
-function getAuthenticatedAppDestination(user: AuthUser): string {
-  const hasProjects = (user.memberships?.length ?? 0) > 0;
-  return user.needs_project_selection || !hasProjects ? '/app/project-selection' : '/app';
-}
 
 export default function LoginPage() {
   const { user, login, restoreAccount } = useAuth();

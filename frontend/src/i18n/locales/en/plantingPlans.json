@@ -72,6 +72,7 @@
     "bedRequired": "Bed is required",
     "cultivationTypeRequired": "Cultivation type is required",
     "requiredFields": "The following required fields must be filled in: {{fields}}",
+    "cultureOrBedRequired": "Culture or bed is required",
     "areaExceedsRemaining": "The specified area exceeds this bed's available remaining area.",
     "areaExceedsBedArea": "The specified area exceeds this bed's size.",
     "bedArea": "Bed area",

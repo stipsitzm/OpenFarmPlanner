@@ -72,6 +72,7 @@
     "bedRequired": "Beet ist ein Pflichtfeld",
     "cultivationTypeRequired": "Anbauart ist ein Pflichtfeld",
     "requiredFields": "Folgende Pflichtfelder müssen ausgefüllt werden: {{fields}}",
+    "cultureOrBedRequired": "Kultur oder Beet ist ein Pflichtfeld",
     "areaExceedsRemaining": "Die angegebene Fläche überschreitet die verfügbare Restfläche dieses Beets.",
     "areaExceedsBedArea": "Die angegebene Fläche überschreitet die Größe dieses Beets.",
     "bedArea": "Beetfläche",

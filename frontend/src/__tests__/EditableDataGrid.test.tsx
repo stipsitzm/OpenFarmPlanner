@@ -58,6 +58,7 @@ vi.mock('@mui/x-data-grid', async () => {
     pagination,
     paginationModel,
     pageSizeOptions,
+    sx,
   }: unknown) => {
     const [, forceFocusRender] = React.useState(0);
     const [editValues, setEditValues] = React.useState<Record<string, unknown>>({});
@@ -109,6 +110,12 @@ vi.mock('@mui/x-data-grid', async () => {
         <div data-testid="pagination-page">{paginationModel?.page ?? ''}</div>
         <div data-testid="pagination-page-size">{paginationModel?.pageSize ?? ''}</div>
         <div data-testid="pagination-options">{pageSizeOptions?.join(',') ?? ''}</div>
+        <div data-testid="continuous-render-zone-collapsed">
+          {String(Boolean((sx as Record<string, unknown> | undefined)?.['& .MuiDataGrid-virtualScrollerRenderZone']))}
+        </div>
+        <div data-testid="continuous-content-height">
+          {String(((sx as Record<string, Record<string, unknown>> | undefined)?.['& .MuiDataGrid-virtualScrollerContent']?.height) ?? '')}
+        </div>
         {rows.map((row: TestGridRow) => (
           <div
             key={row.id}
@@ -356,6 +363,7 @@ describe('EditableDataGrid', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('125'));
+    expect(screen.getByTestId('continuous-render-zone-collapsed')).toHaveTextContent('false');
     expect(screen.getByTestId('pagination-enabled')).toHaveTextContent('true');
     expect(screen.getByTestId('pagination-page')).toHaveTextContent('0');
     expect(screen.getByTestId('pagination-page-size')).toHaveTextContent('100');
@@ -365,6 +373,25 @@ describe('EditableDataGrid', () => {
     fireEvent.click(screen.getByLabelText('Neu'));
 
     await waitFor(() => expect(screen.getByTestId('pagination-page')).toHaveTextContent('1'));
+  });
+
+  it('collapses the continuous-scroll render zone when all rows fit on one page', async () => {
+    const props = basePropsWithRows([
+      createGridRow({ id: 1, name: 'Plan 1', area_sqm: 1 }),
+      createGridRow({ id: 2, name: 'Plan 2', area_sqm: 2 }),
+    ]);
+
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        scrollMode="continuous"
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('2'));
+    expect(screen.getByTestId('continuous-render-zone-collapsed')).toHaveTextContent('true');
+    expect(screen.getByTestId('continuous-content-height')).toHaveTextContent('60px !important');
   });
 
   it('supports add, blur/enter/tab commit flows and calls API save with payload', async () => {
@@ -478,7 +505,12 @@ describe('EditableDataGrid', () => {
     await user.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
 
     await waitFor(() => {
-      expect(mockUseNavigationBlocker).toHaveBeenLastCalledWith(true, 'messages.unsavedChanges');
+      expect(mockUseNavigationBlocker).toHaveBeenLastCalledWith(
+        true,
+        'messages.unsavedChanges',
+        expect.any(Function),
+        false,
+      );
     });
   });
 

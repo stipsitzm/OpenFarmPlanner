@@ -81,6 +81,7 @@ import {
   prepareDataGridColumn,
   SaveBlockedError,
 } from './dataGridUtils';
+import { parseGermanDateText } from './GermanDateEditCell';
 import {
   focusKeyboardNavigableCell as focusDataGridKeyboardNavigableCell,
   getKeyboardNavigationTarget,
@@ -115,7 +116,8 @@ type DataGridKeyboardEvent = KeyboardEvent & {
 };
 
 const CONTINUOUS_SCROLL_PAGE_SIZE = 100;
-const CONTINUOUS_SCROLL_ROW_HEIGHT_PX = 44;
+const CONTINUOUS_SCROLL_REQUESTED_ROW_HEIGHT_PX = 44;
+const CONTINUOUS_SCROLL_COMPACT_ROW_HEIGHT_PX = 30;
 const CONTINUOUS_SCROLL_HEADER_HEIGHT_PX = 56;
 const CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX = 61;
 const CONTINUOUS_SCROLL_BORDER_HEIGHT_PX = 2;
@@ -131,6 +133,13 @@ const DATA_GRID_VIRTUAL_SCROLLER_SELECTOR = '.MuiDataGrid-virtualScroller';
 const DATA_GRID_MAIN_SELECTOR = '.MuiDataGrid-main';
 const DATA_GRID_CONTINUOUS_SCROLL_FOOTER_CLASS = 'ofp-data-grid-continuous-footer';
 const CONTINUOUS_SCROLL_FIT_EPSILON_PX = 2;
+
+const cssEscape = (value: string): string => {
+  if (typeof window !== 'undefined' && window.CSS?.escape) {
+    return window.CSS.escape(value);
+  }
+  return value.replace(/["\\]/g, '\\$&');
+};
 
 type ContinuousScrollLayoutHeights = {
   header: number;
@@ -240,6 +249,7 @@ export function EditableDataGrid<T extends EditableRow>({
   const [dirtyRowIds, setDirtyRowIds] = useState<Set<string>>(new Set());
   const [activeValidationErrors, setActiveValidationErrors] = useState<Record<string, Record<string, string>>>({});
   const rowSnapshotRef = useRef<Map<string, T>>(new Map());
+  const rowSavePromisesRef = useRef<Map<string, Promise<T>>>(new Map());
   const canceledRowIdsRef = useRef<Set<string>>(new Set());
   const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
   const pageContentRef = useRef<HTMLDivElement | null>(null);
@@ -283,7 +293,7 @@ export function EditableDataGrid<T extends EditableRow>({
     )
     : rowsForGrid.length;
   const stableScrollbarRowHeights = useMemo(
-    () => (isContinuousScroll && !isMobile ? rowsForGrid.map(() => CONTINUOUS_SCROLL_ROW_HEIGHT_PX) : []),
+    () => (isContinuousScroll && !isMobile ? rowsForGrid.map(() => CONTINUOUS_SCROLL_COMPACT_ROW_HEIGHT_PX) : []),
     [isContinuousScroll, isMobile, rowsForGrid],
   );
   const [continuousScrollLayoutHeights, setContinuousScrollLayoutHeights] = useState<ContinuousScrollLayoutHeights>(() => ({
@@ -294,7 +304,7 @@ export function EditableDataGrid<T extends EditableRow>({
     continuousScrollLayoutHeights.header
     + continuousScrollLayoutHeights.footer
     + continuousScrollLayoutHeights.border
-    + currentWindowRowCount * CONTINUOUS_SCROLL_ROW_HEIGHT_PX
+    + currentWindowRowCount * CONTINUOUS_SCROLL_COMPACT_ROW_HEIGHT_PX
     + CONTINUOUS_SCROLL_FIT_EPSILON_PX,
   ), [continuousScrollLayoutHeights, currentWindowRowCount]);
   const [availableGridHeight, setAvailableGridHeight] = useState<number | null>(null);
@@ -316,6 +326,10 @@ export function EditableDataGrid<T extends EditableRow>({
     && !isMobile
     && resolvedContinuousScrollHeight !== undefined
     && measuredContinuousScrollContentHeight <= resolvedContinuousScrollHeight + CONTINUOUS_SCROLL_FIT_EPSILON_PX,
+  );
+  const shouldCollapseContinuousRenderZone = Boolean(
+    shouldHideContinuousVerticalOverflow
+    && rowsForGrid.length <= CONTINUOUS_SCROLL_PAGE_SIZE,
   );
   const stableScrollbar = useStableDataGridScrollbar(
     stableScrollbarRowHeights,
@@ -879,12 +893,6 @@ export function EditableDataGrid<T extends EditableRow>({
     });
   }, [hasRowsInEditMode, rowModesModel, rowsById, validateRow]);
 
-  // Do not block navigation with modal prompts: invalid/dirty state is visible inline.
-  useNavigationBlocker(
-    hasUnsavedChanges,
-    t('messages.unsavedChanges')
-  );
-
   const rowValidationErrors = useMemo(() => {
     if (!getRowValidationErrors) return {};
     const errorsByRow: Record<string, Record<string, string>> = {};
@@ -1053,8 +1061,53 @@ export function EditableDataGrid<T extends EditableRow>({
     if (!api) {
       return null;
     }
-    return api.getRowWithUpdatedValues(rowId, '') as T | null;
-  }, [gridApiRef]);
+    const baseRow = (rowsById.get(String(rowId)) as T | undefined) ?? (api.getRow(rowId) as T | null);
+    if (!baseRow) {
+      return null;
+    }
+
+    const draftRow = { ...baseRow } as Record<string, unknown>;
+    for (const column of columns) {
+      const rowWithUpdatedField = api.getRowWithUpdatedValues(rowId, column.field) as Record<string, unknown> | null;
+      if (rowWithUpdatedField && Object.prototype.hasOwnProperty.call(rowWithUpdatedField, column.field)) {
+        draftRow[column.field] = rowWithUpdatedField[column.field];
+      }
+    }
+    return draftRow as T;
+  }, [columns, gridApiRef, rowsById]);
+
+  const mergeVisibleEditInputValues = useCallback((rowId: GridRowId, draftRow: T): T => {
+    const root = gridApiRef.current?.rootElementRef?.current;
+    if (!root) {
+      return draftRow;
+    }
+
+    const rowElement = root.querySelector<HTMLElement>(`[role="row"][data-id="${cssEscape(String(rowId))}"]`);
+    if (!rowElement) {
+      return draftRow;
+    }
+
+    const nextDraft = { ...draftRow } as Record<string, unknown>;
+    for (const column of columns) {
+      if (column.type !== 'date') {
+        continue;
+      }
+
+      const cellElement = rowElement.querySelector<HTMLElement>(
+        `[data-field="${cssEscape(column.field)}"].MuiDataGrid-cell--editing`,
+      );
+      const inputElement = cellElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+        'input:not([type="hidden"]):not([aria-hidden="true"]), textarea',
+      );
+      const inputValue = inputElement?.value;
+      if (inputValue === undefined) {
+        continue;
+      }
+
+      nextDraft[column.field] = parseGermanDateText(inputValue) ?? inputValue;
+    }
+    return nextDraft as T;
+  }, [columns, gridApiRef]);
 
   const applyDraftValues = useCallback(async (rowId: GridRowId, values: Partial<T>): Promise<void> => {
     const rowKey = String(rowId);
@@ -1108,13 +1161,18 @@ export function EditableDataGrid<T extends EditableRow>({
     return row;
   }, [onBeforeSaveRow]);
 
+  const waitForPendingEditCellUpdates = useCallback(async (): Promise<void> => {
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+  }, []);
+
   const prepareRowForSave = useCallback(async (rowId: GridRowId): Promise<T | null> => {
+    await waitForPendingEditCellUpdates();
     const draftRow = getDraftRow(rowId);
     if (!draftRow) {
       return rowsById.get(String(rowId)) as T | undefined ?? null;
     }
-    return draftRow;
-  }, [getDraftRow, rowsById]);
+    return mergeVisibleEditInputValues(rowId, draftRow);
+  }, [getDraftRow, mergeVisibleEditInputValues, rowsById, waitForPendingEditCellUpdates]);
 
   const commitEditedRowDraftForKeyboardNavigation = useCallback((
     rowId: GridRowId,
@@ -1274,25 +1332,38 @@ export function EditableDataGrid<T extends EditableRow>({
       return rowSnapshotRef.current.get(rowKey) ?? newRow;
     }
 
+    const inFlightSave = rowSavePromisesRef.current.get(rowKey);
+    if (inFlightSave) {
+      return inFlightSave;
+    }
+
     // Clear previous error before validating
     // This ensures dropdown selections and other changes trigger fresh validation
     setError('');
 
-    const rowAfterSaveGate = await runBeforeSaveGate(newRow);
-    if (!rowAfterSaveGate) {
+    const savePromise = (async (): Promise<T> => {
+      const rowAfterSaveGate = await runBeforeSaveGate(newRow);
+      if (!rowAfterSaveGate) {
+        setRowModesModel((oldModel) => ({
+          ...oldModel,
+          [newRow.id]: { mode: GridRowModes.Edit },
+        }));
+        throw new SaveBlockedError();
+      }
+
+      const savedRow = await saveResolvedRow(rowAfterSaveGate);
       setRowModesModel((oldModel) => ({
         ...oldModel,
-        [newRow.id]: { mode: GridRowModes.Edit },
+        [newRow.id]: { mode: GridRowModes.View, ignoreModifications: true },
       }));
-      throw new SaveBlockedError();
+      return savedRow;
+    })();
+    rowSavePromisesRef.current.set(rowKey, savePromise);
+    try {
+      return await savePromise;
+    } finally {
+      rowSavePromisesRef.current.delete(rowKey);
     }
-
-    const savedRow = await saveResolvedRow(rowAfterSaveGate);
-    setRowModesModel((oldModel) => ({
-      ...oldModel,
-      [newRow.id]: { mode: GridRowModes.View, ignoreModifications: true },
-    }));
-    return savedRow;
   }, [
     runBeforeSaveGate,
     saveResolvedRow,
@@ -1487,23 +1558,16 @@ export function EditableDataGrid<T extends EditableRow>({
   ]);
 
   const handleSaveAllDirtyRows = useCallback(async (): Promise<void> => {
+    // Awaits the real save (including the API call) for every dirty row in
+    // turn, rather than just flipping rowModesModel to View and hoping MUI's
+    // own async commit catches up later. Callers (e.g. the navigation
+    // blocker below) may unmount this component right after this resolves,
+    // which would cancel a save that hadn't actually started yet.
     const editingRowIds = Object.entries(rowModesModel)
       .filter(([, mode]) => mode.mode === GridRowModes.Edit)
       .map(([id]) => id);
-    const saveableRowIds: GridRowId[] = [];
     for (const rowId of editingRowIds) {
-      if (await prepareRowForSave(rowId)) {
-        saveableRowIds.push(rowId);
-      }
-    }
-    if (saveableRowIds.length > 0) {
-      setRowModesModel((oldModel) => {
-        const nextModel = { ...oldModel };
-        for (const rowId of saveableRowIds) {
-          nextModel[rowId] = { mode: GridRowModes.View };
-        }
-        return nextModel;
-      });
+      await handleSaveRow(rowId);
     }
     const editingRowIdKeys = new Set(editingRowIds.map(String));
     for (const rowKey of dirtyRowIds) {
@@ -1511,7 +1575,50 @@ export function EditableDataGrid<T extends EditableRow>({
         await handleSaveRow(rowKey);
       }
     }
-  }, [dirtyRowIds, handleSaveRow, prepareRowForSave, rowModesModel]);
+  }, [dirtyRowIds, handleSaveRow, rowModesModel]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      return;
+    }
+
+    const handleDocumentPointerDown = (event: PointerEvent): void => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+      if (
+        target.closest('[role="listbox"], .MuiAutocomplete-popper, .MuiPopover-root, .MuiPickersPopper-root')
+        || target.closest('a[href]')
+      ) {
+        return;
+      }
+
+      const editingRowElements = Object.entries(rowModesModel)
+        .filter(([, mode]) => mode.mode === GridRowModes.Edit)
+        .map(([id]) => `[role="row"][data-id="${cssEscape(id)}"]`)
+        .join(',');
+      if (editingRowElements && target.closest(editingRowElements)) {
+        return;
+      }
+
+      void handleSaveAllDirtyRows();
+    };
+
+    document.addEventListener('pointerdown', handleDocumentPointerDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', handleDocumentPointerDown, true);
+    };
+  }, [handleSaveAllDirtyRows, hasUnsavedChanges, rowModesModel]);
+
+  // Route changes save first and then proceed without showing a confirmation.
+  // Browser tab close/reload still gets the native beforeunload protection.
+  useNavigationBlocker(
+    hasUnsavedChanges,
+    t('messages.unsavedChanges'),
+    handleSaveAllDirtyRows,
+    false,
+  );
 
   const rememberRowSnapshotForCellEdit = useCallback((params: GridCellParams<T>): void => {
     const rowKey = String(params.id);
@@ -2298,7 +2405,7 @@ export function EditableDataGrid<T extends EditableRow>({
                 : undefined
           }
           pageSizeOptions={showPaginationControls ? paginationPageSizeOptions : undefined}
-          rowHeight={isContinuousScroll ? CONTINUOUS_SCROLL_ROW_HEIGHT_PX : undefined}
+          rowHeight={isContinuousScroll ? CONTINUOUS_SCROLL_REQUESTED_ROW_HEIGHT_PX : undefined}
           columnHeaderHeight={isContinuousScroll ? CONTINUOUS_SCROLL_HEADER_HEIGHT_PX : undefined}
           sortModel={sortModel}
           onSortModelChange={handleSortModelChange}
@@ -2327,6 +2434,14 @@ export function EditableDataGrid<T extends EditableRow>({
                       maxHeight: `${resolvedContinuousScrollBodyHeight ?? 0}px !important`,
                       overflowY: shouldHideContinuousVerticalOverflow ? 'clip !important' : undefined,
                     },
+                    ...(shouldCollapseContinuousRenderZone ? {
+                      '& .MuiDataGrid-virtualScrollerContent': {
+                        height: `${currentWindowRowCount * CONTINUOUS_SCROLL_COMPACT_ROW_HEIGHT_PX}px !important`,
+                      },
+                      '& .MuiDataGrid-virtualScrollerRenderZone': {
+                        transform: 'none !important',
+                      },
+                    } : {}),
                     '& .MuiDataGrid-scrollbar--vertical': {
                       display: 'none',
                     },
@@ -2342,7 +2457,12 @@ export function EditableDataGrid<T extends EditableRow>({
               '& .MuiDataGrid-scrollbar--horizontal': { display: 'none' },
               '& .MuiDataGrid-main': { width: 'fit-content' },
               '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden !important' },
-              '& .MuiDataGrid-virtualScrollerContent': { width: 'fit-content !important' },
+              '& .MuiDataGrid-virtualScrollerContent': {
+                width: 'fit-content !important',
+                ...(shouldCollapseContinuousRenderZone ? {
+                  height: `${currentWindowRowCount * CONTINUOUS_SCROLL_COMPACT_ROW_HEIGHT_PX}px !important`,
+                } : {}),
+              },
               '& .MuiDataGrid-columnHeaders': { width: 'fit-content !important' },
             } : {}),
           }}
