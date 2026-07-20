@@ -48,7 +48,7 @@ import {
   getBedRectSizeWithinField,
   getFieldRectSize,
   initialAutoLayout,
-  type Rect,
+  type Rect as PlacementRect,
   type RectSize,
 } from "./graphicalLayoutUtils";
 import {
@@ -1533,7 +1533,7 @@ export default function GraphicalFields({
                         const missingBeds = fieldBeds
                           .map((bed) => bed.id!)
                           .filter((bedId) => !layoutsByBed[bedId]);
-                        const occupiedBedRects: Rect[] = fieldBeds
+                        const occupiedBedRects: PlacementRect[] = fieldBeds
                           .filter((bed) => layoutsByBed[bed.id!])
                           .map((bed) => {
                             const bedId = bed.id!;
