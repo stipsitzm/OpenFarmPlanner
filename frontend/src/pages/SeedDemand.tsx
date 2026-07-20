@@ -62,7 +62,7 @@ const formatPackageSelection = (row: SeedDemand, t: Translator): string => (
     .join(' + ')
 );
 
-type PackageCellState = 'computed' | 'chooseSupplier' | 'notConfigured' | 'calculationError';
+type PackageCellState = 'computed' | 'chooseSupplier' | 'notConfigured' | 'unavailableRequirement' | 'calculationError';
 
 const getPackageCellState = (row: SeedDemand): PackageCellState => {
   const supplierOptions = row.supplier_options ?? [];
@@ -78,6 +78,9 @@ const getPackageCellState = (row: SeedDemand): PackageCellState => {
   }
   if ((row.seed_packages ?? []).length === 0) {
     return 'notConfigured';
+  }
+  if (row.required_amount_value === null || row.required_amount_unit === null) {
+    return 'unavailableRequirement';
   }
   return 'calculationError';
 };
@@ -232,6 +235,7 @@ export default function SeedDemandPage() {
       case 'computed':
         return formatPackageSelection(row, t);
       case 'chooseSupplier':
+      case 'unavailableRequirement':
         return '—';
       case 'notConfigured':
         return t('seedDemand.noPackagesAvailable');
@@ -258,6 +262,8 @@ export default function SeedDemandPage() {
           </Tooltip>
         );
       }
+      case 'unavailableRequirement':
+        return <Typography variant="body2" color="text.secondary">—</Typography>;
       case 'notConfigured':
         return (
           <Tooltip title={t('seedDemand.noPackagesAvailableTooltip')} describeChild>

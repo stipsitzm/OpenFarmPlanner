@@ -2661,7 +2661,7 @@ export function EditableDataGrid<T extends EditableRow>({
             key={action.id}
             label={action.label}
             icon={action.icon}
-            color={action.color === 'error' ? 'error' : undefined}
+            color={action.color === 'error' || action.color === 'primary' ? action.color : undefined}
             disabled={action.disabled}
             onClick={() => {
               if (!menuRow) {

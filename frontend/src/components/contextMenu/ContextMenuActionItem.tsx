@@ -63,7 +63,10 @@ export function ContextMenuActionItem({
   }
 
   return (
-    <MenuItem {...menuItemProps} sx={sx}>
+    <MenuItem
+      {...menuItemProps}
+      sx={mergeSx(resolvedColor ? { color: resolvedColor } : undefined, sx)}
+    >
       {icon ? (
         <ListItemIcon sx={resolvedColor ? { color: resolvedColor } : undefined}>
           {icon}

@@ -21,7 +21,8 @@
   "actions": {
     "useAvailableArea": "Use remaining area",
     "useBedArea": "Use bed area",
-    "copyPlantingPlan": "Copy planting plan"
+    "copyPlantingPlan": "Copy planting plan",
+    "createPlantingPlan": "Create planting plan"
   },
   "feedback": {
     "areaAutoFilled": "Available remaining area applied automatically: {{area}}"

@@ -21,7 +21,8 @@
   "actions": {
     "useAvailableArea": "Restfläche übernehmen",
     "useBedArea": "Beetfläche übernehmen",
-    "copyPlantingPlan": "Anbauplan kopieren"
+    "copyPlantingPlan": "Anbauplan kopieren",
+    "createPlantingPlan": "Anbauplan erstellen"
   },
   "feedback": {
     "areaAutoFilled": "Verfügbare Restfläche automatisch verwendet: {{area}}"

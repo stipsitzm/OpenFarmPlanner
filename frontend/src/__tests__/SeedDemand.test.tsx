@@ -944,4 +944,47 @@ describe('SeedDemandPage', () => {
     });
     expect(screen.queryByRole('link', { name: /seedDemand.noPackageCalculationPossible/ })).not.toBeInTheDocument();
   });
+
+  it('shows a neutral package dash when the total demand cannot be calculated yet', async () => {
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            culture_id: 10,
+            culture_name: 'Mais',
+            variety: 'rot',
+            supplier: 'Reinsaat',
+            supplier_options: [{ supplier_id: 10, supplier_name: 'Reinsaat' }],
+            selected_supplier_id: 10,
+            required_amount_value: null,
+            required_amount_unit: 'g',
+            required_amount_warning: null,
+            total_grams: null,
+            seed_packages: [{ size_value: 25, size_unit: 'g' }],
+            package_suggestion: null,
+            warning: null,
+          },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <FocusManagerProvider><CommandProvider>
+          <SeedDemandPage />
+        </CommandProvider></FocusManagerProvider>
+      </MemoryRouter>
+    );
+
+    const cultureLink = await screen.findByRole('link', { name: 'Mais (rot)' });
+    const row = cultureLink.closest('tr');
+    expect(row).not.toBeNull();
+    const cells = Array.from((row as HTMLTableRowElement).querySelectorAll('td'));
+    expect(cells.at(-2)?.textContent).toBe('-');
+    expect(cells.at(-1)?.textContent).toBe('—');
+    expect(screen.queryByText(/seedDemand.noPackageCalculationPossible/)).not.toBeInTheDocument();
+  });
 });

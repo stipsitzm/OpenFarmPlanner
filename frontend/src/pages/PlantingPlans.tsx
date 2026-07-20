@@ -29,6 +29,8 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
@@ -1855,6 +1857,28 @@ function PlantingPlans() {
           showRowEditActions={false}
           inlineRowActionField="culture"
           showInlineRowActionMenu
+          getRowActions={() => [
+            {
+              id: "create-planting-plan",
+              label: t("plantingPlans:actions.createPlantingPlan"),
+              icon: <AddIcon fontSize="small" />,
+              color: "primary",
+              onClick: () => handleCreatePlan(),
+            },
+            {
+              id: "duplicate",
+              label: t("common:actions.duplicate"),
+              icon: <ContentCopyIcon fontSize="small" />,
+              onClick: (row, helpers) => helpers.duplicate(row),
+            },
+            {
+              id: "delete",
+              label: t("common:actions.delete"),
+              icon: <DeleteIcon fontSize="small" />,
+              color: "error",
+              onClick: (row, helpers) => helpers.delete(row.id),
+            },
+          ]}
           getInlineRowActions={(row, helpers) => [
             {
               id: "delete",
