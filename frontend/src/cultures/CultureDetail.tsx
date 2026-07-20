@@ -18,6 +18,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTranslation } from '../i18n';
 import { CultureFiltersPopover } from './CultureFiltersPopover';
+import { CultureMobileSelectorDialog } from './CultureMobileSelectorDialog';
 import TuneIcon from '@mui/icons-material/Tune';
 import EditIcon from '@mui/icons-material/Edit';
 import AgricultureIcon from '@mui/icons-material/Agriculture';
@@ -50,9 +51,6 @@ import {
   IconButton,
   Menu,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
 } from '@mui/material';
 import type { Culture } from '../api/api';
 import { SearchableSelect } from '../components/inputs/SearchableSelect';
@@ -1280,35 +1278,18 @@ export function CultureDetail({
 
 
       {useUnifiedMobileLayout ? (
-        <Dialog fullScreen open={mobileSelectorOpen} onClose={() => setMobileSelectorOpen(false)}>
-          <DialogTitle>{t('selectCulture')}</DialogTitle>
-          <DialogContent sx={{ px: 1.5, pb: 2 }}>
-            {selectorControl}
-            <List dense sx={{ py: 0.5, px: 0.25, overflowY: 'auto' }}>
-              {filteredCultures.map((culture) => {
-                const secondary = [culture.variety].filter(Boolean).join(' • ');
-                return (
-                  <ListItemButton
-                    key={`mobile-${culture.id}`}
-                    selected={selectedCulture?.id === culture.id}
-                    onClick={() => {
-                      onCultureSelect(culture);
-                      setMobileSelectorOpen(false);
-                    }}
-                    sx={{ borderRadius: 1.25, mb: 0.375 }}
-                  >
-                    <ListItemText
-                      primary={culture.name}
-                      secondary={secondary || culture.crop_family || undefined}
-                      primaryTypographyProps={{ fontSize: '0.95rem', fontWeight: 600 }}
-                      secondaryTypographyProps={{ fontSize: '0.8rem', color: 'text.secondary' }}
-                    />
-                  </ListItemButton>
-                );
-              })}
-            </List>
-          </DialogContent>
-        </Dialog>
+        <CultureMobileSelectorDialog
+          open={mobileSelectorOpen}
+          onClose={() => setMobileSelectorOpen(false)}
+          selectorControl={selectorControl}
+          cultures={filteredCultures}
+          selectedCultureId={selectedCulture?.id}
+          onSelect={(culture) => {
+            onCultureSelect(culture);
+            setMobileSelectorOpen(false);
+          }}
+          t={t}
+        />
       ) : null}
 
       {/* Empty State */}
