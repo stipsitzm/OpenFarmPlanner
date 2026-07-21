@@ -160,7 +160,7 @@ class HintTestProjectServiceTests(TestCase):
         )
         partial_timing = PlantingPlan.objects.get(
             project=result.project,
-            culture__name='Kultur – nur Kulturdauer',
+            culture__name='Kultur – nur Wachstumszeitraum',
         )
         complete_timing = PlantingPlan.objects.filter(
             project=result.project,

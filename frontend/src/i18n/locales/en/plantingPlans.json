@@ -57,7 +57,9 @@
     "areaInputDescription": "The area of the bed occupied by this planting plan. Changes to the area or plant count automatically update the other value. Empty or \"max\" uses the maximum available remaining area.",
     "plantsFromSpacing": "Plant count: coupled with area used. Changes automatically update the other value.",
     "calculatedHarvestDate": "Calculated automatically from the planting date and the culture library data.",
-    "missingCultureDuration": "Cannot be calculated because this culture has no cultivation duration."
+    "missingGrowthDuration": "Cannot be calculated because this culture has no growth period.",
+    "missingHarvestDuration": "Cannot be calculated because this culture has no harvest period.",
+    "missingGrowthAndHarvestDuration": "Cannot be calculated because this culture has neither a growth period nor a harvest period."
   },
   "errors": {
     "load": "Failed to load planting plans",

@@ -348,6 +348,15 @@ describe("PlantingPlans save-time area validation", () => {
   });
 
   it("renders unavailable calculated harvest dates with a dash and explanatory tooltip", async () => {
+    apiMocks.cultureList.mockResolvedValue({
+      data: {
+        results: [
+          { id: 2, name: "Ohne Zeiträume", plants_per_m2: 10, growth_duration_days: null, harvest_duration_days: null },
+          { id: 3, name: "Nur Wachstumszeitraum", plants_per_m2: 10, growth_duration_days: 30, harvest_duration_days: null },
+          { id: 4, name: "Vollständige Zeiträume", plants_per_m2: 10, growth_duration_days: 30, harvest_duration_days: 7 },
+        ],
+      },
+    });
     render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
     await waitForPlansToLoad();
 
@@ -364,6 +373,7 @@ describe("PlantingPlans save-time area validation", () => {
 
     const completeStart = render(<>{renderCell(harvestStartColumn, {
       id: 1,
+      culture: 4,
       harvest_date: "2026-05-01",
       harvest_end_date: "2026-05-08",
     })}</>);
@@ -372,24 +382,38 @@ describe("PlantingPlans save-time area validation", () => {
 
     const missingStart = render(<>{renderCell(harvestStartColumn, {
       id: 2,
+      culture: 2,
       harvest_date: null,
       harvest_end_date: null,
     })}</>);
     const missingDash = missingStart.getByText("—");
     expect(missingDash).toBeInTheDocument();
     await userEvent.hover(missingDash);
-    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur keine Kulturdauer hinterlegt ist.")).toBeInTheDocument();
+    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur kein Wachstumszeitraum hinterlegt ist.")).toBeInTheDocument();
     missingStart.unmount();
 
-    const partialEnd = render(<>{renderCell(harvestEndColumn, {
+    const missingEnd = render(<>{renderCell(harvestEndColumn, {
       id: 3,
+      culture: 2,
+      harvest_date: null,
+      harvest_end_date: null,
+    })}</>);
+    const missingEndDash = missingEnd.getByText("—");
+    expect(missingEndDash).toBeInTheDocument();
+    await userEvent.hover(missingEndDash);
+    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur weder Wachstumszeitraum noch Erntezeitraum hinterlegt sind.")).toBeInTheDocument();
+    missingEnd.unmount();
+
+    const partialEnd = render(<>{renderCell(harvestEndColumn, {
+      id: 4,
+      culture: 3,
       harvest_date: "2026-05-01",
       harvest_end_date: null,
     })}</>);
     const partialDash = partialEnd.getByText("—");
     expect(partialDash).toBeInTheDocument();
     await userEvent.hover(partialDash);
-    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur keine Kulturdauer hinterlegt ist.")).toBeInTheDocument();
+    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur kein Erntezeitraum hinterlegt ist.")).toBeInTheDocument();
     partialEnd.unmount();
   });
 

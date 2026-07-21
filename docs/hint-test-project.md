@@ -46,7 +46,7 @@ state directly in tables:
 - `Saatgutmenge – Pflanzenanzahl fehlt`
 - `Saatgutmenge – TKG fehlt`
 - `Kultur – keine Zeiträume`
-- `Kultur – nur Kulturdauer`
+- `Kultur – nur Wachstumszeitraum`
 - `Kultur – Pflanzabstände fehlen`
 - `Ertrag – erwarteter Ertrag fehlt`
 
@@ -72,7 +72,7 @@ below marks the remaining step as a manual input action.
 | Cultures | Duplicate supplier/culture validation | Existing suppliers and cultures provide collision targets | Error | Manual | Create duplicate supplier/culture names in the same project |
 | Public library | Empty/no-result and import errors | Public library is global, not project-owned | Info/error | Manual | Open library, search for an impossible term or test import failures |
 | Planting plans | Harvest start/end not computable without culture durations | `Kultur – keine Zeiträume` | Warning/info | Yes | Anbaupläne |
-| Planting plans | Harvest end not computable when only harvest duration is missing | `Kultur – nur Kulturdauer` | Warning/info | Yes | Anbaupläne |
+| Planting plans | Harvest end not computable when only harvest duration is missing | `Kultur – nur Wachstumszeitraum` | Warning/info | Yes | Anbaupläne |
 | Planting plans | Fully computable timing reference | `Kultur – vollständige Zeiträume` | Reference | Yes | Anbaupläne |
 | Planting plans | Draft/incomplete row behavior | `Entwurf – Kultur und Datum fehlen` | Info/warning | Yes | Anbaupläne |
 | Planting plans | Area conflict / overbooking warning context | `Beet – überbelegt` has overlapping plans | Warning | Yes | Anbaupläne, edit area/date on overlapping rows |

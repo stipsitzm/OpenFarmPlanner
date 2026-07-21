@@ -442,7 +442,7 @@ def _create_cultures(project: Project, suppliers: dict[str, Supplier]) -> dict[s
         },
         'partial_timing': {
             **base_kwargs,
-            'name': 'Kultur – nur Kulturdauer',
+            'name': 'Kultur – nur Wachstumszeitraum',
             'variety': 'Ernteende offen',
             'growth_duration_days': 35,
             'harvest_duration_days': None,

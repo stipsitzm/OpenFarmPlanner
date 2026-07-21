@@ -511,17 +511,28 @@ function PlantingPlans() {
   ) => {
     const row = params.row as PlantingPlanRow;
     const value = params.field === "harvest_end_date" ? row.harvest_end_date : row.harvest_date;
+    const culture = cultures.find((item) => item.id === row.culture);
+    const hasGrowthDuration = typeof culture?.growth_duration_days === "number";
+    const hasHarvestDuration = typeof culture?.harvest_duration_days === "number";
+    let missingDurationTooltip = t("plantingPlans:tooltips.missingGrowthDuration");
+    if (params.field === "harvest_end_date") {
+      if (!hasGrowthDuration && !hasHarvestDuration) {
+        missingDurationTooltip = t("plantingPlans:tooltips.missingGrowthAndHarvestDuration");
+      } else if (!hasHarvestDuration) {
+        missingDurationTooltip = t("plantingPlans:tooltips.missingHarvestDuration");
+      }
+    }
 
     if (!value) {
       return (
-        <Tooltip title={t("plantingPlans:tooltips.missingCultureDuration")}>
+        <Tooltip title={missingDurationTooltip}>
           <Box component="span">—</Box>
         </Tooltip>
       );
     }
 
     return <Box component="span">{formatDateForDisplay(value)}</Box>;
-  }, [formatDateForDisplay, t]);
+  }, [cultures, formatDateForDisplay, t]);
 
   const columns: GridColDef[] = useMemo(
     () => [
