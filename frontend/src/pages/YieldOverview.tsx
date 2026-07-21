@@ -352,15 +352,17 @@ const YieldChartSegment = memo(function YieldChartSegment({
       slotProps={{
         tooltip: {
           sx: {
-            bgcolor: "background.paper",
-            color: "text.primary",
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: 1,
-            boxShadow: 3,
-            p: 1,
             minWidth: "12rem",
-            maxWidth: 320,
+            "& .MuiTypography-root": {
+              color: "inherit",
+            },
+            "& .MuiTypography-caption": {
+              fontSize: "inherit",
+              lineHeight: "inherit",
+            },
+            "& [data-yield-tooltip-label='true']": {
+              color: "rgba(255, 255, 255, 0.72)",
+            },
           },
         },
       }}
@@ -370,11 +372,11 @@ const YieldChartSegment = memo(function YieldChartSegment({
             {cultureName}
           </Typography>
           <Box sx={{ display: "grid", gridTemplateColumns: "auto 1fr", columnGap: 1, rowGap: 0.25 }}>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+            <Typography variant="caption" data-yield-tooltip-label="true" sx={{ fontWeight: 600 }}>
               {tooltipPeriodLabel}:
             </Typography>
             <Typography variant="caption">{periodLabel}</Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+            <Typography variant="caption" data-yield-tooltip-label="true" sx={{ fontWeight: 600 }}>
               {tooltipYieldLabel}:
             </Typography>
             <Typography variant="caption">{yieldValue.toFixed(2)} kg</Typography>

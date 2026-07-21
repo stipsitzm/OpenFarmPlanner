@@ -43,9 +43,9 @@
   --rmg-task-text-color: var(--rmg-white);
 
   /* UI-Elemente */
-  --rmg-tooltip-bg: var(--rmg-white);
-  --rmg-tooltip-text: var(--rmg-gray-800);
-  --rmg-tooltip-border: var(--rmg-gray-200);
+  --rmg-tooltip-bg: #1f2a24;
+  --rmg-tooltip-text: var(--rmg-white);
+  --rmg-tooltip-border: #314138;
   --rmg-resize-handle-bg: rgba(255, 255, 255, 0.3);
   --rmg-progress-bg: rgba(0, 0, 0, 0.2);
   --rmg-progress-fill: var(--rmg-white);
@@ -751,9 +751,10 @@
   background-color: var(--rmg-tooltip-bg);
   color: var(--rmg-tooltip-text);
   border: 1px solid var(--rmg-tooltip-border);
-  padding: 4px 8px;
+  padding: 6px 10px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
   font-weight: 600;
   white-space: nowrap;
   box-shadow: 0 2px 8px var(--rmg-shadow-color);
@@ -835,8 +836,9 @@
   color: var(--rmg-tooltip-text);
   border: 1px solid var(--rmg-tooltip-border);
   border-radius: 4px;
-  padding: 8px;
-  font-size: 0.75rem;
+  padding: 10px 12px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
   box-shadow: 0 2px 8px var(--rmg-shadow-color);
   opacity: 0;
   transform: translateY(5px);
@@ -845,6 +847,7 @@
     transform 0.2s ease;
   pointer-events: none;
   min-width: 12rem;
+  max-width: 320px;
 }
 
 .rmg-tooltip-visible {
@@ -881,11 +884,11 @@
 
 .rmg-tooltip-label {
   font-weight: 600;
-  color: var(--rmg-gray-500);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .rmg-dark .rmg-tooltip-label {
-  color: var(--rmg-gray-400);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 /* ======================================================

@@ -327,6 +327,26 @@ const theme = createTheme({
         },
       },
     },
+    MuiTooltip: {
+      styleOverrides: {
+        tooltip: ({ theme }) => ({
+          backgroundColor: theme.palette.navigation.tooltipBackground,
+          color: theme.palette.primary.contrastText,
+          fontSize: '0.8125rem',
+          lineHeight: 1.45,
+          padding: '10px 12px',
+          maxWidth: 320,
+          borderRadius: 4,
+          '& .MuiTypography-caption': {
+            fontSize: 'inherit',
+            lineHeight: 'inherit',
+          },
+        }),
+        arrow: ({ theme }) => ({
+          color: theme.palette.navigation.tooltipBackground,
+        }),
+      },
+    },
     MuiPaper: {
       styleOverrides: {
         root: {
