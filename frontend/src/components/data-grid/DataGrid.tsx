@@ -822,6 +822,10 @@ export function EditableDataGrid<T extends EditableRow>({
       }
 
       if (rowModesModel[rowId]?.mode === GridRowModes.Edit) {
+        setRowModesModel((oldModel) => ({
+          ...oldModel,
+          [rowId]: { ...oldModel[rowId], mode: GridRowModes.Edit, fieldToFocus: field },
+        }));
         return;
       }
 

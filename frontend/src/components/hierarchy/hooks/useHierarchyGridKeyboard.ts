@@ -162,6 +162,12 @@ export function useHierarchyGridKeyboard({
     rememberFocusedField(target.field);
     selectRow(target.id);
     setTreeActive(true);
+    if (editMode) {
+      setRowModesModel((previousModel) => ({
+        ...previousModel,
+        [target.id]: { mode: GridRowModes.Edit, fieldToFocus: target.field },
+      }));
+    }
     focusKeyboardNavigableCell<HierarchyRow>({
       api: gridApiRef.current,
       cell: target,
@@ -176,6 +182,7 @@ export function useHierarchyGridKeyboard({
     rowModesModel,
     rows,
     selectRow,
+    setRowModesModel,
     setTreeActive,
   ]);
 
