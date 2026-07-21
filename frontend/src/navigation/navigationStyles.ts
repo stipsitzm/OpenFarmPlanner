@@ -66,9 +66,6 @@ export const getNavigationToggleButtonSx = (cursor: 'e-resize' | 'w-resize'): Sx
 
 export const navigationTooltipSx: SxProps<Theme> = (theme) => ({
   bgcolor: theme.palette.navigation.tooltipBackground,
-  fontSize: '0.72rem',
-  px: 1,
-  py: 0.5,
 });
 
 export const getNavigationItemSx = (

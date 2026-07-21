@@ -48,9 +48,9 @@ export const defaultTheme: GanttTheme = {
   taskColor: "#3b82f6",
   taskTextColor: "#ffffff",
 
-  tooltipBgColor: "#ffffff",
-  tooltipTextColor: "#1f2937",
-  tooltipBorderColor: "#e5e7eb",
+  tooltipBgColor: "#1f2a24",
+  tooltipTextColor: "#ffffff",
+  tooltipBorderColor: "#314138",
 
   progressBgColor: "rgba(0, 0, 0, 0.2)",
   progressFillColor: "#ffffff",
@@ -106,9 +106,9 @@ export const materialTheme: GanttTheme = {
   taskColor: "#2196f3",
   taskTextColor: "#ffffff",
 
-  tooltipBgColor: "#ffffff",
-  tooltipTextColor: "#212121",
-  tooltipBorderColor: "#e0e0e0",
+  tooltipBgColor: "#1f2a24",
+  tooltipTextColor: "#ffffff",
+  tooltipBorderColor: "#314138",
 
   progressBgColor: "rgba(0, 0, 0, 0.12)",
   progressFillColor: "#ffffff",
