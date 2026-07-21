@@ -118,6 +118,7 @@
   },
   "errors": {
     "generic": "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.",
+    "sessionExpired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
     "noPublicCultures": "Es wurden keine öffentlichen Kulturen gefunden.",
     "bedNotFound": "Das Beet wurde nicht gefunden.",
     "fileTooLarge": "Die Datei ist zu groß (maximal 10 MB).",

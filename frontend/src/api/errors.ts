@@ -59,6 +59,26 @@ const backendMessageMap: Record<string, string> = {
   'area input value must be greater than 0.': 'validation.areaInputPositive',
 };
 
+const authenticationExpiredDetails = new Set([
+  'authentication credentials were not provided.',
+  'not authenticated',
+]);
+
+function getResponseDetail(data: unknown): string | null {
+  if (!data || typeof data !== 'object' || !('detail' in data)) {
+    return null;
+  }
+  const detail = data.detail;
+  return typeof detail === 'string' ? detail : null;
+}
+
+function isAuthenticationExpiredDetail(detail: string | null): boolean {
+  if (!detail) {
+    return false;
+  }
+  return authenticationExpiredDetails.has(detail.trim().toLowerCase());
+}
+
 function localizeBackendMessage(message: string, t: TFunction): string {
   const normalized = message.trim().toLowerCase();
   const key = backendMessageMap[normalized];
@@ -97,6 +117,14 @@ export function extractApiErrorMessage(
     const axiosError = error as AxiosError;
     const status = axiosError.response?.status;
     const data = axiosError.response?.data;
+
+    if (isAuthenticationExpiredError(error)) {
+      return translatedOrFallback(
+        t,
+        'errors.sessionExpired',
+        'Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.',
+      );
+    }
 
     if (typeof data === 'string') {
       const trimmed = data.trim();
@@ -167,4 +195,19 @@ export function isApiRequestCanceled(error: unknown): boolean {
   }
   const axiosError = error as AxiosError;
   return axiosError.code === 'ERR_CANCELED';
+}
+
+/**
+ * Detects stale or missing browser sessions reported by Django REST Framework.
+ */
+export function isAuthenticationExpiredError(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+  const axiosError = error as AxiosError;
+  const status = axiosError.response?.status;
+  if (status !== 401 && status !== 403) {
+    return false;
+  }
+  return isAuthenticationExpiredDetail(getResponseDetail(axiosError.response?.data));
 }

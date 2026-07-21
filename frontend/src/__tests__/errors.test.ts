@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { extractApiErrorMessage } from '../api/errors';
+import { extractApiErrorMessage, isAuthenticationExpiredError } from '../api/errors';
 
 const fallbackMessage = 'Ein Fehler ist aufgetreten';
 
@@ -43,6 +43,31 @@ describe('extractApiErrorMessage', () => {
     const result = extractApiErrorMessage(error, t, fallbackMessage);
 
     expect(result).toBe(fallbackMessage);
+  });
+
+  it('returns a session-expired message for missing authentication credentials', () => {
+    const t = createT({
+      'errors.sessionExpired': 'Ihre Sitzung ist abgelaufen.',
+    });
+    const error = createAxiosError(403, {
+      detail: 'Authentication credentials were not provided.',
+    });
+
+    const result = extractApiErrorMessage(error, t, fallbackMessage);
+
+    expect(result).toBe('Ihre Sitzung ist abgelaufen.');
+  });
+
+  it('detects stale authenticated sessions', () => {
+    expect(isAuthenticationExpiredError(createAxiosError(403, {
+      detail: 'Authentication credentials were not provided.',
+    }))).toBe(true);
+    expect(isAuthenticationExpiredError(createAxiosError(401, {
+      detail: 'Not authenticated',
+    }))).toBe(true);
+    expect(isAuthenticationExpiredError(createAxiosError(403, {
+      detail: 'You do not have permission to perform this action.',
+    }))).toBe(false);
   });
 
 

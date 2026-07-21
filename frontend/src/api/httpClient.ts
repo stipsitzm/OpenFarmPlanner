@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { isAuthenticationExpiredError } from './errors';
+import { AUTHENTICATION_EXPIRED_EVENT } from '../auth/authEvents';
 
 const PROD_API_PATH = '/api';
 
@@ -129,5 +131,15 @@ httpClient.interceptors.request.use((config) => {
 
   return config;
 });
+
+httpClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (isAuthenticationExpiredError(error) && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(AUTHENTICATION_EXPIRED_EVENT));
+    }
+    return Promise.reject(error);
+  },
+);
 
 export default httpClient;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   acceptConsent as acceptConsentRequest,
   activate as activateRequest,
@@ -13,6 +13,7 @@ import {
   restoreAccount as restoreAccountRequest,
   switchActiveProject as switchActiveProjectRequest,
 } from "./authApi";
+import { AUTHENTICATION_EXPIRED_EVENT } from "./authEvents";
 import type { AuthUser } from "./types";
 import { AuthContext, type AuthContextValue } from "./authContextShared";
 
@@ -57,12 +58,18 @@ export function AuthProvider({
   const [isLoading, setIsLoading] = useState(true);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
 
-  const applyAuthenticatedUser = (me: AuthUser): void => {
+  const clearAuthenticatedUser = useCallback((): void => {
+    setUser(null);
+    setActiveProjectId(null);
+    clearStoredProjectId();
+  }, []);
+
+  const applyAuthenticatedUser = useCallback((me: AuthUser): void => {
     setUser(me);
     setActiveProjectId(applyResolvedProjectId(me));
-  };
+  }, []);
 
-  const refreshUser = async (): Promise<AuthUser | null> => {
+  const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
     try {
       const me = await getMe();
       applyAuthenticatedUser(me);
@@ -71,13 +78,7 @@ export function AuthProvider({
       clearAuthenticatedUser();
       return null;
     }
-  };
-
-  const clearAuthenticatedUser = (): void => {
-    setUser(null);
-    setActiveProjectId(null);
-    clearStoredProjectId();
-  };
+  }, [applyAuthenticatedUser, clearAuthenticatedUser]);
 
   useEffect(() => {
     void (async () => {
@@ -89,7 +90,15 @@ export function AuthProvider({
         setIsLoading(false);
       }
     })();
-  }, []);
+  }, [clearAuthenticatedUser, refreshUser]);
+
+  useEffect(() => {
+    function handleAuthenticationExpired(): void {
+      clearAuthenticatedUser();
+    }
+    window.addEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
+    return () => window.removeEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);
+  }, [clearAuthenticatedUser]);
 
   // localStorage is shared across tabs, but React state and the API's X-Project-Id
   // header (read fresh from localStorage per request, see httpClient.ts) are not: if
@@ -179,7 +188,7 @@ export function AuthProvider({
       },
       refreshUser,
     }),
-    [activeProjectId, isLoading, user],
+    [activeProjectId, applyAuthenticatedUser, clearAuthenticatedUser, isLoading, refreshUser, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
