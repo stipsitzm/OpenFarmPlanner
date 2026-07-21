@@ -1588,7 +1588,7 @@ export function EditableDataGrid<T extends EditableRow>({
         return;
       }
       if (
-        target.closest('[role="listbox"], .MuiAutocomplete-popper, .MuiPopover-root, .MuiPickersPopper-root')
+        target.closest('[role="listbox"], .MuiAutocomplete-popper, .MuiPopover-root, .MuiPickersPopper-root, .MuiDialog-root, .MuiModal-root')
         || target.closest('a[href]')
       ) {
         return;

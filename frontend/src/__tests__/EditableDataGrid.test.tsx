@@ -643,6 +643,36 @@ describe('EditableDataGrid', () => {
     expect(screen.getByTestId('mode-1')).toHaveTextContent('edit');
   });
 
+  it('does not autosave an edited row when interacting with a portal dialog', async () => {
+    const props = baseProps(() => null);
+    const updateSpy = vi.spyOn(props.api, 'update');
+    const dialogRoot = document.createElement('div');
+    dialogRoot.className = 'MuiDialog-root MuiModal-root';
+    const dialogButton = document.createElement('button');
+    dialogButton.type = 'button';
+    dialogButton.textContent = 'Parzelle';
+    dialogRoot.appendChild(dialogButton);
+    document.body.appendChild(dialogRoot);
+
+    try {
+      render(<EditableDataGrid {...props} showDeleteAction={false} />);
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
+      fireEvent.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
+      await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+
+      fireEvent.pointerDown(dialogButton);
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 0);
+      });
+
+      expect(updateSpy).not.toHaveBeenCalled();
+      expect(screen.getByTestId('mode-1')).toHaveTextContent('edit');
+    } finally {
+      dialogRoot.remove();
+    }
+  });
+
   it('saves transformed before-save values directly on input Enter', async () => {
     const props = baseProps(() => null);
     const updateSpy = vi.spyOn(props.api, 'update');
