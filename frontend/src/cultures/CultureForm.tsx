@@ -37,7 +37,6 @@ import { cultureAPI, publicCultureAPI, supplierAPI } from '../api/api';
 import { useActiveSaveShortcut } from '../hooks/useActiveSaveShortcut';
 import { useDialogKeyboardScroll } from '../hooks/useDialogKeyboardScroll';
 import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
-import { useNavigate } from 'react-router-dom';
 import { hasEffectiveCultureFormChanges } from './cultureFormChangeDetection';
 import { validateCulture } from './validation';
 import { normalizeSeedRateUnit } from './enumNormalization';
@@ -50,6 +49,7 @@ import { ColorSection } from './sections/ColorSection';
 import { NotesSection } from './sections/NotesSection';
 import { hasSupplierDataRowMissingSupplier, hasSupplierInformation } from './supplierDataRows';
 import { stripCitationMarkers } from '../components/data-grid/markdown';
+import { SupplierFormDialog } from '../components/suppliers/SupplierFormDialog';
 
 interface CultureFormProps {
   culture?: Culture;
@@ -202,7 +202,6 @@ export function CultureForm({
   onViewPublicLibraryMatch,
 }: CultureFormProps) {
   const { t } = useTranslation('cultures');
-  const navigate = useNavigate();
   const isEdit = Boolean(culture);
   const [saveError, setSaveError] = useState<string>('');
 
@@ -230,8 +229,10 @@ export function CultureForm({
   const [isValid, setIsValid] = useState(true);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [supplierCreateTargetIndex, setSupplierCreateTargetIndex] = useState<number | null>(null);
   const isSavingRef = useRef(false);
   const userInteractedRef = useRef(false);
+  const createSupplierButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
   const dialogContentRef = useDialogKeyboardScroll(true);
   const formRef = useRef<HTMLFormElement | null>(null);
   const supplierOptionsRef = useRef<Supplier[]>([]);
@@ -249,7 +250,7 @@ export function CultureForm({
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  const loadSuppliers = useCallback(async () => {
+  const loadSuppliers = useCallback(async (): Promise<Supplier[]> => {
     try {
       const response = await supplierAPI.list();
       const nextSuppliers = response.data.results || [];
@@ -287,9 +288,11 @@ export function CultureForm({
           };
         });
       }
+      return nextSuppliers;
     } catch {
       supplierOptionsRef.current = [];
       setSupplierOptions([]);
+      return [];
     }
   }, []);
 
@@ -304,6 +307,7 @@ export function CultureForm({
     setIsValid(true);
     setHasSubmitted(false);
     setSaveError('');
+    setSupplierCreateTargetIndex(null);
     isSavingRef.current = false;
     userInteractedRef.current = false;
   }, [culture]);
@@ -320,12 +324,12 @@ export function CultureForm({
   }, [loadSuppliers]);
 
   // Validate on every change
-  const validateAndSet = (draft: Partial<Culture>, mode: 'live' | 'submit' = hasSubmitted ? 'submit' : 'live') => {
+  const validateAndSet = useCallback((draft: Partial<Culture>, mode: 'live' | 'submit' = hasSubmitted ? 'submit' : 'live') => {
     const result = validateCulture(draft, t, mode);
     setErrors(result.errors);
     setIsValid(result.isValid);
     return result.isValid;
-  };
+  }, [hasSubmitted, t]);
 
   const currentIdentityKey = buildCultureIdentityKey(formData.name, formData.variety);
   currentIdentityKeyRef.current = currentIdentityKey;
@@ -547,11 +551,83 @@ export function CultureForm({
     ? { ...errors, variety: errors.variety || t(duplicateErrorKey) }
     : errors;
   const isSaveDisabled = isSaving || !isValid || Boolean(duplicateErrorKey) || isDuplicateChecking;
+  const isSupplierCreateDialogOpen = supplierCreateTargetIndex !== null;
+
+  const handleCreateSupplierClick = useCallback((supplierIndex: number): void => {
+    setSupplierCreateTargetIndex(supplierIndex);
+  }, []);
+
+  const handleCloseSupplierCreateDialog = useCallback((): void => {
+    const targetIndex = supplierCreateTargetIndex;
+    setSupplierCreateTargetIndex(null);
+    window.setTimeout(() => {
+      const createButton = targetIndex === null ? null : createSupplierButtonRefs.current[targetIndex];
+      if (createButton?.isConnected) {
+        createButton.focus();
+        return;
+      }
+
+      const supplierFields = Array.from(document.querySelectorAll<HTMLElement>('[role="combobox"]'));
+      supplierFields[targetIndex ?? 0]?.focus();
+    }, 0);
+  }, [supplierCreateTargetIndex]);
+
+  const mergeSupplierOption = useCallback((createdSupplier: Supplier): void => {
+    supplierOptionsRef.current = [
+      ...supplierOptionsRef.current.filter((supplier) => supplier.id !== createdSupplier.id),
+      createdSupplier,
+    ];
+    setSupplierOptions(supplierOptionsRef.current);
+  }, []);
+
+  const handleSupplierCreated = useCallback(async (createdSupplier: Supplier): Promise<void> => {
+    const createdSupplierId = createdSupplier.id;
+    if (typeof createdSupplierId !== 'number') {
+      setSaveError(t('form.supplierCreateSelectionError'));
+      return;
+    }
+
+    mergeSupplierOption(createdSupplier);
+
+    setFormData((prev) => {
+      const rows = prev.supplier_data ?? [];
+      if (supplierCreateTargetIndex === null || !rows[supplierCreateTargetIndex]) {
+        setSaveError(t('form.supplierCreateSelectionError'));
+        return prev;
+      }
+
+      const nextRows = rows.map((row, rowIndex) => (
+        rowIndex === supplierCreateTargetIndex
+          ? {
+            ...row,
+            supplier_id: createdSupplierId,
+            supplier: createdSupplier,
+            supplier_name: createdSupplier.name,
+            supplier_name_input: undefined,
+          }
+          : row
+      ));
+
+      setIsDirty(true);
+      userInteractedRef.current = true;
+      setSaveError('');
+      validateAndSet({ ...prev, supplier_data: nextRows });
+      return {
+        ...prev,
+        supplier_data: nextRows,
+      };
+    });
+
+    const refreshedSuppliers = await loadSuppliers();
+    if (!refreshedSuppliers.some((supplier) => supplier.id === createdSupplierId)) {
+      mergeSupplierOption(createdSupplier);
+    }
+  }, [loadSuppliers, mergeSupplierOption, supplierCreateTargetIndex, t, validateAndSet]);
 
   const getActiveSaveShortcutElement = useCallback((): HTMLElement | null => {
     const formElement = formRef.current;
     const dialogElement = formElement?.closest('[role="dialog"]') as HTMLElement | null;
-    if (!formElement || !dialogElement || showDiscardConfirm) {
+    if (!formElement || !dialogElement || showDiscardConfirm || isSupplierCreateDialogOpen) {
       return null;
     }
 
@@ -563,7 +639,7 @@ export function CultureForm({
     }
 
     return formElement;
-  }, [showDiscardConfirm]);
+  }, [isSupplierCreateDialogOpen, showDiscardConfirm]);
 
   const submitActiveForm = useCallback((): void => {
     formRef.current?.requestSubmit();
@@ -604,6 +680,7 @@ export function CultureForm({
       open
       onClose={(_event, reason) => {
         if (reason === 'backdropClick') return;
+        if (isSupplierCreateDialogOpen && reason === 'escapeKeyDown') return;
         if (isDirty && userInteractedRef.current) {
           setShowDiscardConfirm(true);
         } else {
@@ -720,7 +797,14 @@ export function CultureForm({
                         <Typography variant="body2" color="text.secondary">
                           {t('form.noSuppliers')}
                         </Typography>
-                        <Button variant="outlined" size="small" onClick={() => navigate('/app/suppliers?create=1')}>
+                        <Button
+                          ref={(element) => {
+                            createSupplierButtonRefs.current[supplierIndex] = element;
+                          }}
+                          variant="outlined"
+                          size="small"
+                          onClick={() => handleCreateSupplierClick(supplierIndex)}
+                        >
                           {t('form.createSuppliers')}
                         </Button>
                       </Box>
@@ -852,6 +936,13 @@ export function CultureForm({
         }}
         cancelButtonProps={{ autoFocus: true }}
         confirmButtonProps={{ variant: 'contained', color: 'error' }}
+      />
+      <SupplierFormDialog
+        open={isSupplierCreateDialogOpen}
+        title={t('form.createSuppliers')}
+        submitLabel={t('form.createSuppliers')}
+        onClose={handleCloseSupplierCreateDialog}
+        onSaved={handleSupplierCreated}
       />
     </Dialog>
   );

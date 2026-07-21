@@ -87,6 +87,7 @@
     "discardChangesMessage": "Alle nicht gespeicherten Änderungen gehen verloren.",
     "discardCancel": "Weiter bearbeiten",
     "discardConfirm": "Verwerfen",
+    "supplierCreateSelectionError": "Der neue Lieferant wurde angelegt, konnte aber nicht automatisch für diese Kultur ausgewählt werden. Bitte wählen Sie ihn manuell aus.",
     "sectionGeneral": "Allgemein / Details",
     "sectionTiming": "Zeitplanung",
     "sectionHarvest": "Ernteinformationen",

@@ -1,14 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import axios from 'axios';
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   IconButton,
   Link,
   Table,
@@ -17,7 +12,6 @@ import {
   TableHead,
   TableRow,
   TableContainer,
-  TextField,
   Typography,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -36,6 +30,7 @@ import {
   SupplierDeleteUsageDialog,
   type SupplierDeleteUsageDialogState,
 } from '../components/suppliers/SupplierDeleteUsageDialog';
+import { SupplierFormDialog } from '../components/suppliers/SupplierFormDialog';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
@@ -49,17 +44,6 @@ import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils
 import { showGlobalSnackbar } from '../utils/globalSnackbar';
 import { createTransientId } from '../utils/transientId';
 
-interface SupplierDraft {
-  id?: number;
-  name: string;
-  homepage_url: string;
-};
-
-interface SupplierFieldErrors {
-  name?: string;
-  homepage_url?: string;
-}
-
 type SupplierLoadStatus = 'idle' | 'loading' | 'success' | 'error';
 
 interface PendingSupplierDeletion {
@@ -72,28 +56,6 @@ interface PendingSupplierDeletion {
   undoPayload?: SupplierDeleteUndoPayload;
 }
 
-const normalizeUrl = (input: string): string => {
-  const trimmed = input.trim();
-  if (!trimmed) return trimmed;
-  
-  // Already has protocol
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed;
-  }
-  
-  // Prepend https://
-  return `https://${trimmed}`;
-};
-
-const isValidUrl = (url: string): boolean => {
-  try {
-    const parsedUrl = new URL(url);
-    return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
-  } catch {
-    return false;
-  }
-};
-
 export default function Suppliers() {
   const { t } = useTranslation(['suppliers', 'common']);
   const location = useLocation();
@@ -104,8 +66,7 @@ export default function Suppliers() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<SupplierFieldErrors>({});
-  const [draft, setDraft] = useState<SupplierDraft>({ name: '', homepage_url: '' });
+  const [dialogSupplier, setDialogSupplier] = useState<Supplier | null>(null);
   const [pendingSupplierDeletions, setPendingSupplierDeletions] = useState<PendingSupplierDeletion[]>([]);
   const [deleteUsageDialog, setDeleteUsageDialog] = useState<SupplierDeleteUsageDialogState | null>(null);
   const [unlinkDeletingSupplierId, setUnlinkDeletingSupplierId] = useState<number | null>(null);
@@ -131,9 +92,8 @@ export default function Suppliers() {
   }, [t]);
 
   const openCreate = useCallback((): void => {
-    setDraft({ name: '', homepage_url: '' });
+    setDialogSupplier(null);
     setError('');
-    setFieldErrors({});
     setDialogOpen(true);
   }, []);
 
@@ -185,76 +145,14 @@ export default function Suppliers() {
   }, [location.pathname, location.search, navigate, openCreate, shouldShowProjectRequiredState]);
 
   const openEdit = useCallback((supplier: Supplier): void => {
-    setDraft({
-      id: supplier.id,
-      name: supplier.name,
-      homepage_url: supplier.homepage_url ?? '',
-    });
+    setDialogSupplier(supplier);
     setError('');
-    setFieldErrors({});
     setDialogOpen(true);
   }, []);
 
-  const canSave = useMemo(() => draft.name.trim().length > 0, [draft]);
-
-  const saveSupplier = async (): Promise<void> => {
-    try {
-      setError('');
-      setFieldErrors({});
-      
-      // Normalize URL (prepend https:// if no protocol)
-      const normalizedUrl = normalizeUrl(draft.homepage_url);
-      
-      // Client-side URL validation
-      if (normalizedUrl && !isValidUrl(normalizedUrl)) {
-        setFieldErrors({ homepage_url: t('invalidUrl') });
-        return;
-      }
-      
-      const payload = {
-        name: draft.name.trim(),
-        homepage_url: normalizedUrl,
-        allowed_domains: [],
-      };
-      if (draft.id) {
-        await supplierAPI.update(draft.id, payload);
-      } else {
-        await supplierAPI.create(payload.name, payload.homepage_url, []);
-      }
-      setDialogOpen(false);
-      await loadSuppliers();
-    } catch (saveError) {
-      console.error('Error saving supplier', saveError);
-      
-      if (axios.isAxiosError(saveError) && saveError.response?.data) {
-        const errorData = saveError.response.data as Record<string, unknown>;
-        const fieldErrorValue = (value: unknown): string | undefined => {
-          if (typeof value === 'string') return value;
-          if (Array.isArray(value)) {
-            return value.filter((entry): entry is string => typeof entry === 'string').join(' ');
-          }
-          return undefined;
-        };
-        const nextFieldErrors = {
-          name: fieldErrorValue(errorData.name),
-          homepage_url: fieldErrorValue(errorData.homepage_url),
-        };
-        if (nextFieldErrors.name || nextFieldErrors.homepage_url) {
-          setFieldErrors(nextFieldErrors);
-          return;
-        }
-      }
-      setError(t('saveError'));
-    }
-  };
-
-  const handleSupplierSubmit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    if (!canSave) {
-      return;
-    }
-    void saveSupplier();
-  };
+  const handleSupplierSaved = useCallback(async (): Promise<void> => {
+    await loadSuppliers();
+  }, [loadSuppliers]);
 
   const showDeleteError = useCallback((message: string): void => {
     showGlobalSnackbar({ message, severity: 'error' });
@@ -712,44 +610,12 @@ export default function Suppliers() {
         />
       </CustomContextMenu>
 
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="sm">
-        <Box component="form" onSubmit={handleSupplierSubmit}>
-          <DialogTitle>{draft.id ? t('edit') : t('create')}</DialogTitle>
-          <DialogContent>
-            <TextField
-              margin="dense"
-              fullWidth
-              label={t('name')}
-              value={draft.name}
-              error={Boolean(fieldErrors.name)}
-              helperText={fieldErrors.name}
-              onChange={(e) => {
-                const value = e.target.value;
-                setDraft((prev) => ({ ...prev, name: value }));
-                setFieldErrors((prev) => ({ ...prev, name: undefined }));
-              }}
-            />
-            <TextField
-              margin="dense"
-              fullWidth
-              label={t('homepage')}
-              value={draft.homepage_url}
-              error={Boolean(fieldErrors.homepage_url)}
-              helperText={fieldErrors.homepage_url}
-              onChange={(e) => {
-                const value = e.target.value;
-                setDraft((prev) => ({ ...prev, homepage_url: value }));
-                setFieldErrors((prev) => ({ ...prev, homepage_url: undefined }));
-              }}
-            />
-            {error ? <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert> : null}
-          </DialogContent>
-          <DialogActions>
-            <Button type="button" onClick={() => setDialogOpen(false)}>{t('cancel')}</Button>
-            <Button type="submit" disabled={!canSave} variant="contained">{t('save')}</Button>
-          </DialogActions>
-        </Box>
-      </Dialog>
+      <SupplierFormDialog
+        open={dialogOpen}
+        supplier={dialogSupplier}
+        onClose={() => setDialogOpen(false)}
+        onSaved={handleSupplierSaved}
+      />
 
       <SupplierDeleteUsageDialog
         dialog={deleteUsageDialog}

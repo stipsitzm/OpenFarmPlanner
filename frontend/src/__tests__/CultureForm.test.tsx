@@ -10,15 +10,11 @@ vi.mock('../i18n', () => ({
   }),
 }));
 
-const { cultureDuplicateCheckMock, navigateMock, publicCultureMatchMock, supplierListMock } = vi.hoisted(() => ({
+const { cultureDuplicateCheckMock, publicCultureMatchMock, supplierCreateMock, supplierListMock } = vi.hoisted(() => ({
   cultureDuplicateCheckMock: vi.fn().mockResolvedValue({ data: { exists: false } }),
-  navigateMock: vi.fn(),
   publicCultureMatchMock: vi.fn().mockResolvedValue({ data: { exists: false, culture: null } }),
+  supplierCreateMock: vi.fn(),
   supplierListMock: vi.fn().mockResolvedValue({ data: { results: [] } }),
-}));
-
-vi.mock('react-router-dom', () => ({
-  useNavigate: () => navigateMock,
 }));
 
 vi.mock('../api/api', async () => {
@@ -35,6 +31,7 @@ vi.mock('../api/api', async () => {
     },
     supplierAPI: {
       list: supplierListMock,
+      create: supplierCreateMock,
     },
   };
 });
@@ -122,11 +119,14 @@ const dispatchSaveShortcut = (options: { metaKey?: boolean; repeat?: boolean } =
 
 describe('CultureForm', () => {
   beforeEach(() => {
-    navigateMock.mockReset();
     cultureDuplicateCheckMock.mockReset();
     cultureDuplicateCheckMock.mockResolvedValue({ data: { exists: false } });
     publicCultureMatchMock.mockReset();
     publicCultureMatchMock.mockResolvedValue({ data: { exists: false, culture: null } });
+    supplierCreateMock.mockReset();
+    supplierCreateMock.mockResolvedValue({
+      data: { id: 42, name: 'Reinsaat', homepage_url: 'https://reinsaat.at', allowed_domains: [] },
+    });
     supplierListMock.mockReset();
     supplierListMock.mockResolvedValue({ data: { results: [] } });
   });
@@ -146,7 +146,157 @@ describe('CultureForm', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.getByText('form.noSuppliers')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
-    expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
+    expect(await screen.findByRole('heading', { name: 'form.createSuppliers' })).toBeInTheDocument();
+  });
+
+  it('opens supplier creation without navigation and preserves culture changes when cancelled', async () => {
+    supplierListMock.mockResolvedValueOnce({ data: { results: [] } });
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ packaging_sizes: [] }] }}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'form.createSuppliers' })).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Neue Karotte' } });
+    fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
+
+    expect(await screen.findByRole('heading', { name: 'form.createSuppliers' })).toBeInTheDocument();
+    expect(screen.getByLabelText('name-input')).toHaveValue('Neue Karotte');
+
+    fireEvent.change(screen.getByLabelText('name'), { target: { value: 'Reinsaat' } });
+    fireEvent.click(screen.getByRole('button', { name: 'cancel' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'form.createSuppliers' })).not.toBeInTheDocument();
+    });
+
+    expect(supplierCreateMock).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('name-input')).toHaveValue('Neue Karotte');
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('creates a supplier inline, selects it, and keeps edited culture fields dirty', async () => {
+    supplierListMock
+      .mockResolvedValueOnce({ data: { results: [] } })
+      .mockResolvedValueOnce({
+        data: { results: [{ id: 42, name: 'Reinsaat', homepage_url: 'https://reinsaat.at', allowed_domains: [] }] },
+      });
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ packaging_sizes: [] }] }}
+        onSave={onSave}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'form.createSuppliers' })).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Neue Karotte' } });
+    fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
+    fireEvent.change(await screen.findByLabelText('name'), { target: { value: 'Reinsaat' } });
+    fireEvent.change(screen.getByLabelText('homepage'), { target: { value: 'reinsaat.at' } });
+    fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
+
+    await waitFor(() => expect(supplierCreateMock).toHaveBeenCalledTimes(1));
+    expect(supplierCreateMock).toHaveBeenCalledWith('Reinsaat', 'https://reinsaat.at', []);
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'form.createSuppliers' })).not.toBeInTheDocument());
+
+    const supplierSelect = await screen.findByRole('combobox');
+    expect(supplierSelect).toHaveTextContent('Reinsaat');
+    expect(screen.getByLabelText('name-input')).toHaveValue('Neue Karotte');
+    expect(screen.getByText('messages.unsavedChanges')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'form.save' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0]).toEqual(expect.objectContaining({
+      name: 'Neue Karotte',
+      supplier_data: [
+        expect.objectContaining({
+          supplier_id: 42,
+          supplier: expect.objectContaining({ id: 42, name: 'Reinsaat' }),
+          supplier_name: 'Reinsaat',
+        }),
+      ],
+    }));
+  });
+
+  it('keeps supplier creation open with entered values after an API error', async () => {
+    supplierListMock.mockResolvedValueOnce({ data: { results: [] } });
+    supplierCreateMock.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { data: { name: ['Ein Lieferant mit diesem Namen existiert bereits.'] } },
+    });
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ packaging_sizes: [] }] }}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'form.createSuppliers' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
+    fireEvent.change(await screen.findByLabelText('name'), { target: { value: 'Reinsaat' } });
+    fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
+
+    expect(await screen.findByText('Ein Lieferant mit diesem Namen existiert bereits.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'form.createSuppliers' })).toBeInTheDocument();
+    expect(screen.getByLabelText('name')).toHaveValue('Reinsaat');
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('prevents duplicate supplier creation from double submit clicks', async () => {
+    supplierListMock.mockResolvedValueOnce({ data: { results: [] } });
+    let resolveCreate: (value: { data: { id: number; name: string; homepage_url: string; allowed_domains: string[] } }) => void = () => {};
+    supplierCreateMock.mockReturnValueOnce(new Promise((resolve) => {
+      resolveCreate = resolve;
+    }));
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ packaging_sizes: [] }] }}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'form.createSuppliers' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
+    fireEvent.change(await screen.findByLabelText('name'), { target: { value: 'Reinsaat' } });
+    const submitButton = screen.getByRole('button', { name: 'form.createSuppliers' });
+    fireEvent.click(submitButton);
+    fireEvent.click(submitButton);
+
+    expect(supplierCreateMock).toHaveBeenCalledTimes(1);
+
+    resolveCreate({ data: { id: 42, name: 'Reinsaat', homepage_url: '', allowed_domains: [] } });
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'form.createSuppliers' })).not.toBeInTheDocument());
+  });
+
+  it('closes only the supplier dialog on Escape', async () => {
+    supplierListMock.mockResolvedValueOnce({ data: { results: [] } });
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ packaging_sizes: [] }] }}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'form.createSuppliers' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
+    expect(await screen.findByRole('heading', { name: 'form.createSuppliers' })).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'form.createSuppliers' })).not.toBeInTheDocument());
+    expect(screen.getByRole('heading', { name: 'form.editTitle' })).toBeInTheDocument();
   });
 
   it('shows only real suppliers in the supplier dropdown when supplier options are available', async () => {
