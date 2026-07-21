@@ -122,6 +122,14 @@ describe('ProjectSelectionPage', () => {
     expect(screen.getByText('Demo-Projekt ausprobieren')).toBeInTheDocument();
   });
 
+  it('hides the trash retention notice when the trash is empty', async () => {
+    render(<MemoryRouter initialEntries={['/app/project-selection?trash=1']}><ProjectSelectionPage /></MemoryRouter>);
+
+    expect(await screen.findByRole('heading', { name: 'Papierkorb' })).toBeInTheDocument();
+    expect(await screen.findByText('Der Papierkorb ist leer.')).toBeInTheDocument();
+    expect(screen.queryByText('Gelöschte Projekte werden nach 30 Tagen automatisch endgültig gelöscht.')).not.toBeInTheDocument();
+  });
+
   it('opens the project trash from an explicit URL and restores deleted projects', async () => {
     projectApiMocks.listDeleted.mockResolvedValue({
       data: [{
