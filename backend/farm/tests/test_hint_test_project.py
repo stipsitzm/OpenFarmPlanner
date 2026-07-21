@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
 
+from accounts.consent import CURRENT_VERSIONS, REQUIRED_DOCUMENTS, get_pending_consent_documents
 from accounts.models import UserProjectSettings
 from farm.models import (
     Bed,
@@ -56,6 +57,8 @@ class HintTestProjectServiceTests(TestCase):
             UserProjectSettings.objects.get(user=result.member_user).last_project_id,
             result.project.id,
         )
+        self.assertEqual(get_pending_consent_documents(result.user), [])
+        self.assertEqual(get_pending_consent_documents(result.member_user), [])
         self.assertEqual(Location.objects.filter(project=result.project).count(), 2)
         self.assertEqual(Bed.objects.filter(project=result.project).count(), 3)
         self.assertEqual(Culture.objects.filter(project=result.project).count(), 16)
@@ -84,6 +87,14 @@ class HintTestProjectServiceTests(TestCase):
         self.assertEqual(Location.objects.filter(project=first.project).count(), 2)
         self.assertEqual(Culture.objects.filter(project=first.project).count(), 16)
         self.assertEqual(PlantingPlan.objects.filter(project=first.project).count(), 19)
+        for document in REQUIRED_DOCUMENTS:
+            self.assertEqual(
+                first.user.document_consents.filter(
+                    document=document,
+                    version=CURRENT_VERSIONS[document],
+                ).count(),
+                1,
+            )
         self.assertEqual(
             ProjectInvitation.objects.filter(
                 project=first.project,

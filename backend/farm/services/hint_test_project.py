@@ -9,7 +9,8 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
-from accounts.models import UserProjectSettings
+from accounts.consent import CURRENT_VERSIONS, REQUIRED_DOCUMENTS
+from accounts.models import DocumentConsent, UserProjectSettings
 from farm.models import (
     Bed,
     BedLayout,
@@ -111,6 +112,8 @@ def create_or_reset_hint_test_project(
         )
         _apply_project_settings(user=user, project=project)
         _apply_project_settings(user=member_user, project=project)
+        _ensure_required_consents(user)
+        _ensure_required_consents(member_user)
 
         populate_hint_test_project(project, owner=user)
 
@@ -165,6 +168,21 @@ def _apply_project_settings(*, user: Any, project: Project) -> None:
     settings_obj.default_project = project
     settings_obj.last_project = project
     settings_obj.save(update_fields=['default_project', 'last_project', 'updated_at'])
+
+
+def _ensure_required_consents(user: Any) -> None:
+    for document in REQUIRED_DOCUMENTS:
+        current_version = CURRENT_VERSIONS[document]
+        if not DocumentConsent.objects.filter(
+            user=user,
+            document=document,
+            version=current_version,
+        ).exists():
+            DocumentConsent.objects.create(
+                user=user,
+                document=document,
+                version=current_version,
+            )
 
 
 def _create_suppliers(project: Project) -> dict[str, Supplier]:

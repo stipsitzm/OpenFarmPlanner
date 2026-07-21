@@ -28,7 +28,9 @@ Default records:
 The command is idempotent. It reuses the project with slug
 `hinweise-sonderfaelle`, resets that project's farm-planning data, recreates
 the fixture records, keeps the admin and member memberships, and recreates one
-pending invitation. It does not modify the onboarding demo project.
+pending invitation. It also records the current required document consent for
+the fixture users so they can enter the app directly after login. It does not
+modify the onboarding demo project.
 
 The project is a developer/test fixture. It is not exposed through production
 UI actions and must not be used as realistic sample farm data.
