@@ -141,8 +141,7 @@ export function useContextMenuHint({
   }, [storageKey]);
 
   const markContextMenuHintUsed = useCallback((): void => {
-    storeContextMenuHintDismissal(storageKey);
-    setHasDismissedHint(true);
+    storeContextMenuHintDismissal(storageKey, false);
   }, [storageKey]);
 
   const closeContextMenuHint = useCallback((): void => {

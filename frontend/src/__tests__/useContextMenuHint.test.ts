@@ -101,7 +101,7 @@ describe('useContextMenuHint', () => {
     await waitFor(() => expect(fieldsBeds.result.current.showContextMenuHint).toBe(true));
   });
 
-  it('hides only the current table context after the row context menu is used', async () => {
+  it('stores only the current table context after the row context menu is used', async () => {
     const plantingPlans = renderHook(() => useContextMenuHint({
       contextKey: 'plantingPlans',
       isDesktop: true,
@@ -122,7 +122,7 @@ describe('useContextMenuHint', () => {
 
     expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:context:plantingPlans`)).toBe('1');
     expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:context:fieldsBeds`)).toBeNull();
-    await waitFor(() => expect(plantingPlans.result.current.showContextMenuHint).toBe(false));
+    expect(plantingPlans.result.current.showContextMenuHint).toBe(true);
     expect(fieldsBeds.result.current.showContextMenuHint).toBe(true);
   });
 
@@ -137,7 +137,7 @@ describe('useContextMenuHint', () => {
     await waitFor(() => expect(result.current.showContextMenuHint).toBe(true));
 
     act(() => result.current.markContextMenuHintUsed());
-    await waitFor(() => expect(result.current.showContextMenuHint).toBe(false));
+    expect(result.current.showContextMenuHint).toBe(true);
 
     unmount();
 
@@ -212,7 +212,7 @@ describe('useContextMenuHint', () => {
     act(() => result.current.markContextMenuHintUsed());
 
     expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:context:plantingPlans`)).toBe('1');
-    await waitFor(() => expect(result.current.showContextMenuHint).toBe(false));
+    expect(result.current.showContextMenuHint).toBe(true);
   });
 
   it('ignores legacy project-scoped dismissals when the global hint has not been dismissed', async () => {
