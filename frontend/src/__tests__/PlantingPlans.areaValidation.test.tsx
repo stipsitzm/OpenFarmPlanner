@@ -82,6 +82,23 @@ vi.mock("../components/data-grid", async () => {
       ) => void;
     }>;
     duplicateRow?: (row: Record<string, unknown>) => Record<string, unknown>;
+    getInlineRowActions?: (
+      row: Record<string, unknown>,
+      helpers: {
+        delete: (rowId: string | number) => void;
+      },
+    ) => Array<{
+      id: string;
+      label: string;
+      color?: string;
+      onClick: (
+        row: Record<string, unknown>,
+        helpers: {
+          delete: (rowId: string | number) => void;
+        },
+      ) => void;
+    }>;
+    inlineRowActionField?: string;
     deleteUndoOptions?: { message: string; snackbarTestId?: string };
   };
   return {
@@ -250,6 +267,7 @@ describe("PlantingPlans save-time area validation", () => {
     expect(latestProps).toMatchObject({
       showDeleteAction: false,
       showRowEditActions: false,
+      inlineRowActionField: "bed",
       deleteUndoOptions: {
         message: "Anbauplan gelöscht",
         snackbarTestId: "planting-plan-delete-snackbar",
@@ -294,6 +312,20 @@ describe("PlantingPlans save-time area validation", () => {
       __draft: true,
       note_attachment_count: 0,
     });
+    const inlineDeleteHelper = vi.fn();
+    const inlineRowActions = latestProps.getInlineRowActions({
+      id: -1,
+      culture: 0,
+      bed: 101,
+      area_m2: 5,
+      isNew: true,
+      __draft: true,
+    }, {
+      delete: inlineDeleteHelper,
+    });
+    expect(inlineRowActions.map((action: { id: string }) => action.id)).toEqual(["delete"]);
+    inlineRowActions[0].onClick({ id: -1, bed: 101 }, { delete: inlineDeleteHelper });
+    expect(inlineDeleteHelper).toHaveBeenCalledWith(-1);
   });
 
   it("uses one compact width for all date columns", async () => {
