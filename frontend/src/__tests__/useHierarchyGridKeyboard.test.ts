@@ -77,8 +77,13 @@ const makeMouseEvent = (): MouseEventStub => ({
   stopPropagation: vi.fn(),
 }) as unknown as MouseEventStub;
 
-const renderKeyboardHook = (rowModesModel: GridRowModesModel = {}) => {
+const renderKeyboardHook = (
+  rowModesModel: GridRowModesModel = {},
+  hookRows: HierarchyRow[] = rows,
+) => {
+  const hookRowsById = new Map(hookRows.map((row) => [String(row.id), row]));
   const discardRowEdit = vi.fn();
+  const editInputFocus = vi.fn();
   const focusCell = vi.fn();
   const notesOpen = vi.fn();
   const openContextMenu = vi.fn();
@@ -92,12 +97,19 @@ const renderKeyboardHook = (rowModesModel: GridRowModesModel = {}) => {
   const scrollToIndexes = vi.fn();
 
   const api = {
-    getAllRowIds: () => rows.map((row) => row.id),
-    getCellParams: (id: GridRowId, field: string) => makeCellParams(id, field),
+    getAllRowIds: () => hookRows.map((row) => row.id),
+    getCellElement: () => {
+      const cell = document.createElement('div');
+      const input = document.createElement('input');
+      input.focus = editInputFocus;
+      cell.append(input);
+      return cell;
+    },
+    getCellParams: (id: GridRowId, field: string) => makeCellParams(id, field, hookRowsById.get(String(id))!),
     getColumnIndexRelativeToVisibleColumns: (field: string) =>
       columns.findIndex((column) => column.field === field),
     getRowIndexRelativeToVisibleRows: (id: GridRowId) =>
-      rows.findIndex((row) => String(row.id) === String(id)),
+      hookRows.findIndex((row) => String(row.id) === String(id)),
     getVisibleColumns: () => columns,
     isCellEditable: (params: GridCellParams<HierarchyRow>) =>
       params.field === 'name' || params.field === 'length_m' || params.field === 'width_m',
@@ -118,8 +130,8 @@ const renderKeyboardHook = (rowModesModel: GridRowModesModel = {}) => {
       rememberFocusedField,
       rememberRowSnapshot,
       rowModesModel,
-      rows,
-      rowsById,
+      rows: hookRows,
+      rowsById: hookRowsById,
       selectRow,
       setRowModesModel,
       setTreeActive,
@@ -130,6 +142,7 @@ const renderKeyboardHook = (rowModesModel: GridRowModesModel = {}) => {
   return {
     ...hook,
     discardRowEdit,
+    editInputFocus,
     focusCell,
     notesOpen,
     openContextMenu,
@@ -145,6 +158,17 @@ const renderKeyboardHook = (rowModesModel: GridRowModesModel = {}) => {
 };
 
 describe('useHierarchyGridKeyboard', () => {
+  const unsavedBedRow: HierarchyRow = {
+    id: -1700000000000,
+    type: 'bed',
+    name: 'New bed',
+    level: 1,
+    hasChildren: false,
+    isNew: true,
+    bedId: -1700000000000,
+    field: 1,
+  };
+
   it('skips the calculated area column when tabbing in edit mode', () => {
     const { result, focusCell, selectRow } = renderKeyboardHook({
       'field-1': { mode: GridRowModes.Edit },
@@ -203,6 +227,154 @@ describe('useHierarchyGridKeyboard', () => {
     await waitFor(() => {
       expect(setEditCellValue).toHaveBeenCalledWith({ id: 'field-1', field: 'length_m', value: '123' });
     });
+  });
+
+  it('keeps the first numeric key after tabbing from a new row name into dimensions', async () => {
+    const {
+      result,
+      editInputFocus,
+      focusCell,
+      setEditCellValue,
+    } = renderKeyboardHook(
+      { [unsavedBedRow.id]: { mode: GridRowModes.Edit, fieldToFocus: 'name' } },
+      [unsavedBedRow],
+    );
+
+    act(() => {
+      result.current.handleCellKeyDown(
+        makeCellParams(unsavedBedRow.id, 'name', unsavedBedRow),
+        makeKeyboardEvent('Tab'),
+      );
+    });
+    expect(focusCell).toHaveBeenLastCalledWith(unsavedBedRow.id, 'length_m');
+
+    act(() => {
+      result.current.handleCellKeyDown(
+        makeCellParams(unsavedBedRow.id, 'length_m', unsavedBedRow),
+        makeKeyboardEvent('1', { target: document.createElement('input') } as Partial<KeyboardEventStub>),
+      );
+    });
+
+    await waitFor(() => {
+      expect(setEditCellValue).toHaveBeenCalledWith({
+        id: unsavedBedRow.id,
+        field: 'length_m',
+        value: '1',
+      });
+    });
+    expect(editInputFocus).toHaveBeenCalledWith({ preventScroll: true });
+
+    act(() => {
+      result.current.handleCellKeyDown(
+        makeCellParams(unsavedBedRow.id, 'length_m', unsavedBedRow),
+        makeKeyboardEvent('Tab'),
+      );
+    });
+    expect(focusCell).toHaveBeenLastCalledWith(unsavedBedRow.id, 'width_m');
+
+    act(() => {
+      result.current.handleCellKeyDown(
+        makeCellParams(unsavedBedRow.id, 'width_m', unsavedBedRow),
+        makeKeyboardEvent('2', { target: document.createElement('input') } as Partial<KeyboardEventStub>),
+      );
+    });
+
+    await waitFor(() => {
+      expect(setEditCellValue).toHaveBeenCalledWith({
+        id: unsavedBedRow.id,
+        field: 'width_m',
+        value: '2',
+      });
+    });
+  });
+
+  it('keeps direct typing active after Shift+Tab returns to an editable new-row cell', async () => {
+    const { result, focusCell, setEditCellValue } = renderKeyboardHook(
+      { [unsavedBedRow.id]: { mode: GridRowModes.Edit, fieldToFocus: 'width_m' } },
+      [unsavedBedRow],
+    );
+
+    act(() => {
+      result.current.handleCellKeyDown(
+        makeCellParams(unsavedBedRow.id, 'width_m', unsavedBedRow),
+        makeKeyboardEvent('Tab', { shiftKey: true }),
+      );
+    });
+    expect(focusCell).toHaveBeenLastCalledWith(unsavedBedRow.id, 'length_m');
+
+    act(() => {
+      result.current.handleCellKeyDown(
+        makeCellParams(unsavedBedRow.id, 'length_m', unsavedBedRow),
+        makeKeyboardEvent('3', { target: document.createElement('input') } as Partial<KeyboardEventStub>),
+      );
+    });
+
+    await waitFor(() => {
+      expect(setEditCellValue).toHaveBeenCalledWith({
+        id: unsavedBedRow.id,
+        field: 'length_m',
+        value: '3',
+      });
+    });
+  });
+
+  it('keeps direct typing active after clicking an editable cell in a new row', async () => {
+    const { result, selectRow, setEditCellValue } = renderKeyboardHook(
+      { [unsavedBedRow.id]: { mode: GridRowModes.Edit, fieldToFocus: 'name' } },
+      [unsavedBedRow],
+    );
+
+    act(() => {
+      result.current.handleCellClick(makeCellParams(unsavedBedRow.id, 'width_m', unsavedBedRow), makeMouseEvent());
+    });
+    expect(selectRow).toHaveBeenCalledWith(unsavedBedRow.id);
+
+    act(() => {
+      result.current.handleCellKeyDown(
+        makeCellParams(unsavedBedRow.id, 'width_m', unsavedBedRow),
+        makeKeyboardEvent('4', { target: document.createElement('input') } as Partial<KeyboardEventStub>),
+      );
+    });
+
+    await waitFor(() => {
+      expect(setEditCellValue).toHaveBeenCalledWith({
+        id: unsavedBedRow.id,
+        field: 'width_m',
+        value: '4',
+      });
+    });
+  });
+
+  it('does not replace values when printable keys come from an already focused editor input', () => {
+    const { result, setEditCellValue } = renderKeyboardHook(
+      { [unsavedBedRow.id]: { mode: GridRowModes.Edit, fieldToFocus: 'length_m' } },
+      [unsavedBedRow],
+    );
+    const input = document.createElement('input');
+    const event = makeKeyboardEvent('5', { target: input } as Partial<KeyboardEventStub>);
+
+    act(() => {
+      result.current.handleCellKeyDown(makeCellParams(unsavedBedRow.id, 'length_m', unsavedBedRow), event);
+    });
+
+    expect(event.defaultMuiPrevented).toBe(false);
+    expect(setEditCellValue).not.toHaveBeenCalled();
+  });
+
+  it('keeps calculated cells protected from direct printable editing', () => {
+    const { result, setEditCellValue, setRowModesModel } = renderKeyboardHook(
+      { [unsavedBedRow.id]: { mode: GridRowModes.Edit, fieldToFocus: 'name' } },
+      [unsavedBedRow],
+    );
+    const event = makeKeyboardEvent('9');
+
+    act(() => {
+      result.current.handleCellKeyDown(makeCellParams(unsavedBedRow.id, 'area_sqm', unsavedBedRow), event);
+    });
+
+    expect(event.defaultMuiPrevented).toBe(false);
+    expect(setEditCellValue).not.toHaveBeenCalled();
+    expect(setRowModesModel).not.toHaveBeenCalled();
   });
 
   it('suppresses modified printable shortcuts in view mode without entering edit mode', () => {

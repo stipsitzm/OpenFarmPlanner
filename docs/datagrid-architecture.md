@@ -158,7 +158,11 @@ that's still true. But cell-level Tab/Arrow/Enter/F2 navigation
   typed character, buffering rapid keystrokes typed before the edit-cell
   component has actually mounted) and F2 (opens edit mode *without*
   altering the value — the standard spreadsheet distinction between the
-  two).
+  two). The same starter also handles the row-edit edge case where Tab or
+  Shift+Tab has visibly focused another editable cell but DOM focus is still
+  on the cell container rather than the mounted editor input: the first
+  printable key is still captured, buffered, and written into that target
+  cell instead of being lost.
 - Notes cells (see below) are deliberately excluded from both spreadsheet
   auto-edit-start and the F2 flow — Enter/Space on a notes cell opens the
   notes drawer instead.

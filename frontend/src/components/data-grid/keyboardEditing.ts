@@ -6,12 +6,14 @@ import type React from 'react';
 import { flushSync } from 'react-dom';
 import { GridRowModes } from '@mui/x-data-grid';
 import type { GridCellParams, GridRowId, GridRowModesModel, GridValidRowModel } from '@mui/x-data-grid';
+import { EDIT_CELL_FOCUS_TARGET_SELECTOR } from './keyboardNavigation';
 
 type DataGridKeyboardEvent = React.KeyboardEvent & {
   defaultMuiPrevented?: boolean;
 };
 
 interface SpreadsheetEditApi {
+  getCellElement?: (id: GridRowId, field: string) => HTMLElement | null;
   isCellEditable?: (params: GridCellParams) => boolean;
   setCellFocus?: (id: GridRowId, field: string) => void;
   setEditCellValue?: (params: { id: GridRowId; field: string; value: unknown }) => Promise<boolean> | boolean | void;
@@ -38,6 +40,7 @@ interface UseSpreadsheetEditStarterResult<Row extends GridValidRowModel> {
   startEditFromPrintableKey: (
     params: GridCellParams<Row>,
     event: React.KeyboardEvent,
+    options?: { allowEditableEventTarget?: boolean },
   ) => boolean;
   startEditFromF2: (
     params: GridCellParams<Row>,
@@ -64,6 +67,11 @@ const markMuiEventHandled = (event: DataGridKeyboardEvent): void => {
   event.preventDefault();
   event.stopPropagation();
   event.defaultMuiPrevented = true;
+};
+
+const isEditableEventTarget = (event: DataGridKeyboardEvent): boolean => {
+  const target = event.target;
+  return target instanceof HTMLElement && Boolean(target.closest(EDIT_CELL_FOCUS_TARGET_SELECTOR));
 };
 
 export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
@@ -95,6 +103,41 @@ export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
     clearTimersRef.current.set(pendingKey, timerId);
   }, []);
 
+  const focusEditInput = useCallback((
+    id: GridRowId,
+    field: string,
+    caretPosition?: number,
+  ): void => {
+    const focusEditor = (): boolean => {
+      const cellElement = apiRef.current?.getCellElement?.(id, field);
+      const editor = cellElement?.querySelector<HTMLElement>(EDIT_CELL_FOCUS_TARGET_SELECTOR);
+      if (!editor) {
+        return false;
+      }
+
+      editor.focus({ preventScroll: true });
+      if (
+        typeof caretPosition === 'number'
+        && (editor instanceof HTMLInputElement || editor instanceof HTMLTextAreaElement)
+      ) {
+        const position = Math.min(caretPosition, editor.value.length);
+        try {
+          editor.setSelectionRange(position, position);
+        } catch {
+          // Some non-text input types expose setSelectionRange but reject it.
+        }
+      }
+      return true;
+    };
+
+    focusEditor();
+    queueMicrotask(focusEditor);
+    window.setTimeout(focusEditor, 0);
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(focusEditor);
+    }
+  }, [apiRef]);
+
   const flushPendingValue = useCallback((pendingKey: string): void => {
     const applyPendingValue = (): void => {
       const pendingValue = pendingValuesRef.current.get(pendingKey);
@@ -108,7 +151,9 @@ export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
         id: pendingValue.id,
         field: pendingValue.field,
         value: valueAtFlushStart,
-      }));
+      })).then(() => {
+        focusEditInput(pendingValue.id, pendingValue.field, valueAtFlushStart.length);
+      });
     };
 
     applyPendingValue();
@@ -117,7 +162,7 @@ export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
     if (typeof window.requestAnimationFrame === 'function') {
       window.requestAnimationFrame(applyPendingValue);
     }
-  }, [apiRef]);
+  }, [apiRef, focusEditInput]);
 
   const canStartEdit = useCallback((params: GridCellParams<Row>): boolean => {
     if (!params.isEditable || isRowEditing(rowModesModel, params.id)) {
@@ -129,23 +174,56 @@ export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
     return apiRef.current?.isCellEditable?.(params as GridCellParams) ?? true;
   }, [apiRef, isCellEditable, rowModesModel]);
 
+  const canReplaceEditingCell = useCallback((
+    params: GridCellParams<Row>,
+    event: DataGridKeyboardEvent,
+    allowEditableEventTarget = false,
+  ): boolean => {
+    if (
+      !params.isEditable
+      || !isRowEditing(rowModesModel, params.id)
+      || (!allowEditableEventTarget && isEditableEventTarget(event))
+    ) {
+      return false;
+    }
+    if (isCellEditable && !isCellEditable(params)) {
+      return false;
+    }
+    return apiRef.current?.isCellEditable?.(params as GridCellParams) ?? true;
+  }, [apiRef, isCellEditable, rowModesModel]);
+
+  const focusCellForEdit = useCallback((params: GridCellParams<Row>): void => {
+    apiRef.current?.setCellFocus?.(params.id, params.field);
+    flushSync(() => {
+      setRowModesModel((oldModel) => {
+        const previousMode = oldModel[params.id] ?? oldModel[String(params.id)] ?? {};
+        return {
+          ...oldModel,
+          [params.id]: {
+            ...previousMode,
+            mode: GridRowModes.Edit,
+            fieldToFocus: params.field,
+          },
+        };
+      });
+    });
+    focusEditInput(params.id, params.field);
+  }, [apiRef, focusEditInput, setRowModesModel]);
+
   const startEdit = useCallback((params: GridCellParams<Row>): boolean => {
     if (!canStartEdit(params)) {
       return false;
     }
 
     onBeforeEdit?.(params);
-    apiRef.current?.setCellFocus?.(params.id, params.field);
-    setRowModesModel((oldModel) => ({
-      ...oldModel,
-      [params.id]: { mode: GridRowModes.Edit, fieldToFocus: params.field },
-    }));
+    focusCellForEdit(params);
     return true;
-  }, [apiRef, canStartEdit, onBeforeEdit, setRowModesModel]);
+  }, [canStartEdit, focusCellForEdit, onBeforeEdit]);
 
   const startEditFromPrintableKey = useCallback((
     params: GridCellParams<Row>,
     event: React.KeyboardEvent,
+    options: { allowEditableEventTarget?: boolean } = {},
   ): boolean => {
     const keyboardEvent = event as DataGridKeyboardEvent;
     if (!isSpreadsheetPrintableKey(keyboardEvent)) {
@@ -154,26 +232,20 @@ export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
 
     const pendingKey = getPendingKey(params.id, params.field);
     const pendingValue = pendingValuesRef.current.get(pendingKey);
-    if (!pendingValue && !canStartEdit(params)) {
+    const canEditFromView = canStartEdit(params);
+    const canEditFocusedCell = canReplaceEditingCell(
+      params,
+      keyboardEvent,
+      options.allowEditableEventTarget === true,
+    );
+    if (!pendingValue && !canEditFromView && !canEditFocusedCell) {
       return false;
     }
 
     markMuiEventHandled(keyboardEvent);
     if (!pendingValue) {
       onBeforeEdit?.(params);
-      apiRef.current?.setCellFocus?.(params.id, params.field);
-      // flushSync forces the row-mode change to commit synchronously so the edit
-      // cell exists in the DOM before we try to seed its value below. Without it,
-      // fast typing can race ahead of React's own render and the first keystroke
-      // (or several, on a slow render) would land before there's an input to type
-      // into — the pendingValuesRef buffer below exists specifically to survive
-      // that gap regardless, but flushSync keeps the common case tight.
-      flushSync(() => {
-        setRowModesModel((oldModel) => ({
-          ...oldModel,
-          [params.id]: { mode: GridRowModes.Edit, fieldToFocus: params.field },
-        }));
-      });
+      focusCellForEdit(params);
     }
 
     const previousValue = pendingValue?.value ?? '';
@@ -188,13 +260,13 @@ export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
     clearPendingLater(pendingKey);
     return true;
   }, [
-    apiRef,
+    canReplaceEditingCell,
     canStartEdit,
     clearPendingLater,
+    focusCellForEdit,
     flushPendingValue,
     onBeforeEdit,
     onReplaceValue,
-    setRowModesModel,
   ]);
 
   const startEditFromF2 = useCallback((

@@ -51,10 +51,11 @@ interface FocusKeyboardNavigableCellOptions<Row extends GridValidRowModel> {
 }
 
 const IGNORED_NAVIGATION_FIELDS = new Set(['actions', 'rowEditActions']);
-const EDIT_CELL_FOCUS_TARGET_SELECTOR = [
+export const EDIT_CELL_FOCUS_TARGET_SELECTOR = [
   'input:not([type="hidden"]):not([disabled])',
   'textarea:not([disabled])',
   '[contenteditable="true"]',
+  '[role="textbox"]:not([aria-disabled="true"])',
   '[role="combobox"]:not([aria-disabled="true"])',
   '.MuiSelect-select[tabindex]:not([tabindex="-1"])',
 ].join(', ');
@@ -268,10 +269,7 @@ export function focusKeyboardNavigableCell<Row extends GridValidRowModel>({
     return true;
   };
 
-  if (focusEditor()) {
-    return;
-  }
-
+  focusEditor();
   queueMicrotask(focusEditor);
   window.setTimeout(focusEditor, 0);
   if (typeof window.requestAnimationFrame === 'function') {
