@@ -10,6 +10,14 @@ export interface Position {
   y: number;
 }
 
+export interface Rect extends Position, RectSize {}
+
+/**
+ * Default gap (in world pixels) to keep between graphical objects when
+ * searching for a collision-free placement position.
+ */
+export const DEFAULT_PLACEMENT_SPACING = 20;
+
 interface AreaToRectOptions {
   baseWidth?: number;
   minWidth?: number;
@@ -137,8 +145,101 @@ export function clampInsideParent(position: Position, childSize: RectSize, paren
   };
 }
 
-export function initialAutoLayout(ids: number[], childSizes: Map<number, RectSize>, parentSize: RectSize, gap = 12): Map<number, Position> {
+/**
+ * Returns true when two rectangles intersect, treating `spacing` as an extra
+ * margin that must stay clear around each rectangle. With `spacing === 0` this
+ * is a plain axis-aligned bounding box intersection test.
+ */
+export function rectsOverlap(a: Rect, b: Rect, spacing = 0): boolean {
+  return (
+    a.x < b.x + b.width + spacing &&
+    a.x + a.width + spacing > b.x &&
+    a.y < b.y + b.height + spacing &&
+    a.y + a.height + spacing > b.y
+  );
+}
+
+export interface FreePlacementOptions {
+  /** Minimum gap to keep between the placed rectangle and every occupied one. */
+  spacing?: number;
+  /** Distance between candidate positions in the expanding grid search. */
+  step?: number;
+  /** Maximum number of rings to probe before giving up. */
+  maxRadius?: number;
+  /** Optional parent bounds; candidates are clamped to stay inside. */
+  bounds?: RectSize;
+}
+
+/**
+ * Finds the nearest collision-free position for a rectangle of `size`, starting
+ * from `preferred` and probing outwards in an expanding square-ring (grid)
+ * pattern. This keeps the preferred position when it is already free and is
+ * generic enough to be reused for any graphical object, not just beds.
+ *
+ * Returns `null` when no free position is found within `maxRadius` rings, so
+ * callers can fall back to their previous behavior.
+ */
+export function findFreePlacementPosition(
+  preferred: Position,
+  size: RectSize,
+  occupied: Rect[],
+  options: FreePlacementOptions = {},
+): Position | null {
+  const spacing = options.spacing ?? DEFAULT_PLACEMENT_SPACING;
+  const step =
+    options.step ??
+    Math.max(1, Math.round(Math.min(size.width, size.height) / 2 + spacing));
+  const maxRadius = options.maxRadius ?? 32;
+  const { bounds } = options;
+
+  const place = (pos: Position): Position =>
+    bounds ? clampInsideParent(pos, size, bounds) : pos;
+
+  const collides = (pos: Position): boolean => {
+    const candidate: Rect = {
+      x: pos.x,
+      y: pos.y,
+      width: size.width,
+      height: size.height,
+    };
+    return occupied.some((rect) => rectsOverlap(candidate, rect, spacing));
+  };
+
+  const base = place(preferred);
+  if (!collides(base)) {
+    return base;
+  }
+
+  for (let radius = 1; radius <= maxRadius; radius += 1) {
+    for (let dy = -radius; dy <= radius; dy += 1) {
+      for (let dx = -radius; dx <= radius; dx += 1) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) {
+          continue;
+        }
+        const candidate = place({
+          x: preferred.x + dx * step,
+          y: preferred.y + dy * step,
+        });
+        if (!collides(candidate)) {
+          return candidate;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+export function initialAutoLayout(
+  ids: number[],
+  childSizes: Map<number, RectSize>,
+  parentSize: RectSize,
+  gap = 12,
+  occupiedRects: Rect[] = [],
+  spacing: number = gap,
+): Map<number, Position> {
   const output = new Map<number, Position>();
+  const placed: Rect[] = [...occupiedRects];
   let cursorX = gap;
   let cursorY = gap;
   let rowHeight = 0;
@@ -153,7 +254,21 @@ export function initialAutoLayout(ids: number[], childSizes: Map<number, RectSiz
       rowHeight = 0;
     }
 
-    output.set(id, clampInsideParent({ x: cursorX, y: cursorY }, size, parentSize));
+    const preferred = clampInsideParent({ x: cursorX, y: cursorY }, size, parentSize);
+    const free = findFreePlacementPosition(preferred, size, placed, {
+      spacing,
+      bounds: parentSize,
+    });
+    const position = free ?? preferred;
+
+    output.set(id, position);
+    placed.push({
+      x: position.x,
+      y: position.y,
+      width: size.width,
+      height: size.height,
+    });
+
     cursorX += size.width + gap;
     rowHeight = Math.max(rowHeight, size.height);
   }

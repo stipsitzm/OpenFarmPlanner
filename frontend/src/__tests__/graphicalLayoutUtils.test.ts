@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaToRectSize, clampInsideParent, getBedRectSize, getBedRectSizeWithinField, getBedScaleFromField, getFieldRectSize, initialAutoLayout } from '../pages/graphicalLayoutUtils';
+import { areaToRectSize, clampInsideParent, findFreePlacementPosition, getBedRectSize, getBedRectSizeWithinField, getBedScaleFromField, getFieldRectSize, initialAutoLayout, rectsOverlap, type Rect } from '../pages/graphicalLayoutUtils';
 
 describe('graphicalLayoutUtils', () => {
   it('returns deterministic area size', () => {
@@ -121,5 +121,79 @@ describe('graphicalLayoutUtils', () => {
     expect(output.get(1)?.x).toBe(10);
     expect(output.get(2)?.y).toBe(10);
     expect(output.get(3)?.y).toBe(70);
+  });
+
+  it('detects rectangle intersection with and without spacing', () => {
+    const a: Rect = { x: 0, y: 0, width: 50, height: 50 };
+    const b: Rect = { x: 60, y: 0, width: 50, height: 50 };
+
+    expect(rectsOverlap(a, b)).toBe(false);
+    // 10px gap between them: still clear at spacing 10, blocked at spacing 20.
+    expect(rectsOverlap(a, b, 10)).toBe(false);
+    expect(rectsOverlap(a, b, 20)).toBe(true);
+    expect(rectsOverlap(a, { ...a }, 0)).toBe(true);
+  });
+
+  it('keeps the preferred position when it is already free', () => {
+    const occupied: Rect[] = [{ x: 200, y: 200, width: 50, height: 50 }];
+    const result = findFreePlacementPosition(
+      { x: 10, y: 10 },
+      { width: 50, height: 50 },
+      occupied,
+      { spacing: 20 },
+    );
+    expect(result).toEqual({ x: 10, y: 10 });
+  });
+
+  it('searches outward for a collision-free position when the preferred one overlaps', () => {
+    const size = { width: 50, height: 50 };
+    const occupied: Rect[] = [{ x: 10, y: 10, width: 50, height: 50 }];
+    const result = findFreePlacementPosition({ x: 10, y: 10 }, size, occupied, {
+      spacing: 20,
+    });
+
+    expect(result).not.toBeNull();
+    const placed: Rect = { ...size, x: result!.x, y: result!.y };
+    expect(occupied.some((rect) => rectsOverlap(placed, rect, 20))).toBe(false);
+  });
+
+  it('clamps candidate positions to the provided bounds', () => {
+    const size = { width: 50, height: 50 };
+    const bounds = { width: 200, height: 200 };
+    const occupied: Rect[] = [{ x: 0, y: 0, width: 50, height: 50 }];
+    const result = findFreePlacementPosition({ x: 0, y: 0 }, size, occupied, {
+      spacing: 20,
+      bounds,
+    });
+
+    expect(result).not.toBeNull();
+    expect(result!.x).toBeGreaterThanOrEqual(0);
+    expect(result!.y).toBeGreaterThanOrEqual(0);
+    expect(result!.x).toBeLessThanOrEqual(bounds.width - size.width);
+    expect(result!.y).toBeLessThanOrEqual(bounds.height - size.height);
+  });
+
+  it('returns null when no free position fits within the search radius', () => {
+    const size = { width: 50, height: 50 };
+    const bounds = { width: 50, height: 50 };
+    const occupied: Rect[] = [{ x: 0, y: 0, width: 50, height: 50 }];
+    const result = findFreePlacementPosition({ x: 0, y: 0 }, size, occupied, {
+      spacing: 20,
+      bounds,
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it('places new beds without overlapping existing occupied beds', () => {
+    const sizes = new Map<number, { width: number; height: number }>([
+      [1, { width: 100, height: 50 }],
+    ]);
+    const occupied: Rect[] = [{ x: 12, y: 12, width: 100, height: 50 }];
+
+    const output = initialAutoLayout([1], sizes, { width: 400, height: 400 }, 12, occupied, 20);
+    const placed: Rect = { x: output.get(1)!.x, y: output.get(1)!.y, width: 100, height: 50 };
+
+    expect(rectsOverlap(placed, occupied[0], 20)).toBe(false);
   });
 });
