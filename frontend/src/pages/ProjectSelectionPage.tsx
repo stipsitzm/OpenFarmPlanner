@@ -208,6 +208,17 @@ export default function ProjectSelectionPage() {
         {isTrashView ? (
           <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
             <Stack spacing={1.5}>
+              <Alert
+                severity="info"
+                variant="outlined"
+                sx={{
+                  alignItems: 'center',
+                  bgcolor: 'transparent',
+                  '& .MuiAlert-message': { width: '100%' },
+                }}
+              >
+                {t('projectTrash.retentionNotice')}
+              </Alert>
               {trashError ? <Alert severity="error">{trashError}</Alert> : null}
               {!trashError && deletedProjectsByName.length === 0 ? (
                 <Alert severity="info">{t('projectTrash.empty')}</Alert>

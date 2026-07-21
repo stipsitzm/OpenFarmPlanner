@@ -76,6 +76,7 @@
   "projectTrash": {
     "title": "Trash",
     "empty": "The trash is empty.",
+    "retentionNotice": "Deleted projects are automatically permanently deleted after 30 days.",
     "loadError": "Deleted projects could not be loaded.",
     "deletedDays_zero": "deleted today",
     "deletedDays_one": "deleted {{count}} day ago",

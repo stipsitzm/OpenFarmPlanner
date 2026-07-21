@@ -55,6 +55,12 @@ erDiagram
   This is the actual multi-tenancy enforcement point — see
   [architecture-overview.md](./architecture-overview.md#project-user-and-permission-model)
   for the full request-time flow.
+- **`Project.deleted_at`** is the project trash marker. Soft-deleted projects
+  are hidden from normal project selection, can be restored by an admin while
+  `deleted_at` is set, and are permanently deleted by the scheduled
+  `cleanup_deleted_projects` command once they have been in the trash for
+  more than 30 days. Manual permanent deletion uses the same database cascade
+  as the cleanup command.
 - **Unclear / needs check**: the invariant "a project always has at least
   one admin" is enforced only in `ProjectMembersView` view logic, not at the
   database level.
