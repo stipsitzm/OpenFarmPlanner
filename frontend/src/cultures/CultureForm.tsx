@@ -28,7 +28,6 @@ import {
   TextField,
   FormControl,
   InputLabel,
-  Select,
   MenuItem,
   IconButton,
 } from '@mui/material';
@@ -40,6 +39,7 @@ import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
 import { hasEffectiveCultureFormChanges } from './cultureFormChangeDetection';
 import { validateCulture } from './validation';
 import { normalizeSeedRateUnit } from './enumNormalization';
+import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
 import { BasicInfoSection } from './sections/BasicInfoSection';
 import { TimingSection } from './sections/TimingSection';
 import { HarvestSection } from './sections/HarvestSection';

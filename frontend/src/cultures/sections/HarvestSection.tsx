@@ -2,10 +2,11 @@
  * HarvestSection: yield unit and expected yield
  * @remarks Presentational, no internal state
  */
-import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
+import { Box, Typography, FormControl, InputLabel, MenuItem, TextField } from '@mui/material';
 import type { Culture } from '../../api/types';
 import type { TFunction } from 'i18next';
 import { fieldSx } from './styles.tsx';
+import { TypeaheadSelect as Select } from '../../components/inputs/TypeaheadSelect';
 
 interface HarvestSectionProps {
   formData: Partial<Culture>;

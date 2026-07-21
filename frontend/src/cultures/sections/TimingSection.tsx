@@ -2,11 +2,12 @@
  * TimingSection: Cultivation type, growth/harvest/propagation durations
  * @remarks Presentational, no internal state
  */
-import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField, Checkbox, ListItemText } from '@mui/material';
+import { Box, Typography, FormControl, InputLabel, MenuItem, TextField, Checkbox, ListItemText } from '@mui/material';
 import { smallFieldSx } from './styles.tsx';
 import type { Culture, CultivationType } from '../../api/types';
 import type { TFunction } from 'i18next';
 import { DropdownAwareTooltip } from '../../components/DropdownAwareTooltip';
+import { TypeaheadSelect as Select } from '../../components/inputs/TypeaheadSelect';
 
 interface TimingSectionProps {
   formData: Partial<Culture>;

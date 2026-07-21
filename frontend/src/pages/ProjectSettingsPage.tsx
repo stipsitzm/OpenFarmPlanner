@@ -1,11 +1,12 @@
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { projectAPI, type ProjectInvitationPayload, type ProjectMemberPayload } from '../api/api';
 import { useAuth } from '../auth/useAuth';
 import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
+import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
 import { useTranslation } from '../i18n';
 import { showProjectDeleteUndoSnackbar } from '../projects/projectDeletionFeedback';
 
@@ -352,16 +353,18 @@ export default function ProjectSettingsPage() {
           onChange={(event) => setEmail(event.target.value)}
           disabled={!canManageMembers}
         />
-        <TextField
-          select
-          label={t('roleLabel')}
-          value={role}
-          onChange={(event) => setRole(event.target.value as 'admin' | 'member')}
-          disabled={!canManageMembers}
-        >
-          <MenuItem value="member">{t('roleMember')}</MenuItem>
-          <MenuItem value="admin">{t('roleAdmin')}</MenuItem>
-        </TextField>
+        <FormControl disabled={!canManageMembers}>
+          <InputLabel id="project-invite-role-label">{t('roleLabel')}</InputLabel>
+          <Select
+            labelId="project-invite-role-label"
+            label={t('roleLabel')}
+            value={role}
+            onChange={(event) => setRole(event.target.value as 'admin' | 'member')}
+          >
+            <MenuItem value="member">{t('roleMember')}</MenuItem>
+            <MenuItem value="admin">{t('roleAdmin')}</MenuItem>
+          </Select>
+        </FormControl>
         <Button
           variant="contained"
           onClick={() => void handleInvite()}
@@ -395,18 +398,23 @@ export default function ProjectSettingsPage() {
                   <Typography variant="body2" color="text.secondary">{member.user_email}</Typography>
                 </Box>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
-                  <TextField
-                    select
+                  <FormControl
                     size="small"
-                    label={t('memberRoleLabel')}
-                    value={member.role}
-                    onChange={(event) => void handleMemberRoleChange(member.id, event.target.value as 'admin' | 'member', isCurrentUser)}
                     disabled={!canManageMembers || isCurrentUser}
                     sx={{ minWidth: 160 }}
                   >
-                    <MenuItem value="member">{t('roleMember')}</MenuItem>
-                    <MenuItem value="admin">{t('roleAdmin')}</MenuItem>
-                  </TextField>
+                    <InputLabel id={`project-member-role-label-${member.id}`}>{t('memberRoleLabel')}</InputLabel>
+                    <Select
+                      labelId={`project-member-role-label-${member.id}`}
+                      size="small"
+                      label={t('memberRoleLabel')}
+                      value={member.role}
+                      onChange={(event) => void handleMemberRoleChange(member.id, event.target.value as 'admin' | 'member', isCurrentUser)}
+                    >
+                      <MenuItem value="member">{t('roleMember')}</MenuItem>
+                      <MenuItem value="admin">{t('roleAdmin')}</MenuItem>
+                    </Select>
+                  </FormControl>
                   <Button
                     size="small"
                     variant="outlined"

@@ -2,71 +2,11 @@
  * Data Grid column builders shared across pages.
  */
 
-import { memo } from 'react';
-import type { GridColDef, GridRenderEditCellParams } from '@mui/x-data-grid';
-import { Box, MenuItem, TextField, Tooltip } from '@mui/material';
+import type { GridColDef } from '@mui/x-data-grid';
+import { Box, Tooltip } from '@mui/material';
 import { SearchableSelectEditCell } from './SearchableSelectEditCell';
 import type { SearchableSelectOption } from './SearchableSelectEditCell';
-
-interface StandardSingleSelectEditCellProps extends GridRenderEditCellParams {
-  options: SearchableSelectOption[];
-  placeholder?: string;
-}
-
-const StandardSingleSelectEditCell = memo(function StandardSingleSelectEditCell({
-  id,
-  field,
-  value,
-  hasFocus,
-  api,
-  options,
-  placeholder,
-}: StandardSingleSelectEditCellProps) {
-  const selectedOption = options.find((option) => option.value === value);
-
-  return (
-    <TextField
-      select
-      fullWidth
-      size="small"
-      autoFocus={hasFocus}
-      value={value ?? ''}
-      slotProps={{
-        htmlInput: {
-          tabIndex: hasFocus ? 0 : -1,
-        },
-        select: {
-          displayEmpty: Boolean(placeholder),
-          renderValue: () => selectedOption?.label ?? (
-            <Box component="span" sx={{ color: 'text.disabled' }}>
-              {placeholder}
-            </Box>
-          ),
-        },
-      }}
-      onChange={async (event) => {
-        await api.setEditCellValue({
-          id,
-          field,
-          value: event.target.value,
-        });
-      }}
-    >
-      {options.map((option) => (
-        <MenuItem key={option.value} value={option.value}>
-          {option.label}
-        </MenuItem>
-      ))}
-    </TextField>
-  );
-}, (previous, next) => (
-  previous.id === next.id
-  && previous.field === next.field
-  && previous.value === next.value
-  && previous.hasFocus === next.hasFocus
-  && previous.options === next.options
-  && previous.placeholder === next.placeholder
-));
+import { StandardSingleSelectEditCell } from './StandardSingleSelectEditCell';
 
 export interface SearchableSelectColumnConfig<Row extends { [key: string]: unknown }> {
   field: keyof Row;

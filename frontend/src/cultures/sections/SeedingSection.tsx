@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, Typography, TextField, FormControl, InputLabel, MenuItem } from '@mui/material';
 import type { Culture, SeedRateUnit } from '../../api/types';
 import type { TFunction } from 'i18next';
 import { fieldSx, spacingFieldSx } from './styles.tsx';
 import { fieldRowSx } from './styles.tsx';
 import { DropdownAwareTooltip } from '../../components/DropdownAwareTooltip';
+import { TypeaheadSelect as Select } from '../../components/inputs/TypeaheadSelect';
 
 interface SeedingSectionProps {
   formData: Partial<Culture>;

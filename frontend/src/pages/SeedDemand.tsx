@@ -7,7 +7,6 @@ import {
   FormControl,
   Link,
   MenuItem,
-  Select,
   Table,
   TableBody,
   TableCell,
@@ -41,6 +40,7 @@ import { handleContextMenuKeyboardNavigation } from '../components/data-grid/con
 import { getFirstMissingProjectSetupStep, getTranslatedProjectSetupActions } from './requirementFlow';
 import { formatLocalizedNumber } from '../utils/numberLocalization';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
+import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')

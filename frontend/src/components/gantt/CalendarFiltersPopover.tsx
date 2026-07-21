@@ -6,13 +6,13 @@ import {
   InputLabel,
   MenuItem,
   Popover,
-  Select,
   Stack,
 } from '@mui/material';
 
 import { useTranslation } from '../../i18n';
 import type { Location } from '../../api/api';
 import type { OccupancyHierarchyNode } from '../../pages/ganttChartUtils';
+import { TypeaheadSelect as Select } from '../inputs/TypeaheadSelect';
 
 interface CalendarFiltersPopoverProps {
   anchorEl: HTMLElement | null;

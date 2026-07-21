@@ -22,7 +22,6 @@ import {
   ListItemButton,
   ListItemText,
   MenuItem,
-  Select,
   TextField,
   Typography,
   useMediaQuery,
@@ -37,6 +36,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 // future cleanup candidate rather than fixed now.
 import { stripCitationMarkers } from '../../components/data-grid/markdown';
 import { createTransientId } from '../../utils/transientId';
+import { TypeaheadSelect as Select } from '../../components/inputs/TypeaheadSelect';
 
 interface PublicCultureLibraryDialogProps {
   open: boolean;

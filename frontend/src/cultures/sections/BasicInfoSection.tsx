@@ -2,10 +2,11 @@
  * BasicInfoSection: Name, Variety, Crop Family, Nutrient Demand
  */
 import type { ReactNode } from 'react';
-import { Box, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, TextField, FormControl, InputLabel, MenuItem } from '@mui/material';
 import { fieldSx } from './styles.tsx';
 import type { Culture } from '../../api/types';
 import type { TFunction } from 'i18next';
+import { TypeaheadSelect as Select } from '../../components/inputs/TypeaheadSelect';
 
 interface BasicInfoSectionProps {
   formData: Partial<Culture>;

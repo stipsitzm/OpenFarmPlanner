@@ -20,13 +20,13 @@ import {
   ButtonGroup,
   Divider,
   MenuItem,
-  Select,
   Stack,
   Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
 import {
   shouldOpenCustomContextMenu,
   suppressNativeContextMenu,

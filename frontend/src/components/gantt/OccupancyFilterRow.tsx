@@ -5,7 +5,6 @@ import {
   FormControlLabel,
   InputAdornment,
   MenuItem,
-  Select,
   TextField,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
@@ -13,6 +12,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import { useTranslation } from '../../i18n';
 import type { Location } from '../../api/api';
 import type { OccupancyHierarchyNode } from '../../pages/ganttChartUtils';
+import { TypeaheadSelect as Select } from '../inputs/TypeaheadSelect';
 
 interface OccupancyFilterRowProps {
   searchText: string;

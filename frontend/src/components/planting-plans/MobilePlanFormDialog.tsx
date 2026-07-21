@@ -9,7 +9,6 @@ import {
   FormControl,
   InputLabel,
   MenuItem,
-  Select,
   Stack,
   TextField,
 } from "@mui/material";
@@ -23,6 +22,7 @@ import {
 import type { SearchableSelectOption } from "../data-grid";
 import type { MobileCreateFormState } from "../../pages/plantingPlansUtils";
 import type { CultivationTypeSelectOption } from "../../pages/usePlantingPlanHierarchy";
+import { TypeaheadSelect as Select } from "../inputs/TypeaheadSelect";
 
 interface MobilePlanFormDialogProps {
   open: boolean;

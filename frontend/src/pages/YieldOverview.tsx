@@ -10,7 +10,6 @@ import {
   Divider,
   FormControl,
   MenuItem,
-  Select,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
@@ -33,6 +32,7 @@ import PageSurface from "../components/layout/PageSurface";
 import EmptyStateCard from "../components/project/EmptyStateCard";
 import ProjectRequiredState from "../components/project/ProjectRequiredState";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
+import { TypeaheadSelect as Select } from "../components/inputs/TypeaheadSelect";
 import { useTranslation } from "../i18n";
 import {
   shouldOpenCustomContextMenu,

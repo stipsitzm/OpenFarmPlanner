@@ -130,7 +130,11 @@ MUI's stock edit cells didn't fit a few OpenFarmPlanner-specific needs:
   `singleSelect` dropdown wouldn't make browsable; `columns.tsx` also
   exposes a `createSingleSelectColumn` builder (plain dropdown) for
   short option lists — pick whichever builder matches the option-list size,
-  don't default to the searchable one everywhere.
+  don't default to the searchable one everywhere. The plain editor renders
+  through `StandardSingleSelectEditCell`, which reuses the shared closed
+  Select typeahead hook from `components/inputs/selectTypeahead.ts` so typing
+  on a focused closed editor selects by the localized visible label just like
+  form-level Selects.
 
 ## Keyboard editing/navigation inside the grid
 

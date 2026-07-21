@@ -151,6 +151,24 @@ layout) and to DataGrid (which already has its own cell-navigation code) is
 future work — the reference implementation and this write-up are meant to
 make that a mechanical port rather than a fresh design exercise each time.
 
+### Closed Select typeahead
+
+Plain MUI `<Select>` menus already provide text typeahead while their menu is
+open, because the menu's listbox is mounted and owns the option focus. The
+closed trigger, however, only exposes the current display value, so typing on
+a focused but closed Select did not consistently search all options across
+forms.
+
+OpenFarmPlanner routes normal closed Select controls through
+`components/inputs/TypeaheadSelect.tsx`, backed by
+`useClosedSelectTypeahead`. The hook derives searchable text from the visible
+MenuItem labels, uses a short multi-character buffer, ignores case, skips
+disabled/hidden options, and only runs while the Select is closed. Navigation
+keys, Enter, Space, Escape, Alt+ArrowDown, opened-menu typeahead, editable text
+fields, and Autocomplete inputs remain owned by their native/MUI handlers.
+Autocomplete-based `SearchableSelect` stays separate because it is an editable
+combobox with its own input-value search behavior.
+
 ## 5. Adding this to a new page
 
 ```tsx

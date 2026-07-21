@@ -5,13 +5,13 @@ import {
   InputLabel,
   MenuItem,
   Popover,
-  Select,
   Stack,
   TextField,
 } from '@mui/material';
 
 import { useTranslation } from '../i18n';
 import type { PersistedCultureFilters } from './cultureDetailFormatters';
+import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
 
 interface CultureFiltersPopoverProps {
   anchorEl: HTMLElement | null;

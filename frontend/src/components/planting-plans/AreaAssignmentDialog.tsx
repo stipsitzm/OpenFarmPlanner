@@ -10,7 +10,6 @@ import {
   IconButton,
   InputLabel,
   MenuItem,
-  Select,
   Stack,
   Typography,
 } from '@mui/material';
@@ -23,6 +22,7 @@ import {
   filterFieldOptionsByLocation,
 } from './areaHierarchySelection';
 import { formatLocalizedNumber } from '../../utils/numberLocalization';
+import { TypeaheadSelect as Select } from '../inputs/TypeaheadSelect';
 
 interface AreaAssignmentDialogProps {
   bedId: number | null;

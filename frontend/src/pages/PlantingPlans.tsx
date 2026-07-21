@@ -91,6 +91,7 @@ import {
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
 import EmptyStateCard from "../components/project/EmptyStateCard";
+import { useClosedSelectTypeahead } from "../components/inputs/selectTypeahead";
 
 export {
   collectHierarchyAvailability,
@@ -152,6 +153,19 @@ const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
 }: CultivationTypeEditCellProps) {
   const selectedValue = normalizeCultivationType(value) ?? "";
   const selectedOption = options.find((option) => option.value === selectedValue);
+  const handleTypeaheadSelect = useCallback((nextValue: string | string[]): void => {
+    const nextSelectedValue = Array.isArray(nextValue) ? nextValue[0] : nextValue;
+    void api.setEditCellValue({
+      id,
+      field,
+      value: nextSelectedValue,
+    });
+  }, [api, field, id]);
+  const handleSelectKeyDown = useClosedSelectTypeahead<string>({
+    options,
+    value: selectedValue,
+    onSelect: handleTypeaheadSelect,
+  });
 
   return (
     <TextField
@@ -166,6 +180,7 @@ const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
         },
         select: {
           displayEmpty: true,
+          onKeyDown: handleSelectKeyDown,
           renderValue: () => selectedOption?.label ?? (
             <Box
               component="span"
