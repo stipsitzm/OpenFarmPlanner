@@ -21,6 +21,9 @@ For rules AI agents must follow when changing code, see [`AGENTS.md`](../AGENTS.
   row actions, notes/markdown cells, copy/paste, column visibility.
 - **[Demo Project Template](./demo-project.md)** — the reusable realistic
   demo dataset used by first-project onboarding and landing screenshots.
+- **[Hint Test Project](./hint-test-project.md)** — reproducible developer
+  fixture for hints, warnings, empty states, incomplete calculations, and
+  related manual QA paths.
 - **[Keyboard Navigation Architecture](./keyboard-architecture.md)** — the
   focus-region model and the shortcut/command system.
 - **[Occupancy Tree / Gantt Hierarchy](./occupancy-tree-hierarchy.md)** —
