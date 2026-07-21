@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react';
+import { useCallback, useEffect, useRef, type FormEvent } from 'react';
 import {
   Box,
   Button,
@@ -34,6 +34,38 @@ export function CreateProjectDialog({
   onSubmit,
 }: CreateProjectDialogProps) {
   const { t } = useTranslation('navigation');
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const hasAppliedOpeningFocusRef = useRef(false);
+
+  const focusProjectNameInput = useCallback((input: HTMLInputElement): void => {
+    input.focus({ preventScroll: true });
+    if (input.value) {
+      input.select();
+      return;
+    }
+    input.setSelectionRange(input.value.length, input.value.length);
+  }, []);
+
+  const setProjectNameInputRef = useCallback((input: HTMLInputElement | null): void => {
+    inputRef.current = input;
+    if (!input || !open || hasAppliedOpeningFocusRef.current) {
+      return;
+    }
+    hasAppliedOpeningFocusRef.current = true;
+    focusProjectNameInput(input);
+  }, [focusProjectNameInput, open]);
+
+  useEffect(() => {
+    if (!open) {
+      hasAppliedOpeningFocusRef.current = false;
+      return;
+    }
+    if (!inputRef.current || hasAppliedOpeningFocusRef.current) {
+      return;
+    }
+    hasAppliedOpeningFocusRef.current = true;
+    focusProjectNameInput(inputRef.current);
+  }, [focusProjectNameInput, open]);
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
@@ -46,6 +78,7 @@ export function CreateProjectDialog({
               value={name}
               onChange={(event) => onNameChange(event.target.value)}
               autoFocus
+              inputRef={setProjectNameInputRef}
               fullWidth
             />
           </Stack>
