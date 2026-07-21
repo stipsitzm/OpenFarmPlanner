@@ -18,6 +18,59 @@ class ImageProcessingBackendUnavailableError(ImageProcessingError):
     """Raised when the image processing backend is not installed."""
 
 
+# Map the raster formats we accept for direct (non re-encoded) media storage to
+# a safe, canonical file extension and MIME type. The extension is derived from
+# the *decoded* image format rather than the client-supplied filename, so a
+# request cannot control the stored file's extension (e.g. store HTML/SVG under
+# an ``image/*`` content-type header).
+_ALLOWED_MEDIA_IMAGE_FORMATS: dict[str, tuple[str, str]] = {
+    'JPEG': ('jpg', 'image/jpeg'),
+    'PNG': ('png', 'image/png'),
+    'WEBP': ('webp', 'image/webp'),
+    'GIF': ('gif', 'image/gif'),
+}
+
+
+def validate_image_upload(uploaded_file) -> tuple[str, str]:
+    """Verify that an upload is a genuine raster image and return (extension, mime).
+
+    The returned extension is derived from the actual decoded image format, never
+    from the client-supplied filename or ``Content-Type`` header (both of which are
+    attacker-controlled). This prevents storing non-image payloads (HTML, SVG,
+    scripts) under an image content-type and a dangerous file extension.
+    """
+    try:
+        from PIL import Image
+    except ModuleNotFoundError as exc:
+        raise ImageProcessingBackendUnavailableError(
+            'Image processing backend is not available. Install Pillow in the backend environment.'
+        ) from exc
+
+    if uploaded_file.size > MAX_UPLOAD_SIZE_BYTES:
+        raise ImageProcessingError('Uploaded file exceeds the 10MB size limit.')
+
+    uploaded_file.seek(0)
+    try:
+        image = Image.open(uploaded_file)
+        image.verify()
+    except Exception as exc:
+        raise ImageProcessingError('Uploaded file is not a valid image.') from exc
+
+    # ``verify()`` leaves the image unusable; reopen to read the detected format.
+    uploaded_file.seek(0)
+    try:
+        detected_format = (Image.open(uploaded_file).format or '').upper()
+    except Exception as exc:
+        raise ImageProcessingError('Uploaded file is not a valid image.') from exc
+    finally:
+        uploaded_file.seek(0)
+
+    mapping = _ALLOWED_MEDIA_IMAGE_FORMATS.get(detected_format)
+    if mapping is None:
+        raise ImageProcessingError('Unsupported file type. Only image uploads are allowed.')
+    return mapping
+
+
 def process_note_image(uploaded_file) -> tuple[ContentFile, dict[str, int | str]]:
     """Validate, orient, downscale and re-encode uploaded image."""
     try:

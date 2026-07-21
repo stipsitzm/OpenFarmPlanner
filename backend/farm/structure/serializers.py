@@ -59,7 +59,9 @@ class LocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Location
         fields = '__all__'
-        extra_kwargs = {'project': {'required': False}}
+        # Server-assigned from the active project on create; never client-settable
+        # (prevents cross-tenant record reassignment via update).
+        read_only_fields = ['project']
 
 
 class FieldSerializer(serializers.ModelSerializer):
@@ -77,8 +79,10 @@ class FieldSerializer(serializers.ModelSerializer):
         model = Field
         fields = '__all__'
         validators = []
+        # `project` is server-assigned on create and never client-settable
+        # (prevents cross-tenant record reassignment via update).
+        read_only_fields = ['project']
         extra_kwargs = {
-            'project': {'required': False},
             'name': {'label': 'Parzelle'},
         }
     
@@ -137,8 +141,10 @@ class BedSerializer(serializers.ModelSerializer):
         model = Bed
         fields = '__all__'
         validators = []
+        # `project` is server-assigned on create and never client-settable
+        # (prevents cross-tenant record reassignment via update).
+        read_only_fields = ['project']
         extra_kwargs = {
-            'project': {'required': False},
             'field': {'label': 'Parzelle'},
         }
 

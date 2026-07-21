@@ -174,7 +174,11 @@ class CultureSerializer(serializers.ModelSerializer):
     class Meta:
         model = Culture
         fields = '__all__'
-        extra_kwargs = {'project': {'required': False}}
+        # `project` is assigned server-side from the active project on create
+        # (see CultureViewSet.perform_create) and must never be settable by the
+        # client, otherwise a member could reassign a record to another project
+        # via update and inject data across tenant boundaries.
+        read_only_fields = ['project']
     
     def get_owned_public_culture_id(self, obj: Culture) -> int | None:
         request = self.context.get('request')

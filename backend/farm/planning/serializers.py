@@ -188,6 +188,10 @@ class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = '__all__'
+        # Server-assigned from the active project on create (see
+        # TaskViewSet.perform_create); never client-settable so a member cannot
+        # reassign a task across tenant boundaries via update.
+        read_only_fields = ['project']
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
