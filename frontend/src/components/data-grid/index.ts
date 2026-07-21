@@ -49,4 +49,7 @@ export type { TableClipboardRow } from './tableClipboard';
 
 export { handleEditableCellClick, handleRowEditStop } from './handlers';
 
+export { StableScrollbarTrack } from './StableScrollbarTrack';
+export type { StableScrollbarTrackProps } from './StableScrollbarTrack';
+
 export { dataGridSx, dataGridFooterSx, deleteIconButtonSx } from './styles';

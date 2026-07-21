@@ -56,6 +56,7 @@ import {
   NotesDrawer,
   getPlainExcerpt,
   useContextMenuHint,
+  StableScrollbarTrack,
 } from "../components/data-grid";
 import { handleContextMenuKeyboardNavigation } from "../components/data-grid/contextMenuFocus";
 import {
@@ -1495,34 +1496,13 @@ function FieldsBedsHierarchy({
               localeText={germanDataGridLocaleText}
               apiRef={gridApiRef}
             />
-            {!isMobileViewport && stableScrollbar.isActive && (
-              <Box
-                ref={stableScrollbarTrackRef}
-                onPointerDown={stableScrollbar.onTrackPointerDown}
-                sx={{
-                  position: "absolute",
-                  top: `${HEADER_ROW_HEIGHT}px`,
-                  bottom: 0,
-                  right: 0,
-                  width: "10px",
-                  zIndex: 60,
-                }}
-              >
-                <Box
-                  onPointerDown={stableScrollbar.onThumbPointerDown}
-                  sx={{
-                    position: "absolute",
-                    top: `${stableScrollbar.thumbTop}px`,
-                    height: `${stableScrollbar.thumbHeight}px`,
-                    left: "2px",
-                    right: "2px",
-                    borderRadius: "4px",
-                    backgroundColor: "rgba(0, 0, 0, 0.3)",
-                    cursor: "pointer",
-                    "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.45)" },
-                  }}
-                />
-              </Box>
+            {!isMobileViewport && (
+              <StableScrollbarTrack
+                trackRef={stableScrollbarTrackRef}
+                scrollbar={stableScrollbar}
+                top={HEADER_ROW_HEIGHT}
+                bottom={0}
+              />
             )}
           </Box>
         ) : null}

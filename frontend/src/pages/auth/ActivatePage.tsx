@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { projectAPI } from '../../api/api';
 import { useAuth } from '../../auth/useAuth';
+import { getAuthenticatedAppDestination } from '../../auth/authDestination';
 import { useTranslation } from '../../i18n';
 import { buildInvitationAcceptPath, getStoredInvitationNext, getStoredInvitationToken } from '../invitationAcceptance';
 
@@ -47,7 +48,11 @@ export default function ActivatePage() {
         setStatus('loading');
       });
       try {
-        await activate(uid, token);
+        const activatedUser = await activate(uid, token);
+        // A user with no project yet (e.g. a brand-new signup) needs the
+        // project-selection/onboarding flow, not the dashboard — same
+        // destination rule LoginPage uses after a normal login.
+        const appDestination = activatedUser ? getAuthenticatedAppDestination(activatedUser) : '/app';
 
         const storedNext = getStoredInvitationNext();
         const storedToken = getStoredInvitationToken();
@@ -65,7 +70,7 @@ export default function ActivatePage() {
           if (pendingInvitationResponse.data.code === 'no_pending_invitation') {
             setMessage(t('auth:activate.success'));
             setStatus('success');
-            setTimeout(() => navigate('/app', { replace: true }), 1200);
+            setTimeout(() => navigate(appDestination, { replace: true }), 1200);
             return;
           }
 
@@ -74,6 +79,12 @@ export default function ActivatePage() {
             await switchActiveProject(invitationResponse.data.project_id);
           }
           setMessage(t(`projectInvitations:result.${invitationResponse.data.code}`, { defaultValue: t('auth:activate.success') }));
+          // Accepting the invitation just gave this user a real project, so
+          // skip onboarding even if activatedUser (fetched beforehand) still
+          // looked project-less.
+          setStatus('success');
+          setTimeout(() => navigate('/app', { replace: true }), 1200);
+          return;
         } catch (invitationError: unknown) {
           const invitationCode = getInvitationErrorCode(invitationError);
           if (invitationCode && invitationCode !== 'no_pending_invitation') {
@@ -85,7 +96,7 @@ export default function ActivatePage() {
         }
 
         setStatus('success');
-        setTimeout(() => navigate('/app', { replace: true }), 1200);
+        setTimeout(() => navigate(appDestination, { replace: true }), 1200);
       } catch (err) {
         setStatus('error');
         setMessage(err instanceof Error ? err.message : t('auth:activate.failed'));

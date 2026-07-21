@@ -4,6 +4,7 @@ import { parseLocalizedNumber } from '../utils/numberLocalization';
 import { formatLocalizedNumber } from '../utils/numberLocalization';
 
 export const AREA_LABEL_SEPARATOR = ' | ';
+const UNIT_NON_BREAKING_SPACE = '\u00a0';
 
 export const toNumericValue = (value: unknown): number | null => {
   if (typeof value === 'number') return Number.isNaN(value) ? null : value;
@@ -15,7 +16,7 @@ export const toNumericValue = (value: unknown): number | null => {
 };
 
 export const formatAreaM2 = (value: number, locale: string): string =>
-  `${formatLocalizedNumber(value, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
+  `${formatLocalizedNumber(value, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${UNIT_NON_BREAKING_SPACE}m²`;
 
 export const buildAreaColumnHeaderLabel = (
   includeLocation: boolean,
@@ -203,7 +204,7 @@ export const toOptionalNumber = (value: unknown): number | undefined => {
 export interface HierarchySelectionRow {
   location_id?: number;
   field_id?: number;
-  bed?: number | string;
+  bed?: number | string | null;
 }
 
 export const normalizeSelectionAfterLocationChange = (

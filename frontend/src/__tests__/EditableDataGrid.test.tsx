@@ -58,6 +58,7 @@ vi.mock('@mui/x-data-grid', async () => {
     pagination,
     paginationModel,
     pageSizeOptions,
+    sx,
   }: unknown) => {
     const [, forceFocusRender] = React.useState(0);
     const [editValues, setEditValues] = React.useState<Record<string, unknown>>({});
@@ -109,6 +110,12 @@ vi.mock('@mui/x-data-grid', async () => {
         <div data-testid="pagination-page">{paginationModel?.page ?? ''}</div>
         <div data-testid="pagination-page-size">{paginationModel?.pageSize ?? ''}</div>
         <div data-testid="pagination-options">{pageSizeOptions?.join(',') ?? ''}</div>
+        <div data-testid="continuous-render-zone-collapsed">
+          {String(Boolean((sx as Record<string, unknown> | undefined)?.['& .MuiDataGrid-virtualScrollerRenderZone']))}
+        </div>
+        <div data-testid="continuous-content-height">
+          {String(((sx as Record<string, Record<string, unknown>> | undefined)?.['& .MuiDataGrid-virtualScrollerContent']?.height) ?? '')}
+        </div>
         {rows.map((row: TestGridRow) => (
           <div
             key={row.id}
@@ -356,6 +363,7 @@ describe('EditableDataGrid', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('125'));
+    expect(screen.getByTestId('continuous-render-zone-collapsed')).toHaveTextContent('false');
     expect(screen.getByTestId('pagination-enabled')).toHaveTextContent('true');
     expect(screen.getByTestId('pagination-page')).toHaveTextContent('0');
     expect(screen.getByTestId('pagination-page-size')).toHaveTextContent('100');
@@ -365,6 +373,25 @@ describe('EditableDataGrid', () => {
     fireEvent.click(screen.getByLabelText('Neu'));
 
     await waitFor(() => expect(screen.getByTestId('pagination-page')).toHaveTextContent('1'));
+  });
+
+  it('collapses the continuous-scroll render zone when all rows fit on one page', async () => {
+    const props = basePropsWithRows([
+      createGridRow({ id: 1, name: 'Plan 1', area_sqm: 1 }),
+      createGridRow({ id: 2, name: 'Plan 2', area_sqm: 2 }),
+    ]);
+
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        scrollMode="continuous"
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-count')).toHaveTextContent('2'));
+    expect(screen.getByTestId('continuous-render-zone-collapsed')).toHaveTextContent('true');
+    expect(screen.getByTestId('continuous-content-height')).toHaveTextContent('60px !important');
   });
 
   it('supports add, blur/enter/tab commit flows and calls API save with payload', async () => {
@@ -478,7 +505,12 @@ describe('EditableDataGrid', () => {
     await user.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
 
     await waitFor(() => {
-      expect(mockUseNavigationBlocker).toHaveBeenLastCalledWith(true, 'messages.unsavedChanges');
+      expect(mockUseNavigationBlocker).toHaveBeenLastCalledWith(
+        true,
+        'messages.unsavedChanges',
+        expect.any(Function),
+        false,
+      );
     });
   });
 
@@ -609,6 +641,36 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(onBeforeSaveRow).toHaveBeenCalled());
     expect(updateSpy).not.toHaveBeenCalled();
     expect(screen.getByTestId('mode-1')).toHaveTextContent('edit');
+  });
+
+  it('does not autosave an edited row when interacting with a portal dialog', async () => {
+    const props = baseProps(() => null);
+    const updateSpy = vi.spyOn(props.api, 'update');
+    const dialogRoot = document.createElement('div');
+    dialogRoot.className = 'MuiDialog-root MuiModal-root';
+    const dialogButton = document.createElement('button');
+    dialogButton.type = 'button';
+    dialogButton.textContent = 'Parzelle';
+    dialogRoot.appendChild(dialogButton);
+    document.body.appendChild(dialogRoot);
+
+    try {
+      render(<EditableDataGrid {...props} showDeleteAction={false} />);
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Zelle 1-name' })).toBeInTheDocument());
+      fireEvent.click(screen.getByRole('button', { name: 'Zelle 1-name' }));
+      await waitFor(() => expect(screen.getByTestId('mode-1')).toHaveTextContent('edit'));
+
+      fireEvent.pointerDown(dialogButton);
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 0);
+      });
+
+      expect(updateSpy).not.toHaveBeenCalled();
+      expect(screen.getByTestId('mode-1')).toHaveTextContent('edit');
+    } finally {
+      dialogRoot.remove();
+    }
   });
 
   it('saves transformed before-save values directly on input Enter', async () => {
@@ -1062,6 +1124,32 @@ describe('EditableDataGrid', () => {
 
   it('renders configured inline row actions inside the requested cell', async () => {
     const props = baseProps();
+    const deleteSpy = vi.spyOn(props.api, 'delete');
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        inlineRowActionField="name"
+        getInlineRowActions={(row, helpers) => [
+          {
+            id: 'delete',
+            label: 'Löschen',
+            onClick: () => helpers.delete(row.id),
+          },
+        ]}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+
+    await waitFor(() => expect(deleteSpy).toHaveBeenCalledWith(1));
+  });
+
+  it('renders configured inline row actions when the requested cell is empty', async () => {
+    const props = basePropsWithRows([createGridRow({ id: 1, name: '', area_sqm: 12 })]);
     const deleteSpy = vi.spyOn(props.api, 'delete');
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 

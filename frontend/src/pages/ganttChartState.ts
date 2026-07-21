@@ -26,7 +26,13 @@ export const GANTT_SIDEBAR_RESIZE_HANDLE_DESKTOP_HITBOX_WIDTH = 12;
 export const GANTT_SIDEBAR_RESIZE_HANDLE_MOBILE_HITBOX_WIDTH = 24;
 export const GANTT_SIDEBAR_RESIZE_KEYBOARD_STEP = 10;
 export const GANTT_ROW_HEIGHT = 32;
-export const GANTT_VIEWPORT_MAX_HEIGHT_SX = { md: '72svh', lg: '76svh' } as const;
+// Desktop/tablet calendar viewport height is capped dynamically at
+// `window.innerHeight - <viewport top> - GANTT_VIEWPORT_BOTTOM_MARGIN_PX`
+// (see GanttChart.tsx) so the panel always leaves a fixed, predictable gap
+// to the bottom of the screen instead of a viewport-percentage cap that
+// under- or over-shoots depending on screen height.
+export const GANTT_VIEWPORT_BOTTOM_MARGIN_PX = 24;
+export const GANTT_VIEWPORT_MIN_HEIGHT_PX = 320;
 // Above this many combined location+field+bed nodes, default to
 // locations-expanded/fields-collapsed instead of fully expanding the tree.
 export const OCCUPANCY_TREE_AUTO_EXPAND_ALL_THRESHOLD = 30;

@@ -11,6 +11,7 @@
     "contextMenuTableHint": "Tip: Right-click a row for more actions."
   },
   "errors": {
+    "sessionExpired": "Your session has expired. Please sign in again.",
     "supplierDataDuplicate": "This supplier already has data for this culture.",
     "supplierDataMissingSupplier": "Select a supplier or remove the supplier data.",
     "supplierSpecificTkgUnsupported": "Supplier-specific thousand-kernel weight is no longer supported.",

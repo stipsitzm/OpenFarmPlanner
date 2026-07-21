@@ -18,6 +18,7 @@ const apiMocks = vi.hoisted(() => ({
 }));
 
 const commandApiSpies = vi.hoisted(() => ({
+  addRow: vi.fn(),
   setDraftValues: vi.fn(),
   commitDraftValues: vi.fn(),
   saveAttemptResult: vi.fn(),
@@ -62,7 +63,42 @@ vi.mock("../components/data-grid", async () => {
     commandApiRef?: { current: EditableDataGridCommandApi | null };
     showDeleteAction?: boolean;
     showRowEditActions?: boolean;
+    getRowActions?: (
+      row: Record<string, unknown>,
+      helpers: {
+        duplicate: (row: Record<string, unknown>) => void;
+        delete: (rowId: string | number) => void;
+      },
+    ) => Array<{
+      id: string;
+      label: string;
+      color?: string;
+      onClick: (
+        row: Record<string, unknown>,
+        helpers: {
+          duplicate: (row: Record<string, unknown>) => void;
+          delete: (rowId: string | number) => void;
+        },
+      ) => void;
+    }>;
     duplicateRow?: (row: Record<string, unknown>) => Record<string, unknown>;
+    getInlineRowActions?: (
+      row: Record<string, unknown>,
+      helpers: {
+        delete: (rowId: string | number) => void;
+      },
+    ) => Array<{
+      id: string;
+      label: string;
+      color?: string;
+      onClick: (
+        row: Record<string, unknown>,
+        helpers: {
+          delete: (rowId: string | number) => void;
+        },
+      ) => void;
+    }>;
+    inlineRowActionField?: string;
     deleteUndoOptions?: { message: string; snackbarTestId?: string };
   };
   return {
@@ -72,7 +108,7 @@ vi.mock("../components/data-grid", async () => {
       commandApiSpies.gridProps(props);
       if (commandApiRef) {
         commandApiRef.current = {
-          addRow: vi.fn(),
+          addRow: commandApiSpies.addRow,
           editSelectedRow: vi.fn(),
           deleteSelectedRow: vi.fn(),
           getSelectedRowId: vi.fn(),
@@ -231,12 +267,34 @@ describe("PlantingPlans save-time area validation", () => {
     expect(latestProps).toMatchObject({
       showDeleteAction: false,
       showRowEditActions: false,
+      inlineRowActionField: "culture",
       deleteUndoOptions: {
         message: "Anbauplan gelöscht",
         snackbarTestId: "planting-plan-delete-snackbar",
       },
     });
     expect(latestProps.duplicateRow).toBeTypeOf("function");
+    expect(latestProps.getRowActions).toBeTypeOf("function");
+    const duplicateHelper = vi.fn();
+    const deleteHelper = vi.fn();
+    const rowActions = latestProps.getRowActions({ id: 9 }, {
+      duplicate: duplicateHelper,
+      delete: deleteHelper,
+    });
+    expect(rowActions.map((action: { id: string }) => action.id)).toEqual([
+      "create-planting-plan",
+      "duplicate",
+      "delete",
+    ]);
+    expect(rowActions[0]).toMatchObject({
+      label: "Anbauplan erstellen",
+      color: "primary",
+    });
+    rowActions[0].onClick({ id: 9 }, {
+      duplicate: duplicateHelper,
+      delete: deleteHelper,
+    });
+    expect(commandApiSpies.addRow).toHaveBeenCalledTimes(1);
     expect(latestProps.duplicateRow({
       id: 9,
       bed: 101,
@@ -254,6 +312,20 @@ describe("PlantingPlans save-time area validation", () => {
       __draft: true,
       note_attachment_count: 0,
     });
+    const inlineDeleteHelper = vi.fn();
+    const inlineRowActions = latestProps.getInlineRowActions({
+      id: -1,
+      culture: 0,
+      bed: 101,
+      area_m2: 5,
+      isNew: true,
+      __draft: true,
+    }, {
+      delete: inlineDeleteHelper,
+    });
+    expect(inlineRowActions.map((action: { id: string }) => action.id)).toEqual(["delete"]);
+    inlineRowActions[0].onClick({ id: -1, bed: 101 }, { delete: inlineDeleteHelper });
+    expect(inlineDeleteHelper).toHaveBeenCalledWith(-1);
   });
 
   it("uses one compact width for all date columns", async () => {

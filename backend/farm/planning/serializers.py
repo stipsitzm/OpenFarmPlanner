@@ -11,13 +11,16 @@ from farm.models import PlantingPlan, Task
 
 
 class PlantingPlanSerializer(serializers.ModelSerializer):
-    culture_name = serializers.CharField(source='culture.name', read_only=True)
-    culture_variety = serializers.CharField(source='culture.variety', read_only=True, allow_blank=True)
-    culture_display_color = serializers.CharField(source='culture.display_color', read_only=True, allow_blank=True)
+    # allow_null=True lets DRF's dotted-source lookup gracefully return None
+    # instead of raising when `culture` itself is null (draft plans without
+    # a culture chosen yet) — see get_attribute in rest_framework/fields.py.
+    culture_name = serializers.CharField(source='culture.name', read_only=True, allow_null=True)
+    culture_variety = serializers.CharField(source='culture.variety', read_only=True, allow_blank=True, allow_null=True)
+    culture_display_color = serializers.CharField(source='culture.display_color', read_only=True, allow_blank=True, allow_null=True)
     culture_propagation_duration_days = serializers.IntegerField(source='culture.propagation_duration_days', read_only=True, allow_null=True)
-    culture_cultivation_type = serializers.CharField(source='culture.cultivation_type', read_only=True, allow_blank=True)
-    culture_cultivation_types = serializers.ListField(source='culture.cultivation_types', child=serializers.CharField(), read_only=True)
-    bed_name = serializers.CharField(source='bed.name', read_only=True)
+    culture_cultivation_type = serializers.CharField(source='culture.cultivation_type', read_only=True, allow_blank=True, allow_null=True)
+    culture_cultivation_types = serializers.ListField(source='culture.cultivation_types', child=serializers.CharField(), read_only=True, allow_null=True)
+    bed_name = serializers.SerializerMethodField(read_only=True)
     plants_count = serializers.SerializerMethodField(read_only=True)
     note_attachment_count = serializers.IntegerField(read_only=True)
     created_by_user = AuditUserSerializer(source='created_by', read_only=True)
@@ -46,6 +49,9 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
             'storage_path': obj.image_file.storage_path,
         }
 
+    def get_bed_name(self, obj):
+        return obj.bed.name if obj.bed else None
+
     class Meta:
         model = PlantingPlan
         fields = '__all__'
@@ -61,10 +67,23 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
         return round(obj.area_usage_sqm * plants_per_m2)
 
     def validate(self, attrs):
+        self._validate_minimal_identity(attrs)
         self._validate_project_scope(attrs)
         self._apply_area_input_conversion(attrs)
         self._run_model_clean(attrs)
         return attrs
+
+    def _validate_minimal_identity(self, attrs):
+        """A plan can be saved as a draft missing bed/planting_date/
+        cultivation_type, but it must identify itself by at least a culture
+        or a bed — an entirely empty plan isn't a meaningful draft."""
+        culture = attrs['culture'] if 'culture' in attrs else (self.instance.culture if self.instance else None)
+        bed = attrs['bed'] if 'bed' in attrs else (self.instance.bed if self.instance else None)
+        if culture is None and bed is None:
+            raise serializers.ValidationError({
+                'culture': 'Either culture or bed must be set.',
+                'bed': 'Either culture or bed must be set.',
+            })
 
     def _validate_project_scope(self, attrs):
         """Culture and bed must belong to the active project."""

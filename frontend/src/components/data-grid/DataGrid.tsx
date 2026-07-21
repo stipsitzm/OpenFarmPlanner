@@ -72,6 +72,7 @@ import { useDataGridRowActionMenu } from './hooks/useDataGridRowActionMenu';
 import { useDataGridRowCommands } from './hooks/useDataGridRowCommands';
 import { useScrollDrivenRowWindow } from './hooks/useScrollDrivenRowWindow';
 import { useStableDataGridScrollbar } from './hooks/useStableDataGridScrollbar';
+import { StableScrollbarTrack } from './StableScrollbarTrack';
 import {
   getSortedRowIds,
   isSaveBlockedError,
@@ -80,6 +81,7 @@ import {
   prepareDataGridColumn,
   SaveBlockedError,
 } from './dataGridUtils';
+import { parseGermanDateText } from './GermanDateEditCell';
 import {
   focusKeyboardNavigableCell as focusDataGridKeyboardNavigableCell,
   getKeyboardNavigationTarget,
@@ -114,17 +116,30 @@ type DataGridKeyboardEvent = KeyboardEvent & {
 };
 
 const CONTINUOUS_SCROLL_PAGE_SIZE = 100;
-const CONTINUOUS_SCROLL_ROW_HEIGHT_PX = 44;
+const CONTINUOUS_SCROLL_REQUESTED_ROW_HEIGHT_PX = 44;
+const CONTINUOUS_SCROLL_COMPACT_ROW_HEIGHT_PX = 30;
 const CONTINUOUS_SCROLL_HEADER_HEIGHT_PX = 56;
 const CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX = 61;
 const CONTINUOUS_SCROLL_BORDER_HEIGHT_PX = 2;
-const CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX = 24;
+// Slack kept below the grid so it sits comfortably above the fold. Small
+// margins here are risky: any tiny under-measurement (rounding, a font
+// metrics difference, browser chrome) can push the page a few pixels taller
+// than the viewport, which brings in a second, native page-level scrollbar
+// right alongside the grid's own continuous-scroll thumb.
+const CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX = 35;
 const CONTINUOUS_SCROLL_MIN_HEIGHT_PX = 240;
 const DATA_GRID_ROOT_SELECTOR = '.MuiDataGrid-root';
 const DATA_GRID_VIRTUAL_SCROLLER_SELECTOR = '.MuiDataGrid-virtualScroller';
 const DATA_GRID_MAIN_SELECTOR = '.MuiDataGrid-main';
 const DATA_GRID_CONTINUOUS_SCROLL_FOOTER_CLASS = 'ofp-data-grid-continuous-footer';
 const CONTINUOUS_SCROLL_FIT_EPSILON_PX = 2;
+
+const cssEscape = (value: string): string => {
+  if (typeof window !== 'undefined' && window.CSS?.escape) {
+    return window.CSS.escape(value);
+  }
+  return value.replace(/["\\]/g, '\\$&');
+};
 
 type ContinuousScrollLayoutHeights = {
   header: number;
@@ -234,9 +249,11 @@ export function EditableDataGrid<T extends EditableRow>({
   const [dirtyRowIds, setDirtyRowIds] = useState<Set<string>>(new Set());
   const [activeValidationErrors, setActiveValidationErrors] = useState<Record<string, Record<string, string>>>({});
   const rowSnapshotRef = useRef<Map<string, T>>(new Map());
+  const rowSavePromisesRef = useRef<Map<string, Promise<T>>>(new Map());
   const canceledRowIdsRef = useRef<Set<string>>(new Set());
   const gridSurfaceRef = useRef<HTMLDivElement | null>(null);
   const pageContentRef = useRef<HTMLDivElement | null>(null);
+  const horizontalScrollRef = useRef<HTMLDivElement | null>(null);
   const stableScrollbarTrackRef = useRef<HTMLDivElement | null>(null);
   const isMobile = useMediaQuery('(max-width:900px)');
   
@@ -276,7 +293,7 @@ export function EditableDataGrid<T extends EditableRow>({
     )
     : rowsForGrid.length;
   const stableScrollbarRowHeights = useMemo(
-    () => (isContinuousScroll && !isMobile ? rowsForGrid.map(() => CONTINUOUS_SCROLL_ROW_HEIGHT_PX) : []),
+    () => (isContinuousScroll && !isMobile ? rowsForGrid.map(() => CONTINUOUS_SCROLL_COMPACT_ROW_HEIGHT_PX) : []),
     [isContinuousScroll, isMobile, rowsForGrid],
   );
   const [continuousScrollLayoutHeights, setContinuousScrollLayoutHeights] = useState<ContinuousScrollLayoutHeights>(() => ({
@@ -287,10 +304,11 @@ export function EditableDataGrid<T extends EditableRow>({
     continuousScrollLayoutHeights.header
     + continuousScrollLayoutHeights.footer
     + continuousScrollLayoutHeights.border
-    + currentWindowRowCount * CONTINUOUS_SCROLL_ROW_HEIGHT_PX
+    + currentWindowRowCount * CONTINUOUS_SCROLL_COMPACT_ROW_HEIGHT_PX
     + CONTINUOUS_SCROLL_FIT_EPSILON_PX,
   ), [continuousScrollLayoutHeights, currentWindowRowCount]);
   const [availableGridHeight, setAvailableGridHeight] = useState<number | null>(null);
+  const [scrollbarRightOffsetPx, setScrollbarRightOffsetPx] = useState<number>(0);
   const resolvedContinuousScrollHeight = isContinuousScroll && !isMobile
     ? Math.min(
       measuredContinuousScrollContentHeight,
@@ -308,6 +326,10 @@ export function EditableDataGrid<T extends EditableRow>({
     && !isMobile
     && resolvedContinuousScrollHeight !== undefined
     && measuredContinuousScrollContentHeight <= resolvedContinuousScrollHeight + CONTINUOUS_SCROLL_FIT_EPSILON_PX,
+  );
+  const shouldCollapseContinuousRenderZone = Boolean(
+    shouldHideContinuousVerticalOverflow
+    && rowsForGrid.length <= CONTINUOUS_SCROLL_PAGE_SIZE,
   );
   const stableScrollbar = useStableDataGridScrollbar(
     stableScrollbarRowHeights,
@@ -335,38 +357,6 @@ export function EditableDataGrid<T extends EditableRow>({
       requestAnimationFrame(action);
     });
   }, [ensureRowVisible]);
-
-  useLayoutEffect(() => {
-    if (!isContinuousScroll || isMobile) {
-      return undefined;
-    }
-
-    const measure = (): void => {
-      const surface = gridSurfaceRef.current;
-      if (!surface) {
-        return;
-      }
-      const top = surface.getBoundingClientRect().top;
-      setAvailableGridHeight(
-        Math.max(CONTINUOUS_SCROLL_MIN_HEIGHT_PX, window.innerHeight - top - CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX),
-      );
-    };
-
-    measure();
-    window.addEventListener('resize', measure);
-
-    let resizeObserver: ResizeObserver | undefined;
-    const observedElement = pageContentRef.current;
-    if (observedElement && typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(measure);
-      resizeObserver.observe(observedElement);
-    }
-
-    return () => {
-      window.removeEventListener('resize', measure);
-      resizeObserver?.disconnect();
-    };
-  }, [isContinuousScroll, isMobile]);
 
   useLayoutEffect(() => {
     if (!isContinuousScroll || isMobile) {
@@ -487,6 +477,63 @@ export function EditableDataGrid<T extends EditableRow>({
       scroller.removeEventListener('scroll', keepAtTop);
     };
   }, [shouldHideContinuousVerticalOverflow]);
+
+  useLayoutEffect(() => {
+    if (!isContinuousScroll || isMobile) {
+      return undefined;
+    }
+
+    const scrollport = horizontalScrollRef.current;
+    const content = gridSurfaceRef.current;
+    const page = pageContentRef.current;
+    if (!scrollport || !content || !page) {
+      return undefined;
+    }
+
+    // The vertical scrollbar track must sit at the table's *visible* right
+    // edge: the table's own edge when it's narrower than the scrollport
+    // (centered on a wide screen, with empty space to its right), or the
+    // scrollport's edge when the table overflows and is scrolled (so the
+    // track stays glued to the viewport instead of scrolling away with the
+    // wider-than-viewport content). Taking the leftmost of the two edges
+    // covers both cases without needing to special-case which one applies.
+    const measure = (): void => {
+      const scrollportRect = scrollport.getBoundingClientRect();
+      const contentRect = content.getBoundingClientRect();
+      const pageRect = page.getBoundingClientRect();
+      const visibleRight = Math.min(scrollportRect.right, contentRect.right);
+      setScrollbarRightOffsetPx(Math.max(0, pageRect.right - visibleRight));
+    };
+
+    measure();
+
+    let rafId: number | null = null;
+    const scheduleMeasure = (): void => {
+      if (rafId !== null) {
+        return;
+      }
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        measure();
+      });
+    };
+
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleMeasure) : undefined;
+    resizeObserver?.observe(scrollport);
+    resizeObserver?.observe(content);
+    scrollport.addEventListener('scroll', scheduleMeasure, { passive: true });
+    window.addEventListener('resize', scheduleMeasure);
+
+    return () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      resizeObserver?.disconnect();
+      scrollport.removeEventListener('scroll', scheduleMeasure);
+      window.removeEventListener('resize', scheduleMeasure);
+    };
+  }, [isContinuousScroll, isMobile]);
+
   useEffect(() => {
     if (!import.meta.env.DEV || (!showPaginationControls && !isContinuousScroll) || loading) {
       return;
@@ -528,6 +575,48 @@ export function EditableDataGrid<T extends EditableRow>({
     isLoading: loading,
     hasRows: hasContextMenuHintRows,
   });
+
+  useLayoutEffect(() => {
+    if (!isContinuousScroll || isMobile) {
+      return undefined;
+    }
+
+    const measure = (): void => {
+      const surface = gridSurfaceRef.current;
+      if (!surface) {
+        return;
+      }
+      const top = surface.getBoundingClientRect().top;
+      setAvailableGridHeight(
+        Math.max(CONTINUOUS_SCROLL_MIN_HEIGHT_PX, window.innerHeight - top - CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX),
+      );
+    };
+
+    measure();
+    window.addEventListener('resize', measure);
+
+    let resizeObserver: ResizeObserver | undefined;
+    const observedElement = pageContentRef.current;
+    if (observedElement && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(measure);
+      resizeObserver.observe(observedElement);
+    }
+
+    return () => {
+      window.removeEventListener('resize', measure);
+      resizeObserver?.disconnect();
+    };
+    // error and showContextMenuHint aren't read inside the effect, but both
+    // toggle sibling banners rendered above gridSurfaceRef (see the error
+    // Alert / ContextMenuHint in the JSX below) — they shift the surface's
+    // top position without changing pageContentRef's own size, so the
+    // ResizeObserver above never fires for them on its own. Without this,
+    // the hint banner appearing after data loads (a later render than this
+    // effect's first run) left availableGridHeight stale/too-tall, letting
+    // the capped grid height push the whole page taller than the viewport —
+    // a second, native page-level scrollbar alongside the grid's own.
+  }, [isContinuousScroll, isMobile, error, showContextMenuHint]);
+
   const refreshStableRowOrder = useCallback((sourceRows: readonly T[], model: GridSortModel = sortModel): void => {
     setStableRowOrder(getSortedRowIds(sourceRows, model));
   }, [sortModel]);
@@ -804,12 +893,6 @@ export function EditableDataGrid<T extends EditableRow>({
     });
   }, [hasRowsInEditMode, rowModesModel, rowsById, validateRow]);
 
-  // Do not block navigation with modal prompts: invalid/dirty state is visible inline.
-  useNavigationBlocker(
-    hasUnsavedChanges,
-    t('messages.unsavedChanges')
-  );
-
   const rowValidationErrors = useMemo(() => {
     if (!getRowValidationErrors) return {};
     const errorsByRow: Record<string, Record<string, string>> = {};
@@ -978,8 +1061,53 @@ export function EditableDataGrid<T extends EditableRow>({
     if (!api) {
       return null;
     }
-    return api.getRowWithUpdatedValues(rowId, '') as T | null;
-  }, [gridApiRef]);
+    const baseRow = (rowsById.get(String(rowId)) as T | undefined) ?? (api.getRow(rowId) as T | null);
+    if (!baseRow) {
+      return null;
+    }
+
+    const draftRow = { ...baseRow } as Record<string, unknown>;
+    for (const column of columns) {
+      const rowWithUpdatedField = api.getRowWithUpdatedValues(rowId, column.field) as Record<string, unknown> | null;
+      if (rowWithUpdatedField && Object.prototype.hasOwnProperty.call(rowWithUpdatedField, column.field)) {
+        draftRow[column.field] = rowWithUpdatedField[column.field];
+      }
+    }
+    return draftRow as T;
+  }, [columns, gridApiRef, rowsById]);
+
+  const mergeVisibleEditInputValues = useCallback((rowId: GridRowId, draftRow: T): T => {
+    const root = gridApiRef.current?.rootElementRef?.current;
+    if (!root) {
+      return draftRow;
+    }
+
+    const rowElement = root.querySelector<HTMLElement>(`[role="row"][data-id="${cssEscape(String(rowId))}"]`);
+    if (!rowElement) {
+      return draftRow;
+    }
+
+    const nextDraft = { ...draftRow } as Record<string, unknown>;
+    for (const column of columns) {
+      if (column.type !== 'date') {
+        continue;
+      }
+
+      const cellElement = rowElement.querySelector<HTMLElement>(
+        `[data-field="${cssEscape(column.field)}"].MuiDataGrid-cell--editing`,
+      );
+      const inputElement = cellElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+        'input:not([type="hidden"]):not([aria-hidden="true"]), textarea',
+      );
+      const inputValue = inputElement?.value;
+      if (inputValue === undefined) {
+        continue;
+      }
+
+      nextDraft[column.field] = parseGermanDateText(inputValue) ?? inputValue;
+    }
+    return nextDraft as T;
+  }, [columns, gridApiRef]);
 
   const applyDraftValues = useCallback(async (rowId: GridRowId, values: Partial<T>): Promise<void> => {
     const rowKey = String(rowId);
@@ -1033,13 +1161,18 @@ export function EditableDataGrid<T extends EditableRow>({
     return row;
   }, [onBeforeSaveRow]);
 
+  const waitForPendingEditCellUpdates = useCallback(async (): Promise<void> => {
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+  }, []);
+
   const prepareRowForSave = useCallback(async (rowId: GridRowId): Promise<T | null> => {
+    await waitForPendingEditCellUpdates();
     const draftRow = getDraftRow(rowId);
     if (!draftRow) {
       return rowsById.get(String(rowId)) as T | undefined ?? null;
     }
-    return draftRow;
-  }, [getDraftRow, rowsById]);
+    return mergeVisibleEditInputValues(rowId, draftRow);
+  }, [getDraftRow, mergeVisibleEditInputValues, rowsById, waitForPendingEditCellUpdates]);
 
   const commitEditedRowDraftForKeyboardNavigation = useCallback((
     rowId: GridRowId,
@@ -1199,25 +1332,38 @@ export function EditableDataGrid<T extends EditableRow>({
       return rowSnapshotRef.current.get(rowKey) ?? newRow;
     }
 
+    const inFlightSave = rowSavePromisesRef.current.get(rowKey);
+    if (inFlightSave) {
+      return inFlightSave;
+    }
+
     // Clear previous error before validating
     // This ensures dropdown selections and other changes trigger fresh validation
     setError('');
 
-    const rowAfterSaveGate = await runBeforeSaveGate(newRow);
-    if (!rowAfterSaveGate) {
+    const savePromise = (async (): Promise<T> => {
+      const rowAfterSaveGate = await runBeforeSaveGate(newRow);
+      if (!rowAfterSaveGate) {
+        setRowModesModel((oldModel) => ({
+          ...oldModel,
+          [newRow.id]: { mode: GridRowModes.Edit },
+        }));
+        throw new SaveBlockedError();
+      }
+
+      const savedRow = await saveResolvedRow(rowAfterSaveGate);
       setRowModesModel((oldModel) => ({
         ...oldModel,
-        [newRow.id]: { mode: GridRowModes.Edit },
+        [newRow.id]: { mode: GridRowModes.View, ignoreModifications: true },
       }));
-      throw new SaveBlockedError();
+      return savedRow;
+    })();
+    rowSavePromisesRef.current.set(rowKey, savePromise);
+    try {
+      return await savePromise;
+    } finally {
+      rowSavePromisesRef.current.delete(rowKey);
     }
-
-    const savedRow = await saveResolvedRow(rowAfterSaveGate);
-    setRowModesModel((oldModel) => ({
-      ...oldModel,
-      [newRow.id]: { mode: GridRowModes.View, ignoreModifications: true },
-    }));
-    return savedRow;
   }, [
     runBeforeSaveGate,
     saveResolvedRow,
@@ -1412,23 +1558,16 @@ export function EditableDataGrid<T extends EditableRow>({
   ]);
 
   const handleSaveAllDirtyRows = useCallback(async (): Promise<void> => {
+    // Awaits the real save (including the API call) for every dirty row in
+    // turn, rather than just flipping rowModesModel to View and hoping MUI's
+    // own async commit catches up later. Callers (e.g. the navigation
+    // blocker below) may unmount this component right after this resolves,
+    // which would cancel a save that hadn't actually started yet.
     const editingRowIds = Object.entries(rowModesModel)
       .filter(([, mode]) => mode.mode === GridRowModes.Edit)
       .map(([id]) => id);
-    const saveableRowIds: GridRowId[] = [];
     for (const rowId of editingRowIds) {
-      if (await prepareRowForSave(rowId)) {
-        saveableRowIds.push(rowId);
-      }
-    }
-    if (saveableRowIds.length > 0) {
-      setRowModesModel((oldModel) => {
-        const nextModel = { ...oldModel };
-        for (const rowId of saveableRowIds) {
-          nextModel[rowId] = { mode: GridRowModes.View };
-        }
-        return nextModel;
-      });
+      await handleSaveRow(rowId);
     }
     const editingRowIdKeys = new Set(editingRowIds.map(String));
     for (const rowKey of dirtyRowIds) {
@@ -1436,7 +1575,50 @@ export function EditableDataGrid<T extends EditableRow>({
         await handleSaveRow(rowKey);
       }
     }
-  }, [dirtyRowIds, handleSaveRow, prepareRowForSave, rowModesModel]);
+  }, [dirtyRowIds, handleSaveRow, rowModesModel]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      return;
+    }
+
+    const handleDocumentPointerDown = (event: PointerEvent): void => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+      if (
+        target.closest('[role="listbox"], .MuiAutocomplete-popper, .MuiPopover-root, .MuiPickersPopper-root, .MuiDialog-root, .MuiModal-root')
+        || target.closest('a[href]')
+      ) {
+        return;
+      }
+
+      const editingRowElements = Object.entries(rowModesModel)
+        .filter(([, mode]) => mode.mode === GridRowModes.Edit)
+        .map(([id]) => `[role="row"][data-id="${cssEscape(id)}"]`)
+        .join(',');
+      if (editingRowElements && target.closest(editingRowElements)) {
+        return;
+      }
+
+      void handleSaveAllDirtyRows();
+    };
+
+    document.addEventListener('pointerdown', handleDocumentPointerDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', handleDocumentPointerDown, true);
+    };
+  }, [handleSaveAllDirtyRows, hasUnsavedChanges, rowModesModel]);
+
+  // Route changes save first and then proceed without showing a confirmation.
+  // Browser tab close/reload still gets the native beforeunload protection.
+  useNavigationBlocker(
+    hasUnsavedChanges,
+    t('messages.unsavedChanges'),
+    handleSaveAllDirtyRows,
+    false,
+  );
 
   const rememberRowSnapshotForCellEdit = useCallback((params: GridCellParams<T>): void => {
     const rowKey = String(params.id);
@@ -1685,6 +1867,7 @@ export function EditableDataGrid<T extends EditableRow>({
     const baseContent: ReactNode = col.renderCell
       ? col.renderCell(params)
       : String(params.formattedValue ?? params.value ?? '');
+    const hasEmptyTextContent = typeof baseContent === 'string' && baseContent.length === 0;
 
     if (actions.length === 0 && !hasInlineMenuAction) {
       return baseContent;
@@ -1696,6 +1879,7 @@ export function EditableDataGrid<T extends EditableRow>({
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
+          minHeight: '100%',
           minWidth: 0,
           width: '100%',
           overflow: 'hidden',
@@ -1711,7 +1895,11 @@ export function EditableDataGrid<T extends EditableRow>({
             whiteSpace: 'nowrap',
           }}
         >
-          {baseContent}
+          {hasEmptyTextContent ? (
+            <Box component="span" aria-hidden="true" sx={{ visibility: 'hidden' }}>
+              {'\u00a0'}
+            </Box>
+          ) : baseContent}
         </Box>
         <Box
           className="ofp-inline-row-actions"
@@ -2146,6 +2334,7 @@ export function EditableDataGrid<T extends EditableRow>({
         }}
       >
         <Box
+          ref={horizontalScrollRef}
           onKeyDownCapture={handleGridEditNavigation}
           sx={{
             minWidth: 0,
@@ -2222,7 +2411,7 @@ export function EditableDataGrid<T extends EditableRow>({
                 : undefined
           }
           pageSizeOptions={showPaginationControls ? paginationPageSizeOptions : undefined}
-          rowHeight={isContinuousScroll ? CONTINUOUS_SCROLL_ROW_HEIGHT_PX : undefined}
+          rowHeight={isContinuousScroll ? CONTINUOUS_SCROLL_REQUESTED_ROW_HEIGHT_PX : undefined}
           columnHeaderHeight={isContinuousScroll ? CONTINUOUS_SCROLL_HEADER_HEIGHT_PX : undefined}
           sortModel={sortModel}
           onSortModelChange={handleSortModelChange}
@@ -2251,6 +2440,14 @@ export function EditableDataGrid<T extends EditableRow>({
                       maxHeight: `${resolvedContinuousScrollBodyHeight ?? 0}px !important`,
                       overflowY: shouldHideContinuousVerticalOverflow ? 'clip !important' : undefined,
                     },
+                    ...(shouldCollapseContinuousRenderZone ? {
+                      '& .MuiDataGrid-virtualScrollerContent': {
+                        height: `${currentWindowRowCount * CONTINUOUS_SCROLL_COMPACT_ROW_HEIGHT_PX}px !important`,
+                      },
+                      '& .MuiDataGrid-virtualScrollerRenderZone': {
+                        transform: 'none !important',
+                      },
+                    } : {}),
                     '& .MuiDataGrid-scrollbar--vertical': {
                       display: 'none',
                     },
@@ -2266,7 +2463,12 @@ export function EditableDataGrid<T extends EditableRow>({
               '& .MuiDataGrid-scrollbar--horizontal': { display: 'none' },
               '& .MuiDataGrid-main': { width: 'fit-content' },
               '& .MuiDataGrid-virtualScroller': { overflowX: 'hidden !important' },
-              '& .MuiDataGrid-virtualScrollerContent': { width: 'fit-content !important' },
+              '& .MuiDataGrid-virtualScrollerContent': {
+                width: 'fit-content !important',
+                ...(shouldCollapseContinuousRenderZone ? {
+                  height: `${currentWindowRowCount * CONTINUOUS_SCROLL_COMPACT_ROW_HEIGHT_PX}px !important`,
+                } : {}),
+              },
               '& .MuiDataGrid-columnHeaders': { width: 'fit-content !important' },
             } : {}),
           }}
@@ -2425,40 +2627,28 @@ export function EditableDataGrid<T extends EditableRow>({
           localeText={germanDataGridLocaleText}
           apiRef={gridApiRef}
           />
-          {!isMobile && isContinuousScroll && stableScrollbar.isActive && (
-            <Box
-              ref={stableScrollbarTrackRef}
-              data-testid="continuous-scrollbar-track"
-              onPointerDown={stableScrollbar.onTrackPointerDown}
-              sx={{
-                position: 'absolute',
-                top: `${CONTINUOUS_SCROLL_HEADER_HEIGHT_PX}px`,
-                bottom: `${continuousScrollLayoutHeights.footer + continuousScrollLayoutHeights.border}px`,
-                right: 0,
-                width: '10px',
-                zIndex: 60,
-              }}
-            >
-              <Box
-                data-testid="continuous-scrollbar-thumb"
-                onPointerDown={stableScrollbar.onThumbPointerDown}
-                sx={{
-                  position: 'absolute',
-                  top: `${stableScrollbar.thumbTop}px`,
-                  height: `${stableScrollbar.thumbHeight}px`,
-                  left: '2px',
-                  right: '2px',
-                  borderRadius: '4px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  cursor: 'pointer',
-                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.45)' },
-                }}
-              />
-            </Box>
-          )}
           </Box>
           </Box>
         </Box>
+        {!isMobile && isContinuousScroll && (
+          // Deliberately a sibling of the overflowX:'auto' horizontal-scroll
+          // Box above, not a child of gridSurfaceRef inside it: gridSurfaceRef
+          // is sized to the full (possibly viewport-exceeding) table content
+          // under surfaceSizing="contentFit", so a `right: 0` anchored there
+          // sits at the content's right edge, not the visible viewport's —
+          // scrolling the table horizontally carried the track out of view.
+          // pageContentRef (this Box's parent) stays at the fixed visible
+          // width regardless of the inner horizontal scroll position.
+          <StableScrollbarTrack
+            trackRef={stableScrollbarTrackRef}
+            scrollbar={stableScrollbar}
+            top={CONTINUOUS_SCROLL_HEADER_HEIGHT_PX}
+            bottom={continuousScrollLayoutHeights.footer + continuousScrollLayoutHeights.border}
+            right={scrollbarRightOffsetPx}
+            trackTestId="continuous-scrollbar-track"
+            thumbTestId="continuous-scrollbar-thumb"
+          />
+        )}
       </Box>
       <CustomContextMenu
         open={Boolean(rowActionMenuState)}
@@ -2477,7 +2667,7 @@ export function EditableDataGrid<T extends EditableRow>({
             key={action.id}
             label={action.label}
             icon={action.icon}
-            color={action.color === 'error' ? 'error' : undefined}
+            color={action.color === 'error' || action.color === 'primary' ? action.color : undefined}
             disabled={action.disabled}
             onClick={() => {
               if (!menuRow) {

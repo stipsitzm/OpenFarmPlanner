@@ -29,13 +29,14 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DeleteIcon from "@mui/icons-material/Delete";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import PhotoCameraOutlinedIcon from "@mui/icons-material/PhotoCameraOutlined";
 import { useTranslation } from "../i18n";
 import {
   normalizeCultivationType,
-  resolveCultivationTypeForAllowedOptions,
   toNumericValue,
   formatAreaM2,
   buildBedDisplayLabel,
@@ -500,15 +501,14 @@ function PlantingPlans() {
           );
           const availableTypes =
             getAllowedCultivationTypesForCulture(selectedCulture);
-          const nextCultivationType = resolveCultivationTypeForAllowedOptions(
-            availableTypes,
-            nextRow.cultivation_type,
-          );
+          const currentCultivationType = normalizeCultivationType(nextRow.cultivation_type);
 
           return {
             ...nextRow,
             culture: numericValue,
-            cultivation_type: nextCultivationType,
+            cultivation_type: currentCultivationType && availableTypes.includes(currentCultivationType)
+              ? currentCultivationType
+              : "",
           } as PlantingPlanRow;
         },
       },
@@ -563,10 +563,7 @@ function PlantingPlans() {
             ...row,
             cultivation_type: nextType && allowedTypes.includes(nextType)
               ? nextType
-              : resolveCultivationTypeForAllowedOptions(
-                allowedTypes,
-                nextRow.cultivation_type,
-              ),
+              : "",
           };
         },
         preProcessEditCellProps: (params) => ({
@@ -823,7 +820,7 @@ function PlantingPlans() {
     ],
   );
 
-  const formatDateForDisplay = (value?: string): string => {
+  const formatDateForDisplay = (value?: string | null): string => {
     if (!value) {
       return "—";
     }
@@ -1644,11 +1641,6 @@ function PlantingPlans() {
                   ...(initialSelection.cultureId
                     ? { culture: initialSelection.cultureId }
                     : {}),
-                  cultivation_type: resolveCultivationTypeForAllowedOptions(
-                    getAllowedCultivationTypesForCulture(
-                      cultures.find((culture) => culture.id === initialSelection.cultureId),
-                    ),
-                  ),
                   ...(initialSelection.bedId
                     ? { bed: initialSelection.bedId }
                     : {}),
@@ -1682,30 +1674,38 @@ function PlantingPlans() {
             };
           }}
           mapToApiData={async (row) => {
-            const plantingDate = toIsoDateString(row.planting_date) ?? "";
+            // Bed and planting date may still be unset — the row can be
+            // saved as a draft, so send null rather than blocking on them.
+            const plantingDate = toIsoDateString(row.planting_date);
 
             // Ensure culture and bed are numeric IDs, not label strings
             // DataGrid singleSelect can sometimes provide the label instead of value
-            let cultureId: number;
-            let bedId: number;
+            let cultureId: number | null;
+            let bedId: number | null;
 
-            if (typeof row.culture === "number") {
+            if (typeof row.culture === "number" && row.culture !== 0) {
               cultureId = row.culture;
-            } else {
+            } else if (row.culture && typeof row.culture !== "number") {
               // If it's a string, it's the label - should not happen but handle gracefully
               console.warn(
                 "Culture field contains non-numeric value:",
                 row.culture,
               );
-              cultureId = 0; // This will cause validation error
+              cultureId = null;
+            } else {
+              // Not selected yet — allowed as long as a bed is chosen instead.
+              cultureId = null;
             }
 
-            if (typeof row.bed === "number") {
+            if (typeof row.bed === "number" && row.bed !== 0) {
               bedId = row.bed;
-            } else {
+            } else if (row.bed && typeof row.bed !== "number") {
               // If it's a string, it's the label - should not happen but handle gracefully
               console.warn("Bed field contains non-numeric value:", row.bed);
-              bedId = 0; // This will cause validation error
+              bedId = null;
+            } else {
+              // Not selected yet — allowed, the row can be saved as a draft.
+              bedId = null;
             }
 
             // Prepare API data object
@@ -1745,25 +1745,14 @@ function PlantingPlans() {
             return apiData;
           }}
           validateRow={(row) => {
-            const missingFields: string[] = [];
-
-            if (!row.planting_date) {
-              missingFields.push(t("plantingPlans:columns.plantingDate"));
-            }
-            if (!row.culture || row.culture === 0) {
-              missingFields.push(t("plantingPlans:columns.culture"));
-            }
-            if (!row.bed || row.bed === 0) {
-              missingFields.push(t("plantingPlans:columns.bed"));
-            }
-            if (!row.cultivation_type) {
-              missingFields.push(t("plantingPlans:columns.cultivationType"));
-            }
-
-            if (missingFields.length > 0) {
-              return t("plantingPlans:validation.requiredFields", {
-                fields: missingFields.join(", "),
-              });
+            // A row can be saved as a draft and completed later, so nothing
+            // is strictly required except enough to identify what the row
+            // is about: either a culture or a bed. Missing fields stay
+            // visible via getRowValidationErrors' per-cell markers below.
+            const hasCulture = Boolean(row.culture) && row.culture !== 0;
+            const hasBed = Boolean(row.bed) && row.bed !== 0;
+            if (!hasCulture && !hasBed) {
+              return t("plantingPlans:validation.cultureOrBedRequired");
             }
 
             return null;
@@ -1817,7 +1806,7 @@ function PlantingPlans() {
                 availableArea: capacity.availableArea,
                 bedArea: capacity.bedArea,
                 occupiedArea: capacity.occupiedArea,
-                cultureId: row.culture,
+                cultureId: row.culture ?? undefined,
                 plantsCount: row.plants_count,
                 mode: "noRemainingArea",
               });
@@ -1830,7 +1819,7 @@ function PlantingPlans() {
                 availableArea: capacity.availableArea,
                 bedArea: capacity.bedArea,
                 occupiedArea: capacity.occupiedArea,
-                cultureId: row.culture,
+                cultureId: row.culture ?? undefined,
                 plantsCount: row.plants_count,
                 mode: "remainingLimit",
               });
@@ -1843,7 +1832,7 @@ function PlantingPlans() {
                 availableArea: capacity.availableArea,
                 bedArea: capacity.bedArea,
                 occupiedArea: capacity.occupiedArea,
-                cultureId: row.culture,
+                cultureId: row.culture ?? undefined,
                 plantsCount: row.plants_count,
                 mode: "bedLimit",
               });
@@ -1868,6 +1857,28 @@ function PlantingPlans() {
           showRowEditActions={false}
           inlineRowActionField="culture"
           showInlineRowActionMenu
+          getRowActions={() => [
+            {
+              id: "create-planting-plan",
+              label: t("plantingPlans:actions.createPlantingPlan"),
+              icon: <AddIcon fontSize="small" />,
+              color: "primary",
+              onClick: () => handleCreatePlan(),
+            },
+            {
+              id: "duplicate",
+              label: t("common:actions.duplicate"),
+              icon: <ContentCopyIcon fontSize="small" />,
+              onClick: (row, helpers) => helpers.duplicate(row),
+            },
+            {
+              id: "delete",
+              label: t("common:actions.delete"),
+              icon: <DeleteIcon fontSize="small" />,
+              color: "error",
+              onClick: (row, helpers) => helpers.delete(row.id),
+            },
+          ]}
           getInlineRowActions={(row, helpers) => [
             {
               id: "delete",

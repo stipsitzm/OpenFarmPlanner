@@ -5,7 +5,7 @@
  * when there are unsaved changes that would be lost.
  * Also handles browser navigation via beforeunload.
  * 
- * @param shouldBlock Function that returns true if navigation should be blocked
+ * @param shouldBlock Whether navigation should be blocked
  * @param message Optional custom message for the confirmation dialog
  * 
  * @remarks
@@ -14,16 +14,23 @@
  * Works with data routers (createBrowserRouter).
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useBlocker } from 'react-router-dom';
 import { confirmAction } from '../utils/confirmAction';
 
 /**
  * Hook to block navigation when there are unsaved changes
+ *
+ * @param onProceed Optional callback run after the user confirms leaving,
+ * before navigation actually proceeds, e.g. to save in-progress edits
+ * instead of silently discarding them (the confirmation message tells the
+ * user their changes will be saved, so this makes that true).
  */
 export function useNavigationBlocker(
   shouldBlock: boolean,
-  message: string = 'You have unsaved changes. Are you sure you want to leave?'
+  message: string = 'You have unsaved changes. Are you sure you want to leave?',
+  onProceed?: () => Promise<void> | void,
+  confirmBeforeProceed = true,
 ): void {
   // Setup beforeunload handler for browser navigation (tab close, reload, etc.)
   useEffect(() => {
@@ -48,15 +55,37 @@ export function useNavigationBlocker(
     return shouldBlock && currentLocation.pathname !== nextLocation.pathname;
   });
 
-  // Handle blocker state
+  // Handle blocker state. `blocker` is a fresh object every render (its
+  // `.state` just happens to still read 'blocked'), and onProceed (e.g.
+  // saving dirty rows) triggers several of those re-renders itself while
+  // it's in flight. Without this guard each one re-runs the effect and
+  // re-shows the confirm dialog for what is still the same blocked
+  // transition. Reset once the router has moved past 'blocked'.
+  const isHandlingBlockRef = useRef(false);
   useEffect(() => {
-    if (blocker.state === 'blocked') {
-      const proceed = confirmAction(message);
-      if (proceed) {
-        blocker.proceed();
-      } else {
-        blocker.reset();
-      }
+    if (blocker.state !== 'blocked') {
+      isHandlingBlockRef.current = false;
+      return;
     }
-  }, [blocker, message]);
+    if (isHandlingBlockRef.current) {
+      return;
+    }
+    isHandlingBlockRef.current = true;
+
+    const proceed = confirmBeforeProceed ? confirmAction(message) : true;
+    if (proceed) {
+      if (onProceed) {
+        // Proceed regardless of whether the save succeeds. A failed
+        // save shouldn't trap the user on the page; validation errors
+        // remain visible inline for when they come back to the row.
+        void Promise.resolve(onProceed()).catch(() => undefined).finally(() => blocker.proceed());
+      } else {
+        blocker.proceed();
+        isHandlingBlockRef.current = false;
+      }
+    } else {
+      blocker.reset();
+      isHandlingBlockRef.current = false;
+    }
+  }, [blocker, confirmBeforeProceed, message, onProceed]);
 }

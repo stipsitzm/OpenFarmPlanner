@@ -8,7 +8,7 @@ import {
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 
-type ContextMenuActionColor = 'error';
+type ContextMenuActionColor = 'error' | 'primary';
 
 interface ContextMenuActionItemProps extends Omit<MenuItemProps, 'children'> {
   label: ReactNode;
@@ -44,7 +44,11 @@ export function ContextMenuActionItem({
   sx,
   ...menuItemProps
 }: ContextMenuActionItemProps) {
-  const resolvedColor = color === 'error' ? 'error.main' : undefined;
+  const resolvedColor = color === 'error'
+    ? 'error.main'
+    : color === 'primary'
+      ? 'primary.main'
+      : undefined;
   const shouldRenderPlain = renderPlainWhenUnadorned && !icon && !shortcutHint && !emphasized;
 
   if (shouldRenderPlain) {
@@ -59,7 +63,10 @@ export function ContextMenuActionItem({
   }
 
   return (
-    <MenuItem {...menuItemProps} sx={sx}>
+    <MenuItem
+      {...menuItemProps}
+      sx={mergeSx(resolvedColor ? { color: resolvedColor } : undefined, sx)}
+    >
       {icon ? (
         <ListItemIcon sx={resolvedColor ? { color: resolvedColor } : undefined}>
           {icon}

@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { useContext } from 'react';
 import { AuthProvider } from '../auth/AuthContext';
+import { AUTHENTICATION_EXPIRED_EVENT } from '../auth/authEvents';
 import { AuthContext } from '../auth/authContextShared';
 import type { AuthUser } from '../auth/types';
 
@@ -102,5 +103,18 @@ describe('AuthProvider cross-tab project sync', () => {
     }));
 
     expect(reloadSpy).not.toHaveBeenCalled();
+  });
+
+  it('clears stale auth state when the shared API client reports an expired session', async () => {
+    render(<AuthProvider><ActiveProjectProbe /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId('active-project-id')).toHaveTextContent('1'));
+    expect(localStorage.getItem('activeProjectId')).toBe('1');
+
+    act(() => {
+      window.dispatchEvent(new Event(AUTHENTICATION_EXPIRED_EVENT));
+    });
+
+    await waitFor(() => expect(screen.getByTestId('active-project-id')).toHaveTextContent('none'));
+    expect(localStorage.getItem('activeProjectId')).toBeNull();
   });
 });
