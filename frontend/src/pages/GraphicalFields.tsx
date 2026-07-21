@@ -1101,14 +1101,23 @@ export default function GraphicalFields({
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 1,
+                    justifyContent: "flex-start",
+                    flexWrap: "nowrap",
+                    gap: 1.5,
                     minWidth: 0,
                     width: "100%",
                     pr: 1,
                   }}
                 >
-                  <Typography variant="h6" sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      minWidth: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     {t("fields:graphical.locationTitle", { name: location.name })}
                   </Typography>
                   {!globalEditMode ? (
