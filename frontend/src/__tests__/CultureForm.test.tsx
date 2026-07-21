@@ -149,6 +149,36 @@ describe('CultureForm', () => {
     expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
   });
 
+  it('asks before navigating to supplier creation when edited culture changes would be lost', async () => {
+    supplierListMock.mockResolvedValueOnce({ data: { results: [] } });
+
+    render(
+      <CultureForm
+        culture={{ ...CULTURE_A, supplier_data: [{ packaging_sizes: [] }] }}
+        onSave={vi.fn().mockResolvedValue(undefined)}
+        onCancel={() => {}}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'form.createSuppliers' })).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('name-input'), { target: { value: 'Neue Karotte' } });
+    fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
+
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading', { name: 'form.supplierNavigationUnsavedTitle' })).toBeInTheDocument();
+    expect(screen.getByText('form.supplierNavigationUnsavedMessage')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'form.supplierNavigationCancel' }));
+    expect(navigateMock).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'form.supplierNavigationUnsavedTitle' })).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'form.createSuppliers' }));
+    fireEvent.click(screen.getByRole('button', { name: 'form.supplierNavigationConfirm' }));
+    expect(navigateMock).toHaveBeenCalledWith('/app/suppliers?create=1');
+  });
+
   it('shows only real suppliers in the supplier dropdown when supplier options are available', async () => {
     supplierListMock.mockResolvedValueOnce({ data: { results: [{ id: 99, name: 'New Supplier' }] } });
 

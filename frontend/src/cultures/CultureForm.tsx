@@ -230,6 +230,7 @@ export function CultureForm({
   const [isValid, setIsValid] = useState(true);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [showSupplierNavigationConfirm, setShowSupplierNavigationConfirm] = useState(false);
   const isSavingRef = useRef(false);
   const userInteractedRef = useRef(false);
   const dialogContentRef = useDialogKeyboardScroll(true);
@@ -304,6 +305,7 @@ export function CultureForm({
     setIsValid(true);
     setHasSubmitted(false);
     setSaveError('');
+    setShowSupplierNavigationConfirm(false);
     isSavingRef.current = false;
     userInteractedRef.current = false;
   }, [culture]);
@@ -547,11 +549,25 @@ export function CultureForm({
     ? { ...errors, variety: errors.variety || t(duplicateErrorKey) }
     : errors;
   const isSaveDisabled = isSaving || !isValid || Boolean(duplicateErrorKey) || isDuplicateChecking;
+  const hasUnsavedEffectiveChanges = hasEffectiveCultureFormChanges(buildInitialFormData(culture), formData);
+
+  const navigateToSupplierCreation = useCallback((): void => {
+    navigate('/app/suppliers?create=1');
+  }, [navigate]);
+
+  const handleCreateSupplierClick = useCallback((): void => {
+    if (userInteractedRef.current && hasUnsavedEffectiveChanges) {
+      setShowSupplierNavigationConfirm(true);
+      return;
+    }
+
+    navigateToSupplierCreation();
+  }, [hasUnsavedEffectiveChanges, navigateToSupplierCreation]);
 
   const getActiveSaveShortcutElement = useCallback((): HTMLElement | null => {
     const formElement = formRef.current;
     const dialogElement = formElement?.closest('[role="dialog"]') as HTMLElement | null;
-    if (!formElement || !dialogElement || showDiscardConfirm) {
+    if (!formElement || !dialogElement || showDiscardConfirm || showSupplierNavigationConfirm) {
       return null;
     }
 
@@ -563,7 +579,7 @@ export function CultureForm({
     }
 
     return formElement;
-  }, [showDiscardConfirm]);
+  }, [showDiscardConfirm, showSupplierNavigationConfirm]);
 
   const submitActiveForm = useCallback((): void => {
     formRef.current?.requestSubmit();
@@ -720,7 +736,7 @@ export function CultureForm({
                         <Typography variant="body2" color="text.secondary">
                           {t('form.noSuppliers')}
                         </Typography>
-                        <Button variant="outlined" size="small" onClick={() => navigate('/app/suppliers?create=1')}>
+                        <Button variant="outlined" size="small" onClick={handleCreateSupplierClick}>
                           {t('form.createSuppliers')}
                         </Button>
                       </Box>
@@ -852,6 +868,20 @@ export function CultureForm({
         }}
         cancelButtonProps={{ autoFocus: true }}
         confirmButtonProps={{ variant: 'contained', color: 'error' }}
+      />
+      <ConfirmationDialog
+        open={showSupplierNavigationConfirm}
+        title={t('form.supplierNavigationUnsavedTitle')}
+        message={t('form.supplierNavigationUnsavedMessage')}
+        cancelLabel={t('form.supplierNavigationCancel')}
+        confirmLabel={t('form.supplierNavigationConfirm')}
+        onCancel={() => setShowSupplierNavigationConfirm(false)}
+        onConfirm={() => {
+          setShowSupplierNavigationConfirm(false);
+          navigateToSupplierCreation();
+        }}
+        cancelButtonProps={{ autoFocus: true }}
+        confirmButtonProps={{ variant: 'contained', color: 'warning' }}
       />
     </Dialog>
   );
