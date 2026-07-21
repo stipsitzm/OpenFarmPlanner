@@ -82,8 +82,7 @@ export default function ProjectSelectionPage() {
     [deletedProjects],
   );
   const visibleMemberships = isDevOnboardingPreview ? [] : memberships;
-  const isRestartingOnboarding = searchParams.get('onboarding') === '1' && memberships.length > 0;
-  const isOnboardingState = !isTrashView && (visibleMemberships.length === 0 || isRestartingOnboarding);
+  const isOnboardingState = !isTrashView && visibleMemberships.length === 0;
 
   const stopDevOnboardingPreview = (): void => {
     clearDevOnboardingPreview();
@@ -196,15 +195,11 @@ export default function ProjectSelectionPage() {
             <Typography variant="h5">
               {isTrashView
                 ? t('projectTrash.title')
-                : isRestartingOnboarding
-                ? t('common:projectOnboarding.restartTitle')
                 : isOnboardingState ? t('common:projectOnboarding.pageTitle') : t('project.switch')}
             </Typography>
             {isOnboardingState ? (
               <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 620, lineHeight: 1.6 }}>
-                {isRestartingOnboarding
-                  ? t('common:projectOnboarding.restartDescription')
-                  : t('common:projectOnboarding.pageDescription')}
+                {t('common:projectOnboarding.pageDescription')}
               </Typography>
             ) : null}
           </Box>

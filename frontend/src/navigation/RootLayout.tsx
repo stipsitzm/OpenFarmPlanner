@@ -147,7 +147,6 @@ interface ProjectMenuProps {
   onOpenProjectSelection: () => void;
   onOpenCreateProject: () => void;
   onCreateDemoProject: () => void;
-  onRestartOnboarding: () => void;
   onOpenProjectTrash: () => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 }
@@ -167,7 +166,6 @@ function ProjectMenu(props: ProjectMenuProps) {
     onOpenProjectSelection,
     onOpenCreateProject,
     onCreateDemoProject,
-    onRestartOnboarding,
     onOpenProjectTrash,
     t,
   } = props;
@@ -213,10 +211,6 @@ function ProjectMenu(props: ProjectMenuProps) {
       <MenuItem onClick={onCreateDemoProject} disabled={isCreatingDemoProject}>
         <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><PlayCircleOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
         {t('projectSwitcher.loadDemoProject')}
-      </MenuItem>
-      <MenuItem onClick={onRestartOnboarding}>
-        <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
-        {t('projectSwitcher.restartOnboarding')}
       </MenuItem>
       {deletedProjectsCount > 0 ? (
         <MenuItem onClick={onOpenProjectTrash}>
@@ -603,11 +597,6 @@ function RootLayout() {
   const handleOpenProjectSelectionPage = useCallback((): void => {
     handleProjectMenuClose();
     navigate('/app/project-selection');
-  }, [handleProjectMenuClose, navigate]);
-
-  const handleRestartOnboarding = useCallback((): void => {
-    handleProjectMenuClose();
-    navigate('/app/project-selection?onboarding=1');
   }, [handleProjectMenuClose, navigate]);
 
   const handleOpenProjectTrash = useCallback((): void => {
@@ -1380,7 +1369,6 @@ function RootLayout() {
             onOpenProjectSelection={handleOpenProjectSelectionPage}
             onOpenCreateProject={handleOpenCreateProject}
             onCreateDemoProject={() => { void handleCreateDemoProject(); }}
-            onRestartOnboarding={handleRestartOnboarding}
             onOpenProjectTrash={handleOpenProjectTrash}
             t={t}
           />

@@ -277,7 +277,7 @@ describe('App', () => {
     expect(screen.queryByText('Mitglieder verwalten')).not.toBeInTheDocument();
     expect(await screen.findByText('Neues Projekt')).toBeInTheDocument();
     expect(screen.getByText('Demo-Projekt laden')).toBeInTheDocument();
-    expect(screen.getByText('Einführung erneut starten')).toBeInTheDocument();
+    expect(screen.queryByText('Einführung erneut starten')).not.toBeInTheDocument();
     expect(screen.queryByText(/Papierkorb/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Neues Projekt'));
     expect(await screen.findByRole('heading', { name: 'Projekt anlegen' })).toBeInTheDocument();
@@ -350,33 +350,6 @@ describe('App', () => {
       expect(projectApiMocks.createDemo).toHaveBeenCalledTimes(1);
       expect(authState.switchActiveProject).toHaveBeenCalledWith(9);
     });
-  });
-
-  it('restarts onboarding from the project switcher without creating a demo project', async () => {
-    authState.user = {
-      id: 1,
-      email: 'demo@example.com',
-      display_name: 'Demo',
-      display_label: 'Demo',
-      is_active: true,
-      default_project_id: 1,
-      last_project_id: 1,
-      resolved_project_id: 1,
-      needs_project_selection: false,
-      memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
-      account_pending_deletion: false,
-      scheduled_deletion_at: null,
-      pending_consents: [],
-    };
-    authState.activeProjectId = 1;
-    window.history.pushState({}, '', '/app/dashboard');
-
-    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
-    fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
-    fireEvent.click(await screen.findByText('Einführung erneut starten'));
-
-    expect(await screen.findByRole('heading', { name: 'Einführung erneut starten' })).toBeInTheDocument();
-    expect(projectApiMocks.createDemo).not.toHaveBeenCalled();
   });
 
   it('opens project settings from the project switcher menu', async () => {

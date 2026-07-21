@@ -33,7 +33,6 @@
     "createSubmit": "Create project",
     "createError": "Project could not be created.",
     "loadDemoProject": "Load demo project",
-    "restartOnboarding": "Restart introduction",
     "trash": "Trash ({{count}})"
   },
   "projectRoles": {

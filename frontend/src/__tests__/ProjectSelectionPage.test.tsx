@@ -118,14 +118,6 @@ describe('ProjectSelectionPage', () => {
     expect(screen.getByText('Demo-Projekt ausprobieren')).toBeInTheDocument();
   });
 
-  it('shows repeat onboarding from an explicit URL parameter with existing projects', () => {
-    render(<MemoryRouter initialEntries={['/app/project-selection?onboarding=1']}><ProjectSelectionPage /></MemoryRouter>);
-
-    expect(screen.getByRole('heading', { name: 'Einführung erneut starten' })).toBeInTheDocument();
-    expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
-    expect(screen.getByText('Demo-Projekt ausprobieren')).toBeInTheDocument();
-  });
-
   it('opens the project trash from an explicit URL and restores deleted projects', async () => {
     projectApiMocks.listDeleted.mockResolvedValue({
       data: [{

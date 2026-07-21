@@ -18,9 +18,8 @@ records are project-scoped and owned by the receiving user through a regular
 admin `ProjectMembership`.
 
 The frontend opens the first-project onboarding automatically only while the
-authenticated user's project membership list is empty. Once the user has at
-least one project, onboarding is available only through the project switcher's
-explicit restart action; loading the demo project remains a separate action.
+authenticated user's project membership list is empty. Loading the demo project
+from the project switcher remains a separate action.
 The onboarding screen itself stays focused on starting a project. Deleted
 projects are restored or permanently deleted through the project switcher's
 trash entry, which opens the existing project trash view.

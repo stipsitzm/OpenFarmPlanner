@@ -152,8 +152,6 @@
   "projectOnboarding": {
     "pageTitle": "Erstes Projekt starten",
     "pageDescription": "Wähle, ob du mit einem eigenen leeren Projekt beginnst oder OpenFarmPlanner zuerst mit realistischen Beispieldaten ausprobierst.",
-    "restartTitle": "Einführung erneut starten",
-    "restartDescription": "Du kannst die Einführung jederzeit erneut öffnen, ohne deine bestehenden Projekte zu verändern.",
     "emptyTitle": "Mit leerem Projekt starten",
     "emptyDescription": "Lege ein eigenes Projekt an und erfasse Standorte, Kulturen und Anbaupläne Schritt für Schritt.",
     "emptyAction": "Leeres Projekt anlegen",
