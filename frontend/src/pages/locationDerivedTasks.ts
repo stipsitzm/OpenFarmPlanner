@@ -21,7 +21,7 @@ const PRE_CULTIVATION = 'pre_cultivation';
 
 const toIsoDate = (value: Date): string => value.toISOString().slice(0, 10);
 
-const parseIsoDate = (value?: string): Date | null => {
+const parseIsoDate = (value?: string | null): Date | null => {
   if (!value) return null;
   const [year, month, day] = value.split('-').map(Number);
   const parsed = new Date(Date.UTC(year, month - 1, day));
@@ -79,6 +79,7 @@ export function deriveLocationTasks({
   };
 
   plantingPlans.forEach((plan) => {
+    if (!plan.bed || !plan.culture) return;
     const bed = bedById.get(plan.bed);
     if (!bed) return;
     const field = fieldById.get(bed.field);

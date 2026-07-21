@@ -15,7 +15,7 @@ export const toNumericValue = (value: unknown): number | null => {
 };
 
 export const formatAreaM2 = (value: number, locale: string): string =>
-  `${formatLocalizedNumber(value, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
+  `${formatLocalizedNumber(value, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
 
 export const buildAreaColumnHeaderLabel = (
   includeLocation: boolean,
@@ -203,7 +203,7 @@ export const toOptionalNumber = (value: unknown): number | undefined => {
 export interface HierarchySelectionRow {
   location_id?: number;
   field_id?: number;
-  bed?: number | string;
+  bed?: number | string | null;
 }
 
 export const normalizeSelectionAfterLocationChange = (

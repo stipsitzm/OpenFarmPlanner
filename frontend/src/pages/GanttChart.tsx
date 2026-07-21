@@ -573,8 +573,12 @@ function GanttChartPage() {
       if (isGrowthTask) {
         newPlantingDate = formatDateToAPI(updatedTask.startDate);
       } else {
+        if (!plan.planting_date || !plan.harvest_date) {
+          console.error('Cannot move harvest task for incomplete planting plan:', planId);
+          return;
+        }
         const originalPlantingDate = parseDateString(plan.planting_date);
-        const originalHarvestDate = parseDateString(plan.harvest_date!);
+        const originalHarvestDate = parseDateString(plan.harvest_date);
         const daysDifference = Math.round(
           (originalHarvestDate.getTime() - originalPlantingDate.getTime()) / (1000 * 60 * 60 * 24),
         );

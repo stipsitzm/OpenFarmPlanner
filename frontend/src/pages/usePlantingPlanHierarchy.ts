@@ -203,8 +203,10 @@ export function usePlantingPlanHierarchy(shouldShowProjectRequiredState: boolean
 
   const getCultivationTypeOptionsForRow = useMemo(
     () =>
-      (row: { culture: number }): CultivationTypeSelectOption[] =>
-        cultivationTypeOptionsByCultureId.get(row.culture) ?? cultivationTypeOptions,
+      (row: { culture: number | null }): CultivationTypeSelectOption[] =>
+        typeof row.culture === 'number'
+          ? cultivationTypeOptionsByCultureId.get(row.culture) ?? cultivationTypeOptions
+          : cultivationTypeOptions,
     [cultivationTypeOptions, cultivationTypeOptionsByCultureId],
   );
 

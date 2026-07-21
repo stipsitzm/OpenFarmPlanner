@@ -820,7 +820,7 @@ function PlantingPlans() {
     ],
   );
 
-  const formatDateForDisplay = (value?: string): string => {
+  const formatDateForDisplay = (value?: string | null): string => {
     if (!value) {
       return "—";
     }
@@ -1806,7 +1806,7 @@ function PlantingPlans() {
                 availableArea: capacity.availableArea,
                 bedArea: capacity.bedArea,
                 occupiedArea: capacity.occupiedArea,
-                cultureId: row.culture,
+                cultureId: row.culture ?? undefined,
                 plantsCount: row.plants_count,
                 mode: "noRemainingArea",
               });
@@ -1819,7 +1819,7 @@ function PlantingPlans() {
                 availableArea: capacity.availableArea,
                 bedArea: capacity.bedArea,
                 occupiedArea: capacity.occupiedArea,
-                cultureId: row.culture,
+                cultureId: row.culture ?? undefined,
                 plantsCount: row.plants_count,
                 mode: "remainingLimit",
               });
@@ -1832,7 +1832,7 @@ function PlantingPlans() {
                 availableArea: capacity.availableArea,
                 bedArea: capacity.bedArea,
                 occupiedArea: capacity.occupiedArea,
-                cultureId: row.culture,
+                cultureId: row.culture ?? undefined,
                 plantsCount: row.plants_count,
                 mode: "bedLimit",
               });
