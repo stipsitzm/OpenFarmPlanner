@@ -552,6 +552,28 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     await waitFor(() => expect(screen.queryByTestId('row--1700000000000')).not.toBeInTheDocument());
   });
 
+  it('persists a new bed before saving notes from the notes drawer', async () => {
+    const user = userEvent.setup();
+    renderHierarchy();
+    await addNewBed();
+
+    await user.click(screen.getByRole('button', { name: 'Partial name -1700000000000' }));
+    const notesButtons = within(screen.getByTestId('row--1700000000000')).getAllByRole('button', { name: 'notes.editEmpty' });
+    await user.click(notesButtons[notesButtons.length - 1]);
+    const notesInput = await screen.findByRole('textbox');
+    fireEvent.change(notesInput, { target: { value: 'Neue Notiz' } });
+    expect(notesInput).toHaveValue('Neue Notiz');
+    await user.click(screen.getByRole('button', { name: 'actions.save' }));
+
+    await waitFor(() => {
+      expect(bedCreateMock).toHaveBeenCalledWith(expect.objectContaining({
+        name: 'Teilweise gefuellt',
+        field: 10,
+        notes: 'Neue Notiz',
+      }));
+    });
+  });
+
   it('allows invalid missing-name edits to leave edit mode after validation fails', async () => {
     const user = userEvent.setup();
     renderHierarchy();

@@ -810,7 +810,12 @@ export function EditableDataGrid<T extends EditableRow>({
       const rowIndex = api.getRowIndexRelativeToVisibleRows(rowId);
       const colIndex = api.getColumnIndexRelativeToVisibleColumns(field);
       api.scrollToIndexes({ rowIndex, colIndex });
-      api.setCellFocus(rowId, field);
+      focusDataGridKeyboardNavigableCell<T>({
+        api,
+        cell: { id: rowId, field },
+        focusEditInput: rowModesModel[rowId]?.mode === GridRowModes.Edit
+          || (options.startEdit && !notesFieldNames.includes(field)),
+      });
 
       if (!options.startEdit || notesFieldNames.includes(field)) {
         return;

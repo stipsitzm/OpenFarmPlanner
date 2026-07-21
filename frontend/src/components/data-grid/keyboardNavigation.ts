@@ -15,6 +15,7 @@ interface CellLocation {
 
 interface DataGridNavigationApi<Row extends GridValidRowModel> {
   getAllRowIds?: () => GridRowId[];
+  getCellElement?: (id: GridRowId, field: string) => HTMLElement | null;
   getCellParams?: (id: GridRowId, field: string) => GridCellParams<Row>;
   getColumnIndexRelativeToVisibleColumns?: (field: string) => number;
   getRowIndexRelativeToVisibleRows?: (id: GridRowId) => number;
@@ -46,9 +47,17 @@ interface GetKeyboardNavigationTargetOptions<Row extends GridValidRowModel> {
 interface FocusKeyboardNavigableCellOptions<Row extends GridValidRowModel> {
   api: DataGridNavigationApi<Row> | null | undefined;
   cell: CellLocation;
+  focusEditInput?: boolean;
 }
 
 const IGNORED_NAVIGATION_FIELDS = new Set(['actions', 'rowEditActions']);
+const EDIT_CELL_FOCUS_TARGET_SELECTOR = [
+  'input:not([type="hidden"]):not([disabled])',
+  'textarea:not([disabled])',
+  '[contenteditable="true"]',
+  '[role="combobox"]:not([aria-disabled="true"])',
+  '.MuiSelect-select[tabindex]:not([tabindex="-1"])',
+].join(', ');
 const INTERACTIVE_CELL_TARGET_SELECTOR = [
   'a[href]',
   'button',
@@ -233,6 +242,7 @@ export function getVerticalKeyboardNavigationTarget<Row extends GridValidRowMode
 export function focusKeyboardNavigableCell<Row extends GridValidRowModel>({
   api,
   cell,
+  focusEditInput = false,
 }: FocusKeyboardNavigableCellOptions<Row>): void {
   if (!api?.setCellFocus) {
     return;
@@ -242,6 +252,31 @@ export function focusKeyboardNavigableCell<Row extends GridValidRowModel>({
   const colIndex = api.getColumnIndexRelativeToVisibleColumns?.(cell.field);
   api.scrollToIndexes?.({ rowIndex, colIndex });
   api.setCellFocus(cell.id, cell.field);
+
+  if (!focusEditInput) {
+    return;
+  }
+
+  const focusEditor = (): boolean => {
+    const cellElement = api.getCellElement?.(cell.id, cell.field);
+    const editor = cellElement?.querySelector<HTMLElement>(EDIT_CELL_FOCUS_TARGET_SELECTOR);
+    if (!editor) {
+      return false;
+    }
+
+    editor.focus({ preventScroll: true });
+    return true;
+  };
+
+  if (focusEditor()) {
+    return;
+  }
+
+  queueMicrotask(focusEditor);
+  window.setTimeout(focusEditor, 0);
+  if (typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(focusEditor);
+  }
 }
 
 export function preventReadOnlyCellMouseFocus(event: MouseEvent<HTMLElement>): void {

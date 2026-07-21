@@ -20,6 +20,7 @@ type HierarchyKeyboardEvent = React.KeyboardEvent & {
 
 interface HierarchyGridKeyboardApi {
   getAllRowIds?: () => GridRowId[];
+  getCellElement?: (id: GridRowId, field: string) => HTMLElement | null;
   getCellParams?: (id: GridRowId, field: string) => GridCellParams<HierarchyRow>;
   getColumnIndexRelativeToVisibleColumns?: (field: string) => number;
   getRowIndexRelativeToVisibleRows?: (id: GridRowId) => number;
@@ -164,6 +165,7 @@ export function useHierarchyGridKeyboard({
     focusKeyboardNavigableCell<HierarchyRow>({
       api: gridApiRef.current,
       cell: target,
+      focusEditInput: editMode,
     });
     return true;
   }, [

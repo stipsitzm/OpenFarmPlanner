@@ -148,6 +148,10 @@ that's still true. But cell-level Tab/Arrow/Enter/F2 navigation
   columns, and Up/Down across rows — falling back to the nearest navigable
   cell in the target row if the same column isn't editable there (so Enter
   after editing one column doesn't get stuck on a read-only next-row cell).
+  When navigation lands inside a row that is already in edit mode, the shared
+  focus helper focuses the target cell's actual editor input instead of only
+  the DataGrid cell wrapper; otherwise the cell can look focused while
+  printable keystrokes are ignored.
 - **`keyboardEditing.ts`**'s `useSpreadsheetEditStarter` implements
   Excel-like "just start typing" (a printable keydown on a non-editing
   cell immediately opens edit mode and *replaces* the cell's value with the
@@ -201,6 +205,12 @@ treat a UX fix to
 *when/how* the menu opens (or the row-type-specific actions inside it) as
 *not* automatically fixing the other; only a fix to the shared
 open/close/reposition/focus-restore mechanics itself applies to both.
+
+The hierarchy grid also coordinates its notes drawer with row editing
+directly: saving notes for a new or still-editing Standort/Parzelle/Beet row
+first persists the current row draft with the note value, then closes the
+drawer. Users should never need to click outside the grid to make a new row
+exist before saving its notes.
 
 ## Notes / markdown cells
 
