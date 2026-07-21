@@ -13,6 +13,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type {
   GridCellParams,
   GridColDef,
+  GridRenderCellParams,
   GridRenderEditCellParams,
   GridValueOptionsParams,
 } from "@mui/x-data-grid";
@@ -479,6 +480,34 @@ function PlantingPlans() {
 
   useRegisterCommands("plans-page", commands);
 
+  const formatDateForDisplay = useCallback((value?: string | null): string => {
+    if (!value) {
+      return "—";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleDateString("de-DE");
+  }, []);
+
+  const renderCalculatedHarvestDateCell = useCallback((
+    params: GridRenderCellParams<PlantingPlanRow, Date | null>,
+  ) => {
+    const row = params.row as PlantingPlanRow;
+    const value = params.field === "harvest_end_date" ? row.harvest_end_date : row.harvest_date;
+
+    if (!value) {
+      return (
+        <Tooltip title={t("plantingPlans:tooltips.missingCultureDuration")}>
+          <Box component="span">—</Box>
+        </Tooltip>
+      );
+    }
+
+    return <Box component="span">{formatDateForDisplay(value)}</Box>;
+  }, [formatDateForDisplay, t]);
+
   const columns: GridColDef[] = useMemo(
     () => [
       {
@@ -665,6 +694,7 @@ function PlantingPlans() {
         }),
         type: "date",
         valueGetter: (value) => (value ? new Date(value) : null),
+        renderCell: renderCalculatedHarvestDateCell,
       },
       {
         field: "harvest_end_date",
@@ -679,6 +709,7 @@ function PlantingPlans() {
         }),
         type: "date",
         valueGetter: (value) => (value ? new Date(value) : null),
+        renderCell: renderCalculatedHarvestDateCell,
       },
       {
         field: "area_m2",
@@ -813,23 +844,13 @@ function PlantingPlans() {
       cultures,
       dynamicWidths,
       getBedLabelForRow,
+      renderCalculatedHarvestDateCell,
       areaColumnLabel,
       fieldBedColumnLabel,
       numberLocale,
       t,
     ],
   );
-
-  const formatDateForDisplay = (value?: string | null): string => {
-    if (!value) {
-      return "—";
-    }
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
-    return date.toLocaleDateString("de-DE");
-  };
 
   const getCultureLabel = (row: PlantingPlanRow): string => {
     const linkedCulture = cultures.find((culture) => culture.id === row.culture);
@@ -921,6 +942,7 @@ function PlantingPlans() {
     getCultivationTypeLabel,
     getDisplayArea,
     getPlantsCountLabel,
+    formatDateForDisplay,
     t,
   ]);
 

@@ -56,6 +56,7 @@ export const i18nMap: Record<string, string> = {
   'messages.fieldAndBedsDeleted': 'Parzelle und {{count}} Beete gelöscht',
   'plantingPlans:messages.deleted': 'Anbauplan gelöscht',
   'plantingPlans:actions.createPlantingPlan': 'Anbauplan erstellen',
+  'plantingPlans:tooltips.missingCultureDuration': 'Nicht berechenbar, da für diese Kultur keine Kulturdauer hinterlegt ist.',
   'actions.undo': 'Rückgängig',
   'footer.singleLocation': 'Ein Standort',
   'footer.multipleLocations': 'Mehrere Standorte',

@@ -490,7 +490,7 @@ class PlantingPlanModelTest(TestCase):
         self.assertEqual(plan.harvest_end_date, expected_harvest_end)
     
     def test_harvest_end_date_defaults_to_harvest_date(self):
-        """Test that harvest_end_date defaults to harvest_date when no harvest_duration_days."""
+        """Test harvest_end_date calculation when both culture durations exist."""
         planting_date = date(2024, 3, 1)
         plan = PlantingPlan.objects.create(
             culture=self.culture,
@@ -501,6 +501,64 @@ class PlantingPlanModelTest(TestCase):
         )
         
         self.assertEqual(plan.harvest_end_date, plan.harvest_date + timedelta(days=3))
+
+    def test_harvest_dates_are_null_without_culture_timing(self):
+        culture_without_timing = Culture.objects.create(
+            name="Unknown timing",
+            project=self.project,
+        )
+        planting_date = date(2024, 3, 1)
+        plan = PlantingPlan.objects.create(
+            culture=culture_without_timing,
+            bed=self.bed,
+            planting_date=planting_date,
+            quantity=100,
+            project=self.project,
+        )
+
+        self.assertEqual(plan.planting_date, planting_date)
+        self.assertIsNone(plan.harvest_date)
+        self.assertIsNone(plan.harvest_end_date)
+        self.assertIsNone(plan._get_active_period())
+
+    def test_partial_culture_timing_calculates_only_available_harvest_date(self):
+        culture_without_harvest_duration = Culture.objects.create(
+            name="Partial timing",
+            growth_duration_days=30,
+            project=self.project,
+        )
+        planting_date = date(2024, 3, 1)
+        plan = PlantingPlan.objects.create(
+            culture=culture_without_harvest_duration,
+            bed=self.bed,
+            planting_date=planting_date,
+            quantity=100,
+            project=self.project,
+        )
+
+        self.assertEqual(plan.harvest_date, planting_date + timedelta(days=30))
+        self.assertIsNone(plan.harvest_end_date)
+        self.assertIsNone(plan._get_active_period())
+
+    def test_explicit_zero_durations_are_valid_harvest_periods(self):
+        culture_with_zero_timing = Culture.objects.create(
+            name="Zero timing",
+            growth_duration_days=0,
+            harvest_duration_days=0,
+            project=self.project,
+        )
+        planting_date = date(2024, 3, 1)
+        plan = PlantingPlan.objects.create(
+            culture=culture_with_zero_timing,
+            bed=self.bed,
+            planting_date=planting_date,
+            quantity=100,
+            project=self.project,
+        )
+
+        self.assertEqual(plan.harvest_date, planting_date)
+        self.assertEqual(plan.harvest_end_date, planting_date)
+        self.assertEqual(plan._get_active_period(), (planting_date, planting_date))
 
     def test_area_usage_no_bed_dimensions(self):
         """Test that validation is skipped when bed has no dimensions"""

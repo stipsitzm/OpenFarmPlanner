@@ -63,6 +63,7 @@ type ScheduledPlantingPlan = PlantingPlan & {
   bed: number;
   planting_date: string;
   harvest_date: string;
+  harvest_end_date: string;
 };
 
 function isScheduledPlantingPlan(plan: PlantingPlan): plan is ScheduledPlantingPlan {
@@ -71,6 +72,7 @@ function isScheduledPlantingPlan(plan: PlantingPlan): plan is ScheduledPlantingP
     && typeof plan.bed === 'number'
     && Boolean(plan.planting_date)
     && Boolean(plan.harvest_date)
+    && Boolean(plan.harvest_end_date)
   );
 }
 
@@ -319,15 +321,13 @@ export function buildFieldOccupancyTaskGroups({
         const tasks: GanttTask[] = [];
         bedPlans.forEach((plan) => {
           const plantingDate = parseDateString(plan.planting_date);
-          const harvestStartDate = parseDateString(plan.harvest_date!);
+          const harvestStartDate = parseDateString(plan.harvest_date);
+          const harvestEndDate = parseDateString(plan.harvest_end_date);
           const baseColor = getCultureColor(cultures, plan.culture, plan.culture_name || '', plan.culture_display_color);
           const cultureLabel = formatCultureDisplayLabel(
             plan.culture_name || `Culture ${plan.culture}`,
             plan.culture_variety,
           );
-          const harvestEndDate = plan.harvest_end_date
-            ? parseDateString(plan.harvest_end_date)
-            : harvestStartDate;
 
           tasks.push({
             id: `plan-${plan.id}-growth`,
@@ -484,15 +484,13 @@ export function buildFieldOccupancyHierarchy({
     const tasks: GanttTask[] = [];
     bedPlans.forEach((plan) => {
       const plantingDate = parseDateString(plan.planting_date);
-      const harvestStartDate = parseDateString(plan.harvest_date!);
+      const harvestStartDate = parseDateString(plan.harvest_date);
+      const harvestEndDate = parseDateString(plan.harvest_end_date);
       const baseColor = getCultureColor(cultures, plan.culture, plan.culture_name || '', plan.culture_display_color);
       const cultureLabel = formatCultureDisplayLabel(
         plan.culture_name || `Culture ${plan.culture}`,
         plan.culture_variety,
       );
-      const harvestEndDate = plan.harvest_end_date
-        ? parseDateString(plan.harvest_end_date)
-        : harvestStartDate;
 
       tasks.push({
         id: `plan-${plan.id}-growth`,

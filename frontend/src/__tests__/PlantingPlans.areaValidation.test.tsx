@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
 import PlantingPlans from "../pages/PlantingPlans";
 import type { EditableDataGridCommandApi } from "../components/data-grid";
 
@@ -344,6 +345,52 @@ describe("PlantingPlans save-time area validation", () => {
       expect.objectContaining({ minWidth: 142, width: 142, maxWidth: 142 }),
     ]);
     expect(dateColumns.every((column) => column?.renderEditCell === undefined)).toBe(true);
+  });
+
+  it("renders unavailable calculated harvest dates with a dash and explanatory tooltip", async () => {
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+
+    const latestProps = commandApiSpies.gridProps.mock.calls.at(-1)?.[0];
+    const columns = latestProps?.columns ?? [];
+    const harvestStartColumn = columns.find((column: { field: string }) => column.field === "harvest_date");
+    const harvestEndColumn = columns.find((column: { field: string }) => column.field === "harvest_end_date");
+    const renderCell = (column: { renderCell?: (params: unknown) => ReactNode }, row: Record<string, unknown>) => (
+      column.renderCell?.({
+        field: column === harvestEndColumn ? "harvest_end_date" : "harvest_date",
+        row,
+      })
+    );
+
+    const completeStart = render(<>{renderCell(harvestStartColumn, {
+      id: 1,
+      harvest_date: "2026-05-01",
+      harvest_end_date: "2026-05-08",
+    })}</>);
+    expect(completeStart.getByText("1.5.2026")).toBeInTheDocument();
+    completeStart.unmount();
+
+    const missingStart = render(<>{renderCell(harvestStartColumn, {
+      id: 2,
+      harvest_date: null,
+      harvest_end_date: null,
+    })}</>);
+    const missingDash = missingStart.getByText("—");
+    expect(missingDash).toBeInTheDocument();
+    await userEvent.hover(missingDash);
+    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur keine Kulturdauer hinterlegt ist.")).toBeInTheDocument();
+    missingStart.unmount();
+
+    const partialEnd = render(<>{renderCell(harvestEndColumn, {
+      id: 3,
+      harvest_date: "2026-05-01",
+      harvest_end_date: null,
+    })}</>);
+    const partialDash = partialEnd.getByText("—");
+    expect(partialDash).toBeInTheDocument();
+    await userEvent.hover(partialDash);
+    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur keine Kulturdauer hinterlegt ist.")).toBeInTheDocument();
+    partialEnd.unmount();
   });
 
   it("shows bed-limit dialog when requested area exceeds bed area", async () => {
