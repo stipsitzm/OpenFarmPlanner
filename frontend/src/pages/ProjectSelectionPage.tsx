@@ -17,10 +17,11 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { projectAPI, type ProjectPayload } from '../api/api';
 import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
+import { createDemoProjectAndSwitch } from '../projects/demoProjectFlow';
 import { clearDevOnboardingPreview, isDevOnboardingPreviewEnabled } from '../projects/devOnboardingPreview';
 import { openProjectCreationFlow } from '../projects/projectCreationFlow';
 import { showProjectDeleteUndoSnackbar } from '../projects/projectDeletionFeedback';
@@ -32,6 +33,7 @@ const isDevQuickDeleteEnabled = import.meta.env.DEV;
 export default function ProjectSelectionPage() {
   const { user, switchActiveProject, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation(['navigation', 'common', 'projectInvitations']);
   const memberships = user?.memberships ?? [];
   const [isDevOnboardingPreview, setIsDevOnboardingPreview] = useState(() => isDevOnboardingPreviewEnabled());
@@ -78,7 +80,8 @@ export default function ProjectSelectionPage() {
     [deletedProjects],
   );
   const visibleMemberships = isDevOnboardingPreview ? [] : memberships;
-  const isOnboardingState = visibleMemberships.length === 0;
+  const isRestartingOnboarding = searchParams.get('onboarding') === '1' && memberships.length > 0;
+  const isOnboardingState = visibleMemberships.length === 0 || isRestartingOnboarding;
   const shouldShowProjectTrash = !isOnboardingState || deletedProjectsByName.length > 0 || Boolean(trashError);
 
   const stopDevOnboardingPreview = (): void => {
@@ -103,9 +106,8 @@ export default function ProjectSelectionPage() {
     setIsCreatingDemoProject(true);
     setDemoError(null);
     try {
-      const response = await projectAPI.createDemo();
+      await createDemoProjectAndSwitch(switchActiveProject);
       stopDevOnboardingPreview();
-      await switchActiveProject(response.data.id);
       showSnackbar(t('common:projectOnboarding.demoCreatedHint'), 'success');
       navigate('/app/fields-beds', { replace: true });
     } catch (error) {
@@ -189,11 +191,15 @@ export default function ProjectSelectionPage() {
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'flex-start' }}>
           <Box>
             <Typography variant="h5">
-              {isOnboardingState ? t('common:projectOnboarding.pageTitle') : t('project.switch')}
+              {isRestartingOnboarding
+                ? t('common:projectOnboarding.restartTitle')
+                : isOnboardingState ? t('common:projectOnboarding.pageTitle') : t('project.switch')}
             </Typography>
             {isOnboardingState ? (
               <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 620, lineHeight: 1.6 }}>
-                {t('common:projectOnboarding.pageDescription')}
+                {isRestartingOnboarding
+                  ? t('common:projectOnboarding.restartDescription')
+                  : t('common:projectOnboarding.pageDescription')}
               </Typography>
             ) : null}
           </Box>

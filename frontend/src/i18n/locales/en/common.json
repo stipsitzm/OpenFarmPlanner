@@ -22,6 +22,8 @@
   "projectOnboarding": {
     "pageTitle": "Start your first project",
     "pageDescription": "Choose whether to begin with your own empty project or explore OpenFarmPlanner first with realistic sample data.",
+    "restartTitle": "Restart introduction",
+    "restartDescription": "You can reopen the introduction at any time without changing your existing projects.",
     "emptyTitle": "Start with an empty project",
     "emptyDescription": "Create your own project and add locations, crops, and planting plans step by step.",
     "emptyAction": "Create empty project",

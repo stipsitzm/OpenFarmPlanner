@@ -32,7 +32,9 @@
     "createNameLabel": "Projektname",
     "createCancel": "Abbrechen",
     "createSubmit": "Projekt anlegen",
-    "createError": "Projekt konnte nicht erstellt werden."
+    "createError": "Projekt konnte nicht erstellt werden.",
+    "loadDemoProject": "Demo-Projekt laden",
+    "restartOnboarding": "Einführung erneut starten"
   },
   "projectRoles": {
     "admin": "Admin",

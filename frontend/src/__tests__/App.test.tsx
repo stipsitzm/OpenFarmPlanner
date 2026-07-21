@@ -37,6 +37,18 @@ const projectApiMocks = vi.hoisted(() => ({
       updated_at: '2026-01-01T00:00:00Z',
     },
   })),
+  createDemo: vi.fn(async () => ({
+    data: {
+      id: 9,
+      name: 'Solawi Sonnenacker',
+      slug: 'solawi-sonnenacker',
+      description: '',
+      is_active: true,
+      deleted_at: null,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    },
+  })),
 }));
 
 vi.mock('../auth/useAuth', () => ({
@@ -50,6 +62,7 @@ vi.mock('../api/api', async () => {
     projectAPI: {
       ...actual.projectAPI,
       create: projectApiMocks.create,
+      createDemo: projectApiMocks.createDemo,
     },
   };
 });
@@ -77,6 +90,19 @@ describe('App', () => {
     authState.activeProjectId = null;
     authState.switchActiveProject.mockClear();
     projectApiMocks.create.mockClear();
+    projectApiMocks.createDemo.mockClear();
+    projectApiMocks.createDemo.mockResolvedValue({
+      data: {
+        id: 9,
+        name: 'Solawi Sonnenacker',
+        slug: 'solawi-sonnenacker',
+        description: '',
+        is_active: true,
+        deleted_at: null,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    });
     localStorage.clear();
     window.history.pushState({}, '', '/');
   });
@@ -246,8 +272,66 @@ describe('App', () => {
     expect(await screen.findByText('Projekteinstellungen')).toBeInTheDocument();
     expect(screen.queryByText('Mitglieder verwalten')).not.toBeInTheDocument();
     expect(await screen.findByText('Neues Projekt')).toBeInTheDocument();
+    expect(screen.getByText('Demo-Projekt laden')).toBeInTheDocument();
+    expect(screen.getByText('Einführung erneut starten')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Neues Projekt'));
     expect(await screen.findByRole('heading', { name: 'Projekt anlegen' })).toBeInTheDocument();
+  });
+
+  it('loads the demo project directly from the project switcher menu', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: 1,
+      last_project_id: 1,
+      resolved_project_id: 1,
+      needs_project_selection: false,
+      memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+      pending_consents: [],
+    };
+    authState.activeProjectId = 1;
+    window.history.pushState({}, '', '/app/dashboard');
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
+    fireEvent.click(await screen.findByText('Demo-Projekt laden'));
+
+    await waitFor(() => {
+      expect(projectApiMocks.createDemo).toHaveBeenCalledTimes(1);
+      expect(authState.switchActiveProject).toHaveBeenCalledWith(9);
+    });
+  });
+
+  it('restarts onboarding from the project switcher without creating a demo project', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: 1,
+      last_project_id: 1,
+      resolved_project_id: 1,
+      needs_project_selection: false,
+      memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+      pending_consents: [],
+    };
+    authState.activeProjectId = 1;
+    window.history.pushState({}, '', '/app/dashboard');
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
+    fireEvent.click(await screen.findByText('Einführung erneut starten'));
+
+    expect(await screen.findByRole('heading', { name: 'Einführung erneut starten' })).toBeInTheDocument();
+    expect(projectApiMocks.createDemo).not.toHaveBeenCalled();
   });
 
   it('opens project settings from the project switcher menu', async () => {
@@ -340,7 +424,7 @@ describe('App', () => {
     expect(authState.switchActiveProject).toHaveBeenCalledWith(2);
   });
 
-  it('does not show cultures load error for users without projects', async () => {
+  it('automatically opens onboarding for users without projects', async () => {
     authState.user = {
       id: 1,
       email: 'demo@example.com',
@@ -361,11 +445,12 @@ describe('App', () => {
 
     render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
 
-    expect(await screen.findByRole('heading', { name: 'Kulturen' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Erstes Projekt starten' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/app/project-selection');
     expect(screen.queryByText('Fehler beim Laden der Kulturen')).not.toBeInTheDocument();
   });
 
-  it('does not open supplier creation from query intent for users without projects', async () => {
+  it('opens onboarding instead of supplier creation from query intent for users without projects', async () => {
     authState.user = {
       id: 1,
       email: 'demo@example.com',
@@ -386,7 +471,7 @@ describe('App', () => {
 
     render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
 
-    expect(await screen.findByRole('heading', { name: 'Lieferanten' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Erstes Projekt starten' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '+ Lieferant anlegen' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Speichern' })).not.toBeInTheDocument();
   });
@@ -398,16 +483,16 @@ describe('App', () => {
       display_name: 'Demo',
       display_label: 'Demo',
       is_active: true,
-      default_project_id: null,
-      last_project_id: null,
-      resolved_project_id: null,
+      default_project_id: 1,
+      last_project_id: 1,
+      resolved_project_id: 1,
       needs_project_selection: false,
-      memberships: [],
+      memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
       account_pending_deletion: false,
       scheduled_deletion_at: null,
       pending_consents: [],
     };
-    authState.activeProjectId = null;
+    authState.activeProjectId = 1;
 
     for (const { initialPath, previousHeading } of [
       { initialPath: '/app/cultures', previousHeading: 'Kulturen' },
@@ -459,16 +544,16 @@ describe('App', () => {
       display_name: 'Demo',
       display_label: 'Demo',
       is_active: true,
-      default_project_id: null,
-      last_project_id: null,
-      resolved_project_id: null,
+      default_project_id: 1,
+      last_project_id: 1,
+      resolved_project_id: 1,
       needs_project_selection: false,
-      memberships: [],
+      memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
       account_pending_deletion: false,
       scheduled_deletion_at: null,
       pending_consents: [],
     };
-    authState.activeProjectId = null;
+    authState.activeProjectId = 1;
     window.history.pushState({}, '', '/app/this-does-not-exist');
 
     render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
