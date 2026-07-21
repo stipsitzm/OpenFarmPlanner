@@ -5,12 +5,7 @@ import {
   AccordionSummary,
   Alert,
   Box,
-  Button,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   IconButton,
   Paper,
   Stack,
@@ -41,6 +36,7 @@ import {
 } from "../api/api";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useTranslation } from "../i18n";
+import { GraphicalFieldDetailsDialog } from "./GraphicalFieldDetailsDialog";
 import ModeToggle from "../components/ModeToggle";
 import {
   clampInsideParent,
@@ -1760,46 +1756,11 @@ export default function GraphicalFields({
         },
       )}
 
-      <Dialog
-        open={Boolean(selectedElement)}
+      <GraphicalFieldDetailsDialog
+        element={selectedElement}
         onClose={() => setSelectedElement(null)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>
-          {selectedElement
-            ? t(`fields:graphical.details.${selectedElement.type}`)
-            : ""}
-        </DialogTitle>
-        <DialogContent>
-          {selectedElement ? (
-            <Stack spacing={1} sx={{ mt: 1 }}>
-              <Typography>
-                {t("common:fields.name")}: {selectedElement.name}
-              </Typography>
-              <Typography>
-                {t("fields:graphical.location")}: {selectedElement.locationName}
-              </Typography>
-              {selectedElement.parentName ? (
-                <Typography>
-                  {t("fields:graphical.parentField")}:{" "}
-                  {selectedElement.parentName}
-                </Typography>
-              ) : null}
-              {selectedElement.area !== null ? (
-                <Typography>
-                  {t("fields:graphical.area")}: {selectedElement.area} m²
-                </Typography>
-              ) : null}
-            </Stack>
-          ) : null}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSelectedElement(null)}>
-            {t("common:actions.close")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        t={t}
+      />
     </Box>
   );
 }
