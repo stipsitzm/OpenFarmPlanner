@@ -46,12 +46,12 @@ class SerializerBranchCoverageTest(TestCase):
                 'harvest_duration_days': 2,
                 'harvest_method': 'per_sqm',
                 'supplier_name': '  ACME Seeds GmbH ',
-                'project': self.project.id,
             }
         )
 
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        culture = serializer.save()
+        # `project` is read-only on the serializer and assigned server-side.
+        culture = serializer.save(project=self.project)
 
         self.assertIsNotNone(culture.supplier)
         self.assertEqual(culture.supplier.name_normalized, 'acme seeds')
@@ -250,12 +250,12 @@ class SerializerBranchCoverageTest(TestCase):
                 'seed_rate_direct_unit': 'g_per_m2',
                 'seed_rate_pre_cultivation_value': 1.357,
                 'seed_rate_pre_cultivation_unit': 'g_per_m2',
-                'project': self.project.id,
             }
         )
 
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        culture = serializer.save()
+        # `project` is read-only on the serializer and assigned server-side.
+        culture = serializer.save(project=self.project)
         self.assertEqual(culture.seed_rate_direct_value, 0.014)
         self.assertEqual(culture.seed_rate_pre_cultivation_value, 1.357)
 
