@@ -103,6 +103,7 @@ describe('ProjectSelectionPage', () => {
     expect(screen.getByText('Wähle, ob du mit einem eigenen leeren Projekt beginnst oder OpenFarmPlanner zuerst mit realistischen Beispieldaten ausprobierst.')).toBeInTheDocument();
     expect(screen.getByText('Demo-Projekt ausprobieren')).toBeInTheDocument();
     expect(screen.queryByText('Papierkorb')).not.toBeInTheDocument();
+    expect(projectApiMocks.listDeleted).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Leeres Projekt anlegen' }));
     expect(dispatchSpy).toHaveBeenCalled();
     dispatchSpy.mockRestore();
@@ -123,6 +124,39 @@ describe('ProjectSelectionPage', () => {
     expect(screen.getByRole('heading', { name: 'Einführung erneut starten' })).toBeInTheDocument();
     expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
     expect(screen.getByText('Demo-Projekt ausprobieren')).toBeInTheDocument();
+  });
+
+  it('opens the project trash from an explicit URL and restores deleted projects', async () => {
+    projectApiMocks.listDeleted.mockResolvedValue({
+      data: [{
+        id: 7,
+        name: 'Gelöschtes Projekt',
+        slug: 'geloeschtes-projekt',
+        description: '',
+        is_active: false,
+        deleted_at: '2026-01-01T00:00:00Z',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }],
+    });
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+
+    render(<MemoryRouter initialEntries={['/app/project-selection?trash=1']}><ProjectSelectionPage /></MemoryRouter>);
+
+    expect(await screen.findByRole('heading', { name: 'Papierkorb' })).toBeInTheDocument();
+    expect(screen.queryByText('Demo-Projekt ausprobieren')).not.toBeInTheDocument();
+    expect(await screen.findByText('Gelöschtes Projekt')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wiederherstellen' }));
+
+    await waitFor(() => {
+      expect(projectApiMocks.restore).toHaveBeenCalledWith(7);
+      expect(authState.refreshUser).toHaveBeenCalled();
+    });
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'ofp:project-trash-changed',
+    }));
+    dispatchSpy.mockRestore();
   });
 
   it('creates and opens a demo project from onboarding', async () => {

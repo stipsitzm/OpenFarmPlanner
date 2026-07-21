@@ -21,6 +21,9 @@ The frontend opens the first-project onboarding automatically only while the
 authenticated user's project membership list is empty. Once the user has at
 least one project, onboarding is available only through the project switcher's
 explicit restart action; loading the demo project remains a separate action.
+The onboarding screen itself stays focused on starting a project. Deleted
+projects are restored or permanently deleted through the project switcher's
+trash entry, which opens the existing project trash view.
 
 To adjust the template, update the specs in `demo_project.py` and extend the
 focused backend tests in `backend/farm/tests/test_demo_project.py`. The project

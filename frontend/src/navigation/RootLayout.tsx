@@ -63,6 +63,7 @@ import PublicIcon from '@mui/icons-material/Public';
 import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
@@ -139,6 +140,7 @@ interface ProjectMenuProps {
   activeProjectId: number | null;
   isSwitchingProject: boolean;
   isCreatingDemoProject: boolean;
+  deletedProjectsCount: number;
   onClose: () => void;
   onSwitchProject: (projectId: number) => Promise<void>;
   onOpenProjectSettings: () => void;
@@ -146,7 +148,8 @@ interface ProjectMenuProps {
   onOpenCreateProject: () => void;
   onCreateDemoProject: () => void;
   onRestartOnboarding: () => void;
-  t: (key: string) => string;
+  onOpenProjectTrash: () => void;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }
 
 function ProjectMenu(props: ProjectMenuProps) {
@@ -157,6 +160,7 @@ function ProjectMenu(props: ProjectMenuProps) {
     activeProjectId,
     isSwitchingProject,
     isCreatingDemoProject,
+    deletedProjectsCount,
     onClose,
     onSwitchProject,
     onOpenProjectSettings,
@@ -164,6 +168,7 @@ function ProjectMenu(props: ProjectMenuProps) {
     onOpenCreateProject,
     onCreateDemoProject,
     onRestartOnboarding,
+    onOpenProjectTrash,
     t,
   } = props;
 
@@ -213,6 +218,12 @@ function ProjectMenu(props: ProjectMenuProps) {
         <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
         {t('projectSwitcher.restartOnboarding')}
       </MenuItem>
+      {deletedProjectsCount > 0 ? (
+        <MenuItem onClick={onOpenProjectTrash}>
+          <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><DeleteOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
+          {t('projectSwitcher.trash', { count: deletedProjectsCount })}
+        </MenuItem>
+      ) : null}
     </Menu>
   );
 }
@@ -352,6 +363,7 @@ function RootLayout() {
   const [isSwitchingProject, setIsSwitchingProject] = useState(false);
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [isCreatingDemoProject, setIsCreatingDemoProject] = useState(false);
+  const [deletedProjectsCount, setDeletedProjectsCount] = useState(0);
   const [newProjectName, setNewProjectName] = useState('');
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [topbarContextActions, setTopbarContextActions] = useState<TopbarContextAction[]>([]);
@@ -398,6 +410,7 @@ function RootLayout() {
 
   const handleProjectMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setProjectMenuAnchor(event.currentTarget);
+    void refreshDeletedProjectsCount();
   };
 
   const handleProjectMenuClose = useCallback(() => {
@@ -531,6 +544,36 @@ function RootLayout() {
   const activeMembership = memberships.find((membership) => membership.project_id === activeProjectId) ?? null;
   const activeProjectLabel = activeMembership?.project_name ?? t('projectSwitcher.noProject');
 
+  const refreshDeletedProjectsCount = useCallback(async (): Promise<void> => {
+    if (!user) {
+      setDeletedProjectsCount(0);
+      return;
+    }
+    try {
+      const response = await projectAPI.listDeleted();
+      const payload = response.data;
+      const deletedProjects = Array.isArray(payload) ? payload : payload.results;
+      setDeletedProjectsCount(deletedProjects.length);
+    } catch {
+      setDeletedProjectsCount(0);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+    void refreshDeletedProjectsCount();
+  }, [refreshDeletedProjectsCount, user]);
+
+  useEffect(() => {
+    const handleProjectTrashChanged = (): void => {
+      void refreshDeletedProjectsCount();
+    };
+    window.addEventListener('ofp:project-trash-changed', handleProjectTrashChanged);
+    return () => window.removeEventListener('ofp:project-trash-changed', handleProjectTrashChanged);
+  }, [refreshDeletedProjectsCount]);
+
   useEffect(() => {
     if (!user || memberships.length > 0 || location.pathname === '/app/project-selection') {
       return;
@@ -565,6 +608,11 @@ function RootLayout() {
   const handleRestartOnboarding = useCallback((): void => {
     handleProjectMenuClose();
     navigate('/app/project-selection?onboarding=1');
+  }, [handleProjectMenuClose, navigate]);
+
+  const handleOpenProjectTrash = useCallback((): void => {
+    handleProjectMenuClose();
+    navigate('/app/project-selection?trash=1');
   }, [handleProjectMenuClose, navigate]);
 
   const applyProjectContextChange = useCallback(async (projectId: number): Promise<void> => {
@@ -1325,6 +1373,7 @@ function RootLayout() {
             activeProjectId={activeProjectId}
             isSwitchingProject={isSwitchingProject}
             isCreatingDemoProject={isCreatingDemoProject}
+            deletedProjectsCount={deletedProjectsCount}
             onClose={handleProjectMenuClose}
             onSwitchProject={handleSwitchProject}
             onOpenProjectSettings={handleOpenProjectSettings}
@@ -1332,6 +1381,7 @@ function RootLayout() {
             onOpenCreateProject={handleOpenCreateProject}
             onCreateDemoProject={() => { void handleCreateDemoProject(); }}
             onRestartOnboarding={handleRestartOnboarding}
+            onOpenProjectTrash={handleOpenProjectTrash}
             t={t}
           />
           <IconButton

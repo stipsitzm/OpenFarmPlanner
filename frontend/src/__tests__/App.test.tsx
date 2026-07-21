@@ -49,6 +49,7 @@ const projectApiMocks = vi.hoisted(() => ({
       updated_at: '2026-01-01T00:00:00Z',
     },
   })),
+  listDeleted: vi.fn(async () => ({ data: [] })),
 }));
 
 vi.mock('../auth/useAuth', () => ({
@@ -63,6 +64,7 @@ vi.mock('../api/api', async () => {
       ...actual.projectAPI,
       create: projectApiMocks.create,
       createDemo: projectApiMocks.createDemo,
+      listDeleted: projectApiMocks.listDeleted,
     },
   };
 });
@@ -91,6 +93,8 @@ describe('App', () => {
     authState.switchActiveProject.mockClear();
     projectApiMocks.create.mockClear();
     projectApiMocks.createDemo.mockClear();
+    projectApiMocks.listDeleted.mockClear();
+    projectApiMocks.listDeleted.mockResolvedValue({ data: [] });
     projectApiMocks.createDemo.mockResolvedValue({
       data: {
         id: 9,
@@ -274,8 +278,49 @@ describe('App', () => {
     expect(await screen.findByText('Neues Projekt')).toBeInTheDocument();
     expect(screen.getByText('Demo-Projekt laden')).toBeInTheDocument();
     expect(screen.getByText('Einführung erneut starten')).toBeInTheDocument();
+    expect(screen.queryByText(/Papierkorb/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Neues Projekt'));
     expect(await screen.findByRole('heading', { name: 'Projekt anlegen' })).toBeInTheDocument();
+  });
+
+  it('opens the project trash from the project switcher when deleted projects exist', async () => {
+    authState.user = {
+      id: 1,
+      email: 'demo@example.com',
+      display_name: 'Demo',
+      display_label: 'Demo',
+      is_active: true,
+      default_project_id: 1,
+      last_project_id: 1,
+      resolved_project_id: 1,
+      needs_project_selection: false,
+      memberships: [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
+      account_pending_deletion: false,
+      scheduled_deletion_at: null,
+      pending_consents: [],
+    };
+    authState.activeProjectId = 1;
+    projectApiMocks.listDeleted.mockResolvedValue({
+      data: [{
+        id: 7,
+        name: 'Gelöscht',
+        slug: 'geloescht',
+        description: '',
+        is_active: false,
+        deleted_at: '2026-01-01T00:00:00Z',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }],
+    });
+    window.history.pushState({}, '', '/app/dashboard');
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+    fireEvent.click(await screen.findByRole('button', { name: 'Aktives Projekt wechseln' }));
+    fireEvent.click(await screen.findByText('Papierkorb (1)'));
+
+    expect(await screen.findByRole('heading', { name: 'Papierkorb' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/app/project-selection');
+    expect(window.location.search).toBe('?trash=1');
   });
 
   it('loads the demo project directly from the project switcher menu', async () => {

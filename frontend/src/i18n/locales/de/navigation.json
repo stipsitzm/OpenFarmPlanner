@@ -34,7 +34,8 @@
     "createSubmit": "Projekt anlegen",
     "createError": "Projekt konnte nicht erstellt werden.",
     "loadDemoProject": "Demo-Projekt laden",
-    "restartOnboarding": "Einführung erneut starten"
+    "restartOnboarding": "Einführung erneut starten",
+    "trash": "Papierkorb ({{count}})"
   },
   "projectRoles": {
     "admin": "Admin",
