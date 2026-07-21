@@ -1855,7 +1855,7 @@ function PlantingPlans() {
           showDeleteAction={false}
           showFooterEditControls={false}
           showRowEditActions={false}
-          inlineRowActionField="bed"
+          inlineRowActionField="culture"
           showInlineRowActionMenu
           getRowActions={() => [
             {

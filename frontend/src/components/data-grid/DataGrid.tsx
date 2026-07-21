@@ -1867,6 +1867,7 @@ export function EditableDataGrid<T extends EditableRow>({
     const baseContent: ReactNode = col.renderCell
       ? col.renderCell(params)
       : String(params.formattedValue ?? params.value ?? '');
+    const hasEmptyTextContent = typeof baseContent === 'string' && baseContent.length === 0;
 
     if (actions.length === 0 && !hasInlineMenuAction) {
       return baseContent;
@@ -1878,6 +1879,7 @@ export function EditableDataGrid<T extends EditableRow>({
           position: 'relative',
           display: 'flex',
           alignItems: 'center',
+          minHeight: '100%',
           minWidth: 0,
           width: '100%',
           overflow: 'hidden',
@@ -1893,7 +1895,11 @@ export function EditableDataGrid<T extends EditableRow>({
             whiteSpace: 'nowrap',
           }}
         >
-          {baseContent}
+          {hasEmptyTextContent ? (
+            <Box component="span" aria-hidden="true" sx={{ visibility: 'hidden' }}>
+              {'\u00a0'}
+            </Box>
+          ) : baseContent}
         </Box>
         <Box
           className="ofp-inline-row-actions"

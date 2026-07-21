@@ -1148,6 +1148,32 @@ describe('EditableDataGrid', () => {
     await waitFor(() => expect(deleteSpy).toHaveBeenCalledWith(1));
   });
 
+  it('renders configured inline row actions when the requested cell is empty', async () => {
+    const props = basePropsWithRows([createGridRow({ id: 1, name: '', area_sqm: 12 })]);
+    const deleteSpy = vi.spyOn(props.api, 'delete');
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <EditableDataGrid
+        {...props}
+        showDeleteAction={false}
+        inlineRowActionField="name"
+        getInlineRowActions={(row, helpers) => [
+          {
+            id: 'delete',
+            label: 'Löschen',
+            onClick: () => helpers.delete(row.id),
+          },
+        ]}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('row-1')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+
+    await waitFor(() => expect(deleteSpy).toHaveBeenCalledWith(1));
+  });
+
   it('opens the contextual row action menu from the configured inline actions cell', async () => {
     render(
       <EditableDataGrid

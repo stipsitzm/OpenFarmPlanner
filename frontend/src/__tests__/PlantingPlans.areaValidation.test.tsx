@@ -267,7 +267,7 @@ describe("PlantingPlans save-time area validation", () => {
     expect(latestProps).toMatchObject({
       showDeleteAction: false,
       showRowEditActions: false,
-      inlineRowActionField: "bed",
+      inlineRowActionField: "culture",
       deleteUndoOptions: {
         message: "Anbauplan gelöscht",
         snackbarTestId: "planting-plan-delete-snackbar",
