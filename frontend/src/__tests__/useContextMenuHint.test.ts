@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { AuthContext, type AuthContextValue } from '../auth/authContextShared';
 import {
   CONTEXT_MENU_HINT_STORAGE_KEY,
+  clearContextMenuHintDismissals,
   shouldShowContextMenuHint,
   useContextMenuHint,
 } from '../components/data-grid/useContextMenuHint';
@@ -82,8 +83,125 @@ describe('useContextMenuHint', () => {
     })).toBe(false);
   });
 
-  it('stores context menu usage without hiding the hint during the current mount', async () => {
+  it('shows the hint independently for multiple table contexts', async () => {
+    const plantingPlans = renderHook(() => useContextMenuHint({
+      contextKey: 'plantingPlans',
+      isDesktop: true,
+      isLoading: false,
+      hasRows: true,
+    }));
+    const fieldsBeds = renderHook(() => useContextMenuHint({
+      contextKey: 'fieldsBeds',
+      isDesktop: true,
+      isLoading: false,
+      hasRows: true,
+    }));
+
+    await waitFor(() => expect(plantingPlans.result.current.showContextMenuHint).toBe(true));
+    await waitFor(() => expect(fieldsBeds.result.current.showContextMenuHint).toBe(true));
+  });
+
+  it('hides only the current table context after the row context menu is used', async () => {
+    const plantingPlans = renderHook(() => useContextMenuHint({
+      contextKey: 'plantingPlans',
+      isDesktop: true,
+      isLoading: false,
+      hasRows: true,
+    }));
+    const fieldsBeds = renderHook(() => useContextMenuHint({
+      contextKey: 'fieldsBeds',
+      isDesktop: true,
+      isLoading: false,
+      hasRows: true,
+    }));
+
+    await waitFor(() => expect(plantingPlans.result.current.showContextMenuHint).toBe(true));
+    await waitFor(() => expect(fieldsBeds.result.current.showContextMenuHint).toBe(true));
+
+    act(() => plantingPlans.result.current.markContextMenuHintUsed());
+
+    expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:context:plantingPlans`)).toBe('1');
+    expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:context:fieldsBeds`)).toBeNull();
+    await waitFor(() => expect(plantingPlans.result.current.showContextMenuHint).toBe(false));
+    expect(fieldsBeds.result.current.showContextMenuHint).toBe(true);
+  });
+
+  it('keeps the per-context dismissal after a reload', async () => {
+    const { result, unmount } = renderHook(() => useContextMenuHint({
+      contextKey: 'plantingPlans',
+      isDesktop: true,
+      isLoading: false,
+      hasRows: true,
+    }));
+
+    await waitFor(() => expect(result.current.showContextMenuHint).toBe(true));
+
+    act(() => result.current.markContextMenuHintUsed());
+    await waitFor(() => expect(result.current.showContextMenuHint).toBe(false));
+
+    unmount();
+
+    const remountedPlantingPlans = renderHook(() => useContextMenuHint({
+      contextKey: 'plantingPlans',
+      isDesktop: true,
+      isLoading: false,
+      hasRows: true,
+    }));
+    const remountedFieldsBeds = renderHook(() => useContextMenuHint({
+      contextKey: 'fieldsBeds',
+      isDesktop: true,
+      isLoading: false,
+      hasRows: true,
+    }));
+
+    expect(remountedPlantingPlans.result.current.showContextMenuHint).toBe(false);
+    await waitFor(() => expect(remountedFieldsBeds.result.current.showContextMenuHint).toBe(true));
+  });
+
+  it('hides only the current table context when it is manually closed', async () => {
+    const plantingPlans = renderHook(() => useContextMenuHint({
+      contextKey: 'plantingPlans',
+      isDesktop: true,
+      isLoading: false,
+      hasRows: true,
+    }));
+    const fieldsBeds = renderHook(() => useContextMenuHint({
+      contextKey: 'fieldsBeds',
+      isDesktop: true,
+      isLoading: false,
+      hasRows: true,
+    }));
+
+    await waitFor(() => expect(plantingPlans.result.current.showContextMenuHint).toBe(true));
+    await waitFor(() => expect(fieldsBeds.result.current.showContextMenuHint).toBe(true));
+
+    act(() => fieldsBeds.result.current.closeContextMenuHint());
+
+    expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:context:fieldsBeds`)).toBe('1');
+    expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:context:plantingPlans`)).toBeNull();
+    await waitFor(() => expect(fieldsBeds.result.current.showContextMenuHint).toBe(false));
+    expect(plantingPlans.result.current.showContextMenuHint).toBe(true);
+  });
+
+  it('ignores legacy global dismissals for context-specific hints', async () => {
+    window.localStorage.setItem(CONTEXT_MENU_HINT_STORAGE_KEY, '1');
+    window.localStorage.setItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:user:7`, '1');
+
     const { result } = renderHook(() => useContextMenuHint({
+      contextKey: 'plantingPlans',
+      isDesktop: true,
+      isLoading: false,
+      hasRows: true,
+    }), {
+      wrapper: createAuthWrapper(createAuthValue(7)),
+    });
+
+    await waitFor(() => expect(result.current.showContextMenuHint).toBe(true));
+  });
+
+  it('stores context menu usage for the current table context', async () => {
+    const { result } = renderHook(() => useContextMenuHint({
+      contextKey: 'plantingPlans',
       isDesktop: true,
       isLoading: false,
       hasRows: true,
@@ -93,22 +211,7 @@ describe('useContextMenuHint', () => {
 
     act(() => result.current.markContextMenuHintUsed());
 
-    expect(window.localStorage.getItem(CONTEXT_MENU_HINT_STORAGE_KEY)).toBe('1');
-    expect(result.current.showContextMenuHint).toBe(true);
-  });
-
-  it('hides the hint immediately when it is manually closed', async () => {
-    const { result } = renderHook(() => useContextMenuHint({
-      isDesktop: true,
-      isLoading: false,
-      hasRows: true,
-    }));
-
-    await waitFor(() => expect(result.current.showContextMenuHint).toBe(true));
-
-    act(() => result.current.closeContextMenuHint());
-
-    expect(window.localStorage.getItem(CONTEXT_MENU_HINT_STORAGE_KEY)).toBe('1');
+    expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:context:plantingPlans`)).toBe('1');
     await waitFor(() => expect(result.current.showContextMenuHint).toBe(false));
   });
 
@@ -116,6 +219,7 @@ describe('useContextMenuHint', () => {
     window.localStorage.setItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:project:123`, '1');
 
     const { result } = renderHook(() => useContextMenuHint({
+      contextKey: 'plantingPlans',
       isDesktop: true,
       isLoading: false,
       hasRows: true,
@@ -127,9 +231,10 @@ describe('useContextMenuHint', () => {
 
   it('tracks dismissal per authenticated user instead of per browser', async () => {
     window.localStorage.setItem(CONTEXT_MENU_HINT_STORAGE_KEY, '1');
-    window.localStorage.setItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:user:1`, '1');
+    window.localStorage.setItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:user:1:context:plantingPlans`, '1');
 
     const { result } = renderHook(() => useContextMenuHint({
+      contextKey: 'plantingPlans',
       isDesktop: true,
       isLoading: false,
       hasRows: true,
@@ -141,7 +246,25 @@ describe('useContextMenuHint', () => {
 
     act(() => result.current.closeContextMenuHint());
 
-    expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:user:2`)).toBe('1');
+    expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:user:2:context:plantingPlans`)).toBe('1');
     await waitFor(() => expect(result.current.showContextMenuHint).toBe(false));
+  });
+
+  it('clears context-specific hint dismissals when account hints are reset', () => {
+    window.localStorage.setItem(CONTEXT_MENU_HINT_STORAGE_KEY, '1');
+    window.localStorage.setItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:context:plantingPlans`, '1');
+    window.localStorage.setItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:project:123`, '1');
+    window.localStorage.setItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:user:7`, '1');
+    window.localStorage.setItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:user:7:context:fieldsBeds`, '1');
+    window.localStorage.setItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:user:8:context:fieldsBeds`, '1');
+
+    act(() => clearContextMenuHintDismissals(7));
+
+    expect(window.localStorage.getItem(CONTEXT_MENU_HINT_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:context:plantingPlans`)).toBeNull();
+    expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:project:123`)).toBeNull();
+    expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:user:7`)).toBeNull();
+    expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:user:7:context:fieldsBeds`)).toBeNull();
+    expect(window.localStorage.getItem(`${CONTEXT_MENU_HINT_STORAGE_KEY}:user:8:context:fieldsBeds`)).toBe('1');
   });
 });

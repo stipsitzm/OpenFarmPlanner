@@ -43,7 +43,12 @@ export type { DataGridColumnState } from './calculatedColumns';
 export { DeleteUndoSnackbar, DELETE_UNDO_DURATION_MS } from './DeleteUndoSnackbar';
 export { ContextMenuHint } from './ContextMenuHint';
 export { TableCopyMenuItems } from './TableCopyMenuItems';
-export { CONTEXT_MENU_HINT_STORAGE_KEY, shouldShowContextMenuHint, useContextMenuHint } from './useContextMenuHint';
+export {
+  CONTEXT_MENU_HINT_STORAGE_KEY,
+  clearContextMenuHintDismissals,
+  shouldShowContextMenuHint,
+  useContextMenuHint,
+} from './useContextMenuHint';
 export { buildTsv, copyRowsToClipboard, copyTextToClipboard, copyTextToClipboardSilently, formatClipboardValue } from './tableClipboard';
 export type { TableClipboardRow } from './tableClipboard';
 

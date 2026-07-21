@@ -571,6 +571,7 @@ export function EditableDataGrid<T extends EditableRow>({
     [rowsForGrid],
   );
   const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
+    contextKey: tableKey ?? 'editableDataGrid',
     enabled: dataFetched && !error,
     isLoading: loading,
     hasRows: hasContextMenuHintRows,

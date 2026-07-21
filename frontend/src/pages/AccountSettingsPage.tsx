@@ -29,6 +29,7 @@ import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
 import { useNavigationBlocker } from '../hooks/useNavigationBlocker';
 import { enableDevOnboardingPreview } from '../projects/devOnboardingPreview';
+import { clearContextMenuHintDismissals } from '../components/data-grid';
 
 const actionButtonSx = { width: { xs: '100%', sm: 'auto' } } as const;
 
@@ -249,8 +250,7 @@ export default function AccountSettingsPage() {
 
   const handleResetHints = (): void => {
     localStorage.removeItem('ofp.shortcutHintSeen');
-    localStorage.removeItem(`ofp.contextMenuHintDismissed:user:${user?.id}`);
-    localStorage.removeItem('ofp.contextMenuHintDismissed');
+    clearContextMenuHintDismissals(user?.id);
     setHintsResetDone(true);
   };
 

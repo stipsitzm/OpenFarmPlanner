@@ -6,6 +6,7 @@ export const CONTEXT_MENU_HINT_STORAGE_KEY = 'ofp.contextMenuHintDismissed';
 const CONTEXT_MENU_HINT_STORAGE_EVENT = 'ofp:context-menu-hint-dismissed';
 
 interface UseContextMenuHintOptions {
+  contextKey: string;
   enabled?: boolean;
   isDesktop?: boolean;
   isLoading?: boolean;
@@ -34,12 +35,19 @@ export function shouldShowContextMenuHint({
   return isDesktop && !isLoading && hasRows && !hasDismissedHint;
 }
 
-function getContextMenuHintStorageKey(userId?: number | null): string {
+function normalizeContextMenuHintKey(contextKey: string): string {
+  const normalizedContextKey = contextKey.trim();
+  return normalizedContextKey.length > 0 ? normalizedContextKey : 'default';
+}
+
+function getContextMenuHintStorageKey(contextKey: string, userId?: number | null): string {
+  const normalizedContextKey = normalizeContextMenuHintKey(contextKey);
+
   if (userId !== undefined && userId !== null) {
-    return `${CONTEXT_MENU_HINT_STORAGE_KEY}:user:${userId}`;
+    return `${CONTEXT_MENU_HINT_STORAGE_KEY}:user:${userId}:context:${normalizedContextKey}`;
   }
 
-  return CONTEXT_MENU_HINT_STORAGE_KEY;
+  return `${CONTEXT_MENU_HINT_STORAGE_KEY}:context:${normalizedContextKey}`;
 }
 
 function hasStoredContextMenuHintDismissal(storageKey: string): boolean {
@@ -65,7 +73,38 @@ function storeContextMenuHintDismissal(storageKey: string, notifyCurrentPage = t
   }
 }
 
+export function clearContextMenuHintDismissals(userId?: number | null): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const removableKeys = new Set<string>([CONTEXT_MENU_HINT_STORAGE_KEY]);
+  const contextPrefixes = [
+    `${CONTEXT_MENU_HINT_STORAGE_KEY}:context:`,
+    `${CONTEXT_MENU_HINT_STORAGE_KEY}:project:`,
+  ];
+
+  if (userId !== undefined && userId !== null) {
+    removableKeys.add(`${CONTEXT_MENU_HINT_STORAGE_KEY}:user:${userId}`);
+    contextPrefixes.push(`${CONTEXT_MENU_HINT_STORAGE_KEY}:user:${userId}:context:`);
+  }
+
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+    if (!key) {
+      continue;
+    }
+    if (contextPrefixes.some((prefix) => key.startsWith(prefix))) {
+      removableKeys.add(key);
+    }
+  }
+
+  removableKeys.forEach((key) => window.localStorage.removeItem(key));
+  window.dispatchEvent(new Event(CONTEXT_MENU_HINT_STORAGE_EVENT));
+}
+
 export function useContextMenuHint({
+  contextKey,
   enabled = true,
   isDesktop,
   isLoading = false,
@@ -73,13 +112,19 @@ export function useContextMenuHint({
 }: UseContextMenuHintOptions): UseContextMenuHintResult {
   const authContext = useContext(AuthContext);
   const storageKey = useMemo(
-    () => getContextMenuHintStorageKey(authContext?.user?.id),
-    [authContext?.user?.id],
+    () => getContextMenuHintStorageKey(contextKey, authContext?.user?.id),
+    [authContext?.user?.id, contextKey],
   );
-  const [showContextMenuHint, setShowContextMenuHint] = useState(false);
   const [hasDismissedHint, setHasDismissedHint] = useState(() => hasStoredContextMenuHintDismissal(storageKey));
   const isDesktopPointer = useMediaQuery('(pointer: fine) and (min-width:901px)');
   const resolvedIsDesktop = isDesktop ?? isDesktopPointer;
+  const resolvedHasRows = hasRows ?? enabled;
+  const showContextMenuHint = enabled && shouldShowContextMenuHint({
+    isDesktop: resolvedIsDesktop,
+    isLoading,
+    hasRows: resolvedHasRows,
+    hasDismissedHint,
+  });
 
   useEffect(() => {
     const syncDismissalState = (): void => {
@@ -95,29 +140,14 @@ export function useContextMenuHint({
     };
   }, [storageKey]);
 
-  useEffect(() => {
-    const resolvedHasRows = hasRows ?? enabled;
-    if (!enabled || !shouldShowContextMenuHint({
-      isDesktop: resolvedIsDesktop,
-      isLoading,
-      hasRows: resolvedHasRows,
-      hasDismissedHint,
-    })) {
-      setShowContextMenuHint(false);
-      return;
-    }
-
-    setShowContextMenuHint(true);
-  }, [enabled, hasDismissedHint, hasRows, isLoading, resolvedIsDesktop]);
-
   const markContextMenuHintUsed = useCallback((): void => {
-    storeContextMenuHintDismissal(storageKey, false);
+    storeContextMenuHintDismissal(storageKey);
+    setHasDismissedHint(true);
   }, [storageKey]);
 
   const closeContextMenuHint = useCallback((): void => {
     storeContextMenuHintDismissal(storageKey);
     setHasDismissedHint(true);
-    setShowContextMenuHint(false);
   }, [storageKey]);
 
   return {

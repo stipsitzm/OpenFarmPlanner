@@ -296,6 +296,7 @@ function FieldsBedsHierarchy({
     || beds.length > 0
   );
   const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
+    contextKey: "fieldsBeds",
     enabled: !suppressContextMenuHint,
     isLoading: loading,
     hasRows: hasUsableHierarchyRows,

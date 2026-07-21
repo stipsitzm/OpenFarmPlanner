@@ -103,6 +103,7 @@ export default function SeedDemandPage() {
   const hasSeedData = hasCulturesWithSeedData;
   const canCalculateSeedDemand = locationCount > 0 && fieldCount > 0 && bedCount > 0 && cultureCount > 0 && hasPlans && hasSeedData;
   const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
+    contextKey: 'seedDemand',
     enabled: !shouldShowProjectRequiredState && canCalculateSeedDemand,
     isLoading,
     hasRows: rows.length > 0,
