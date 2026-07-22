@@ -92,6 +92,20 @@ export default function AuthPageShell({ title, subtitle, children, legalLinksDen
               justifyContent: 'center',
               textShadow: '0 1px 2px rgba(255, 255, 255, 0.9)',
             }}
+            linkSx={{
+              color: 'rgba(26, 32, 28, 0.74)',
+              fontWeight: 500,
+              transition: 'color 160ms ease',
+              '&:hover': {
+                color: 'primary.dark',
+              },
+              '&:focus-visible': {
+                color: 'primary.dark',
+                outline: '2px solid rgba(46, 125, 50, 0.32)',
+                outlineOffset: 3,
+                borderRadius: 0.5,
+              },
+            }}
           />
         </Stack>
       </Container>
