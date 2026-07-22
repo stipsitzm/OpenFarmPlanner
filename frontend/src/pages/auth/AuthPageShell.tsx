@@ -93,7 +93,7 @@ export default function AuthPageShell({ title, subtitle, children, legalLinksDen
               textShadow: '0 1px 2px rgba(255, 255, 255, 0.9)',
             }}
             linkSx={{
-              color: 'rgba(26, 32, 28, 0.74)',
+              color: 'text.primary',
               fontWeight: 500,
               transition: 'color 160ms ease',
               '&:hover': {
