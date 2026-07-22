@@ -11,6 +11,7 @@ from farm.models import (
     Project,
     ProjectMembership,
     PublicCulture,
+    PublicCultureStatusEvent,
     SeedPackage,
 )
 from farm.tests.api_base import User
@@ -387,3 +388,212 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         response = self.client.post(f'/openfarmplanner/api/public-cultures/{public_culture.id}/import/', {}, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_owner_can_withdraw_public_culture_without_changing_imported_project_copy(self):
+        public_culture = PublicCulture.objects.create(
+            name='Bean',
+            variety='Canadian Wonder',
+            status=PublicCulture.STATUS_PUBLISHED,
+            created_by=self.user,
+            growth_duration_days=70,
+            harvest_duration_days=30,
+        )
+        import_response = self.client.post(f'/openfarmplanner/api/public-cultures/{public_culture.id}/import/', {}, format='json')
+        imported = Culture.objects.get(id=import_response.data['id'])
+
+        response = self.client.post(f'/openfarmplanner/api/public-cultures/{public_culture.id}/withdraw/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        public_culture.refresh_from_db()
+        imported.refresh_from_db()
+        self.assertEqual(public_culture.status, PublicCulture.STATUS_WITHDRAWN)
+        self.assertEqual(imported.name, 'Bean')
+        self.assertEqual(imported.source_public_culture, public_culture)
+        self.assertTrue(PublicCultureStatusEvent.objects.filter(
+            public_culture=public_culture,
+            from_status=PublicCulture.STATUS_PUBLISHED,
+            to_status=PublicCulture.STATUS_WITHDRAWN,
+            created_by=self.user,
+        ).exists())
+
+        list_response = self.client.get('/openfarmplanner/api/public-cultures/')
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.data['results'], [])
+
+    def test_non_owner_cannot_withdraw_public_culture(self):
+        other_user = User.objects.create_user(username='other-withdrawer', email='withdrawer@example.com', password='testpass', is_active=True)
+        public_culture = PublicCulture.objects.create(
+            name='Bean',
+            variety='Canadian Wonder',
+            status=PublicCulture.STATUS_PUBLISHED,
+            created_by=other_user,
+        )
+
+        response = self.client.post(f'/openfarmplanner/api/public-cultures/{public_culture.id}/withdraw/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        public_culture.refresh_from_db()
+        self.assertEqual(public_culture.status, PublicCulture.STATUS_PUBLISHED)
+
+    def test_owner_can_republish_withdrawn_public_culture(self):
+        public_culture = PublicCulture.objects.create(
+            name='Lettuce',
+            variety='Bijella',
+            status=PublicCulture.STATUS_PUBLISHED,
+            crop_species=self.species,
+            original_language_code='en',
+            created_by=self.user,
+            source_project=self.project,
+            source_project_culture=self.culture,
+        )
+        withdraw_response = self.client.post(f'/openfarmplanner/api/public-cultures/{public_culture.id}/withdraw/', {}, format='json')
+        self.assertEqual(withdraw_response.status_code, status.HTTP_200_OK)
+
+        response = self.publish_current_culture()
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['operation'], 'updated')
+        self.assertEqual(response.data['public_culture']['id'], public_culture.id)
+        public_culture.refresh_from_db()
+        self.assertEqual(public_culture.status, PublicCulture.STATUS_PUBLISHED)
+        self.assertEqual(public_culture.version, 2)
+
+    def test_admin_can_remove_public_culture_with_reason(self):
+        moderator = User.objects.create_user(
+            username='moderator',
+            email='moderator@example.com',
+            password='testpass',
+            is_active=True,
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=moderator)
+        public_culture = PublicCulture.objects.create(
+            name='Tomato',
+            variety='Roma',
+            status=PublicCulture.STATUS_PUBLISHED,
+            created_by=self.user,
+        )
+
+        response = self.client.post(
+            f'/openfarmplanner/api/public-cultures/{public_culture.id}/remove/',
+            {'reason': PublicCulture.REMOVAL_REASON_DUPLICATE},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        public_culture.refresh_from_db()
+        self.assertEqual(public_culture.status, PublicCulture.STATUS_REMOVED)
+        self.assertEqual(public_culture.removal_reason, PublicCulture.REMOVAL_REASON_DUPLICATE)
+        self.assertTrue(PublicCultureStatusEvent.objects.filter(
+            public_culture=public_culture,
+            to_status=PublicCulture.STATUS_REMOVED,
+            reason=PublicCulture.REMOVAL_REASON_DUPLICATE,
+            created_by=moderator,
+        ).exists())
+
+    def test_staff_culture_list_exposes_linked_public_culture_id_for_moderation(self):
+        moderator = User.objects.create_user(
+            username='list-moderator',
+            email='list-moderator@example.com',
+            password='testpass',
+            is_active=True,
+            is_staff=True,
+        )
+        ProjectMembership.objects.create(user=moderator, project=self.project, role='admin')
+        public_culture = PublicCulture.objects.create(
+            name='Lettuce',
+            variety='Bijella',
+            status=PublicCulture.STATUS_PUBLISHED,
+            created_by=self.user,
+            source_project=self.project,
+            source_project_culture=self.culture,
+        )
+        self.client.force_authenticate(user=moderator)
+
+        response = self.client.get('/openfarmplanner/api/cultures/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['results'][0]['owned_public_culture_id'], public_culture.id)
+
+    def test_remove_requires_admin_and_reason(self):
+        public_culture = PublicCulture.objects.create(
+            name='Tomato',
+            variety='Roma',
+            status=PublicCulture.STATUS_PUBLISHED,
+            created_by=self.user,
+        )
+
+        forbidden_response = self.client.post(
+            f'/openfarmplanner/api/public-cultures/{public_culture.id}/remove/',
+            {'reason': PublicCulture.REMOVAL_REASON_DUPLICATE},
+            format='json',
+        )
+        self.assertEqual(forbidden_response.status_code, status.HTTP_403_FORBIDDEN)
+
+        moderator = User.objects.create_user(
+            username='moderator-missing-reason',
+            email='moderator-missing@example.com',
+            password='testpass',
+            is_active=True,
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=moderator)
+        missing_reason_response = self.client.post(
+            f'/openfarmplanner/api/public-cultures/{public_culture.id}/remove/',
+            {},
+            format='json',
+        )
+        self.assertEqual(missing_reason_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(missing_reason_response.data['code'], 'removal_reason_required')
+
+    def test_hard_delete_is_blocked_when_public_culture_has_imports_or_project_provenance(self):
+        moderator = User.objects.create_user(
+            username='delete-moderator',
+            email='delete-moderator@example.com',
+            password='testpass',
+            is_active=True,
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=moderator)
+        public_culture = PublicCulture.objects.create(
+            name='Bean',
+            variety='Canadian Wonder',
+            status=PublicCulture.STATUS_PUBLISHED,
+            created_by=self.user,
+            source_project=self.project,
+            source_project_culture=self.culture,
+        )
+        Culture.objects.create(
+            name='Bean',
+            variety='Canadian Wonder',
+            project=self.project,
+            source_public_culture=public_culture,
+            source_public_version=1,
+            origin_type=Culture.ORIGIN_IMPORTED,
+        )
+
+        response = self.client.post(f'/openfarmplanner/api/public-cultures/{public_culture.id}/hard-delete/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertTrue(PublicCulture.objects.filter(id=public_culture.id).exists())
+
+    def test_admin_can_hard_delete_orphan_public_culture(self):
+        moderator = User.objects.create_user(
+            username='orphan-delete-moderator',
+            email='orphan-delete-moderator@example.com',
+            password='testpass',
+            is_active=True,
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=moderator)
+        public_culture = PublicCulture.objects.create(
+            name='Orphan',
+            variety='Test',
+            status=PublicCulture.STATUS_REMOVED,
+            created_by=None,
+        )
+
+        response = self.client.post(f'/openfarmplanner/api/public-cultures/{public_culture.id}/hard-delete/', {}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(PublicCulture.objects.filter(id=public_culture.id).exists())

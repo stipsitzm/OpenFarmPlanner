@@ -74,12 +74,12 @@ class CultureViewSet(ProjectScopedMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         include_deleted = self.request.query_params.get('include_deleted') in {'1', 'true', 'True'}
         manager = Culture.all_objects if include_deleted else Culture.objects
+        public_cultures_queryset = PublicCulture.objects.filter(status=PublicCulture.STATUS_PUBLISHED)
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            public_cultures_queryset = public_cultures_queryset.filter(created_by=self.request.user)
         owned_public_cultures_prefetch = Prefetch(
             'published_public_cultures',
-            queryset=PublicCulture.objects.filter(
-                created_by=self.request.user,
-                status=PublicCulture.STATUS_PUBLISHED,
-            ).order_by('-updated_at', '-id'),
+            queryset=public_cultures_queryset.order_by('-updated_at', '-id'),
             to_attr='_prefetched_owned_public_cultures',
         )
         return (

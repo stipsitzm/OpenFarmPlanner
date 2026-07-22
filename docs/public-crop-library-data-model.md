@@ -4,8 +4,10 @@ Date: 2026-07-22<br>
 Status: architecture decision record and migration plan. The first
 publishing-boundary slice now exists: `CropSpecies`, optional private
 `Culture.crop_species`, `PublicCulture.crop_species`,
-`PublicCulture.original_language_code`, and the Publishing Wizard. The
-larger variety/translation migration remains future work.
+`PublicCulture.original_language_code`, the Publishing Wizard, and the first
+non-destructive public-library lifecycle statuses (`draft`, `published`,
+`withdrawn`, `removed`) with status events. The larger variety/translation
+migration remains future work.
 
 ## 1. Scope and current-state analysis
 
@@ -27,6 +29,9 @@ species identity table:
 - `PublicCulture` is a shared record. It currently copies the same name,
   variety, free text, growing, and seed fields into one language-specific row.
   New publications also store `crop_species` and `original_language_code`.
+  Public discovery and import only expose `status='published'`; contributor
+  withdrawal and moderator removal hide rows without deleting provenance or
+  imported project copies.
   The Publishing Wizard duplicate check uses official `crop_species` plus
   normalized `variety` (and supplier text in the bridge where relevant). Legacy
   public rows without `crop_species` remain readable.

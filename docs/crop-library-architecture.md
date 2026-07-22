@@ -5,9 +5,9 @@ Scope: `backend/`, `frontend/src/`
 
 Goal: prepare and evolve the architecture for a public Crop Library
 (`/crops`) without splitting the repository unnecessarily. The library is
-now treated as a long-lived, community-built knowledge base for crop data,
-not as a personal publishing shelf that users can normally withdraw from
-at will.
+now treated as a long-lived, community-built knowledge base for crop data.
+Users can withdraw their own accidental publications through a non-destructive
+status transition; moderation and cleanup use stronger staff-only states.
 
 ## 0. Product and legal model
 
@@ -15,10 +15,13 @@ The public Crop Library follows an open-data model:
 
 - Published crop data becomes part of a shared knowledge base intended to
   persist beyond the contributing user's project or account.
-- Normal user-driven deletion/unpublishing is not part of the product
-  model. Removal should be reserved for exceptional cases such as unlawful
-  content, personal data in a published record, spam, obvious abuse, or a
-  moderation decision.
+- Contributors may withdraw their own publications when a publication was
+  accidental or needs correction. Withdrawal is non-destructive: the entry
+  disappears from discovery, but attribution, license evidence, import
+  lineage, and already-imported project copies remain intact.
+- Moderator removal is reserved for exceptional cases such as test data,
+  duplicates, unlawful content, personal data in a published record, spam,
+  obvious abuse, or another moderation decision. It is also non-destructive.
 - Public crop data is intended to be reusable through the app, future
   public APIs, future downloads/exports, and external open-source or
   commercial projects.
@@ -32,10 +35,12 @@ The public Crop Library follows an open-data model:
   separate from the global Terms consent so it can be versioned and audited
   without blocking users who never publish.
 
-Future moderation should prefer non-destructive state transitions
-(`hidden`, `removed`, `needs_review`) over hard deletes, so attribution,
-license evidence, import lineage, and revision history remain auditable
-where legally permissible.
+Moderation uses non-destructive state transitions (`draft`, `published`,
+`withdrawn`, `removed`) over hard deletes, so attribution, license evidence,
+import lineage, and revision history remain auditable where legally
+permissible. Hard delete is intentionally exceptional and only available to
+administrators when no imports, source-project provenance, or other
+dependencies remain.
 
 ## 1. The current situation (before this pass)
 
@@ -233,8 +238,30 @@ wizard is not only a UI affordance. Private project cultures remain
 flexible: `Culture.crop_species` is nullable, and incomplete project
 cultures can still be created and edited. The strictness lives at the
 public-library boundary where durable shared data is created.
-- Backend: 409 existing tests pass (1 pre-existing, unrelated failure —
-  a German-umlaut encoding mismatch in
-  `accounts/tests/test_auth_api.py`, confirmed present on `main` before
-  this branch too), plus 12 new tests for the `crops` app.
-- Frontend: all 956 existing tests pass, plus 3 new tests for `cropsApi`.
+
+## 8. Withdrawal, removal, and hard delete
+
+`PublicCulture.status` models the public-library lifecycle:
+
+- `draft`: reserved for future review workflows;
+- `published`: visible and importable from the public library;
+- `withdrawn`: hidden by the contributor who published it;
+- `removed`: hidden by an administrator or moderator with a required reason.
+
+The status-change API lives on `/api/public-cultures/<id>/`:
+
+- `withdraw/` lets the contributor withdraw their own published entry.
+- `remove/` lets staff remove an entry with a structured reason
+  (`accidental_publication`, `test_data`, `duplicate`, `wrong_mapping`,
+  `unlawful_content`, `other`).
+- `hard-delete/` is staff-only and intentionally narrow. It is blocked when
+  the public entry has imported project copies or source-project provenance;
+  ordinary cleanup and moderation should use `removed` instead.
+
+Every status transition writes `PublicCultureStatusEvent`, establishing the
+audit trail needed for later moderation queues, review steps, duplicate
+merges, restore actions, or richer status history. Public lists, duplicate
+checks, match endpoints, and imports only expose `published` rows. Project
+imports remain protected because importing creates a private `Culture` copy
+with its own fields; status changes on `PublicCulture` never mutate already
+imported project data.

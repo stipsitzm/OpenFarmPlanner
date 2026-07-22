@@ -16,6 +16,10 @@
     "restoreSuccess": "Version restored",
     "restoreError": "Version could not be restored"
   },
+  "buttons": {
+    "versions": "Versions",
+    "delete": "Delete"
+  },
   "history": {
     "currentVersion": "Current version",
     "changedFields": "Changed:",
@@ -37,6 +41,39 @@
   },
   "library": {
     "publishing": "Publishing…",
+    "publishButton": "Publish",
+    "updateButton": "Update public crop library",
+    "updating": "Updating…",
+    "withdrawAction": "Withdraw publication",
+    "withdrawSuccess": "The publication of “{{name}}” was withdrawn.",
+    "withdrawError": "The publication could not be withdrawn.",
+    "removeAction": "Remove from library",
+    "removeSuccess": "“{{name}}” was removed from the public crop library.",
+    "removeError": "The culture could not be removed from the library.",
+    "hardDeleteAction": "Permanently delete",
+    "hardDeleteSuccess": "“{{name}}” was permanently deleted.",
+    "hardDeleteError": "The culture could not be permanently deleted. There are probably still references or provenance data.",
+    "withdrawDialog": {
+      "title": "Withdraw publication?",
+      "message": "“{{name}}” disappears from the public crop library. Cultures already imported into projects remain fully intact. You can publish the culture again later."
+    },
+    "removeDialog": {
+      "title": "Remove from library?",
+      "message": "“{{name}}” is removed from the public crop library for all users. Already imported project cultures remain unchanged. Please select the moderation reason.",
+      "reasonLabel": "Reason"
+    },
+    "hardDeleteDialog": {
+      "title": "Permanently delete?",
+      "message": "“{{name}}” is deleted only if no imports, provenance data, or dependencies remain. Removing from the library is intended for normal moderation cases."
+    },
+    "removeReasons": {
+      "accidental_publication": "Accidental publication",
+      "test_data": "Test data",
+      "duplicate": "Duplicate",
+      "wrong_mapping": "Wrong mapping",
+      "unlawful_content": "Unlawful content",
+      "other": "Other"
+    },
     "empty": "No public cultures found.",
     "emptyState": {
       "noSelectionTitle": "No public culture selected yet",

@@ -14,6 +14,7 @@ class PublicCultureSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'status',
+            'removal_reason',
             'name',
             'variety',
             'notes',

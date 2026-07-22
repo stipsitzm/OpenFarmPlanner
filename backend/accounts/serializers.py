@@ -77,6 +77,8 @@ class UserSerializer(serializers.ModelSerializer):
             'display_label',
             'public_display_name',
             'is_active',
+            'is_staff',
+            'is_superuser',
             'default_project_id',
             'last_project_id',
             'memberships',

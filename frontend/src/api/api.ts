@@ -15,6 +15,7 @@ import type {
   MediaFileRef,
   PublicCulture,
   PublicCultureMatchResponse,
+  PublicCultureRemovalReason,
   PublicCultureDuplicateCandidate,
   CropSpecies,
   PublishPublicCulturePreview,
@@ -139,6 +140,10 @@ export const publicCultureAPI = {
   match: (params: { name: string; variety: string }, signal?: AbortSignal) =>
     http.get<PublicCultureMatchResponse>('/public-cultures/match/', { params, signal }),
   importToProject: (id: number) => http.post<Culture>(`/public-cultures/${id}/import/`, {}),
+  withdraw: (id: number) => http.post<PublicCulture>(`/public-cultures/${id}/withdraw/`, {}),
+  remove: (id: number, reason: PublicCultureRemovalReason) =>
+    http.post<PublicCulture>(`/public-cultures/${id}/remove/`, { reason }),
+  hardDelete: (id: number) => http.post<void>(`/public-cultures/${id}/hard-delete/`, {}),
 };
 
 export const supplierAPI = {
@@ -367,6 +372,7 @@ export type {
   CultureHistoryEntry,
   MediaFileRef,
   PublicCulture,
+  PublicCultureRemovalReason,
   PublicCultureDuplicateCandidate,
   CropSpecies,
   PublishPublicCulturePreview,

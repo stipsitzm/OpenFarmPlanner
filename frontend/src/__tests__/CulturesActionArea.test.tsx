@@ -15,6 +15,9 @@ const {
   cropSpeciesListMock,
   publishPreviewMock,
   publicCultureListMock,
+  publicCultureWithdrawMock,
+  publicCultureRemoveMock,
+  publicCultureHardDeleteMock,
   publishPublicMock,
   deleteMock,
   undeleteMock,
@@ -28,6 +31,9 @@ const {
   cropSpeciesListMock: vi.fn(),
   publishPreviewMock: vi.fn(),
   publicCultureListMock: vi.fn(),
+  publicCultureWithdrawMock: vi.fn(),
+  publicCultureRemoveMock: vi.fn(),
+  publicCultureHardDeleteMock: vi.fn(),
   publishPublicMock: vi.fn(),
   deleteMock: vi.fn(),
   undeleteMock: vi.fn(),
@@ -36,6 +42,8 @@ const {
     id: 1,
     email: 'tester@example.com',
     display_name: 'Tester',
+    is_staff: false,
+    is_superuser: false,
     public_library_terms_accepted: false,
   },
 }));
@@ -72,6 +80,9 @@ vi.mock('../api/api', async () => {
     publicCultureAPI: {
       ...actual.publicCultureAPI,
       list: publicCultureListMock,
+      withdraw: publicCultureWithdrawMock,
+      remove: publicCultureRemoveMock,
+      hardDelete: publicCultureHardDeleteMock,
     },
   };
 });
@@ -83,17 +94,23 @@ vi.mock('../cultures/CultureDetail', () => ({
     onCreateCulture,
     onCreatePlan,
     onPublishCulture,
+    onWithdrawPublicCulture,
+    onRemovePublicCulture,
+    onHardDeletePublicCulture,
     onEditCulture,
     onDeleteCulture,
     canCreatePlan,
     publishActionLabel,
     selectedCultureId,
   }: {
-    cultures: Array<{ id?: number; name: string; variety?: string; cultivation_type?: string }>;
+    cultures: Array<{ id?: number; name: string; variety?: string; cultivation_type?: string; owned_public_culture_id?: number | null }>;
     onCultureSelect: (culture: { id?: number; name: string } | null) => void;
     onCreateCulture?: () => void;
     onCreatePlan?: () => void;
     onPublishCulture?: () => void;
+    onWithdrawPublicCulture?: (culture: { id?: number; name: string; owned_public_culture_id?: number | null }) => void;
+    onRemovePublicCulture?: (culture: { id?: number; name: string; owned_public_culture_id?: number | null }) => void;
+    onHardDeletePublicCulture?: (culture: { id?: number; name: string; owned_public_culture_id?: number | null }) => void;
     onEditCulture?: (culture: { id?: number; name: string }) => void;
     onDeleteCulture?: (culture: { id?: number; name: string; variety?: string; cultivation_type?: string }) => void;
     canCreatePlan?: boolean;
@@ -107,6 +124,9 @@ vi.mock('../cultures/CultureDetail', () => ({
       ))}
       <button type="button" onClick={() => onCreateCulture?.()}>Kultur hinzufügen</button>
       <button type="button" onClick={() => onPublishCulture?.()}>{publishActionLabel ?? 'Veröffentlichen'}</button>
+      <button type="button" onClick={() => onWithdrawPublicCulture?.(cultures[0])}>Veröffentlichung zurückziehen</button>
+      <button type="button" onClick={() => onRemovePublicCulture?.(cultures[0])}>Aus Bibliothek entfernen</button>
+      <button type="button" onClick={() => onHardDeletePublicCulture?.(cultures[0])}>Endgültig löschen</button>
       <button type="button" onClick={() => onCreatePlan?.()} disabled={!canCreatePlan}>Anbauplan erstellen</button>
       <button type="button" onClick={() => onEditCulture?.(cultures[0])}>Kultur bearbeiten</button>
       <button type="button" onClick={() => onDeleteCulture?.(cultures[0])}>Kultur löschen</button>
@@ -154,6 +174,8 @@ describe('Cultures action area', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authUser.public_library_terms_accepted = false;
+    authUser.is_staff = false;
+    authUser.is_superuser = false;
     refreshUserMock.mockResolvedValue(authUser);
 
     listMock.mockResolvedValue({
@@ -205,6 +227,9 @@ describe('Cultures action area', () => {
         duplicates: [],
       },
     });
+    publicCultureWithdrawMock.mockResolvedValue({ data: { id: 77, name: 'Tomate', version: 1, status: 'withdrawn' } });
+    publicCultureRemoveMock.mockResolvedValue({ data: { id: 77, name: 'Tomate', version: 1, status: 'removed' } });
+    publicCultureHardDeleteMock.mockResolvedValue({ data: undefined });
   });
 
   afterEach(() => {
@@ -355,6 +380,90 @@ describe('Cultures action area', () => {
       expect(screen.getByRole('button', { name: 'Öffentliche Kulturbibliothek aktualisieren' })).toBeInTheDocument();
     });
     expect(screen.queryByRole('button', { name: 'Veröffentlichen' })).not.toBeInTheDocument();
+  });
+
+  it('withdraws an owned public culture after confirmation', async () => {
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          { id: 1, name: 'Tomate', growth_duration_days: 1, harvest_duration_days: 1, owned_public_culture_id: 77 },
+        ],
+      },
+    });
+
+    renderCultures('/cultures?cultureId=1');
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Veröffentlichung zurückziehen' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichung zurückziehen' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Veröffentlichung zurückziehen?' });
+    expect(dialog).toHaveTextContent('Bereits importierte Kulturen in Projekten bleiben vollständig erhalten.');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Veröffentlichung zurückziehen' }));
+
+    await waitFor(() => {
+      expect(publicCultureWithdrawMock).toHaveBeenCalledWith(77);
+    });
+    expect(listMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('removes an owned public culture with a moderation reason', async () => {
+    authUser.is_staff = true;
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          { id: 1, name: 'Tomate', growth_duration_days: 1, harvest_duration_days: 1, owned_public_culture_id: 77 },
+        ],
+      },
+    });
+
+    renderCultures('/cultures?cultureId=1');
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Aus Bibliothek entfernen' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Aus Bibliothek entfernen' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Aus Bibliothek entfernen?' });
+    expect(within(dialog).getByRole('button', { name: 'Aus Bibliothek entfernen' })).toBeDisabled();
+    fireEvent.mouseDown(within(dialog).getByLabelText('Grund'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Duplikat' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Aus Bibliothek entfernen' }));
+
+    await waitFor(() => {
+      expect(publicCultureRemoveMock).toHaveBeenCalledWith(77, 'duplicate');
+    });
+  });
+
+  it('requests hard delete only through a destructive confirmation dialog', async () => {
+    authUser.is_superuser = true;
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          { id: 1, name: 'Tomate', growth_duration_days: 1, harvest_duration_days: 1, owned_public_culture_id: 77 },
+        ],
+      },
+    });
+
+    renderCultures('/cultures?cultureId=1');
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Endgültig löschen' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Endgültig löschen' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Endgültig löschen?' });
+    expect(dialog).toHaveTextContent('wenn keine Importe, Herkunftsdaten oder Abhängigkeiten mehr existieren');
+    expect(publicCultureHardDeleteMock).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Endgültig löschen' }));
+
+    await waitFor(() => {
+      expect(publicCultureHardDeleteMock).toHaveBeenCalledWith(77);
+    });
   });
 
   it('renders a compact culture delete confirmation dialog', async () => {

@@ -175,7 +175,8 @@ export interface CultureSupplierDataInput {
 
 export interface PublicCulture {
   id: number;
-  status: 'published';
+  status: 'draft' | 'published' | 'withdrawn' | 'removed';
+  removal_reason?: PublicCultureRemovalReason | '';
   name: string;
   variety?: string;
   notes?: string;
@@ -220,6 +221,14 @@ export interface PublicCulture {
   source_project_culture?: number | null;
   source_project?: number | null;
 }
+
+export type PublicCultureRemovalReason =
+  | 'accidental_publication'
+  | 'test_data'
+  | 'duplicate'
+  | 'wrong_mapping'
+  | 'unlawful_content'
+  | 'other';
 
 export interface PublicCultureDuplicateCandidate {
   id: number;

@@ -185,9 +185,14 @@ class CultureSerializer(serializers.ModelSerializer):
         user = getattr(request, 'user', None)
         if not user or not user.is_authenticated:
             return None
+        can_moderate_public_cultures = user.is_staff or user.is_superuser
 
         if obj.source_public_culture_id:
-            if obj.source_public_culture and obj.source_public_culture.created_by_id == user.id:
+            if (
+                obj.source_public_culture
+                and obj.source_public_culture.status == PublicCulture.STATUS_PUBLISHED
+                and (obj.source_public_culture.created_by_id == user.id or can_moderate_public_cultures)
+            ):
                 return obj.source_public_culture_id
             return None
 
@@ -197,10 +202,11 @@ class CultureSerializer(serializers.ModelSerializer):
 
         linked_public = PublicCulture.objects.filter(
             source_project_culture=obj,
-            created_by=user,
             status=PublicCulture.STATUS_PUBLISHED,
-        ).order_by('-updated_at', '-id').values_list('id', flat=True).first()
-        return linked_public
+        )
+        if not can_moderate_public_cultures:
+            linked_public = linked_public.filter(created_by=user)
+        return linked_public.order_by('-updated_at', '-id').values_list('id', flat=True).first()
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
