@@ -434,6 +434,7 @@ REST_FRAMEWORK = {
         'invitation_accept': _env_str('THROTTLE_INVITATION_ACCEPT', '20/hour'),
         'agent_login_consume': _env_str('THROTTLE_AGENT_LOGIN_CONSUME', '30/hour'),
     },
+    'EXCEPTION_HANDLER': 'config.exceptions.api_exception_handler',
     'DEFAULT_PAGINATION_CLASS': 'config.pagination.OpenFarmPlannerPageNumberPagination',
     'PAGE_SIZE': 100,
 }

@@ -93,6 +93,7 @@ class GuestDemoApiTests(TestCase):
                 'auth_login': '10/minute',
                 'guest_demo_start': '1/minute',
             },
+            'EXCEPTION_HANDLER': 'config.exceptions.api_exception_handler',
         },
     )
     def test_restrictive_guest_demo_throttle_limits_repeated_starts(self) -> None:
@@ -112,6 +113,43 @@ class GuestDemoApiTests(TestCase):
 
         self.assertEqual(first.status_code, status.HTTP_201_CREATED)
         self.assertEqual(second.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertIn('Retry-After', second.headers)
+        self.assertGreaterEqual(int(second.headers['Retry-After']), 1)
+        self.assertGreaterEqual(second.data['retry_after'], 1)
+
+    @override_settings(
+        REST_FRAMEWORK={
+            'DEFAULT_AUTHENTICATION_CLASSES': [
+                'rest_framework.authentication.SessionAuthentication',
+            ],
+            'DEFAULT_PERMISSION_CLASSES': [
+                'rest_framework.permissions.AllowAny',
+            ],
+            'DEFAULT_THROTTLE_CLASSES': [
+                'rest_framework.throttling.ScopedRateThrottle',
+            ],
+            'DEFAULT_THROTTLE_RATES': {
+                'auth_login': '10/minute',
+                'guest_demo_start': '1/minute',
+            },
+            'EXCEPTION_HANDLER': 'config.exceptions.api_exception_handler',
+        },
+    )
+    def test_guest_demo_throttle_is_scoped_by_client_ip(self) -> None:
+        with enabled_scoped_throttling():
+            first = APIClient(REMOTE_ADDR='203.0.113.20').post(
+                '/openfarmplanner/api/auth/guest-demo/start/',
+                {},
+                format='json',
+            )
+            second = APIClient(REMOTE_ADDR='203.0.113.21').post(
+                '/openfarmplanner/api/auth/guest-demo/start/',
+                {},
+                format='json',
+            )
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_201_CREATED)
 
     @override_settings(
         REST_FRAMEWORK={
@@ -128,6 +166,7 @@ class GuestDemoApiTests(TestCase):
                 'auth_login': '1/minute',
                 'guest_demo_start': '1000/minute',
             },
+            'EXCEPTION_HANDLER': 'config.exceptions.api_exception_handler',
         },
     )
     def test_development_guest_demo_throttle_allows_repeated_starts(self) -> None:
@@ -160,6 +199,7 @@ class GuestDemoApiTests(TestCase):
                 'auth_login': '1/minute',
                 'guest_demo_start': '1000/minute',
             },
+            'EXCEPTION_HANDLER': 'config.exceptions.api_exception_handler',
         },
     )
     def test_guest_demo_throttle_does_not_change_other_scopes(self) -> None:

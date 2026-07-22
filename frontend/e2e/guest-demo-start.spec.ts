@@ -1,33 +1,21 @@
 import { expect, test } from '@playwright/test';
 
 test('starts the public guest demo and keeps the user in the app', async ({ page }) => {
-  let releaseStartupRefresh: () => void = () => {};
-  const startupRefreshReleased = new Promise<void>((resolve) => {
-    releaseStartupRefresh = resolve;
-  });
-  let resolveStartupRefreshStarted: () => void = () => {};
-  const startupRefreshStarted = new Promise<void>((resolve) => {
-    resolveStartupRefreshStarted = resolve;
-  });
+  let publicAuthProbeCount = 0;
 
-  await page.route('**/api/auth/me/', async (route) => {
-    resolveStartupRefreshStarted();
-    await startupRefreshReleased;
-    await route.fulfill({
-      status: 401,
-      contentType: 'application/json',
-      body: JSON.stringify({ detail: 'Authentication credentials were not provided.' }),
-    });
-  }, { times: 1 });
+  page.on('request', (request) => {
+    if (request.url().endsWith('/api/auth/me/')) {
+      publicAuthProbeCount += 1;
+    }
+  });
 
   await page.goto('/');
-  await startupRefreshStarted;
+  await expect(page.getByRole('button', { name: 'Demo ohne Registrierung ansehen' })).toBeVisible();
+  expect(publicAuthProbeCount).toBe(0);
 
   await page.getByRole('button', { name: 'Demo ohne Registrierung ansehen' }).click();
 
   await expect(page).toHaveURL(/\/app\/fields-beds/);
-  releaseStartupRefresh();
-
   await expect(page).toHaveURL(/\/app\/fields-beds/);
   await expect(page.getByRole('heading', { name: 'Anbauflächen' })).toBeVisible();
 });

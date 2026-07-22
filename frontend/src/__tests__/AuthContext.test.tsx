@@ -59,6 +59,11 @@ function ActiveProjectProbe() {
   return <div data-testid="active-project-id">{auth?.activeProjectId ?? 'none'}</div>;
 }
 
+function LoadingProbe() {
+  const auth = useContext(AuthContext);
+  return <div data-testid="loading-state">{auth?.isLoading ? 'loading' : 'ready'}</div>;
+}
+
 function GuestDemoStartProbe() {
   const auth = useContext(AuthContext);
   return (
@@ -86,6 +91,7 @@ describe('AuthProvider cross-tab project sync', () => {
   }
 
   beforeEach(() => {
+    window.history.pushState({}, '', '/app');
     localStorage.clear();
     sessionStorage.clear();
     getMeMock.mockClear();
@@ -142,6 +148,15 @@ describe('AuthProvider cross-tab project sync', () => {
     }));
 
     expect(reloadSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not probe the auth session on the public landing page', async () => {
+    window.history.pushState({}, '', '/');
+
+    render(<AuthProvider><LoadingProbe /></AuthProvider>);
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('ready'));
+    expect(getMeMock).not.toHaveBeenCalled();
   });
 
   it('clears stale auth state when the shared API client reports an expired session', async () => {

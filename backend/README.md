@@ -83,6 +83,14 @@ For production, configure these environment variables:
 - `GUEST_DEMO_THROTTLE_RATE` - Rate limit for `POST /api/auth/guest-demo/start/`. Defaults to `1000/minute` when `DJANGO_ENV=development`, otherwise `10/hour`. Invalid values fail startup instead of disabling protection.
 - `URL_PREFIX` - Optional backend URL prefix (default: root). Example: `openfarmplanner` for legacy prefixed routing.
 
+The guest demo endpoint uses Django REST Framework `ScopedRateThrottle` with the
+`guest_demo_start` scope. Anonymous public starts are limited per client IP, while
+authenticated requests would be limited per user; it is not a single global
+bucket. Throttled responses include the standard `Retry-After` header and a
+machine-readable `retry_after` value in the JSON body. With the production
+default of `10/hour`, a user who has exhausted the bucket may see a remaining
+wait of roughly 40 minutes depending on the request history inside that hour.
+
 To manually test the guest demo throttle locally, set a low value such as
 `GUEST_DEMO_THROTTLE_RATE=1/minute`, restart Django, and submit repeated
 `POST /api/auth/guest-demo/start/` requests. Remove the override or set a higher

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
+import { AuthApiError } from '../auth/authApi';
 import { resolveRouterBasename } from '../routerBasename';
 import { CommandProvider } from '../commands/CommandProvider';
 import { FocusManagerProvider } from '../focus/FocusManager';
@@ -111,6 +112,7 @@ vi.mock('../commands/useCommandContext', () => ({
 
 describe('App', () => {
   beforeEach(() => {
+    vi.useRealTimers();
     authState.user = null;
     authState.isLoading = false;
     authState.activeProjectId = null;
@@ -200,6 +202,126 @@ describe('App', () => {
       expect(authState.startGuestDemo).toHaveBeenCalledTimes(1);
       expect(window.location.pathname).toBe('/app/fields-beds');
     });
+  });
+
+  it('prevents duplicate public guest demo requests while one is running', async () => {
+    let resolveRequest: (value: AuthUser) => void = () => {};
+    authState.startGuestDemo.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveRequest = resolve;
+    }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    const button = await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' });
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    expect(authState.startGuestDemo).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole('button', { name: /Demo wird gestartet/ })).toBeDisabled();
+
+    act(() => {
+      const demoUser = createGuestDemoUser();
+      authState.user = demoUser;
+      authState.activeProjectId = demoUser.resolved_project_id;
+      resolveRequest(demoUser);
+    });
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/app/fields-beds');
+    });
+  });
+
+  it('shows a rate-limit message and re-enables the demo button after the retry window', async () => {
+    authState.startGuestDemo.mockRejectedValueOnce(new AuthApiError('Request was throttled.', {
+      status: 429,
+      retryAfterSeconds: 1,
+      payload: { retry_after: 1 },
+    }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText(
+      'Die Demo wurde vor Kurzem bereits gestartet. Bitte versuche es in weniger als einer Minute erneut.',
+    )).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Demo wieder verfügbar in < 1 Min.' })).toBeDisabled();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Demo ohne Registrierung ansehen' })).not.toBeDisabled();
+    }, { timeout: 2500 });
+  });
+
+  it('uses a less-than-one-minute rate-limit message for short retry windows', async () => {
+    authState.startGuestDemo.mockRejectedValueOnce(new AuthApiError('Request was throttled.', {
+      status: 429,
+      retryAfterSeconds: 30,
+      payload: { retry_after: 30 },
+    }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText(
+      'Die Demo wurde vor Kurzem bereits gestartet. Bitte versuche es in weniger als einer Minute erneut.',
+    )).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Demo wieder verfügbar in < 1 Min.' })).toBeDisabled();
+  });
+
+  it('shows a generic rate-limit message when retry duration is missing or invalid', async () => {
+    authState.startGuestDemo.mockRejectedValueOnce(new AuthApiError('Request was throttled.', {
+      status: 429,
+      payload: { retry_after: 'later' },
+    }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText(
+      'Die Demo wurde vor Kurzem bereits gestartet. Bitte versuche es später erneut.',
+    )).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Demo ohne Registrierung ansehen' })).not.toBeDisabled();
+  });
+
+  it('shows a network-specific error when the public guest demo is unreachable', async () => {
+    authState.startGuestDemo.mockRejectedValueOnce(new AuthApiError('network', { isNetworkError: true }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText(
+      'Die Demo ist derzeit nicht erreichbar. Bitte prüfe deine Internetverbindung und versuche es später erneut.',
+    )).toBeInTheDocument();
+  });
+
+  it('shows a server-specific error when the public guest demo fails on the backend', async () => {
+    authState.startGuestDemo.mockRejectedValueOnce(new AuthApiError('server', { status: 500 }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText(
+      'Die Demo konnte wegen eines Serverfehlers nicht gestartet werden. Bitte versuche es später erneut.',
+    )).toBeInTheDocument();
+  });
+
+  it('shows an unexpected-response error when the public guest demo response cannot be read', async () => {
+    authState.startGuestDemo.mockRejectedValueOnce(new AuthApiError('unexpected', {
+      status: 200,
+      code: 'unexpected_response',
+    }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText(
+      'Die Demo konnte nicht gestartet werden, weil die Serverantwort unerwartet war. Bitte versuche es erneut.',
+    )).toBeInTheDocument();
   });
 
   it('shows an error when the public guest demo cannot be started', async () => {

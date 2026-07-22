@@ -20,6 +20,25 @@ import type { AuthUser } from "./types";
 import { AuthContext, type AuthContextValue } from "./authContextShared";
 
 const GUEST_DEMO_SESSION_KEY = 'guestDemoSessionId';
+const PUBLIC_PATHS_WITHOUT_AUTH_PROBE = new Set([
+  '/',
+  '/impressum',
+  '/datenschutz',
+  '/nutzungsbedingungen',
+]);
+
+function currentRelativePathname(): string {
+  const basePath = import.meta.env.BASE_URL.replace(/\/+$/, '');
+  const pathname = window.location.pathname;
+  const relativePath = basePath && pathname.startsWith(basePath)
+    ? pathname.slice(basePath.length) || '/'
+    : pathname;
+  return relativePath.replace(/\/+$/, '') || '/';
+}
+
+function shouldSkipStartupAuthProbe(): boolean {
+  return PUBLIC_PATHS_WITHOUT_AUTH_PROBE.has(currentRelativePathname());
+}
 
 function clearGuestDemoSession(): void {
   window.sessionStorage.removeItem(GUEST_DEMO_SESSION_KEY);
@@ -108,6 +127,10 @@ export function AuthProvider({
 
   useEffect(() => {
     void (async () => {
+      if (shouldSkipStartupAuthProbe()) {
+        setIsLoading(false);
+        return;
+      }
       try {
         await refreshUser();
       } catch {
