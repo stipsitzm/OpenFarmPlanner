@@ -44,6 +44,7 @@ vi.mock('../i18n', () => ({
       }
       const map: Record<string, string> = {
         'auth:register.title': 'Registrieren',
+        'auth:register.subtitle': 'Erstellen Sie Ihr kostenloses OpenFarmPlanner-Konto.',
         'auth:register.logoutAndCreate': 'Abmelden & neuen Account erstellen',
         'auth:register.backToApp': 'Zur App zurückkehren',
         'auth:register.email': 'E-Mail',

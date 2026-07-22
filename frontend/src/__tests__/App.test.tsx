@@ -1,12 +1,60 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
+import { AuthApiError } from '../auth/authApi';
 import { resolveRouterBasename } from '../routerBasename';
 import { CommandProvider } from '../commands/CommandProvider';
 import { FocusManagerProvider } from '../focus/FocusManager';
 import translations from '@/test-utils/translations';
 import type { AuthUser } from '../auth/types';
+
+function createGuestDemoUser(): AuthUser {
+  return {
+    id: 99,
+    email: 'guest-demo@example.com',
+    display_name: 'Demo',
+    display_label: 'Demo',
+    public_display_name: 'Demo',
+    is_active: true,
+    default_project_id: 9,
+    last_project_id: 9,
+    resolved_project_id: 9,
+    needs_project_selection: false,
+    memberships: [{ project_id: 9, project_name: 'Solawi Sonnenacker', role: 'admin', is_demo_project: true }],
+    account_pending_deletion: false,
+    scheduled_deletion_at: null,
+    pending_consents: [],
+    public_library_terms_accepted: false,
+    is_guest_demo: true,
+    guest_demo_session_id: 123,
+  };
+}
+
+function createAuthenticatedUser(
+  memberships: AuthUser['memberships'] = [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
+  resolvedProjectId = memberships[0]?.project_id ?? null,
+): AuthUser {
+  return {
+    id: 1,
+    email: 'demo@example.com',
+    display_name: 'Demo',
+    display_label: 'Demo',
+    public_display_name: 'Demo',
+    is_active: true,
+    default_project_id: resolvedProjectId,
+    last_project_id: resolvedProjectId,
+    resolved_project_id: resolvedProjectId,
+    needs_project_selection: false,
+    memberships,
+    account_pending_deletion: false,
+    scheduled_deletion_at: null,
+    pending_consents: [],
+    public_library_terms_accepted: false,
+    is_guest_demo: false,
+    guest_demo_session_id: null,
+  };
+}
 
 const authState = {
   user: null as AuthUser | null,
@@ -22,6 +70,8 @@ const authState = {
   requestAccountDeletion: vi.fn(async () => ({ detail: 'ok', scheduled_deletion_at: new Date().toISOString() })),
   restoreAccount: vi.fn(async () => ({}) as AuthUser),
   switchActiveProject: vi.fn(async () => {}),
+  startGuestDemo: vi.fn(async () => createGuestDemoUser()),
+  endGuestDemo: vi.fn(async () => {}),
 };
 
 const projectApiMocks = vi.hoisted(() => ({
@@ -87,10 +137,15 @@ vi.mock('../commands/useCommandContext', () => ({
 
 describe('App', () => {
   beforeEach(() => {
+    vi.useRealTimers();
     authState.user = null;
     authState.isLoading = false;
     authState.activeProjectId = null;
     authState.switchActiveProject.mockClear();
+    authState.startGuestDemo.mockClear();
+    authState.endGuestDemo.mockClear();
+    authState.logout.mockClear();
+    authState.startGuestDemo.mockResolvedValue(createGuestDemoUser());
     projectApiMocks.create.mockClear();
     projectApiMocks.createDemo.mockClear();
     projectApiMocks.listDeleted.mockClear();
@@ -153,6 +208,160 @@ describe('App', () => {
     expect(screen.getByRole('img', {
       name: 'Ertragsübersicht mit erwarteten Erntemengen nach Kalenderwochen und Kulturen',
     })).toHaveAttribute('src', '/landing/screenshots/demo-yield-overview.webp');
+  });
+
+  it('starts the public guest demo from the landing page', async () => {
+    const user = userEvent.setup();
+
+    authState.startGuestDemo.mockImplementationOnce(async () => {
+      const demoUser = createGuestDemoUser();
+      authState.user = demoUser;
+      authState.activeProjectId = demoUser.resolved_project_id;
+      return demoUser;
+    });
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    await user.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    await waitFor(() => {
+      expect(authState.startGuestDemo).toHaveBeenCalledTimes(1);
+      expect(window.location.pathname).toBe('/app/fields-beds');
+    });
+  });
+
+  it('prevents duplicate public guest demo requests while one is running', async () => {
+    let resolveRequest: (value: AuthUser) => void = () => {};
+    authState.startGuestDemo.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveRequest = resolve;
+    }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    const button = await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' });
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    expect(authState.startGuestDemo).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole('button', { name: /Demo wird gestartet/ })).toBeDisabled();
+
+    act(() => {
+      const demoUser = createGuestDemoUser();
+      authState.user = demoUser;
+      authState.activeProjectId = demoUser.resolved_project_id;
+      resolveRequest(demoUser);
+    });
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/app/fields-beds');
+    });
+  });
+
+  it('shows a rate-limit message and re-enables the demo button after the retry window', async () => {
+    authState.startGuestDemo.mockRejectedValueOnce(new AuthApiError('Request was throttled.', {
+      status: 429,
+      retryAfterSeconds: 1,
+      payload: { retry_after: 1 },
+    }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText(
+      'Die Demo wurde vor Kurzem bereits gestartet. Bitte versuche es in weniger als einer Minute erneut.',
+    )).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Demo wieder verfügbar in < 1 Min.' })).toBeDisabled();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Demo ohne Registrierung ansehen' })).not.toBeDisabled();
+    }, { timeout: 2500 });
+  });
+
+  it('uses a less-than-one-minute rate-limit message for short retry windows', async () => {
+    authState.startGuestDemo.mockRejectedValueOnce(new AuthApiError('Request was throttled.', {
+      status: 429,
+      retryAfterSeconds: 30,
+      payload: { retry_after: 30 },
+    }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText(
+      'Die Demo wurde vor Kurzem bereits gestartet. Bitte versuche es in weniger als einer Minute erneut.',
+    )).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Demo wieder verfügbar in < 1 Min.' })).toBeDisabled();
+  });
+
+  it('shows a generic rate-limit message when retry duration is missing or invalid', async () => {
+    authState.startGuestDemo.mockRejectedValueOnce(new AuthApiError('Request was throttled.', {
+      status: 429,
+      payload: { retry_after: 'later' },
+    }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText(
+      'Die Demo wurde vor Kurzem bereits gestartet. Bitte versuche es später erneut.',
+    )).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Demo ohne Registrierung ansehen' })).not.toBeDisabled();
+  });
+
+  it('shows a network-specific error when the public guest demo is unreachable', async () => {
+    authState.startGuestDemo.mockRejectedValueOnce(new AuthApiError('network', { isNetworkError: true }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText(
+      'Die Demo ist derzeit nicht erreichbar. Bitte prüfe deine Internetverbindung und versuche es später erneut.',
+    )).toBeInTheDocument();
+  });
+
+  it('shows a server-specific error when the public guest demo fails on the backend', async () => {
+    authState.startGuestDemo.mockRejectedValueOnce(new AuthApiError('server', { status: 500 }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText(
+      'Die Demo konnte wegen eines Serverfehlers nicht gestartet werden. Bitte versuche es später erneut.',
+    )).toBeInTheDocument();
+  });
+
+  it('shows an unexpected-response error when the public guest demo response cannot be read', async () => {
+    authState.startGuestDemo.mockRejectedValueOnce(new AuthApiError('unexpected', {
+      status: 200,
+      code: 'unexpected_response',
+    }));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText(
+      'Die Demo konnte nicht gestartet werden, weil die Serverantwort unerwartet war. Bitte versuche es erneut.',
+    )).toBeInTheDocument();
+  });
+
+  it('shows an error when the public guest demo cannot be started', async () => {
+    const user = userEvent.setup();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    authState.startGuestDemo.mockRejectedValueOnce(new Error('boom'));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    await user.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText('Demo konnte nicht gestartet werden. Bitte versuche es erneut.')).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/');
+    consoleErrorSpy.mockRestore();
   });
 
   it('renders imprint route', async () => {
@@ -248,6 +457,71 @@ describe('App', () => {
     fireEvent.click(await screen.findByLabelText('Mehr'));
     expect(await screen.findByText('Kontoeinstellungen')).toBeInTheDocument();
     expect(screen.getByText('Projekteinstellungen')).toBeInTheDocument();
+  });
+
+  it('returns guest demo sessions to the public landing page when leaving the demo', async () => {
+    authState.user = createGuestDemoUser();
+    authState.activeProjectId = 9;
+    window.history.pushState({}, '', '/app/fields-beds');
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByLabelText('Mehr'));
+    expect(await screen.findByText('Demo verlassen')).toBeInTheDocument();
+    expect(screen.queryByText(/Abmelden/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Demo verlassen'));
+
+    await waitFor(() => {
+      expect(authState.endGuestDemo).toHaveBeenCalledTimes(1);
+      expect(authState.logout).not.toHaveBeenCalled();
+      expect(window.location.pathname).toBe('/');
+    });
+    expect(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Anmelden' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Registrieren' })).toBeInTheDocument();
+  });
+
+  it('keeps authenticated users signed in when leaving their personal demo project', async () => {
+    authState.user = createAuthenticatedUser([
+      { project_id: 9, project_name: 'Solawi Sonnenacker', role: 'admin', is_demo_project: true },
+      { project_id: 1, project_name: 'Alpha', role: 'admin', is_demo_project: false },
+    ], 9);
+    authState.activeProjectId = 9;
+    window.history.pushState({}, '', '/app/fields-beds');
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByLabelText('Mehr'));
+    expect(await screen.findByText('Demo verlassen')).toBeInTheDocument();
+    expect(screen.getByText(/Abmelden/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Demo verlassen'));
+
+    await waitFor(() => {
+      expect(authState.switchActiveProject).toHaveBeenCalledWith(1);
+      expect(authState.endGuestDemo).not.toHaveBeenCalled();
+      expect(authState.logout).not.toHaveBeenCalled();
+      expect(window.location.pathname).toBe('/app/dashboard');
+    });
+  });
+
+  it('only signs out authenticated users through the explicit logout action', async () => {
+    authState.user = createAuthenticatedUser();
+    authState.activeProjectId = 1;
+    window.history.pushState({}, '', '/app/dashboard');
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByLabelText('Mehr'));
+    expect(screen.queryByText('Demo verlassen')).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByText(/Abmelden/));
+
+    await waitFor(() => {
+      expect(authState.logout).toHaveBeenCalledTimes(1);
+      expect(authState.endGuestDemo).not.toHaveBeenCalled();
+      expect(window.location.pathname).toBe('/login');
+    });
   });
 
 

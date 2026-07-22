@@ -3,6 +3,8 @@ from django.urls import path
 from .views import (
     ActivateView,
     CsrfTokenView,
+    GuestDemoEndView,
+    GuestDemoStartView,
     LoginView,
     LogoutView,
     MeView,
@@ -27,6 +29,8 @@ urlpatterns = [
     path('register/', RegisterView.as_view(), name='auth-register'),
     path('activate/', ActivateView.as_view(), name='auth-activate'),
     path('login/', LoginView.as_view(), name='auth-login'),
+    path('guest-demo/start/', GuestDemoStartView.as_view(), name='auth-guest-demo-start'),
+    path('guest-demo/end/', GuestDemoEndView.as_view(), name='auth-guest-demo-end'),
     path('logout/', LogoutView.as_view(), name='auth-logout'),
     path('me/', MeView.as_view(), name='auth-me'),
     path('consent/accept/', ConsentAcceptView.as_view(), name='auth-consent-accept'),

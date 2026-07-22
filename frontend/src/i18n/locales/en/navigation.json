@@ -133,6 +133,7 @@
       "openVersionHistory": "Open version history",
       "toggleSidebar": "Toggle sidebar",
       "openPageHelp": "Open page help",
+      "leaveDemo": "Leave demo",
       "logout": "Logout",
       "openShortcuts": "Open page help",
       "closeDialog": "Close dialog",
@@ -152,6 +153,7 @@
       "versionHistoryLoadError": "Could not load version history.",
       "versionRestored": "Project version restored.",
       "versionRestoreError": "Could not restore project version.",
+      "leaveDemoError": "Could not leave the demo. Please try again.",
       "logoutError": "Logout failed. Please try again."
     }
   }
