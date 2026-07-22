@@ -2,7 +2,10 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useContext } from 'react';
 import { AuthProvider } from '../auth/AuthContext';
-import { AUTHENTICATION_EXPIRED_EVENT } from '../auth/authEvents';
+import {
+  AUTHENTICATION_EXPIRED_EVENT,
+  createAuthenticationExpiredEvent,
+} from '../auth/authEvents';
 import { AuthContext } from '../auth/authContextShared';
 import type { AuthUser } from '../auth/types';
 
@@ -190,5 +193,28 @@ describe('AuthProvider cross-tab project sync', () => {
     await waitFor(() => expect(screen.getByTestId('active-project-id')).toHaveTextContent('2'));
     expect(localStorage.getItem('activeProjectId')).toBe('2');
     expect(sessionStorage.getItem('guestDemoSessionId')).toBe('77');
+  });
+
+  it('ignores auth-expired events from requests that started before a new guest demo login', async () => {
+    const staleRequestStartedAt = Date.now() - 1000;
+
+    render(<AuthProvider><GuestDemoStartProbe /></AuthProvider>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start demo' }));
+    await waitFor(() => expect(screen.getByTestId('active-project-id')).toHaveTextContent('2'));
+
+    act(() => {
+      window.dispatchEvent(createAuthenticationExpiredEvent(staleRequestStartedAt));
+    });
+
+    expect(screen.getByTestId('active-project-id')).toHaveTextContent('2');
+    expect(localStorage.getItem('activeProjectId')).toBe('2');
+    expect(sessionStorage.getItem('guestDemoSessionId')).toBe('77');
+
+    act(() => {
+      window.dispatchEvent(createAuthenticationExpiredEvent(Date.now() + 1000));
+    });
+
+    await waitFor(() => expect(screen.getByTestId('active-project-id')).toHaveTextContent('none'));
   });
 });

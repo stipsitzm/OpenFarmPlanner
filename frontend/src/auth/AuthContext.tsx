@@ -16,7 +16,10 @@ import {
   restoreAccount as restoreAccountRequest,
   switchActiveProject as switchActiveProjectRequest,
 } from "./authApi";
-import { AUTHENTICATION_EXPIRED_EVENT } from "./authEvents";
+import {
+  AUTHENTICATION_EXPIRED_EVENT,
+  type AuthenticationExpiredEventDetail,
+} from "./authEvents";
 import type { AuthUser } from "./types";
 import { AuthContext, type AuthContextValue } from "./authContextShared";
 
@@ -86,6 +89,7 @@ export function AuthProvider({
   const [isLoading, setIsLoading] = useState(true);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
   const authGenerationRef = useRef(0);
+  const lastAuthenticatedAtRef = useRef(0);
 
   const beginAuthMutation = useCallback((): number => {
     authGenerationRef.current += 1;
@@ -93,6 +97,7 @@ export function AuthProvider({
   }, []);
 
   const clearAuthenticatedUser = useCallback((): void => {
+    lastAuthenticatedAtRef.current = 0;
     setUser(null);
     setActiveProjectId(null);
     clearStoredProjectId();
@@ -100,6 +105,7 @@ export function AuthProvider({
   }, []);
 
   const applyAuthenticatedUser = useCallback((me: AuthUser): void => {
+    lastAuthenticatedAtRef.current = Date.now();
     setUser(me);
     setActiveProjectId(applyResolvedProjectId(me));
   }, []);
@@ -149,7 +155,16 @@ export function AuthProvider({
   }, [clearAuthenticatedUser, refreshUser]);
 
   useEffect(() => {
-    function handleAuthenticationExpired(): void {
+    function handleAuthenticationExpired(event: Event): void {
+      const detail = 'detail' in event
+        ? event.detail as Partial<AuthenticationExpiredEventDetail> | undefined
+        : undefined;
+      const requestStartedAt = typeof detail?.requestStartedAt === 'number'
+        ? detail.requestStartedAt
+        : null;
+      if (requestStartedAt !== null && requestStartedAt <= lastAuthenticatedAtRef.current) {
+        return;
+      }
       clearAuthenticatedUser();
     }
     window.addEventListener(AUTHENTICATION_EXPIRED_EVENT, handleAuthenticationExpired);

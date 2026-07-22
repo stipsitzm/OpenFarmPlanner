@@ -48,4 +48,13 @@ test('keeps the guest demo after an older login-page auth refresh finishes', asy
   releaseAuthRefresh();
   await expect(page).toHaveURL(/\/app\/fields-beds/);
   await expect(page.getByRole('heading', { name: 'Anbauflächen' })).toBeVisible();
+
+  await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('openfarmplanner:authentication-expired', {
+      detail: { requestStartedAt: Date.now() - 10_000 },
+    }));
+  });
+
+  await expect(page).toHaveURL(/\/app\/fields-beds/);
+  await expect(page.getByRole('heading', { name: 'Anbauflächen' })).toBeVisible();
 });
