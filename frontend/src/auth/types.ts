@@ -22,6 +22,8 @@ export interface AuthUser {
   pending_consents: string[];
   /** Whether the user accepted the current public-library contribution terms. */
   public_library_terms_accepted: boolean;
+  is_guest_demo: boolean;
+  guest_demo_session_id: number | null;
 }
 
 export interface ProjectSwitchResponse {

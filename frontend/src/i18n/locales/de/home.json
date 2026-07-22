@@ -7,7 +7,9 @@
     "description": "Speziell entwickelt für Marktgärtnereien, Solidarische Landwirtschaft und andere Betriebe mit vielen Kulturen und kleinteiligen Anbauflächen.",
     "actions": {
       "openApp": "Anmelden",
-      "register": "Registrieren"
+      "register": "Registrieren",
+      "demo": "Demo ansehen",
+      "startingDemo": "Demo wird gestartet…"
     }
   },
   "statusNote": "OpenFarmPlanner befindet sich aktuell in der Beta-Phase und wird laufend weiterentwickelt.",

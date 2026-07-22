@@ -234,6 +234,16 @@ export async function login(email: string, password: string): Promise<AuthUser> 
   });
 }
 
+export async function startGuestDemo(): Promise<AuthUser> {
+  await ensureCsrfCookie();
+  return request<AuthUser>('/auth/guest-demo/start/', { method: 'POST', headers: csrfHeader(), body: JSON.stringify({}) });
+}
+
+export async function endGuestDemo(): Promise<void> {
+  await ensureCsrfCookie();
+  await request('/auth/guest-demo/end/', { method: 'POST', headers: csrfHeader(), body: JSON.stringify({}) });
+}
+
 export async function logout(): Promise<void> {
   await ensureCsrfCookie();
   await request('/auth/logout/', { method: 'POST', headers: csrfHeader(), body: JSON.stringify({}) });

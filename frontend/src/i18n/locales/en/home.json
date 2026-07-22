@@ -7,7 +7,9 @@
     "description": "OpenFarmPlanner helps small-scale vegetable production with clear planning for crops, beds, growing areas, cultivation periods, and sowing dates.",
     "actions": {
       "openApp": "Open OpenFarmPlanner",
-      "register": "Register"
+      "register": "Register",
+      "demo": "View demo",
+      "startingDemo": "Starting demo..."
     }
   },
   "statusNote": "Currently in beta - continuously improved.",

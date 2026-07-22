@@ -20,6 +20,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .consent import record_acceptance
+from .guest_demo import create_guest_demo_session, delete_guest_demo_session
 from .data_export import build_personal_data_export
 from .emails import (
     _send_activation_email,
@@ -35,7 +36,7 @@ from .services import (
     _set_activation_expiry,
     _validate_serializer_in_german,
 )
-from .models import AccountDeletionRequest, AccountEmailChangeRequest, PendingActivation, PublicProfile
+from .models import AccountDeletionRequest, AccountEmailChangeRequest, GuestDemoSession, PendingActivation, PublicProfile
 from .serializers import (
     AccountEmailChangeConfirmSerializer,
     AccountEmailChangeRequestSerializer,
@@ -151,6 +152,33 @@ class ActivateView(APIView):
         _clear_activation_expiry(user)
         login(request, user)
         return Response(UserSerializer(user).data)
+
+
+class GuestDemoStartView(APIView):
+    """Start an isolated, anonymous demo session."""
+
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'guest_demo_start'
+
+    def post(self, request: Request) -> Response:
+        if request.user.is_authenticated:
+            logout(request)
+        demo_session = create_guest_demo_session()
+        login(request, demo_session.user)
+        request.session['guest_demo_session_id'] = demo_session.id
+        return Response(UserSerializer(demo_session.user).data, status=status.HTTP_201_CREATED)
+
+
+class GuestDemoEndView(APIView):
+    """End the current guest session and delete its temporary data."""
+
+    def post(self, request: Request) -> Response:
+        demo_id = request.session.get('guest_demo_session_id')
+        demo_session = GuestDemoSession.objects.filter(id=demo_id, user=request.user).first()
+        logout(request)
+        if demo_session is not None:
+            delete_guest_demo_session(demo_session)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class LoginView(APIView):

@@ -4,6 +4,8 @@ import {
   activate as activateRequest,
   getMe,
   login as loginRequest,
+  startGuestDemo as startGuestDemoRequest,
+  endGuestDemo as endGuestDemoRequest,
   logout as logoutRequest,
   register as registerRequest,
   resendActivation as resendActivationRequest,
@@ -16,6 +18,12 @@ import {
 import { AUTHENTICATION_EXPIRED_EVENT } from "./authEvents";
 import type { AuthUser } from "./types";
 import { AuthContext, type AuthContextValue } from "./authContextShared";
+
+const GUEST_DEMO_SESSION_KEY = 'guestDemoSessionId';
+
+function clearGuestDemoSession(): void {
+  window.sessionStorage.removeItem(GUEST_DEMO_SESSION_KEY);
+}
 
 function clearStoredProjectId(): void {
   window.localStorage.removeItem("activeProjectId");
@@ -62,6 +70,7 @@ export function AuthProvider({
     setUser(null);
     setActiveProjectId(null);
     clearStoredProjectId();
+    clearGuestDemoSession();
   }, []);
 
   const applyAuthenticatedUser = useCallback((me: AuthUser): void => {
@@ -72,6 +81,11 @@ export function AuthProvider({
   const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
     try {
       const me = await getMe();
+      if (me.is_guest_demo && String(me.guest_demo_session_id) !== window.sessionStorage.getItem(GUEST_DEMO_SESSION_KEY)) {
+        await logoutRequest();
+        clearAuthenticatedUser();
+        return null;
+      }
       applyAuthenticatedUser(me);
       return me;
     } catch {
@@ -120,6 +134,16 @@ export function AuthProvider({
       user,
       isLoading,
       activeProjectId,
+      startGuestDemo: async () => {
+        const me = await startGuestDemoRequest();
+        window.sessionStorage.setItem(GUEST_DEMO_SESSION_KEY, String(me.guest_demo_session_id));
+        applyAuthenticatedUser(me);
+        return me;
+      },
+      endGuestDemo: async () => {
+        await endGuestDemoRequest();
+        clearAuthenticatedUser();
+      },
       login: async (email, password) => {
         const me = await loginRequest(email, password);
         applyAuthenticatedUser(me);

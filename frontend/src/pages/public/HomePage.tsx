@@ -11,7 +11,8 @@ import {
 } from '@mui/material';
 import { useState } from 'react';
 import type { SyntheticEvent } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
 import LegalLinks from '../../components/legal/LegalLinks';
 
@@ -73,6 +74,9 @@ const HERO_CARD_SX = {
  */
 export default function HomePage() {
   const { t } = useTranslation('home');
+  const navigate = useNavigate();
+  const { startGuestDemo } = useAuth();
+  const [isStartingDemo, setIsStartingDemo] = useState(false);
   const [activeTourKey, setActiveTourKey] = useState<ProductTourKey>('areas');
   const activeTourItem = PRODUCT_TOUR_ITEMS.find((item) => item.key === activeTourKey) ?? PRODUCT_TOUR_ITEMS[0];
 
@@ -155,7 +159,20 @@ export default function HomePage() {
                 {t('landing.description')}
               </Typography>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} sx={{ width: '100%', maxWidth: 380, pt: 0.5 }}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} sx={{ width: '100%', maxWidth: 500, pt: 0.5 }}>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  size="large"
+                  disabled={isStartingDemo}
+                  onClick={() => {
+                    setIsStartingDemo(true);
+                    void startGuestDemo().then(() => navigate('/app/fields-beds')).finally(() => setIsStartingDemo(false));
+                  }}
+                  sx={{ flex: 1, minHeight: 46, borderRadius: 2.5 }}
+                >
+                  {isStartingDemo ? t('landing.actions.startingDemo') : t('landing.actions.demo')}
+                </Button>
                 <Button
                   component={RouterLink}
                   to="/login"

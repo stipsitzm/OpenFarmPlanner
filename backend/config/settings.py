@@ -391,6 +391,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'auth_login': _env_str('THROTTLE_AUTH_LOGIN', '10/minute'),
+        'guest_demo_start': _env_str('THROTTLE_GUEST_DEMO_START', '10/hour'),
         'auth_register': _env_str('THROTTLE_AUTH_REGISTER', '5/minute'),
         'auth_activation': _env_str('THROTTLE_AUTH_ACTIVATION', '10/minute'),
         'auth_resend_activation': _env_str('THROTTLE_AUTH_RESEND_ACTIVATION', '5/minute'),
