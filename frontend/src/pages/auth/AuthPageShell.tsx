@@ -90,11 +90,7 @@ export default function AuthPageShell({ title, subtitle, children, legalLinksDen
             dense={legalLinksDense}
             sx={{
               justifyContent: 'center',
-              px: 1.5,
-              py: 0.75,
-              borderRadius: 2,
-              bgcolor: 'rgba(255, 255, 255, 0.78)',
-              boxShadow: '0 8px 24px rgba(28, 42, 30, 0.08)',
+              textShadow: '0 1px 2px rgba(255, 255, 255, 0.9)',
             }}
           />
         </Stack>
