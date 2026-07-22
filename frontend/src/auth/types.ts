@@ -2,6 +2,7 @@ export interface ProjectMembershipInfo {
   project_id: number;
   project_name: string;
   role: 'admin' | 'member';
+  is_demo_project?: boolean;
 }
 
 export interface AuthUser {

@@ -20,6 +20,22 @@ test('starts the public guest demo and keeps the user in the app', async ({ page
   await expect(page.getByRole('heading', { name: 'Anbauflächen' })).toBeVisible();
 });
 
+test('returns guest demo sessions to the public landing page when leaving the demo', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Demo ohne Registrierung ansehen' }).click();
+
+  await expect(page).toHaveURL(/\/app\/fields-beds/);
+  await expect(page.getByRole('heading', { name: 'Anbauflächen' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Mehr' }).click();
+  await page.getByRole('menuitem', { name: 'Demo verlassen' }).click();
+
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('button', { name: 'Demo ohne Registrierung ansehen' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Anmelden' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Registrieren' })).toBeVisible();
+});
+
 test('keeps the guest demo after an older login-page auth refresh finishes', async ({ page }) => {
   let releaseAuthRefresh: () => void = () => {};
   const authRefreshReleased = new Promise<void>((resolve) => {

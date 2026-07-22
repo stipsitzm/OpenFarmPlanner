@@ -71,6 +71,7 @@ import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import KeyboardOutlinedIcon from '@mui/icons-material/KeyboardOutlined';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import LogoutIcon from '@mui/icons-material/Logout';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import { cultureAPI, projectAPI } from '../api/api';
 import type { CultureHistoryEntry } from '../api/types';
 import { MobileProjectSwitcherDialog } from './MobileProjectSwitcherDialog';
@@ -236,6 +237,9 @@ interface GlobalMenuProps {
   onOpenAccountSettings: () => void;
   onOpenShortcuts: () => void;
   onOpenHelp: () => void;
+  canLeaveDemoProject: boolean;
+  isGuestDemoSession: boolean;
+  onLeaveDemoProject: () => Promise<void>;
   onLogout: () => Promise<void>;
   t: (key: string) => string;
 }
@@ -255,6 +259,9 @@ function GlobalMenu(props: GlobalMenuProps) {
     onOpenAccountSettings,
     onOpenShortcuts,
     onOpenHelp,
+    canLeaveDemoProject,
+    isGuestDemoSession,
+    onLeaveDemoProject,
     onLogout,
     t,
   } = props;
@@ -275,7 +282,8 @@ function GlobalMenu(props: GlobalMenuProps) {
     <MenuItem key="mobile-app-account-settings" onClick={wrap(onOpenAccountSettings)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
     <Divider key="mobile-divider-app-account" />,
     <MenuItem key="mobile-section-account" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.account')}</MenuItem>,
-    <MenuItem key="mobile-account-logout" onClick={wrapAsync(onLogout)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
+    canLeaveDemoProject ? <MenuItem key="mobile-account-leave-demo" onClick={wrapAsync(onLeaveDemoProject)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><ExitToAppIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.leaveDemo')}</MenuItem> : null,
+    !isGuestDemoSession ? <MenuItem key="mobile-account-logout" onClick={wrapAsync(onLogout)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem> : null,
   ];
   const desktopMenuItems = [
     <MenuItem key="desktop-project-settings" onClick={wrap(onOpenProjectSettings)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.settings')}</MenuItem>,
@@ -284,7 +292,8 @@ function GlobalMenu(props: GlobalMenuProps) {
     <MenuItem key="desktop-account-settings" onClick={wrap(onOpenAccountSettings)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
     <MenuItem key="desktop-shortcuts" onClick={wrap(onOpenShortcuts)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.shortcuts')}</MenuItem>,
     <MenuItem key="desktop-help" onClick={wrap(onOpenHelp)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.appHelp')}</MenuItem>,
-    <MenuItem key="desktop-logout" onClick={wrapAsync(onLogout)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem>,
+    canLeaveDemoProject ? <MenuItem key="desktop-leave-demo" onClick={wrapAsync(onLeaveDemoProject)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><ExitToAppIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.leaveDemo')}</MenuItem> : null,
+    !isGuestDemoSession ? <MenuItem key="desktop-logout" onClick={wrapAsync(onLogout)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem> : null,
   ];
   return <Menu id="global-actions-menu" anchorEl={anchorEl} open={open} onClose={onClose}>{isMobile ? mobileMenuItems : desktopMenuItems}</Menu>;
 }
@@ -346,7 +355,7 @@ function RootLayout() {
   const isVeryNarrowMobile = useMediaQuery('(max-width:360px)');
   const isPhonePortrait = useMediaQuery(`${theme.breakpoints.down('sm')} and (orientation: portrait)`);
   const isTabletOrNarrowDesktop = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
-  const { user, logout, activeProjectId, switchActiveProject } = useAuth();
+  const { user, endGuestDemo, logout, activeProjectId, switchActiveProject } = useAuth();
   const fallbackHistoryActorLabel = user?.display_label || user?.display_name || user?.email || undefined;
   const { activeCreateActions, openPalette, runPrimaryCreateAction, openShortcutsHelp } = useCommandContext();
   const [globalMenuAnchor, setGlobalMenuAnchor] = useState<null | HTMLElement>(null);
@@ -523,6 +532,39 @@ function RootLayout() {
     setGlobalHelpOpen(false);
   };
 
+  const memberships = useMemo(() => user?.memberships ?? [], [user?.memberships]);
+  const activeMembership = memberships.find((membership) => membership.project_id === activeProjectId) ?? null;
+  const isGuestDemoSession = Boolean(user?.is_guest_demo);
+  const isPersonalDemoProject = !isGuestDemoSession && activeMembership?.is_demo_project === true;
+  const canLeaveDemoProject = isGuestDemoSession || isPersonalDemoProject;
+  const activeProjectLabel = activeMembership?.project_name ?? t('projectSwitcher.noProject');
+
+  const handleLeaveDemoProject = useCallback(async (): Promise<void> => {
+    try {
+      handleGlobalMenuClose();
+      if (user?.is_guest_demo) {
+        navigate('/', { replace: true });
+        await endGuestDemo();
+        return;
+      }
+
+      const fallbackProject = memberships.find((membership) => (
+        membership.project_id !== activeProjectId
+        && membership.is_demo_project !== true
+      ));
+      if (fallbackProject) {
+        await switchActiveProject(fallbackProject.project_id);
+        navigate('/app/dashboard', { replace: true });
+        return;
+      }
+
+      navigate('/app/project-selection', { replace: true });
+    } catch (error) {
+      console.error('Error leaving demo project:', error);
+      showSnackbar(t('commandPalette.feedback.leaveDemoError'), 'error');
+    }
+  }, [activeProjectId, endGuestDemo, memberships, navigate, showSnackbar, switchActiveProject, t, user?.is_guest_demo]);
+
   const handleLogout = useCallback(async (): Promise<void> => {
     try {
       await logout();
@@ -533,10 +575,6 @@ function RootLayout() {
       showSnackbar(t('commandPalette.feedback.logoutError'), 'error');
     }
   }, [logout, navigate, showSnackbar, t]);
-
-  const memberships = useMemo(() => user?.memberships ?? [], [user?.memberships]);
-  const activeMembership = memberships.find((membership) => membership.project_id === activeProjectId) ?? null;
-  const activeProjectLabel = activeMembership?.project_name ?? t('projectSwitcher.noProject');
 
   const refreshDeletedProjectsCount = useCallback(async (): Promise<void> => {
     if (!user) {
@@ -800,7 +838,8 @@ function RootLayout() {
     onSwitchProject: (projectId) => { void handleSwitchProject(projectId); },
     onOpenAccountSettings: () => navigate('/app/account-settings'),
     onOpenVersionHistory: () => { void handleOpenProjectHistory(); },
-    onLogout: () => { void handleLogout(); },
+    onLeaveDemoProject: canLeaveDemoProject ? () => { void handleLeaveDemoProject(); } : undefined,
+    onLogout: isGuestDemoSession ? undefined : () => { void handleLogout(); },
     onOpenPalette: openPalette,
     onOpenPageHelp: openCurrentPageHelp,
     onOpenShortcutsHelp: openShortcutsHelp,
@@ -814,6 +853,7 @@ function RootLayout() {
       switchProjectPrefix: t('commandPalette.commands.switchProjectPrefix'),
       openAccountSettings: t('commandPalette.commands.openAccountSettings'),
       openVersionHistory: t('commandPalette.commands.openVersionHistory'),
+      leaveDemo: t('commandPalette.commands.leaveDemo'),
       logout: t('commandPalette.commands.logout'),
       openPalette: t('commandPalette.label'),
       openPageHelp: t('commandPalette.commands.openPageHelp'),
@@ -825,12 +865,15 @@ function RootLayout() {
     getCurrentRouteFromLocation,
     goToNextPage,
     goToPreviousPage,
+    handleLeaveDemoProject,
     handleLogout,
     handleOpenCreateProject,
     handleOpenProjectHistory,
     handleOpenProjectSettings,
     handleSwitchProject,
+    canLeaveDemoProject,
     isDesktopUp,
+    isGuestDemoSession,
     memberships,
     navigate,
     openCurrentPageHelp,
@@ -1396,6 +1439,9 @@ function RootLayout() {
             onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
             onOpenShortcuts={handleOpenShortcuts}
             onOpenHelp={openGlobalHelp}
+            canLeaveDemoProject={canLeaveDemoProject}
+            isGuestDemoSession={isGuestDemoSession}
+            onLeaveDemoProject={handleLeaveDemoProject}
             onLogout={handleLogout}
             t={t}
           />
@@ -1660,6 +1706,9 @@ function RootLayout() {
                 onOpenAccountSettings={() => navigateFromGlobalMenu('/app/account-settings')}
                 onOpenShortcuts={handleOpenShortcuts}
                 onOpenHelp={openGlobalHelp}
+                canLeaveDemoProject={canLeaveDemoProject}
+                isGuestDemoSession={isGuestDemoSession}
+                onLeaveDemoProject={handleLeaveDemoProject}
                 onLogout={handleLogout}
                 t={t}
               />

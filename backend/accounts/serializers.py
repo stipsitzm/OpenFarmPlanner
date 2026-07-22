@@ -14,6 +14,8 @@ from rest_framework import serializers
 
 from farm.models import ProjectMembership
 from farm.project_context import resolve_project_for_user
+from farm.services.demo_project import DEMO_PROJECT_DESCRIPTION
+
 from .consent import get_pending_consent_documents, has_accepted_current, record_acceptance
 from .models import AccountDeletionRequest, DocumentConsent, GuestDemoSession, PublicProfile
 
@@ -119,7 +121,7 @@ class UserSerializer(serializers.ModelSerializer):
             return None
         return project.id
 
-    def get_memberships(self, obj: User) -> list[dict[str, str | int]]:
+    def get_memberships(self, obj: User) -> list[dict[str, str | int | bool]]:
         rows = ProjectMembership.objects.select_related('project').filter(
             user=obj,
             project__is_active=True,
@@ -130,6 +132,7 @@ class UserSerializer(serializers.ModelSerializer):
                 'project_id': row.project_id,
                 'project_name': row.project.name,
                 'role': row.role,
+                'is_demo_project': row.project.description == DEMO_PROJECT_DESCRIPTION,
             }
             for row in rows
         ]

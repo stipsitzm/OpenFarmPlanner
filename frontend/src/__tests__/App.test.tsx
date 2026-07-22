@@ -21,13 +21,38 @@ function createGuestDemoUser(): AuthUser {
     last_project_id: 9,
     resolved_project_id: 9,
     needs_project_selection: false,
-    memberships: [{ project_id: 9, project_name: 'Solawi Sonnenacker', role: 'admin' }],
+    memberships: [{ project_id: 9, project_name: 'Solawi Sonnenacker', role: 'admin', is_demo_project: true }],
     account_pending_deletion: false,
     scheduled_deletion_at: null,
     pending_consents: [],
     public_library_terms_accepted: false,
     is_guest_demo: true,
     guest_demo_session_id: 123,
+  };
+}
+
+function createAuthenticatedUser(
+  memberships: AuthUser['memberships'] = [{ project_id: 1, project_name: 'Alpha', role: 'admin' }],
+  resolvedProjectId = memberships[0]?.project_id ?? null,
+): AuthUser {
+  return {
+    id: 1,
+    email: 'demo@example.com',
+    display_name: 'Demo',
+    display_label: 'Demo',
+    public_display_name: 'Demo',
+    is_active: true,
+    default_project_id: resolvedProjectId,
+    last_project_id: resolvedProjectId,
+    resolved_project_id: resolvedProjectId,
+    needs_project_selection: false,
+    memberships,
+    account_pending_deletion: false,
+    scheduled_deletion_at: null,
+    pending_consents: [],
+    public_library_terms_accepted: false,
+    is_guest_demo: false,
+    guest_demo_session_id: null,
   };
 }
 
@@ -119,6 +144,7 @@ describe('App', () => {
     authState.switchActiveProject.mockClear();
     authState.startGuestDemo.mockClear();
     authState.endGuestDemo.mockClear();
+    authState.logout.mockClear();
     authState.startGuestDemo.mockResolvedValue(createGuestDemoUser());
     projectApiMocks.create.mockClear();
     projectApiMocks.createDemo.mockClear();
@@ -431,6 +457,71 @@ describe('App', () => {
     fireEvent.click(await screen.findByLabelText('Mehr'));
     expect(await screen.findByText('Kontoeinstellungen')).toBeInTheDocument();
     expect(screen.getByText('Projekteinstellungen')).toBeInTheDocument();
+  });
+
+  it('returns guest demo sessions to the public landing page when leaving the demo', async () => {
+    authState.user = createGuestDemoUser();
+    authState.activeProjectId = 9;
+    window.history.pushState({}, '', '/app/fields-beds');
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByLabelText('Mehr'));
+    expect(await screen.findByText('Demo verlassen')).toBeInTheDocument();
+    expect(screen.queryByText(/Abmelden/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Demo verlassen'));
+
+    await waitFor(() => {
+      expect(authState.endGuestDemo).toHaveBeenCalledTimes(1);
+      expect(authState.logout).not.toHaveBeenCalled();
+      expect(window.location.pathname).toBe('/');
+    });
+    expect(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Anmelden' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Registrieren' })).toBeInTheDocument();
+  });
+
+  it('keeps authenticated users signed in when leaving their personal demo project', async () => {
+    authState.user = createAuthenticatedUser([
+      { project_id: 9, project_name: 'Solawi Sonnenacker', role: 'admin', is_demo_project: true },
+      { project_id: 1, project_name: 'Alpha', role: 'admin', is_demo_project: false },
+    ], 9);
+    authState.activeProjectId = 9;
+    window.history.pushState({}, '', '/app/fields-beds');
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByLabelText('Mehr'));
+    expect(await screen.findByText('Demo verlassen')).toBeInTheDocument();
+    expect(screen.getByText(/Abmelden/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Demo verlassen'));
+
+    await waitFor(() => {
+      expect(authState.switchActiveProject).toHaveBeenCalledWith(1);
+      expect(authState.endGuestDemo).not.toHaveBeenCalled();
+      expect(authState.logout).not.toHaveBeenCalled();
+      expect(window.location.pathname).toBe('/app/dashboard');
+    });
+  });
+
+  it('only signs out authenticated users through the explicit logout action', async () => {
+    authState.user = createAuthenticatedUser();
+    authState.activeProjectId = 1;
+    window.history.pushState({}, '', '/app/dashboard');
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    fireEvent.click(await screen.findByLabelText('Mehr'));
+    expect(screen.queryByText('Demo verlassen')).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByText(/Abmelden/));
+
+    await waitFor(() => {
+      expect(authState.logout).toHaveBeenCalledTimes(1);
+      expect(authState.endGuestDemo).not.toHaveBeenCalled();
+      expect(window.location.pathname).toBe('/login');
+    });
   });
 
 

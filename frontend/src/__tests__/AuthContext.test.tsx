@@ -36,7 +36,7 @@ const startGuestDemoMock = vi.hoisted(() => vi.fn(async () => ({
   default_project_id: 2,
   last_project_id: 2,
   resolved_project_id: 2,
-  memberships: [{ project_id: 2, project_name: 'Solawi Sonnenacker', role: 'admin' as const }],
+  memberships: [{ project_id: 2, project_name: 'Solawi Sonnenacker', role: 'admin' as const, is_demo_project: true }],
   is_guest_demo: true,
   guest_demo_session_id: 77,
 })));
@@ -107,7 +107,7 @@ describe('AuthProvider cross-tab project sync', () => {
       default_project_id: 2,
       last_project_id: 2,
       resolved_project_id: 2,
-      memberships: [{ project_id: 2, project_name: 'Solawi Sonnenacker', role: 'admin' }],
+      memberships: [{ project_id: 2, project_name: 'Solawi Sonnenacker', role: 'admin', is_demo_project: true }],
       is_guest_demo: true,
       guest_demo_session_id: 77,
     });
