@@ -1,22 +1,44 @@
 from __future__ import annotations
 
-from django.contrib.auth import get_user_model
-from django.test import TestCase
+from contextlib import contextmanager
 from datetime import timedelta
+from typing import Iterator
+from unittest.mock import patch
+
+from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.core.cache import cache
+from django.test import override_settings
+from django.test import TestCase
 
 from django.utils import timezone
 from rest_framework import status
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.test import APIClient
 
 from accounts.guest_demo import create_guest_demo_session
 from accounts.models import GuestDemoSession
+from accounts.views import GuestDemoStartView, LoginView
 from farm.models import Culture, Project
 
 User = get_user_model()
 
 
+@contextmanager
+def enabled_scoped_throttling() -> Iterator[None]:
+    """Temporarily restore DRF scoped throttling disabled by test settings."""
+    rates = settings.REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']
+    with (
+        patch.object(ScopedRateThrottle, 'THROTTLE_RATES', rates),
+        patch.object(GuestDemoStartView, 'throttle_classes', [ScopedRateThrottle]),
+        patch.object(LoginView, 'throttle_classes', [ScopedRateThrottle]),
+    ):
+        yield
+
+
 class GuestDemoApiTests(TestCase):
     def setUp(self) -> None:
+        cache.clear()
         self.client = APIClient()
 
     def test_start_creates_an_isolated_authenticated_demo(self) -> None:
@@ -55,3 +77,103 @@ class GuestDemoApiTests(TestCase):
 
         call_command('cleanup_guest_demo_sessions')
         self.assertFalse(GuestDemoSession.objects.filter(id=demo_session.id).exists())
+
+    @override_settings(
+        REST_FRAMEWORK={
+            'DEFAULT_AUTHENTICATION_CLASSES': [
+                'rest_framework.authentication.SessionAuthentication',
+            ],
+            'DEFAULT_PERMISSION_CLASSES': [
+                'rest_framework.permissions.AllowAny',
+            ],
+            'DEFAULT_THROTTLE_CLASSES': [
+                'rest_framework.throttling.ScopedRateThrottle',
+            ],
+            'DEFAULT_THROTTLE_RATES': {
+                'auth_login': '10/minute',
+                'guest_demo_start': '1/minute',
+            },
+        },
+    )
+    def test_restrictive_guest_demo_throttle_limits_repeated_starts(self) -> None:
+        with enabled_scoped_throttling():
+            first_client = APIClient(REMOTE_ADDR='203.0.113.10')
+            second_client = APIClient(REMOTE_ADDR='203.0.113.10')
+            first = first_client.post(
+                '/openfarmplanner/api/auth/guest-demo/start/',
+                {},
+                format='json',
+            )
+            second = second_client.post(
+                '/openfarmplanner/api/auth/guest-demo/start/',
+                {},
+                format='json',
+            )
+
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    @override_settings(
+        REST_FRAMEWORK={
+            'DEFAULT_AUTHENTICATION_CLASSES': [
+                'rest_framework.authentication.SessionAuthentication',
+            ],
+            'DEFAULT_PERMISSION_CLASSES': [
+                'rest_framework.permissions.AllowAny',
+            ],
+            'DEFAULT_THROTTLE_CLASSES': [
+                'rest_framework.throttling.ScopedRateThrottle',
+            ],
+            'DEFAULT_THROTTLE_RATES': {
+                'auth_login': '1/minute',
+                'guest_demo_start': '1000/minute',
+            },
+        },
+    )
+    def test_development_guest_demo_throttle_allows_repeated_starts(self) -> None:
+        with enabled_scoped_throttling():
+            responses = [
+                APIClient(REMOTE_ADDR='203.0.113.11').post(
+                    '/openfarmplanner/api/auth/guest-demo/start/',
+                    {},
+                    format='json',
+                )
+                for _ in range(3)
+            ]
+
+        self.assertTrue(
+            all(response.status_code == status.HTTP_201_CREATED for response in responses)
+        )
+
+    @override_settings(
+        REST_FRAMEWORK={
+            'DEFAULT_AUTHENTICATION_CLASSES': [
+                'rest_framework.authentication.SessionAuthentication',
+            ],
+            'DEFAULT_PERMISSION_CLASSES': [
+                'rest_framework.permissions.AllowAny',
+            ],
+            'DEFAULT_THROTTLE_CLASSES': [
+                'rest_framework.throttling.ScopedRateThrottle',
+            ],
+            'DEFAULT_THROTTLE_RATES': {
+                'auth_login': '1/minute',
+                'guest_demo_start': '1000/minute',
+            },
+        },
+    )
+    def test_guest_demo_throttle_does_not_change_other_scopes(self) -> None:
+        with enabled_scoped_throttling():
+            first = APIClient(REMOTE_ADDR='203.0.113.12').post(
+                '/openfarmplanner/api/auth/login/',
+                {},
+                format='json',
+            )
+            second = APIClient(REMOTE_ADDR='203.0.113.12').post(
+                '/openfarmplanner/api/auth/login/',
+                {},
+                format='json',
+            )
+
+        self.assertNotEqual(first.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertEqual(second.status_code, status.HTTP_429_TOO_MANY_REQUESTS)

@@ -47,6 +47,36 @@ def _env_list(name: str, default: str = '') -> list[str]:
     return [value.strip() for value in os.getenv(name, default).split(',') if value.strip()]
 
 
+def _validate_throttle_rate(name: str, value: str) -> str:
+    """Validate a DRF throttle rate string before the server starts."""
+    try:
+        requests, period = value.split('/', 1)
+        request_count = int(requests)
+    except ValueError as exc:
+        raise ImproperlyConfigured(
+            f'{name} must use Django REST Framework throttle syntax, for example "10/hour".'
+        ) from exc
+
+    if request_count <= 0:
+        raise ImproperlyConfigured(f'{name} must allow at least one request per period.')
+    if not period or period[0] not in {'s', 'm', 'h', 'd'}:
+        raise ImproperlyConfigured(
+            f'{name} period must be seconds, minutes, hours, or days.'
+        )
+    return value
+
+
+def _guest_demo_throttle_rate_for_env(
+    django_env: str,
+    guest_demo_rate: str = '',
+    legacy_rate: str = '',
+) -> str:
+    """Resolve the guest demo throttle rate from explicit env and safe defaults."""
+    configured_rate = guest_demo_rate or legacy_rate
+    default_rate = '1000/minute' if django_env == 'development' else '10/hour'
+    return _validate_throttle_rate('GUEST_DEMO_THROTTLE_RATE', configured_rate or default_rate)
+
+
 def _dedupe(values: list[str]) -> list[str]:
     return list(dict.fromkeys(values))
 
@@ -391,7 +421,11 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'auth_login': _env_str('THROTTLE_AUTH_LOGIN', '10/minute'),
-        'guest_demo_start': _env_str('THROTTLE_GUEST_DEMO_START', '10/hour'),
+        'guest_demo_start': _guest_demo_throttle_rate_for_env(
+            DJANGO_ENV,
+            _env_str('GUEST_DEMO_THROTTLE_RATE'),
+            _env_str('THROTTLE_GUEST_DEMO_START'),
+        ),
         'auth_register': _env_str('THROTTLE_AUTH_REGISTER', '5/minute'),
         'auth_activation': _env_str('THROTTLE_AUTH_ACTIVATION', '10/minute'),
         'auth_resend_activation': _env_str('THROTTLE_AUTH_RESEND_ACTIVATION', '5/minute'),
