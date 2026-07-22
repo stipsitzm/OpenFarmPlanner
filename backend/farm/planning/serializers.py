@@ -1,5 +1,7 @@
 """DRF serializers for the planning domain (planting plans and tasks)."""
 
+from datetime import date
+
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
@@ -21,6 +23,8 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
     culture_cultivation_type = serializers.CharField(source='culture.cultivation_type', read_only=True, allow_blank=True, allow_null=True)
     culture_cultivation_types = serializers.ListField(source='culture.cultivation_types', child=serializers.CharField(), read_only=True, allow_null=True)
     bed_name = serializers.SerializerMethodField(read_only=True)
+    harvest_date = serializers.SerializerMethodField(read_only=True)
+    harvest_end_date = serializers.SerializerMethodField(read_only=True)
     plants_count = serializers.SerializerMethodField(read_only=True)
     note_attachment_count = serializers.IntegerField(read_only=True)
     created_by_user = AuditUserSerializer(source='created_by', read_only=True)
@@ -41,7 +45,7 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
         help_text='Unit for area input: M2 (square meters) or PLANTS (plant count)'
     )
 
-    def get_image_file(self, obj):
+    def get_image_file(self, obj: PlantingPlan) -> dict[str, object] | None:
         if not obj.image_file_id:
             return None
         return {
@@ -49,8 +53,24 @@ class PlantingPlanSerializer(serializers.ModelSerializer):
             'storage_path': obj.image_file.storage_path,
         }
 
-    def get_bed_name(self, obj):
+    def get_bed_name(self, obj: PlantingPlan) -> str | None:
         return obj.bed.name if obj.bed else None
+
+    def get_harvest_date(self, obj: PlantingPlan) -> date | None:
+        """Return harvest start only when culture growth timing is known."""
+        if obj.culture is None or obj.culture.growth_duration_days is None:
+            return None
+        return obj.harvest_date
+
+    def get_harvest_end_date(self, obj: PlantingPlan) -> date | None:
+        """Return harvest end only when both growth and harvest timing are known."""
+        if (
+            obj.culture is None
+            or obj.culture.growth_duration_days is None
+            or obj.culture.harvest_duration_days is None
+        ):
+            return None
+        return obj.harvest_end_date
 
     class Meta:
         model = PlantingPlan

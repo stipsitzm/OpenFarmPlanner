@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
 import PlantingPlans from "../pages/PlantingPlans";
 import type { EditableDataGridCommandApi } from "../components/data-grid";
 
@@ -344,6 +345,105 @@ describe("PlantingPlans save-time area validation", () => {
       expect.objectContaining({ minWidth: 142, width: 142, maxWidth: 142 }),
     ]);
     expect(dateColumns.every((column) => column?.renderEditCell === undefined)).toBe(true);
+  });
+
+  it("explains the harvest start and end calculations separately", async () => {
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+
+    const latestProps = commandApiSpies.gridProps.mock.calls.at(-1)?.[0];
+    const columns = latestProps?.columns ?? [];
+    const harvestStartColumn = columns.find((column: { field: string }) => column.field === "harvest_date");
+    const harvestEndColumn = columns.find((column: { field: string }) => column.field === "harvest_end_date");
+
+    const startHeader = render(<>{harvestStartColumn.renderHeader()}</>);
+    await userEvent.hover(startHeader.getByText("Erntebeginn"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Wird automatisch aus Pflanzdatum und Wachstumszeit der Kultur berechnet.",
+    );
+    startHeader.unmount();
+
+    const endHeader = render(<>{harvestEndColumn.renderHeader()}</>);
+    await userEvent.hover(endHeader.getByText("Ernteende"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Wird automatisch aus Erntebeginn und Erntezeit der Kultur berechnet.",
+    );
+    endHeader.unmount();
+  });
+
+  it("renders unavailable calculated harvest dates with a dash and explanatory tooltip", async () => {
+    apiMocks.cultureList.mockResolvedValue({
+      data: {
+        results: [
+          { id: 2, name: "Ohne Zeitangaben", plants_per_m2: 10, growth_duration_days: null, harvest_duration_days: null },
+          { id: 3, name: "Nur Wachstumszeit", plants_per_m2: 10, growth_duration_days: 30, harvest_duration_days: null },
+          { id: 4, name: "Vollständige Zeitangaben", plants_per_m2: 10, growth_duration_days: 30, harvest_duration_days: 7 },
+        ],
+      },
+    });
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+
+    const latestProps = commandApiSpies.gridProps.mock.calls.at(-1)?.[0];
+    const columns = latestProps?.columns ?? [];
+    const harvestStartColumn = columns.find((column: { field: string }) => column.field === "harvest_date");
+    const harvestEndColumn = columns.find((column: { field: string }) => column.field === "harvest_end_date");
+    const renderCell = (column: { renderCell?: (params: unknown) => ReactNode }, row: Record<string, unknown>) => (
+      column.renderCell?.({
+        field: column === harvestEndColumn ? "harvest_end_date" : "harvest_date",
+        row,
+      })
+    );
+
+    expect(harvestStartColumn.cellClassName({ value: null })).toContain("ofp-cell-full-tooltip");
+    expect(harvestStartColumn.cellClassName({ value: new Date("2026-05-01") })).not.toContain("ofp-cell-full-tooltip");
+
+    const completeStart = render(<>{renderCell(harvestStartColumn, {
+      id: 1,
+      culture: 4,
+      harvest_date: "2026-05-01",
+      harvest_end_date: "2026-05-08",
+    })}</>);
+    expect(completeStart.getByText("1.5.2026")).toBeInTheDocument();
+    completeStart.unmount();
+
+    const missingStart = render(<>{renderCell(harvestStartColumn, {
+      id: 2,
+      culture: 2,
+      harvest_date: null,
+      harvest_end_date: null,
+    })}</>);
+    const missingDash = missingStart.getByText("—");
+    expect(missingDash).toBeInTheDocument();
+    const missingCellTrigger = missingStart.container.querySelector(".ofp-full-cell-tooltip-trigger");
+    expect(missingCellTrigger).not.toBeNull();
+    await userEvent.hover(missingCellTrigger as Element);
+    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur keine Wachstumszeit hinterlegt ist.")).toBeInTheDocument();
+    missingStart.unmount();
+
+    const missingEnd = render(<>{renderCell(harvestEndColumn, {
+      id: 3,
+      culture: 2,
+      harvest_date: null,
+      harvest_end_date: null,
+    })}</>);
+    const missingEndDash = missingEnd.getByText("—");
+    expect(missingEndDash).toBeInTheDocument();
+    await userEvent.hover(missingEndDash);
+    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur weder eine Wachstumszeit noch eine Erntezeit hinterlegt ist.")).toBeInTheDocument();
+    missingEnd.unmount();
+
+    const partialEnd = render(<>{renderCell(harvestEndColumn, {
+      id: 4,
+      culture: 3,
+      harvest_date: "2026-05-01",
+      harvest_end_date: null,
+    })}</>);
+    const partialDash = partialEnd.getByText("—");
+    expect(partialDash).toBeInTheDocument();
+    await userEvent.hover(partialDash);
+    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur keine Erntezeit hinterlegt ist.")).toBeInTheDocument();
+    partialEnd.unmount();
   });
 
   it("shows bed-limit dialog when requested area exceeds bed area", async () => {

@@ -29,6 +29,8 @@ import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
 import { useNavigationBlocker } from '../hooks/useNavigationBlocker';
 import { enableDevOnboardingPreview } from '../projects/devOnboardingPreview';
+import { clearContextMenuHintDismissals } from '../components/data-grid';
+import { mediumFieldSx, wideFieldSx } from '../components/forms/formLayout';
 
 const actionButtonSx = { width: { xs: '100%', sm: 'auto' } } as const;
 
@@ -249,8 +251,7 @@ export default function AccountSettingsPage() {
 
   const handleResetHints = (): void => {
     localStorage.removeItem('ofp.shortcutHintSeen');
-    localStorage.removeItem(`ofp.contextMenuHintDismissed:user:${user?.id}`);
-    localStorage.removeItem('ofp.contextMenuHintDismissed');
+    clearContextMenuHintDismissals(user?.id);
     setHintsResetDone(true);
   };
 
@@ -308,7 +309,7 @@ export default function AccountSettingsPage() {
                 label={t('displayName')}
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
-                fullWidth
+                sx={wideFieldSx}
                 slotProps={{ htmlInput: { maxLength: 255 } }}
               />
             </InlineEditor>
@@ -346,7 +347,7 @@ export default function AccountSettingsPage() {
                 label={t('publicProfile.publicDisplayName')}
                 value={publicDisplayName}
                 onChange={(event) => setPublicDisplayName(event.target.value)}
-                fullWidth
+                sx={wideFieldSx}
                 helperText={t('publicProfile.helperText')}
                 slotProps={{ htmlInput: { maxLength: 255 } }}
               />
@@ -387,14 +388,14 @@ export default function AccountSettingsPage() {
             <TextField
               label={t('security.newEmail')}
               type="email"
-              fullWidth
+              sx={wideFieldSx}
               value={newEmail}
               onChange={(event) => setNewEmail(event.target.value)}
             />
             <TextField
               label={t('currentPassword')}
               type="password"
-              fullWidth
+              sx={mediumFieldSx}
               value={emailPassword}
               onChange={(event) => setEmailPassword(event.target.value)}
             />
@@ -411,21 +412,21 @@ export default function AccountSettingsPage() {
             <TextField
               label={t('currentPassword')}
               type="password"
-              fullWidth
+              sx={mediumFieldSx}
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
             />
             <TextField
               label={t('security.newPassword')}
               type="password"
-              fullWidth
+              sx={mediumFieldSx}
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
             />
             <TextField
               label={t('security.repeatNewPassword')}
               type="password"
-              fullWidth
+              sx={mediumFieldSx}
               value={repeatPassword}
               onChange={(event) => setRepeatPassword(event.target.value)}
             />
@@ -476,14 +477,14 @@ export default function AccountSettingsPage() {
             <Typography>{t('deleteDescription')}</Typography>
             <Typography>{t('restoreDescription')}</Typography>
             <TextField
-              fullWidth
+              sx={mediumFieldSx}
               type="password"
               label={t('currentPassword')}
               value={deletePassword}
               onChange={(event) => setDeletePassword(event.target.value)}
             />
             <TextField
-              fullWidth
+              sx={wideFieldSx}
               label={t('deletePhraseLabel')}
               value={deleteConfirmationText}
               onChange={(event) => setDeleteConfirmationText(event.target.value)}

@@ -263,6 +263,15 @@ export interface SeedDemand {
   required_amount_value: number | null;
   required_amount_unit: 'g' | 'seeds' | null;
   required_amount_warning?: 'missing_tkg' | string | null;
+  calculation_blockers?: Array<
+    | 'missing_seed_rate'
+    | 'missing_area'
+    | 'missing_row_spacing'
+    | 'missing_plant_quantity'
+    | 'missing_tkg'
+    | 'unsupported_seed_rate_unit'
+    | string
+  >;
   seed_packages?: Array<{ size_value: number; size_unit: 'g' | 'seeds' }>;
   package_suggestion?: {
     selection: Array<{ size_value: number; size_unit: 'g' | 'seeds'; count: number }>;
@@ -271,6 +280,15 @@ export interface SeedDemand {
     pack_count: number;
     unit?: 'g' | 'seeds';
   } | null;
+  package_blocker?:
+    | 'required_amount_unavailable'
+    | 'supplier_data_missing'
+    | 'supplier_not_selected'
+    | 'package_sizes_missing'
+    | 'unit_conversion_unavailable'
+    | 'no_matching_package_sizes'
+    | string
+    | null;
   warning: string | null;
 }
 
@@ -362,9 +380,9 @@ export interface PlantingPlan {
   bed_name?: string | null;
   planting_date: string | null;
   // Read-only, computed.
-  harvest_date?: string;
+  harvest_date?: string | null;
   // Read-only, computed.
-  harvest_end_date?: string;
+  harvest_end_date?: string | null;
   quantity?: number;
   plants_count?: number | null;
   area_usage_sqm?: number;
@@ -451,4 +469,3 @@ export interface CultureHistoryChange {
   old_value: unknown;
   new_value: unknown;
 }
-

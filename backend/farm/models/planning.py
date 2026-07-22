@@ -84,21 +84,21 @@ class PlantingPlan(TimestampedModel):
             return None
 
         active_start = self.planting_date
-        active_end = self.harvest_end_date or self.harvest_date
+        active_end = self.harvest_end_date
 
         if active_end is None and self.culture_id:
-            if self.culture.growth_duration_days:
-                harvest_date = active_start + timedelta(days=self.culture.growth_duration_days)
-            else:
-                harvest_date = active_start
+            if self.culture.growth_duration_days is None:
+                return None
 
-            if self.culture.growth_duration_days and self.culture.harvest_duration_days:
+            harvest_date = active_start + timedelta(days=self.culture.growth_duration_days)
+
+            if self.culture.harvest_duration_days is not None:
                 active_end = harvest_date + timedelta(days=self.culture.harvest_duration_days)
             else:
-                active_end = harvest_date
+                return None
 
         if active_end is None:
-            active_end = active_start
+            return None
 
         return active_start, active_end
 
@@ -135,19 +135,19 @@ class PlantingPlan(TimestampedModel):
         if not self.planting_date or not self.culture:
             return
 
-        if self.culture.growth_duration_days:
+        if self.culture.growth_duration_days is not None:
             self.harvest_date = self.planting_date + timedelta(
                 days=self.culture.growth_duration_days
             )
         else:
-            self.harvest_date = self.planting_date
+            self.harvest_date = None
 
-        if self.culture.growth_duration_days and self.culture.harvest_duration_days:
+        if self.harvest_date is not None and self.culture.harvest_duration_days is not None:
             self.harvest_end_date = self.harvest_date + timedelta(
                 days=self.culture.harvest_duration_days
             )
         else:
-            self.harvest_end_date = self.harvest_date
+            self.harvest_end_date = None
 
     def __str__(self) -> str:
         """Return a string combining culture, bed, and planting date."""

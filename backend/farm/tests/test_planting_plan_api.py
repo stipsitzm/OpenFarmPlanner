@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -55,6 +55,76 @@ def test_planting_plan_list_includes_culture_propagation_metadata():
     assert row['culture_propagation_duration_days'] == 25
     assert row['culture_cultivation_type'] == 'pre_cultivation'
     assert row['culture_cultivation_types'] == ['pre_cultivation', 'direct_sowing']
+
+
+@pytest.mark.django_db
+def test_planting_plan_list_serializes_uncomputable_harvest_dates_as_null():
+    user = User.objects.create_user(
+        username='harvest-date-user',
+        email='harvest-date@example.com',
+        password='testpass',
+        is_active=True,
+    )
+    project = Project.objects.create(name='Harvest Date Project', slug='harvest-date-project')
+    ProjectMembership.objects.create(user=user, project=project, role='admin')
+
+    location = Location.objects.create(name='Hof', project=project)
+    field = Field.objects.create(name='Nordfeld', location=location, project=project)
+    bed = Bed.objects.create(name='Beet A', field=field, project=project)
+    planting_date = date(2026, 4, 1)
+    complete_culture = Culture.objects.create(
+        name='Complete',
+        growth_duration_days=30,
+        harvest_duration_days=7,
+        project=project,
+    )
+    missing_culture = Culture.objects.create(name='Missing', project=project)
+    partial_culture = Culture.objects.create(
+        name='Partial',
+        growth_duration_days=20,
+        project=project,
+    )
+    complete_plan = PlantingPlan.objects.create(
+        culture=complete_culture,
+        bed=bed,
+        planting_date=planting_date,
+        project=project,
+    )
+    missing_plan = PlantingPlan.objects.create(
+        culture=missing_culture,
+        bed=bed,
+        planting_date=planting_date,
+        project=project,
+    )
+    partial_plan = PlantingPlan.objects.create(
+        culture=partial_culture,
+        bed=bed,
+        planting_date=planting_date,
+        project=project,
+    )
+
+    PlantingPlan.objects.filter(pk=missing_plan.pk).update(
+        harvest_date=planting_date,
+        harvest_end_date=planting_date,
+    )
+    PlantingPlan.objects.filter(pk=partial_plan.pk).update(
+        harvest_end_date=planting_date + timedelta(days=20),
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+    client.defaults['HTTP_X_PROJECT_ID'] = str(project.id)
+
+    response = client.get('/openfarmplanner/api/planting-plans/')
+
+    assert response.status_code == 200
+    rows_by_id = {row['id']: row for row in response.json()['results']}
+    assert rows_by_id[complete_plan.id]['harvest_date'] == '2026-05-01'
+    assert rows_by_id[complete_plan.id]['harvest_end_date'] == '2026-05-08'
+    assert rows_by_id[missing_plan.id]['harvest_date'] is None
+    assert rows_by_id[missing_plan.id]['harvest_end_date'] is None
+    assert rows_by_id[partial_plan.id]['harvest_date'] == '2026-04-21'
+    assert rows_by_id[partial_plan.id]['harvest_end_date'] is None
 
 
 @pytest.mark.django_db

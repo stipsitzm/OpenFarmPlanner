@@ -47,7 +47,22 @@ vi.mock('../api/api', async () => {
 
 vi.mock('../i18n', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, options: Record<string, unknown> = {}) => {
+      const translations: Record<string, string> = {
+        'seedDemand.requiredAmountUnavailable': 'Nicht berechenbar ({{reason}})',
+        'seedDemand.requiredAmountUnavailableTooltip': 'Fehlende Angabe: {{reason}}.',
+        'seedDemand.requiredAmountUnavailableMultipleTooltip': 'Fehlende Angaben: {{reasons}}.',
+        'seedDemand.calculationBlockers.missingArea': 'Beetfläche fehlt',
+        'seedDemand.calculationBlockers.missingRowSpacing': 'Reihenabstand fehlt',
+        'seedDemand.calculationBlockers.missingTkg': 'TKG fehlt',
+        'seedDemand.calculationBlockers.missingData': 'notwendige Angaben fehlen',
+        'seedDemand.packageBlockers.requiredAmountUnavailable': 'Kein Packungsvorschlag. {{details}}',
+      };
+      return Object.entries(options).reduce(
+        (text, [name, value]) => text.replace(`{{${name}}}`, String(value)),
+        translations[key] ?? key,
+      );
+    },
   }),
 }));
 
@@ -512,7 +527,7 @@ describe('SeedDemandPage', () => {
     );
 
     const cultureLink = await screen.findByRole('link', { name: 'Kresse' });
-    expect(screen.getByText('seedDemand.requiredAmountMissingTkg')).toBeInTheDocument();
+    expect(screen.getByText('Nicht berechenbar (TKG fehlt)')).toBeInTheDocument();
     expect(screen.queryByText(/2.000,00 seedDemand.unitSeeds/)).not.toBeInTheDocument();
 
     const row = cultureLink.closest('tr');
@@ -522,7 +537,7 @@ describe('SeedDemandPage', () => {
 
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledWith(
-        'Kresse\tReinsaat\tseedDemand.requiredAmountMissingTkg\t1.000 seedDemand.unitSeeds × 2',
+        'Kresse\tReinsaat\tNicht berechenbar (TKG fehlt)\t1.000 seedDemand.unitSeeds × 2',
       );
     });
   });
@@ -864,6 +879,11 @@ describe('SeedDemandPage', () => {
     const packagesCell = cells[cells.length - 1];
     expect(packagesCell.textContent).toBe('—');
     expect(packagesCell.querySelector('a')).toBeNull();
+    const tooltipTrigger = packagesCell.querySelector('.ofp-full-cell-tooltip-trigger');
+    expect(tooltipTrigger).not.toBeNull();
+    expect(tooltipTrigger).toHaveStyle({ position: 'absolute', inset: '0' });
+    fireEvent.mouseOver(tooltipTrigger as Element);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('seedDemand.noSupplierConfiguredTooltip');
   });
 
   it('shows a not-configured link in the packages column when the supplier has no packaging sizes', async () => {
@@ -945,7 +965,7 @@ describe('SeedDemandPage', () => {
     expect(screen.queryByRole('link', { name: /seedDemand.noPackageCalculationPossible/ })).not.toBeInTheDocument();
   });
 
-  it('shows a neutral package dash when the total demand cannot be calculated yet', async () => {
+  it('shows calculation blockers and full-cell tooltips when total demand is unavailable', async () => {
     listMock.mockResolvedValue({
       data: {
         count: 1,
@@ -962,9 +982,11 @@ describe('SeedDemandPage', () => {
             required_amount_value: null,
             required_amount_unit: 'g',
             required_amount_warning: null,
+            calculation_blockers: ['missing_row_spacing', 'missing_area'],
             total_grams: null,
             seed_packages: [{ size_value: 25, size_unit: 'g' }],
             package_suggestion: null,
+            package_blocker: 'required_amount_unavailable',
             warning: null,
           },
         ],
@@ -983,8 +1005,25 @@ describe('SeedDemandPage', () => {
     const row = cultureLink.closest('tr');
     expect(row).not.toBeNull();
     const cells = Array.from((row as HTMLTableRowElement).querySelectorAll('td'));
-    expect(cells.at(-2)?.textContent).toBe('-');
+    expect(cells.at(-2)?.textContent).toBe('Nicht berechenbar (Beetfläche fehlt)');
     expect(cells.at(-1)?.textContent).toBe('—');
-    expect(screen.queryByText(/seedDemand.noPackageCalculationPossible/)).not.toBeInTheDocument();
+
+    const requiredAmountTrigger = cells.at(-2)?.querySelector('.ofp-full-cell-tooltip-trigger');
+    expect(requiredAmountTrigger).not.toBeNull();
+    fireEvent.mouseOver(requiredAmountTrigger as Element);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Fehlende Angaben: Beetfläche fehlt, Reihenabstand fehlt.',
+    );
+    fireEvent.mouseOut(requiredAmountTrigger as Element);
+    await waitFor(() => {
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    });
+
+    const packageTrigger = cells.at(-1)?.querySelector('.ofp-full-cell-tooltip-trigger');
+    expect(packageTrigger).not.toBeNull();
+    fireEvent.mouseOver(packageTrigger as Element);
+    expect(await screen.findByRole('tooltip', { name: /Kein Packungsvorschlag/ })).toHaveTextContent(
+      'Kein Packungsvorschlag. Fehlende Angaben: Beetfläche fehlt, Reihenabstand fehlt.',
+    );
   });
 });

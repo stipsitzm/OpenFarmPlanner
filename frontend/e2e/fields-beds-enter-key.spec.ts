@@ -20,12 +20,9 @@ test.describe('fields-beds Enter key behavior', () => {
 
     expect(await page.locator('.MuiDataGrid-row--editing').count()).toBe(1);
 
-    // First Enter commits the name cell and moves focus to the next cell (MUI's
-    // default row-edit Enter behavior, like Tab) rather than exiting the row;
-    // a second Enter is needed to actually save and exit edit mode.
+    // Enter saves the new row and exits edit mode. A second Enter would act on
+    // the newly focused persisted row and start a fresh edit.
     await nameInput.press('Enter');
-    await page.waitForTimeout(300);
-    await page.keyboard.press('Enter');
     await expect(page.locator('.MuiDataGrid-row--editing')).toHaveCount(0, { timeout: 5000 });
     await expect(page.getByText('Feld-Test-1')).toBeVisible({ timeout: 5000 });
   });

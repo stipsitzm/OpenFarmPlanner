@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Box, Typography, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, Typography, TextField, FormControl, InputLabel, MenuItem } from '@mui/material';
 import type { Culture, SeedRateUnit } from '../../api/types';
 import type { TFunction } from 'i18next';
-import { fieldSx, spacingFieldSx } from './styles.tsx';
-import { fieldRowSx } from './styles.tsx';
+import { compactFieldSx, fieldRowSx, mediumFieldSx, smallFieldSx } from './styles.tsx';
 import { DropdownAwareTooltip } from '../../components/DropdownAwareTooltip';
+import { TypeaheadSelect as Select } from '../../components/inputs/TypeaheadSelect';
 
 interface SeedingSectionProps {
   formData: Partial<Culture>;
@@ -55,7 +55,7 @@ function SeedRateBlock({
       <Box sx={fieldRowSx}>
         <DropdownAwareTooltip title={t('form.seedRateHelp')} arrow>
           <TextField
-            sx={fieldSx}
+            sx={compactFieldSx}
             type="number"
             label={t('form.seedAmountLabel', { defaultValue: 'Menge' })}
             value={formData[valueField] ?? ''}
@@ -67,9 +67,10 @@ function SeedRateBlock({
         </DropdownAwareTooltip>
 
         <DropdownAwareTooltip title={unitSelectOpen ? '' : t('form.seedRateHelp')} arrow>
-          <FormControl sx={fieldSx} error={Boolean(errors[unitField])}>
+          <FormControl sx={smallFieldSx} error={Boolean(errors[unitField])}>
             <InputLabel shrink>{t('form.seedUnitLabel', { defaultValue: 'Einheit' })}</InputLabel>
             <Select
+              fullWidth
               value={toSeedRateUnitSelectValue(formData[unitField])}
               label={t('form.seedUnitLabel', { defaultValue: 'Einheit' })}
               onChange={(e) => onChange(unitField, (e.target.value || null) as Culture[typeof unitField])}
@@ -86,7 +87,6 @@ function SeedRateBlock({
                 return seedRateUnitOptions.find((option) => option.value === selected)?.label ?? '';
               }}
               displayEmpty
-              fullWidth
             >
               {seedRateUnitOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>
@@ -100,7 +100,7 @@ function SeedRateBlock({
 
         <DropdownAwareTooltip title={t('form.sowingCalculationSafetyPercentHelp')} arrow>
           <TextField
-            sx={{ ...spacingFieldSx, ml: 'auto' }}
+            sx={mediumFieldSx}
             type="number"
             label={t('form.sowingCalculationSafetyPercentLabel')}
             value={formData[safetyField] ?? ''}
@@ -166,7 +166,7 @@ export function SeedingSection({ formData, errors, onChange, t }: SeedingSection
       <Box sx={fieldRowSx}>
         <DropdownAwareTooltip title={t('form.thousandKernelWeightHelp')} arrow>
           <TextField
-            sx={fieldSx}
+            sx={smallFieldSx}
             type="text"
             inputMode="decimal"
             label={t('form.thousandKernelWeightLabel')}

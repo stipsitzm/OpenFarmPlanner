@@ -408,9 +408,9 @@ describe("GraphicalFields", () => {
       );
     });
 
-    expect(screen.getByRole("button", { name: "Zoom in" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hineinzoomen" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Zoom out" }),
+      screen.getByRole("button", { name: "Herauszoomen" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Alles einpassen" }),
@@ -431,7 +431,7 @@ describe("GraphicalFields", () => {
     const stage = screen.getByTestId("konva-stage");
     act(() => {
       Array.from({ length: 6 }).forEach(() => {
-        fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+        fireEvent.click(screen.getByRole("button", { name: "Hineinzoomen" }));
       });
     });
     const startX = Number(stage.getAttribute("data-x"));
@@ -439,7 +439,7 @@ describe("GraphicalFields", () => {
 
     act(() => {
       fireEvent.click(
-        screen.getByRole("button", { name: "Nach links verschieben" }),
+        screen.getByRole("button", { name: "Ansicht nach links verschieben" }),
       );
     });
     const afterPanLeftX = Number(
@@ -557,12 +557,12 @@ describe("GraphicalFields", () => {
       );
     });
 
-    expect(screen.queryByText("Zoom in")).not.toBeInTheDocument();
-    expect(screen.queryByText("Zoom out")).not.toBeInTheDocument();
+    expect(screen.queryByText("Hineinzoomen")).not.toBeInTheDocument();
+    expect(screen.queryByText("Herauszoomen")).not.toBeInTheDocument();
     expect(screen.queryByText("Alles einpassen")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Zoom in" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Hineinzoomen" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Zoom out" }),
+      screen.getByRole("button", { name: "Herauszoomen" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Alles einpassen" }),

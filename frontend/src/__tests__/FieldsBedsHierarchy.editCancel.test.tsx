@@ -126,7 +126,7 @@ vi.mock('@mui/x-data-grid', async () => {
     onProcessRowUpdateError?: (error: Error) => void;
     onRowEditStop?: (params: { id: string | number; reason: string }, event: { defaultMuiPrevented: boolean }) => void;
     processRowUpdate?: (row: Record<string, unknown>) => Promise<Record<string, unknown>>;
-    rowModesModel: Record<string, { mode: string }>;
+    rowModesModel: Record<string, { mode: string; fieldToFocus?: string }>;
     rows: Array<Record<string, unknown> & { id: string | number }>;
   }) => {
     const commitBlur = async (row: Record<string, unknown> & { id: string | number }): Promise<void> => {
@@ -156,10 +156,12 @@ vi.mock('@mui/x-data-grid', async () => {
       <div data-testid="hierarchy-grid">
         <div data-testid="row-count">{rows.length}</div>
         {rows.map((row) => {
-          const mode = rowModesModel[row.id]?.mode ?? rowModesModel[String(row.id)]?.mode ?? GridRowModes.View;
+          const rowMode = rowModesModel[row.id] ?? rowModesModel[String(row.id)];
+          const mode = rowMode?.mode ?? GridRowModes.View;
           return (
             <div data-id={String(row.id)} data-testid={`row-${row.id}`} key={String(row.id)} role="row">
               <span data-testid={`mode-${row.id}`}>{mode}</span>
+              <span data-testid={`focus-field-${row.id}`}>{rowMode?.fieldToFocus ?? ''}</span>
               {columns.map((column) => {
                 const editable = Boolean(column.editable) && (isCellEditable?.({ row, field: column.field }) ?? true);
                 if (typeof column.renderCell === 'function') {
@@ -228,6 +230,26 @@ vi.mock('@mui/x-data-grid', async () => {
               </button>
               <button type="button" onClick={() => void commitBlur(row)}>
                 {`Enter ${row.id}`}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  onCellKeyDown?.(
+                    { id: row.id, field: 'name', isEditable: true, row },
+                    {
+                      key: 'Tab',
+                      preventDefault: vi.fn(),
+                      stopPropagation: vi.fn(),
+                      defaultMuiPrevented: false,
+                      altKey: false,
+                      ctrlKey: false,
+                      metaKey: false,
+                      shiftKey: false,
+                    } as unknown as React.KeyboardEvent,
+                  )
+                }
+              >
+                {`Tab from name ${row.id}`}
               </button>
             </div>
           );
@@ -526,6 +548,21 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     );
   });
 
+  it('moves the row edit focus from name to length when tabbing in a new bed row', async () => {
+    const user = userEvent.setup();
+    renderHierarchy();
+    await addNewBed();
+
+    expect(screen.getByTestId('focus-field--1700000000000')).toHaveTextContent('name');
+
+    await user.click(screen.getByRole('button', { name: 'Tab from name -1700000000000' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mode--1700000000000')).toHaveTextContent('edit');
+      expect(screen.getByTestId('focus-field--1700000000000')).toHaveTextContent('length_m');
+    });
+  });
+
   it('removes a completely empty new row when clicking outside', async () => {
     renderHierarchy();
     await addNewBed();
@@ -550,6 +587,28 @@ describe('FieldsBedsHierarchy edit cancellation', () => {
     expect(await screen.findByText('Teilweise gefuellt')).toBeInTheDocument();
     await waitFor(() => expect(bedCreateMock).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByTestId('row--1700000000000')).not.toBeInTheDocument());
+  });
+
+  it('persists a new bed before saving notes from the notes drawer', async () => {
+    const user = userEvent.setup();
+    renderHierarchy();
+    await addNewBed();
+
+    await user.click(screen.getByRole('button', { name: 'Partial name -1700000000000' }));
+    const notesButtons = within(screen.getByTestId('row--1700000000000')).getAllByRole('button', { name: 'notes.editEmpty' });
+    await user.click(notesButtons[notesButtons.length - 1]);
+    const notesInput = await screen.findByRole('textbox');
+    fireEvent.change(notesInput, { target: { value: 'Neue Notiz' } });
+    expect(notesInput).toHaveValue('Neue Notiz');
+    await user.click(screen.getByRole('button', { name: 'actions.save' }));
+
+    await waitFor(() => {
+      expect(bedCreateMock).toHaveBeenCalledWith(expect.objectContaining({
+        name: 'Teilweise gefuellt',
+        field: 10,
+        notes: 'Neue Notiz',
+      }));
+    });
   });
 
   it('allows invalid missing-name edits to leave edit mode after validation fails', async () => {

@@ -47,11 +47,11 @@
     "bed": "Beet",
     "location": "Standort",
     "plantsCount": "Pflanzenanzahl",
-    "totalPlantsCount": "Gesamtpflanzen",
+    "totalPlantsCount": "Pflanzen gesamt",
     "plantingPlanCount": "Anzahl Anbaupläne",
     "involvedLocations": "Beteiligte Standorte",
     "seedRequirement": "Saatgutbedarf",
-    "notes": "Hinweis"
+    "notes": "Notizen"
   },
   "noData": "Keine Anbaupläne vorhanden",
   "modeLabel": "Modus",
@@ -61,7 +61,7 @@
   "moveModeActiveOption": "Zeitraum verschieben aktiv",
   "moveModeCommandActivate": "Zeitraum verschieben aktivieren",
   "moveModeCommandDeactivate": "Zeitraum verschieben deaktivieren",
-  "modeViewTooltip": "Ansichtsmodus: Kalender ansehen und navigieren. Keine Änderungen per Drag & Drop.",
+  "modeViewTooltip": "Ansichtsmodus: Kalender ansehen und navigieren. In diesem Modus sind keine Änderungen per Drag-and-drop möglich.",
   "moveModeTooltipDescription": "Aktiviere den Verschiebemodus, um Anbauzeiträume per Drag-and-Drop zu verschieben.",
   "moveModeActiveTooltipDescription": "Ziehe einen Zeitraum nach links oder rechts, um den gesamten Anbauplan zeitlich zu verschieben.",
   "viewMode": "Ansichtsmodus",
@@ -72,6 +72,8 @@
     "resources": "Flächen",
     "resourcesSeedlings": "Kulturen",
     "today": "Heute",
+    "actions": "Aktionen",
+    "adjustProgress": "Fortschritt durch Ziehen anpassen",
     "viewModes": {
       "minute": "Minute",
       "hour": "Stunde",

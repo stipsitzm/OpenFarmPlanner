@@ -571,6 +571,7 @@ export function EditableDataGrid<T extends EditableRow>({
     [rowsForGrid],
   );
   const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
+    contextKey: tableKey ?? 'editableDataGrid',
     enabled: dataFetched && !error,
     isLoading: loading,
     hasRows: hasContextMenuHintRows,
@@ -809,13 +810,22 @@ export function EditableDataGrid<T extends EditableRow>({
       const rowIndex = api.getRowIndexRelativeToVisibleRows(rowId);
       const colIndex = api.getColumnIndexRelativeToVisibleColumns(field);
       api.scrollToIndexes({ rowIndex, colIndex });
-      api.setCellFocus(rowId, field);
+      focusDataGridKeyboardNavigableCell<T>({
+        api,
+        cell: { id: rowId, field },
+        focusEditInput: rowModesModel[rowId]?.mode === GridRowModes.Edit
+          || (options.startEdit && !notesFieldNames.includes(field)),
+      });
 
       if (!options.startEdit || notesFieldNames.includes(field)) {
         return;
       }
 
       if (rowModesModel[rowId]?.mode === GridRowModes.Edit) {
+        setRowModesModel((oldModel) => ({
+          ...oldModel,
+          [rowId]: { ...oldModel[rowId], mode: GridRowModes.Edit, fieldToFocus: field },
+        }));
         return;
       }
 

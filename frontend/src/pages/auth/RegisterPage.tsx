@@ -6,6 +6,7 @@ import { projectAPI, type InvitationPublicStatus } from '../../api/api';
 import { useAuth } from '../../auth/useAuth';
 import PasswordVisibilityToggle from '../../components/inputs/PasswordVisibilityToggle';
 import LegalLinks from '../../components/legal/LegalLinks';
+import { singleColumnFormSx } from '../../components/forms/formLayout';
 import { useTranslation } from '../../i18n';
 import { getNextFromSearch, getTokenFromNextPath, storeInvitationRedirect } from '../invitationAcceptance';
 
@@ -105,7 +106,7 @@ export default function RegisterPage() {
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>{t('auth:register.title')}</Typography>
-      <Box component="form" onSubmit={handleSubmit} noValidate>
+      <Box component="form" onSubmit={handleSubmit} noValidate sx={singleColumnFormSx}>
         <Stack spacing={2}>
           {isLoggedIn ? (
             <Alert severity="info">

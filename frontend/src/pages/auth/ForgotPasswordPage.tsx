@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
+import { singleColumnFormSx } from '../../components/forms/formLayout';
 
 export default function ForgotPasswordPage() {
   const { requestPasswordReset } = useAuth();
@@ -27,7 +28,7 @@ export default function ForgotPasswordPage() {
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>{t('forgotPassword.title')}</Typography>
-      <Box component="form" onSubmit={handleSubmit}>
+      <Box component="form" onSubmit={handleSubmit} sx={singleColumnFormSx}>
         <Stack spacing={2}>
           {message ? <Alert severity="success">{message}</Alert> : null}
           {error ? <Alert severity="error">{error}</Alert> : null}

@@ -28,8 +28,13 @@ class SeedDemandSerializer(serializers.Serializer):
     required_amount_value = serializers.FloatField(allow_null=True)
     required_amount_unit = serializers.CharField(allow_null=True)
     required_amount_warning = serializers.CharField(allow_null=True, required=False)
+    calculation_blockers = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+    )
     total_grams = serializers.FloatField(allow_null=True)
     seed_packages = serializers.ListField(child=serializers.DictField(), required=False)
     package_suggestion = SeedDemandPackageSuggestionSerializer(allow_null=True, required=False)
+    package_blocker = serializers.CharField(allow_null=True, required=False)
     packages_needed = serializers.IntegerField(allow_null=True, required=False)
     warning = serializers.CharField(allow_null=True)

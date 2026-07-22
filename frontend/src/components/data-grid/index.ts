@@ -40,10 +40,17 @@ export { createSearchableSelectColumn, createSingleSelectColumn } from './column
 export type { SearchableSelectColumnConfig } from './columns';
 export { getCalculatedColumnProps } from './calculatedColumns';
 export type { DataGridColumnState } from './calculatedColumns';
+export { FullCellTooltip, FULL_CELL_TOOLTIP_CELL_CLASS } from './FullCellTooltip';
+export type { FullCellTooltipProps } from './FullCellTooltip';
 export { DeleteUndoSnackbar, DELETE_UNDO_DURATION_MS } from './DeleteUndoSnackbar';
 export { ContextMenuHint } from './ContextMenuHint';
 export { TableCopyMenuItems } from './TableCopyMenuItems';
-export { CONTEXT_MENU_HINT_STORAGE_KEY, shouldShowContextMenuHint, useContextMenuHint } from './useContextMenuHint';
+export {
+  CONTEXT_MENU_HINT_STORAGE_KEY,
+  clearContextMenuHintDismissals,
+  shouldShowContextMenuHint,
+  useContextMenuHint,
+} from './useContextMenuHint';
 export { buildTsv, copyRowsToClipboard, copyTextToClipboard, copyTextToClipboardSilently, formatClipboardValue } from './tableClipboard';
 export type { TableClipboardRow } from './tableClipboard';
 

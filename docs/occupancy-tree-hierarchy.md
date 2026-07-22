@@ -18,6 +18,12 @@ The dependency direction is one-way: `GanttChart.tsx` (app) → `ganttChartUtils
 
 Unlike the old function, `buildFieldOccupancyHierarchy` includes **beds without any planting plan** — the "Nur belegte Beete" filter is what hides them, rather than them never existing in the data at all.
 
+An occupancy task requires a planting date and a calculable harvest start. A
+missing harvest end does not remove the plan from the calendar: the harvest
+start remains the growth task's endpoint, while no separate harvest-period bar
+is rendered. This keeps partially configured cultures visible without inventing
+an end date for a missing harvest duration.
+
 `GanttChart.tsx` turns this into the rows the Gantt library actually renders:
 
 1. Apply the "Nur belegte Beete" structural filter (removes empty beds and any now-childless field/location ancestors) — independent of expand/collapse state.

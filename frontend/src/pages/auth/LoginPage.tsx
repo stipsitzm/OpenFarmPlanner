@@ -9,6 +9,7 @@ import { getAuthenticatedAppDestination } from '../../auth/authDestination';
 import { useTranslation } from '../../i18n';
 import PasswordVisibilityToggle from '../../components/inputs/PasswordVisibilityToggle';
 import LegalLinks from '../../components/legal/LegalLinks';
+import { singleColumnFormSx } from '../../components/forms/formLayout';
 import { getNextFromSearch } from '../invitationAcceptance';
 
 export default function LoginPage() {
@@ -83,7 +84,7 @@ export default function LoginPage() {
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>{t('auth:login.title')}</Typography>
-      <Box component="form" onSubmit={handleSubmit}>
+      <Box component="form" onSubmit={handleSubmit} sx={singleColumnFormSx}>
         <Stack spacing={2}>
           {pendingInvitation ? (
             <Alert severity="info">

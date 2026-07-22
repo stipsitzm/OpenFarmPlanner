@@ -44,7 +44,7 @@
     "expand": "Expand entry",
     "collapse": "Collapse entry",
     "addField": "Add field",
-    "calculatedArea": "Calculated automatically from length × width. Not directly editable."
+    "calculatedArea": "The area is calculated automatically from length × width and cannot be edited directly."
   },
   "messages": {
     "createLocationFirst": "Please create a location first.",
@@ -56,7 +56,7 @@
     "noBedsHintMobile": "Long-press the respective field and select \"Add bed\".",
     "missingDimensionsHint": "Length and width are important for area calculations, seed demand, and crop planning.",
     "missingDimensionsHintOptional": "You can add the values later.",
-    "missingDimensionsCellTooltip": "Required for area calculation.",
+    "missingDimensionsCellTooltip": "This value is required for the area calculation and any planning based on it.",
     "createLocationError": "Failed to create location.",
     "locationCreated": "Location was created.",
     "unsavedMissingName": "Row was not saved because the name is missing.",

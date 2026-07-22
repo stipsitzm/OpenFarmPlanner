@@ -7,14 +7,12 @@ import {
   FormControl,
   Link,
   MenuItem,
-  Select,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Tooltip,
   Typography,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
@@ -36,11 +34,17 @@ import TableSurface from '../components/layout/TableSurface';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
-import { ContextMenuHint, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
+import { ContextMenuHint, FullCellTooltip, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
 import { handleContextMenuKeyboardNavigation } from '../components/data-grid/contextMenuFocus';
 import { getFirstMissingProjectSetupStep, getTranslatedProjectSetupActions } from './requirementFlow';
 import { formatLocalizedNumber } from '../utils/numberLocalization';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
+import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
+import {
+  getEffectivePackageBlocker,
+  getPackageBlockerTooltip,
+  getRequiredAmountDiagnostic,
+} from './seedDemandDiagnostics';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
   unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
@@ -65,25 +69,24 @@ const formatPackageSelection = (row: SeedDemand, t: Translator): string => (
 type PackageCellState = 'computed' | 'chooseSupplier' | 'notConfigured' | 'unavailableRequirement' | 'calculationError';
 
 const getPackageCellState = (row: SeedDemand): PackageCellState => {
-  const supplierOptions = row.supplier_options ?? [];
-  const hasSelectedSupplier = supplierOptions.length === 1
-    || (row.selected_supplier_id !== null && row.selected_supplier_id !== undefined);
-  const hasSuggestion = (row.package_suggestion?.selection ?? []).length > 0;
-
-  if (hasSuggestion) {
+  const blocker = getEffectivePackageBlocker(row);
+  if (!blocker) {
     return 'computed';
   }
-  if (supplierOptions.length === 0 || !hasSelectedSupplier) {
-    return 'chooseSupplier';
+  switch (blocker) {
+    case 'supplier_data_missing':
+    case 'supplier_not_selected':
+      return 'chooseSupplier';
+    case 'package_sizes_missing':
+      return 'notConfigured';
+    case 'required_amount_unavailable':
+      return 'unavailableRequirement';
+    default:
+      return 'calculationError';
   }
-  if ((row.seed_packages ?? []).length === 0) {
-    return 'notConfigured';
-  }
-  if (row.required_amount_value === null || row.required_amount_unit === null) {
-    return 'unavailableRequirement';
-  }
-  return 'calculationError';
 };
+
+const hasPackageCellTooltip = (row: SeedDemand): boolean => getEffectivePackageBlocker(row) !== null;
 
 export default function SeedDemandPage() {
   useCommandContextTag('seedDemand');
@@ -103,6 +106,7 @@ export default function SeedDemandPage() {
   const hasSeedData = hasCulturesWithSeedData;
   const canCalculateSeedDemand = locationCount > 0 && fieldCount > 0 && bedCount > 0 && cultureCount > 0 && hasPlans && hasSeedData;
   const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
+    contextKey: 'seedDemand',
     enabled: !shouldShowProjectRequiredState && canCalculateSeedDemand,
     isLoading,
     hasRows: rows.length > 0,
@@ -222,13 +226,42 @@ export default function SeedDemandPage() {
   }, [t]);
 
   const getRequiredAmountLabel = useCallback((row: SeedDemand): string => {
-    if (row.required_amount_value === null || row.required_amount_unit === null) {
-      return row.required_amount_warning === 'missing_tkg'
-        ? t('seedDemand.requiredAmountMissingTkg')
-        : '-';
+    const diagnostic = getRequiredAmountDiagnostic(row, t);
+    if (diagnostic) {
+      return diagnostic.displayText;
+    }
+    if (row.required_amount_value === null) {
+      return t('seedDemand.requiredAmountUnavailable', {
+        reason: t('seedDemand.calculationBlockers.missingData'),
+      });
     }
     return `${formatRequiredSeedAmount(row.required_amount_value)} ${formatUnit('g', t)}`;
   }, [t]);
+
+  const renderRequiredAmountCell = useCallback((row: SeedDemand) => {
+    const diagnostic = getRequiredAmountDiagnostic(row, t);
+    if (!diagnostic) {
+      return <Typography variant="body2">{getRequiredAmountLabel(row)}</Typography>;
+    }
+
+    return (
+      <FullCellTooltip
+        title={diagnostic.tooltipText}
+        describeChild
+        focusable
+        triggerSx={{ px: 2, justifyContent: 'flex-end' }}
+      >
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          noWrap
+          sx={{ minWidth: 0, maxWidth: '100%' }}
+        >
+          {diagnostic.displayText}
+        </Typography>
+      </FullCellTooltip>
+    );
+  }, [getRequiredAmountLabel, t]);
 
   const getPackageLabel = useCallback((row: SeedDemand): string => {
     switch (getPackageCellState(row)) {
@@ -248,25 +281,26 @@ export default function SeedDemandPage() {
   const renderPackageCell = useCallback((row: SeedDemand) => {
     const editHref = `/app/cultures?cultureId=${row.culture_id}&action=edit`;
     const state = getPackageCellState(row);
+    const tooltip = getPackageBlockerTooltip(row, t);
 
     switch (state) {
       case 'computed':
         return <Typography variant="body2">{formatPackageSelection(row, t)}</Typography>;
-      case 'chooseSupplier': {
-        const tooltipKey = (row.supplier_options ?? []).length === 0
-          ? 'seedDemand.noSupplierConfiguredTooltip'
-          : 'seedDemand.supplierNotSelectedTooltip';
+      case 'chooseSupplier':
         return (
-          <Tooltip title={t(tooltipKey)} describeChild>
+          <FullCellTooltip title={tooltip} describeChild focusable triggerSx={{ px: 2 }}>
             <Typography variant="body2" color="text.secondary">—</Typography>
-          </Tooltip>
+          </FullCellTooltip>
         );
-      }
       case 'unavailableRequirement':
-        return <Typography variant="body2" color="text.secondary">—</Typography>;
+        return (
+          <FullCellTooltip title={tooltip} describeChild focusable triggerSx={{ px: 2 }}>
+            <Typography variant="body2" color="text.secondary">—</Typography>
+          </FullCellTooltip>
+        );
       case 'notConfigured':
         return (
-          <Tooltip title={t('seedDemand.noPackagesAvailableTooltip')} describeChild>
+          <FullCellTooltip title={tooltip} describeChild triggerSx={{ px: 2 }}>
             <Link
               component={RouterLink}
               to={editHref}
@@ -278,12 +312,12 @@ export default function SeedDemandPage() {
               <Inventory2OutlinedIcon fontSize="inherit" />
               {t('seedDemand.noPackagesAvailable')}
             </Link>
-          </Tooltip>
+          </FullCellTooltip>
         );
       case 'calculationError':
       default:
         return (
-          <Tooltip title={t('seedDemand.noPackageCalculationPossibleTooltip')} describeChild>
+          <FullCellTooltip title={tooltip} describeChild focusable triggerSx={{ px: 2 }}>
             <Typography
               variant="body2"
               color="warning.main"
@@ -292,7 +326,7 @@ export default function SeedDemandPage() {
               <WarningAmberOutlinedIcon fontSize="inherit" />
               {t('seedDemand.noPackageCalculationPossible')}
             </Typography>
-          </Tooltip>
+          </FullCellTooltip>
         );
     }
   }, [t]);
@@ -449,7 +483,9 @@ export default function SeedDemandPage() {
               <TableRow>
                 <TableCell>{t('seedDemand.columns.culture')}</TableCell>
                 <TableCell>{t('seedDemand.columns.supplier')}</TableCell>
-                <TableCell align="right">{t('seedDemand.columns.requiredAmount')}</TableCell>
+                <TableCell align="right" sx={{ width: 240, maxWidth: 240 }}>
+                  {t('seedDemand.columns.requiredAmount')}
+                </TableCell>
                 <TableCell>{t('seedDemand.columns.packages')}</TableCell>
               </TableRow>
             </TableHead>
@@ -518,6 +554,7 @@ export default function SeedDemandPage() {
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                           <FormControl size="small" sx={{ minWidth: 220 }}>
                             <Select
+                              fullWidth
                               value={selectValue}
                               sx={{
                                 '& .MuiSelect-select': { py: 0.75 },
@@ -543,6 +580,7 @@ export default function SeedDemandPage() {
                       ) : supplierCount === 1 && singleSupplierOption ? (
                         <FormControl size="small" sx={{ minWidth: 220 }}>
                           <Select
+                            fullWidth
                             value={singleSupplierValue}
                             disabled
                             sx={{
@@ -565,10 +603,17 @@ export default function SeedDemandPage() {
                         </Box>
                       )}
                     </TableCell>
-                    <TableCell align="right">
-                      {getRequiredAmountLabel(row)}
+                    <TableCell
+                      align="right"
+                      sx={getRequiredAmountDiagnostic(row, t)
+                        ? { position: 'relative', width: 240, maxWidth: 240 }
+                        : { width: 240, maxWidth: 240 }}
+                    >
+                      {renderRequiredAmountCell(row)}
                     </TableCell>
-                    <TableCell>{renderPackageCell(row)}</TableCell>
+                    <TableCell sx={hasPackageCellTooltip(row) ? { position: 'relative' } : undefined}>
+                      {renderPackageCell(row)}
+                    </TableCell>
                   </TableRow>
                 );
               })}

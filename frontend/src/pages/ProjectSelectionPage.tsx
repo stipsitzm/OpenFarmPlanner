@@ -1,7 +1,4 @@
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Alert,
   Box,
   Button,
@@ -14,13 +11,13 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { projectAPI, type ProjectPayload } from '../api/api';
 import { useAuth } from '../auth/useAuth';
 import { useTranslation } from '../i18n';
+import { createDemoProjectAndSwitch } from '../projects/demoProjectFlow';
 import { clearDevOnboardingPreview, isDevOnboardingPreviewEnabled } from '../projects/devOnboardingPreview';
 import { openProjectCreationFlow } from '../projects/projectCreationFlow';
 import { showProjectDeleteUndoSnackbar } from '../projects/projectDeletionFeedback';
@@ -32,6 +29,7 @@ const isDevQuickDeleteEnabled = import.meta.env.DEV;
 export default function ProjectSelectionPage() {
   const { user, switchActiveProject, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { t } = useTranslation(['navigation', 'common', 'projectInvitations']);
   const memberships = user?.memberships ?? [];
   const [isDevOnboardingPreview, setIsDevOnboardingPreview] = useState(() => isDevOnboardingPreviewEnabled());
@@ -42,6 +40,7 @@ export default function ProjectSelectionPage() {
   const [quickDeletingProjectId, setQuickDeletingProjectId] = useState<number | null>(null);
   const [renderedAt] = useState(() => Date.now());
   const isMountedRef = useRef(false);
+  const isTrashView = searchParams.get('trash') === '1';
 
   const loadDeletedProjects = useCallback(async (): Promise<void> => {
     try {
@@ -63,6 +62,11 @@ export default function ProjectSelectionPage() {
 
   useEffect(() => {
     isMountedRef.current = true;
+    if (!isTrashView) {
+      return () => {
+        isMountedRef.current = false;
+      };
+    }
     const timeoutId = window.setTimeout(() => {
       void loadDeletedProjects();
     }, 0);
@@ -71,15 +75,14 @@ export default function ProjectSelectionPage() {
       isMountedRef.current = false;
       window.clearTimeout(timeoutId);
     };
-  }, [loadDeletedProjects]);
+  }, [isTrashView, loadDeletedProjects]);
 
   const deletedProjectsByName = useMemo(
     () => [...deletedProjects].sort((left, right) => left.name.localeCompare(right.name, 'de')),
     [deletedProjects],
   );
   const visibleMemberships = isDevOnboardingPreview ? [] : memberships;
-  const isOnboardingState = visibleMemberships.length === 0;
-  const shouldShowProjectTrash = !isOnboardingState || deletedProjectsByName.length > 0 || Boolean(trashError);
+  const isOnboardingState = !isTrashView && visibleMemberships.length === 0;
 
   const stopDevOnboardingPreview = (): void => {
     clearDevOnboardingPreview();
@@ -103,9 +106,8 @@ export default function ProjectSelectionPage() {
     setIsCreatingDemoProject(true);
     setDemoError(null);
     try {
-      const response = await projectAPI.createDemo();
+      await createDemoProjectAndSwitch(switchActiveProject);
       stopDevOnboardingPreview();
-      await switchActiveProject(response.data.id);
       showSnackbar(t('common:projectOnboarding.demoCreatedHint'), 'success');
       navigate('/app/fields-beds', { replace: true });
     } catch (error) {
@@ -135,6 +137,7 @@ export default function ProjectSelectionPage() {
       await projectAPI.restore(projectId);
       await refreshUser();
       await loadDeletedProjects();
+      window.dispatchEvent(new CustomEvent('ofp:project-trash-changed'));
       showSnackbar(t('projectTrash.restoreSuccess'), 'success');
     } catch {
       showSnackbar(t('projectTrash.restoreError'), 'error');
@@ -177,6 +180,7 @@ export default function ProjectSelectionPage() {
     try {
       await projectAPI.permanentDelete(project.id);
       setDeletedProjects((current) => current.filter((item) => item.id !== project.id));
+      window.dispatchEvent(new CustomEvent('ofp:project-trash-changed'));
       showSnackbar(t('projectTrash.permanentSuccess'), 'success');
     } catch {
       showSnackbar(t('projectTrash.permanentError'), 'error');
@@ -189,7 +193,9 @@ export default function ProjectSelectionPage() {
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'flex-start' }}>
           <Box>
             <Typography variant="h5">
-              {isOnboardingState ? t('common:projectOnboarding.pageTitle') : t('project.switch')}
+              {isTrashView
+                ? t('projectTrash.title')
+                : isOnboardingState ? t('common:projectOnboarding.pageTitle') : t('project.switch')}
             </Typography>
             {isOnboardingState ? (
               <Typography color="text.secondary" sx={{ mt: 0.75, maxWidth: 620, lineHeight: 1.6 }}>
@@ -199,7 +205,65 @@ export default function ProjectSelectionPage() {
           </Box>
         </Stack>
 
-        {isOnboardingState ? (
+        {isTrashView ? (
+          <Paper variant="outlined" sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+            <Stack spacing={1.5}>
+              {!trashError && deletedProjectsByName.length > 0 ? (
+                <Alert
+                  severity="success"
+                  variant="outlined"
+                  sx={{
+                    alignItems: 'center',
+                    bgcolor: 'transparent',
+                    '& .MuiAlert-message': { width: '100%' },
+                  }}
+                >
+                  {t('projectTrash.retentionNotice')}
+                </Alert>
+              ) : null}
+              {trashError ? <Alert severity="error">{trashError}</Alert> : null}
+              {!trashError && deletedProjectsByName.length === 0 ? (
+                <Alert severity="info">{t('projectTrash.empty')}</Alert>
+              ) : null}
+              {!trashError && deletedProjectsByName.length > 0 ? (
+                <List>
+                  {deletedProjectsByName.map((project) => (
+                    <ListItem
+                      key={project.id}
+                      secondaryAction={(
+                        <Stack direction="row" spacing={1}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => {
+                              void restoreProject(project.id);
+                            }}
+                          >
+                            {t('projectTrash.restore')}
+                          </Button>
+                          <Button
+                            size="small"
+                            color="error"
+                            onClick={() => {
+                              void permanentlyDeleteProject(project);
+                            }}
+                          >
+                            {t('projectTrash.permanentDelete')}
+                          </Button>
+                        </Stack>
+                      )}
+                    >
+                      <ListItemText
+                        primary={project.name}
+                        secondary={getDeletedAgeLabel(project.deleted_at)}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              ) : null}
+            </Stack>
+          </Paper>
+        ) : isOnboardingState ? (
           <Stack spacing={2}>
             {demoError ? <Alert severity="error">{demoError}</Alert> : null}
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -310,59 +374,6 @@ export default function ProjectSelectionPage() {
           </>
         )}
 
-        {shouldShowProjectTrash ? (
-          <Accordion>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              {t('projectTrash.title')}
-            </Typography>
-          </AccordionSummary>
-          <AccordionDetails>
-            <Stack spacing={1.5}>
-              {trashError ? <Alert severity="error">{trashError}</Alert> : null}
-              {!trashError && deletedProjectsByName.length === 0 ? (
-                <Alert severity="info">{t('projectTrash.empty')}</Alert>
-              ) : null}
-              {!trashError && deletedProjectsByName.length > 0 ? (
-                <List>
-                  {deletedProjectsByName.map((project) => (
-                    <ListItem
-                      key={project.id}
-                      secondaryAction={(
-                        <Stack direction="row" spacing={1}>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => {
-                              void restoreProject(project.id);
-                            }}
-                          >
-                            {t('projectTrash.restore')}
-                          </Button>
-                          <Button
-                            size="small"
-                            color="error"
-                            onClick={() => {
-                              void permanentlyDeleteProject(project);
-                            }}
-                          >
-                            {t('projectTrash.permanentDelete')}
-                          </Button>
-                        </Stack>
-                      )}
-                    >
-                      <ListItemText
-                        primary={project.name}
-                        secondary={getDeletedAgeLabel(project.deleted_at)}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : null}
-            </Stack>
-          </AccordionDetails>
-          </Accordion>
-        ) : null}
       </Stack>
     </Box>
   );

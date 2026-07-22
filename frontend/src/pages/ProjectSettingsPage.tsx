@@ -1,13 +1,15 @@
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, IconButton, InputLabel, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { projectAPI, type ProjectInvitationPayload, type ProjectMemberPayload } from '../api/api';
 import { useAuth } from '../auth/useAuth';
 import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
+import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
 import { useTranslation } from '../i18n';
 import { showProjectDeleteUndoSnackbar } from '../projects/projectDeletionFeedback';
+import { compactFieldSx, formRowSx, wideFieldSx } from '../components/forms/formLayout';
 
 interface InviteFeedback {
   severity: 'success' | 'warning' | 'error';
@@ -319,7 +321,7 @@ export default function ProjectSettingsPage() {
               disabled={!isProjectAdmin || isSavingProjectName}
               error={projectNameDraft.trim().length > 0 && projectNameDraft.trim().length < 2}
               helperText={projectNameDraft.trim().length > 0 && projectNameDraft.trim().length < 2 ? t('projectRename.minLength') : ' '}
-              fullWidth
+              sx={wideFieldSx}
               autoFocus
               slotProps={{ htmlInput: { 'aria-label': t('projectRename.label') } }}
             />
@@ -344,32 +346,37 @@ export default function ProjectSettingsPage() {
         <Alert severity="info" sx={{ mb: 3 }}>{t('memberManagementNoAccess')}</Alert>
       ) : null}
       <Typography variant="h6" sx={{ mb: 2 }}>{t('inviteSectionTitle')}</Typography>
-      <Stack spacing={2}>
+      <Box sx={formRowSx}>
         <TextField
           label={t('emailLabel')}
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           disabled={!canManageMembers}
+          sx={wideFieldSx}
         />
-        <TextField
-          select
-          label={t('roleLabel')}
-          value={role}
-          onChange={(event) => setRole(event.target.value as 'admin' | 'member')}
-          disabled={!canManageMembers}
-        >
-          <MenuItem value="member">{t('roleMember')}</MenuItem>
-          <MenuItem value="admin">{t('roleAdmin')}</MenuItem>
-        </TextField>
+        <FormControl disabled={!canManageMembers} sx={compactFieldSx}>
+          <InputLabel id="project-invite-role-label">{t('roleLabel')}</InputLabel>
+          <Select
+            fullWidth
+            labelId="project-invite-role-label"
+            label={t('roleLabel')}
+            value={role}
+            onChange={(event) => setRole(event.target.value as 'admin' | 'member')}
+          >
+            <MenuItem value="member">{t('roleMember')}</MenuItem>
+            <MenuItem value="admin">{t('roleAdmin')}</MenuItem>
+          </Select>
+        </FormControl>
         <Button
           variant="contained"
           onClick={() => void handleInvite()}
           disabled={!canManageMembers || !email.trim()}
+          sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}
         >
           {t('sendInvite')}
         </Button>
-      </Stack>
+      </Box>
 
       {!canManageMembers ? (
         <Alert severity="info" sx={{ mt: 2 }}>{t('projectMembers.invite.noPermission')}</Alert>
@@ -395,18 +402,24 @@ export default function ProjectSettingsPage() {
                   <Typography variant="body2" color="text.secondary">{member.user_email}</Typography>
                 </Box>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
-                  <TextField
-                    select
+                  <FormControl
                     size="small"
-                    label={t('memberRoleLabel')}
-                    value={member.role}
-                    onChange={(event) => void handleMemberRoleChange(member.id, event.target.value as 'admin' | 'member', isCurrentUser)}
                     disabled={!canManageMembers || isCurrentUser}
-                    sx={{ minWidth: 160 }}
+                    sx={compactFieldSx}
                   >
-                    <MenuItem value="member">{t('roleMember')}</MenuItem>
-                    <MenuItem value="admin">{t('roleAdmin')}</MenuItem>
-                  </TextField>
+                    <InputLabel id={`project-member-role-label-${member.id}`}>{t('memberRoleLabel')}</InputLabel>
+                    <Select
+                      fullWidth
+                      labelId={`project-member-role-label-${member.id}`}
+                      size="small"
+                      label={t('memberRoleLabel')}
+                      value={member.role}
+                      onChange={(event) => void handleMemberRoleChange(member.id, event.target.value as 'admin' | 'member', isCurrentUser)}
+                    >
+                      <MenuItem value="member">{t('roleMember')}</MenuItem>
+                      <MenuItem value="admin">{t('roleAdmin')}</MenuItem>
+                    </Select>
+                  </FormControl>
                   <Button
                     size="small"
                     variant="outlined"
@@ -525,7 +538,7 @@ export default function ProjectSettingsPage() {
               value={deleteConfirmationText}
               onChange={(event) => setDeleteConfirmationText(event.target.value)}
               disabled={isDeletingProject}
-              fullWidth
+              sx={wideFieldSx}
               autoFocus
             />
           </Stack>

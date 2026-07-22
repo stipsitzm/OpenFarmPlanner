@@ -2,11 +2,12 @@
  * TimingSection: Cultivation type, growth/harvest/propagation durations
  * @remarks Presentational, no internal state
  */
-import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField, Checkbox, ListItemText } from '@mui/material';
-import { smallFieldSx } from './styles.tsx';
+import { Box, Typography, FormControl, InputLabel, MenuItem, TextField, Checkbox, ListItemText } from '@mui/material';
+import { fieldRowSx, smallFieldSx } from './styles.tsx';
 import type { Culture, CultivationType } from '../../api/types';
 import type { TFunction } from 'i18next';
 import { DropdownAwareTooltip } from '../../components/DropdownAwareTooltip';
+import { TypeaheadSelect as Select } from '../../components/inputs/TypeaheadSelect';
 
 interface TimingSectionProps {
   formData: Partial<Culture>;
@@ -25,10 +26,11 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
     <>
       <Typography variant="h6" sx={{ mt: 2 }}>{t('form.sectionTiming')}</Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
-          <FormControl sx={{ minWidth: '180px' }}>
+        <Box sx={{ ...fieldRowSx, mb: 1 }}>
+          <FormControl sx={smallFieldSx}>
             <InputLabel id="cultivation-type-label">{t('form.cultivationType')}</InputLabel>
             <Select
+              fullWidth
               labelId="cultivation-type-label"
               multiple
               value={selectedCultivationTypes}
@@ -61,7 +63,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
             </Select>
           </FormControl>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <Box sx={{ ...fieldRowSx, alignItems: 'flex-end' }}>
           <DropdownAwareTooltip title={t('form.growthDurationDaysHelp')} arrow>
             <TextField
               sx={smallFieldSx}
@@ -75,18 +77,25 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
               slotProps={{ htmlInput: { min: 1, step: 1 } }}
             />
           </DropdownAwareTooltip>
-          <TextField
-            sx={smallFieldSx}
-            type="number"
-            label={t('form.harvestDurationDays')}
-            placeholder={t('form.harvestDurationDaysPlaceholder')}
-            value={formData.harvest_duration_days ?? ''}
-            onChange={e => onChange('harvest_duration_days', e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
-            error={Boolean(errors.harvest_duration_days)}
-            helperText={errors.harvest_duration_days}
-            slotProps={{ htmlInput: { min: 0, step: 1 } }}
-          />
-          <DropdownAwareTooltip title={isDirectSowingOnly ? t('form.directSowingPropagationDisabledHelp') : ''} arrow>
+          <DropdownAwareTooltip title={t('form.harvestDurationDaysHelp')} arrow>
+            <TextField
+              sx={smallFieldSx}
+              type="number"
+              label={t('form.harvestDurationDays')}
+              placeholder={t('form.harvestDurationDaysPlaceholder')}
+              value={formData.harvest_duration_days ?? ''}
+              onChange={e => onChange('harvest_duration_days', e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
+              error={Boolean(errors.harvest_duration_days)}
+              helperText={errors.harvest_duration_days}
+              slotProps={{ htmlInput: { min: 0, step: 1 } }}
+            />
+          </DropdownAwareTooltip>
+          <DropdownAwareTooltip
+            title={isDirectSowingOnly
+              ? t('form.directSowingPropagationDisabledHelp')
+              : t('form.propagationDurationDaysHelp')}
+            arrow
+          >
             <TextField
               sx={smallFieldSx}
               type="number"

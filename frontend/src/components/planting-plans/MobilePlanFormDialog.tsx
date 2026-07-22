@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import {
   Alert,
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -9,7 +10,6 @@ import {
   FormControl,
   InputLabel,
   MenuItem,
-  Select,
   Stack,
   TextField,
 } from "@mui/material";
@@ -23,6 +23,14 @@ import {
 import type { SearchableSelectOption } from "../data-grid";
 import type { MobileCreateFormState } from "../../pages/plantingPlansUtils";
 import type { CultivationTypeSelectOption } from "../../pages/usePlantingPlanHierarchy";
+import { TypeaheadSelect as Select } from "../inputs/TypeaheadSelect";
+import {
+  compactFieldSx,
+  formRowSx,
+  fullWidthFieldSx,
+  smallFieldSx,
+  wideFieldSx,
+} from "../forms/formLayout";
 
 interface MobilePlanFormDialogProps {
   open: boolean;
@@ -83,9 +91,10 @@ export function MobilePlanFormDialog({
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           {error ? <Alert severity="error">{error}</Alert> : null}
-          <FormControl fullWidth>
+          <FormControl sx={wideFieldSx}>
             <InputLabel>{t("plantingPlans:columns.culture")}</InputLabel>
             <Select
+              fullWidth
               value={form.culture}
               label={t("plantingPlans:columns.culture")}
               onChange={(event) =>
@@ -97,9 +106,10 @@ export function MobilePlanFormDialog({
               ))}
             </Select>
           </FormControl>
-          <FormControl fullWidth>
+          <FormControl sx={wideFieldSx}>
             <InputLabel>{t("plantingPlans:columns.bed")}</InputLabel>
             <Select
+              fullWidth
               value={form.bed}
               label={t("plantingPlans:columns.bed")}
               onChange={(event) =>
@@ -111,9 +121,10 @@ export function MobilePlanFormDialog({
               ))}
             </Select>
           </FormControl>
-          <FormControl fullWidth>
+          <FormControl sx={smallFieldSx}>
             <InputLabel>{t("plantingPlans:columns.cultivationType")}</InputLabel>
             <Select
+              fullWidth
               value={form.cultivation_type}
               label={t("plantingPlans:columns.cultivationType")}
               onChange={(event) =>
@@ -125,67 +136,72 @@ export function MobilePlanFormDialog({
               ))}
             </Select>
           </FormControl>
-          <TextField
-            type="text"
-            label={t("plantingPlans:columns.plantingDate")}
-            placeholder="TT.MM.JJJJ"
-            InputLabelProps={{ shrink: true }}
-            value={form.planting_date}
-            onChange={(event) =>
-              setForm((previous) => ({ ...previous, planting_date: event.target.value }))
-            }
-          />
-          <TextField
-            type="text"
-            inputMode="decimal"
-            label={t("plantingPlans:columns.areaM2")}
-            value={form.area_m2}
-            onChange={(event) => {
-              const nextArea = event.target.value;
-              const plantsPerSqm = getPlantsPerSqm(form.culture);
-              const normalizedArea = nextArea.trim().toLowerCase();
-              const maxKeyword = t("plantingPlans:placeholders.maxKeyword").toLowerCase();
-              const parsedArea = normalizedArea === maxKeyword ? null : parseLocalizedNumber(nextArea, numberLocale);
-              setForm((previous) => ({
-                ...previous,
-                area_m2: nextArea,
-                plants_count:
-                  plantsPerSqm && parsedArea !== null
-                    ? formatNumberForInput(
-                        Math.round(parsedArea * plantsPerSqm),
-                        { maximumFractionDigits: 0 },
-                      )
-                    : previous.plants_count,
-              }));
-              onLinkedFieldEdited("area_m2");
-            }}
-            placeholder={t("plantingPlans:placeholders.maxKeyword")}
-            helperText={t("plantingPlans:tooltips.areaAutoMax")}
-            slotProps={{ htmlInput: { inputMode: "decimal" } }}
-          />
-          <TextField
-            type="text"
-            inputMode="numeric"
-            label={t("plantingPlans:columns.plantsCount")}
-            value={form.plants_count}
-            onChange={(event) => {
-              const nextPlants = event.target.value;
-              const plantsPerSqm = getPlantsPerSqm(form.culture);
-              const parsedPlants = parseLocalizedNumber(nextPlants, numberLocale);
-              setForm((previous) => ({
-                ...previous,
-                plants_count: nextPlants,
-                area_m2:
-                  plantsPerSqm && parsedPlants !== null
-                    ? formatNumberForInput(parsedPlants / plantsPerSqm, {
-                        maximumFractionDigits: 2,
-                      })
-                    : previous.area_m2,
-              }));
-              onLinkedFieldEdited("plants_count");
-            }}
-            slotProps={{ htmlInput: { inputMode: "numeric" } }}
-          />
+          <Box sx={formRowSx}>
+            <TextField
+              type="text"
+              label={t("plantingPlans:columns.plantingDate")}
+              placeholder="TT.MM.JJJJ"
+              InputLabelProps={{ shrink: true }}
+              value={form.planting_date}
+              onChange={(event) =>
+                setForm((previous) => ({ ...previous, planting_date: event.target.value }))
+              }
+              sx={compactFieldSx}
+            />
+            <TextField
+              type="text"
+              inputMode="decimal"
+              label={t("plantingPlans:columns.areaM2")}
+              value={form.area_m2}
+              onChange={(event) => {
+                const nextArea = event.target.value;
+                const plantsPerSqm = getPlantsPerSqm(form.culture);
+                const normalizedArea = nextArea.trim().toLowerCase();
+                const maxKeyword = t("plantingPlans:placeholders.maxKeyword").toLowerCase();
+                const parsedArea = normalizedArea === maxKeyword ? null : parseLocalizedNumber(nextArea, numberLocale);
+                setForm((previous) => ({
+                  ...previous,
+                  area_m2: nextArea,
+                  plants_count:
+                    plantsPerSqm && parsedArea !== null
+                      ? formatNumberForInput(
+                          Math.round(parsedArea * plantsPerSqm),
+                          { maximumFractionDigits: 0 },
+                        )
+                      : previous.plants_count,
+                }));
+                onLinkedFieldEdited("area_m2");
+              }}
+              placeholder={t("plantingPlans:placeholders.maxKeyword")}
+              helperText={t("plantingPlans:tooltips.areaAutoMax")}
+              slotProps={{ htmlInput: { inputMode: "decimal" } }}
+              sx={compactFieldSx}
+            />
+            <TextField
+              type="text"
+              inputMode="numeric"
+              label={t("plantingPlans:columns.plantsCount")}
+              value={form.plants_count}
+              onChange={(event) => {
+                const nextPlants = event.target.value;
+                const plantsPerSqm = getPlantsPerSqm(form.culture);
+                const parsedPlants = parseLocalizedNumber(nextPlants, numberLocale);
+                setForm((previous) => ({
+                  ...previous,
+                  plants_count: nextPlants,
+                  area_m2:
+                    plantsPerSqm && parsedPlants !== null
+                      ? formatNumberForInput(parsedPlants / plantsPerSqm, {
+                          maximumFractionDigits: 2,
+                        })
+                      : previous.area_m2,
+                }));
+                onLinkedFieldEdited("plants_count");
+              }}
+              slotProps={{ htmlInput: { inputMode: "numeric" } }}
+              sx={compactFieldSx}
+            />
+          </Box>
           <TextField
             label={t("common:fields.notes")}
             multiline
@@ -194,6 +210,7 @@ export function MobilePlanFormDialog({
             onChange={(event) =>
               setForm((previous) => ({ ...previous, notes: event.target.value }))
             }
+            sx={fullWidthFieldSx}
           />
         </Stack>
       </DialogContent>

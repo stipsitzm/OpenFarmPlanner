@@ -10,7 +10,6 @@ import {
   Divider,
   FormControl,
   MenuItem,
-  Select,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
@@ -33,6 +32,7 @@ import PageSurface from "../components/layout/PageSurface";
 import EmptyStateCard from "../components/project/EmptyStateCard";
 import ProjectRequiredState from "../components/project/ProjectRequiredState";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
+import { TypeaheadSelect as Select } from "../components/inputs/TypeaheadSelect";
 import { useTranslation } from "../i18n";
 import {
   shouldOpenCustomContextMenu,
@@ -1021,6 +1021,7 @@ function YieldFilterBar({
         </Typography>
         <FormControl size="small" fullWidth>
           <Select
+            fullWidth
             labelId="yield-culture-filter-label"
             value={selectedCultureId}
             onChange={(event) => onCultureChange(String(event.target.value))}
@@ -1046,6 +1047,7 @@ function YieldFilterBar({
         </Typography>
         <FormControl size="small" fullWidth>
           <Select
+            fullWidth
             labelId="yield-year-filter-label"
             value={String(selectedYear)}
             onChange={(event) => onYearChange(Number(event.target.value))}

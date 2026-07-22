@@ -20,13 +20,13 @@ import {
   ButtonGroup,
   Divider,
   MenuItem,
-  Select,
   Stack,
   Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
 import {
   shouldOpenCustomContextMenu,
   suppressNativeContextMenu,
@@ -1123,6 +1123,8 @@ function GanttChartPage() {
       ? t('ganttChart:chartLocaleText.resourcesSeedlings')
       : t('ganttChart:chartLocaleText.resources'),
     today: t('ganttChart:chartLocaleText.today'),
+    actions: t('ganttChart:chartLocaleText.actions'),
+    adjustProgress: t('ganttChart:chartLocaleText.adjustProgress'),
     viewModes: {
       [ViewMode.MINUTE]: t('ganttChart:chartLocaleText.viewModes.minute'),
       [ViewMode.HOUR]: t('ganttChart:chartLocaleText.viewModes.hour'),

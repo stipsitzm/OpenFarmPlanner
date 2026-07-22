@@ -14,6 +14,7 @@ selection POST) lives in farm.cultures.views.SeedDemandListView.
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 
 from farm.models import Culture, CultureSupplierData, PlantingPlan, Project
@@ -32,6 +33,28 @@ from farm.seed_units import (
 from farm.services.seed_packages import PackageOption, compute_seed_package_suggestion
 
 REQUIRED_AMOUNT_WARNING_MISSING_TKG = 'missing_tkg'
+
+CALCULATION_BLOCKER_MISSING_SEED_RATE = 'missing_seed_rate'
+CALCULATION_BLOCKER_MISSING_AREA = 'missing_area'
+CALCULATION_BLOCKER_MISSING_ROW_SPACING = 'missing_row_spacing'
+CALCULATION_BLOCKER_MISSING_PLANT_QUANTITY = 'missing_plant_quantity'
+CALCULATION_BLOCKER_MISSING_TKG = 'missing_tkg'
+CALCULATION_BLOCKER_UNSUPPORTED_SEED_RATE_UNIT = 'unsupported_seed_rate_unit'
+
+PACKAGE_BLOCKER_REQUIRED_AMOUNT_UNAVAILABLE = 'required_amount_unavailable'
+PACKAGE_BLOCKER_SUPPLIER_DATA_MISSING = 'supplier_data_missing'
+PACKAGE_BLOCKER_SUPPLIER_NOT_SELECTED = 'supplier_not_selected'
+PACKAGE_BLOCKER_PACKAGE_SIZES_MISSING = 'package_sizes_missing'
+PACKAGE_BLOCKER_UNIT_CONVERSION_UNAVAILABLE = 'unit_conversion_unavailable'
+PACKAGE_BLOCKER_NO_MATCHING_PACKAGE_SIZES = 'no_matching_package_sizes'
+
+
+@dataclass(frozen=True)
+class PlanRequirementResult:
+    value: Decimal | None
+    unit: str | None
+    blockers: tuple[str, ...] = ()
+    warning: str | None = None
 
 
 def parse_selected_suppliers(raw_value: str | None) -> dict[int, int]:
@@ -214,13 +237,18 @@ def _m2_based_requirement(
     unit: str,
     value: Decimal,
     area: Decimal,
-) -> tuple[Decimal | None, str | None]:
+) -> PlanRequirementResult:
     if area <= 0:
-        return None, 'Missing area usage for m²-based seed requirement.'
+        return PlanRequirementResult(
+            value=None,
+            unit=None,
+            blockers=(CALCULATION_BLOCKER_MISSING_AREA,),
+            warning='Missing area usage for m²-based seed requirement.',
+        )
     amount_unit = (
         SEED_PACKAGE_UNIT_GRAMS if unit == SEED_RATE_UNIT_G_PER_M2 else SEED_PACKAGE_UNIT_SEEDS
     )
-    return area * value, amount_unit
+    return PlanRequirementResult(value=area * value, unit=amount_unit)
 
 
 def _lfm_based_requirement(
@@ -228,24 +256,41 @@ def _lfm_based_requirement(
     value: Decimal,
     area: Decimal,
     row_spacing: Decimal,
-) -> tuple[Decimal | None, str | None]:
-    if row_spacing <= 0:
-        return None, 'Missing row spacing for lfm-based seed requirement.'
+) -> PlanRequirementResult:
+    blockers: list[str] = []
     if area <= 0:
-        return None, 'Missing area usage for lfm-based seed requirement.'
+        blockers.append(CALCULATION_BLOCKER_MISSING_AREA)
+    if row_spacing <= 0:
+        blockers.append(CALCULATION_BLOCKER_MISSING_ROW_SPACING)
+    if blockers:
+        warning = (
+            'Missing area usage for lfm-based seed requirement.'
+            if blockers[0] == CALCULATION_BLOCKER_MISSING_AREA
+            else 'Missing row spacing for lfm-based seed requirement.'
+        )
+        return PlanRequirementResult(
+            value=None,
+            unit=None,
+            blockers=tuple(blockers),
+            warning=warning,
+        )
     lfm = area / row_spacing
     amount_unit = (
         SEED_PACKAGE_UNIT_GRAMS if unit == SEED_RATE_UNIT_G_PER_LFM else SEED_PACKAGE_UNIT_SEEDS
     )
-    return lfm * value, amount_unit
+    return PlanRequirementResult(value=lfm * value, unit=amount_unit)
 
 
-def compute_plan_requirement(plan: PlantingPlan) -> tuple[Decimal | None, str | None]:
-    """Compute one plan's raw seed requirement; returns (value, unit) on
-    success or (None, warning) when a precondition is missing."""
+def compute_plan_requirement(plan: PlantingPlan) -> PlanRequirementResult:
+    """Compute one plan's raw seed requirement and stable blocker diagnostics."""
     value, unit = select_seed_rate(plan.culture, plan.cultivation_type)
     if value is None or not unit or value <= 0:
-        return None, 'Missing seed rate value or unit.'
+        return PlanRequirementResult(
+            value=None,
+            unit=None,
+            blockers=(CALCULATION_BLOCKER_MISSING_SEED_RATE,),
+            warning='Missing seed rate value or unit.',
+        )
 
     area = Decimal(str(plan.area_usage_sqm or 0))
     quantity = Decimal(str(plan.quantity or 0))
@@ -259,10 +304,20 @@ def compute_plan_requirement(plan: PlantingPlan) -> tuple[Decimal | None, str | 
 
     if unit == SEED_RATE_UNIT_SEEDS_PER_PLANT:
         if quantity <= 0:
-            return None, 'Missing plant quantity for seeds-per-plant requirement.'
-        return quantity * value, 'seeds'
+            return PlanRequirementResult(
+                value=None,
+                unit=None,
+                blockers=(CALCULATION_BLOCKER_MISSING_PLANT_QUANTITY,),
+                warning='Missing plant quantity for seeds-per-plant requirement.',
+            )
+        return PlanRequirementResult(value=quantity * value, unit=SEED_PACKAGE_UNIT_SEEDS)
 
-    return None, 'Unsupported seed rate unit.'
+    return PlanRequirementResult(
+        value=None,
+        unit=None,
+        blockers=(CALCULATION_BLOCKER_UNSUPPORTED_SEED_RATE_UNIT,),
+        warning='Unsupported seed rate unit.',
+    )
 
 
 def _aggregate_requirements_by_culture(project: Project) -> dict[int, dict]:
@@ -295,6 +350,7 @@ def _aggregate_requirements_by_culture(project: Project) -> dict[int, dict]:
                     SEED_PACKAGE_UNIT_SEEDS: Decimal('0'),
                 },
                 'warning': None,
+                'calculation_blockers': [],
                 'tkg': (
                     Decimal(str(culture.thousand_kernel_weight_g))
                     if culture.thousand_kernel_weight_g
@@ -303,21 +359,24 @@ def _aggregate_requirements_by_culture(project: Project) -> dict[int, dict]:
                 'culture': culture,
             },
         )
-        # Once one plan for this culture fails to compute a requirement, every
-        # later plan for the same culture is skipped too (not just the failing
-        # one) — the row shows a single warning rather than a partial total
-        # that would understate demand without saying so. See
-        # docs/seed-demand-calculation.md.
-        if entry['warning']:
+        # A failed plan invalidates the culture total. Later plans are still
+        # inspected for additional blockers, but successful values are not
+        # accumulated into a misleading partial total.
+        result = compute_plan_requirement(plan)
+        if result.blockers:
+            for blocker in result.blockers:
+                if blocker not in entry['calculation_blockers']:
+                    entry['calculation_blockers'].append(blocker)
+            entry['warning'] = (
+                entry['warning'] or result.warning or 'Seed requirement could not be calculated.'
+            )
             continue
-        requirement_value, requirement_unit = compute_plan_requirement(plan)
-        if requirement_value is None or not requirement_unit:
-            entry['warning'] = requirement_unit or 'Seed requirement could not be calculated.'
+        if entry['warning'] or result.value is None or not result.unit:
             continue
         margin_factor = Decimal('1') + (
             select_safety_margin_percent(culture, plan.cultivation_type) / Decimal('100')
         )
-        entry['required_amount_by_unit'][requirement_unit] += requirement_value * margin_factor
+        entry['required_amount_by_unit'][result.unit] += result.value * margin_factor
     return grouped
 
 
@@ -416,6 +475,7 @@ def _base_row(
         ),
         'required_amount_unit': SEED_PACKAGE_UNIT_GRAMS if has_required_amount else None,
         'required_amount_warning': required_amount_warning,
+        'calculation_blockers': list(entry['calculation_blockers']),
         'total_grams': (
             float(display_required_amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
             if display_required_amount is not None
@@ -423,6 +483,7 @@ def _base_row(
         ),
         'seed_packages': packages,
         'package_suggestion': None,
+        'package_blocker': None,
         'packages_needed': None,
         'warning': entry['warning'],
     }
@@ -459,6 +520,7 @@ def _attach_package_suggestion(
         row['warning'] = (
             conversion_warning or 'Cannot convert required amount to package units.'
         )
+        row['package_blocker'] = PACKAGE_BLOCKER_UNIT_CONVERSION_UNAVAILABLE
         return
 
     suggestion = compute_seed_package_suggestion(
@@ -520,6 +582,11 @@ def build_seed_demand_rows(
             target_unit=SEED_PACKAGE_UNIT_GRAMS,
             tkg=selected_tkg,
         )
+        if entry['calculation_blockers']:
+            display_required_amount = None
+            required_amount_warning = None
+        elif required_amount_warning == REQUIRED_AMOUNT_WARNING_MISSING_TKG:
+            entry['calculation_blockers'].append(CALCULATION_BLOCKER_MISSING_TKG)
         packages = _valid_packages(selected_supplier)
         row = _base_row(
             entry=entry,
@@ -537,6 +604,17 @@ def build_seed_demand_rows(
                 selected_tkg=selected_tkg,
                 packages=packages,
             )
+        if row['package_suggestion'] is None and row['package_blocker'] is None:
+            if row['calculation_blockers']:
+                row['package_blocker'] = PACKAGE_BLOCKER_REQUIRED_AMOUNT_UNAVAILABLE
+            elif not supplier_options:
+                row['package_blocker'] = PACKAGE_BLOCKER_SUPPLIER_DATA_MISSING
+            elif selected_supplier is None:
+                row['package_blocker'] = PACKAGE_BLOCKER_SUPPLIER_NOT_SELECTED
+            elif not packages:
+                row['package_blocker'] = PACKAGE_BLOCKER_PACKAGE_SIZES_MISSING
+            else:
+                row['package_blocker'] = PACKAGE_BLOCKER_NO_MATCHING_PACKAGE_SIZES
         rows.append(row)
 
     rows.sort(key=lambda item: (item['culture_name'] or '', item['variety'] or ''))

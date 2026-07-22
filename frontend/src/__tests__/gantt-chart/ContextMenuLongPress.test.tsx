@@ -51,7 +51,7 @@ describe("Gantt chart context-menu long press (occupancy + seedling views)", () 
     );
 
     const bar = screen.getByTestId("task-task-1");
-    const indicator = bar.querySelector('[aria-label="Aktionen"]');
+    const indicator = bar.querySelector('[aria-label="Actions"]');
     expect(indicator).not.toBeNull();
     expect(getComputedStyle(indicator as Element).opacity).toBe("0");
     expect(getComputedStyle(indicator as Element).pointerEvents).toBe("none");

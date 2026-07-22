@@ -249,12 +249,13 @@ describe('buildSeedlingTaskGroups', () => {
           bed: 100,
           planting_date: '2026-03-01',
           harvest_date: '2026-04-15',
+          harvest_end_date: '2026-04-30',
         },
       ],
     });
 
     expect(groups).toHaveLength(1);
-    expect(groups[0].tasks).toHaveLength(1);
+    expect(groups[0].tasks).toHaveLength(2);
     expect(groups[0].tasks[0].name).toBe('Salat (Bijella)');
   });
 
@@ -273,6 +274,7 @@ describe('buildSeedlingTaskGroups', () => {
           bed: 100,
           planting_date: '2026-03-10',
           harvest_date: '2026-04-20',
+          harvest_end_date: '2026-04-30',
         },
       ],
     });
@@ -307,6 +309,7 @@ describe('buildSeedlingTaskGroups', () => {
           bed: 100,
           planting_date: '2026-03-01',
           harvest_date: '2026-04-15',
+          harvest_end_date: '2026-04-30',
         },
         {
           id: 25,
@@ -315,6 +318,7 @@ describe('buildSeedlingTaskGroups', () => {
           bed: 200,
           planting_date: '2026-05-01',
           harvest_date: '2026-07-01',
+          harvest_end_date: '2026-07-15',
         },
       ],
     });
@@ -352,6 +356,63 @@ describe('buildSeedlingTaskGroups', () => {
     expect(groups).toHaveLength(1);
     expect(groups[0].tasks).toHaveLength(2);
     expect(groups[0].tasks[1].name).toBe('Salat (Bijella) (Ernte)');
+    expect(groups[0].tasks[1].notes).toBeUndefined();
+  });
+
+  it('keeps the original plan note in growth and harvest tooltips', () => {
+    const groups = buildFieldOccupancyTaskGroups({
+      locations,
+      fields,
+      beds,
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [{
+        id: 23,
+        culture: 42,
+        culture_name: 'Salat',
+        bed: 100,
+        planting_date: '2026-03-01',
+        harvest_date: '2026-04-15',
+        harvest_end_date: '2026-04-30',
+        notes: 'Morgens ernten',
+      }],
+    });
+
+    expect(groups[0].tasks.map((task) => task.notes)).toEqual([
+      'Morgens ernten',
+      'Morgens ernten',
+    ]);
+  });
+
+  it('keeps the growth task but omits the harvest period without a computed harvest end date', () => {
+    const groups = buildFieldOccupancyTaskGroups({
+      locations,
+      fields,
+      beds,
+      displayYear: 2026,
+      cultures: [],
+      plantingPlans: [
+        {
+          id: 26,
+          culture: 42,
+          culture_name: 'Salat',
+          bed: 100,
+          planting_date: '2026-03-01',
+          harvest_date: '2026-04-15',
+          harvest_end_date: null,
+        },
+      ],
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].tasks).toHaveLength(1);
+    expect(groups[0].tasks[0]).toMatchObject({
+      id: 'plan-26-growth',
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-15T00:00:00.000Z'),
+      harvestStartDate: new Date('2026-04-15T00:00:00.000Z'),
+      harvestEndDate: new Date('2026-04-15T00:00:00.000Z'),
+    });
   });
 });
 
@@ -438,6 +499,7 @@ describe('buildFieldOccupancyHierarchy', () => {
           bed: 100,
           planting_date: '2026-03-01',
           harvest_date: '2026-04-15',
+          harvest_end_date: '2026-04-30',
         },
         {
           id: 2,
@@ -446,6 +508,7 @@ describe('buildFieldOccupancyHierarchy', () => {
           bed: 101,
           planting_date: '2026-03-05',
           harvest_date: '2026-04-20',
+          harvest_end_date: '2026-04-30',
         },
       ],
     });

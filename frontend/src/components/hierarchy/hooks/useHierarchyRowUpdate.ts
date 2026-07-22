@@ -408,6 +408,7 @@ export function useHierarchyRowUpdate({
           ...(existingLocation ?? {}),
           id: newRow.locationId!,
           name: newRow.name,
+          notes: newRow.notes,
         });
 
         setLocations((previousLocations) =>
@@ -417,13 +418,12 @@ export function useHierarchyRowUpdate({
               : locationItem,
           ),
         );
-        return { ...newRow, name: updated.data.name };
+        return { ...newRow, name: updated.data.name, notes: updated.data.notes };
       }
 
       return newRow;
     },
     [
-      beds,
       fetchData,
       fields,
       getBedAreaSum,
@@ -432,7 +432,6 @@ export function useHierarchyRowUpdate({
       locations,
       preservePartialNewBedDraft,
       saveBed,
-      setBeds,
       setDraftValidationWarning,
       setError,
       setFields,

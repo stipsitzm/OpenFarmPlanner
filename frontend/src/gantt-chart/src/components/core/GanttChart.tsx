@@ -131,6 +131,8 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
     const resolvedTodayLabel = todayLabel ?? localeText?.today ?? "Today";
     const resolvedHeaderLabel =
       headerLabel ?? localeText?.resources ?? "Resources";
+    const resolvedContextMenuLabel = localeText?.actions ?? "Actions";
+    const resolvedProgressHandleLabel = localeText?.adjustProgress ?? "Drag to adjust progress";
 
     // Calculate timeline bounds
     const derivedStartDate = customStartDate || findEarliestDate(tasks);
@@ -1109,6 +1111,7 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
             <TaskList
               tasks={tasks}
               headerLabel={resolvedHeaderLabel}
+              contextMenuLabel={resolvedContextMenuLabel}
               onGroupClick={onGroupClick}
               onGroupContextMenu={onGroupContextMenu}
               onToggleGroupExpand={onToggleGroupExpand}
@@ -1182,6 +1185,8 @@ const GanttChart = forwardRef<GanttChartRef, GanttChartProps>(
                       allowTaskResize={allowTaskResize}
                       allowTaskMove={allowTaskMove}
                       showProgress={showProgress}
+                      contextMenuLabel={resolvedContextMenuLabel}
+                      progressHandleLabel={resolvedProgressHandleLabel}
                       onTaskUpdate={handleTaskUpdate}
                       onTaskClick={handleTaskClick}
                       onTaskSelect={handleTaskSelect}

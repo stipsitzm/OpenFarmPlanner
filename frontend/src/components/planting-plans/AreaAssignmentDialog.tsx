@@ -10,7 +10,6 @@ import {
   IconButton,
   InputLabel,
   MenuItem,
-  Select,
   Stack,
   Typography,
 } from '@mui/material';
@@ -23,6 +22,8 @@ import {
   filterFieldOptionsByLocation,
 } from './areaHierarchySelection';
 import { formatLocalizedNumber } from '../../utils/numberLocalization';
+import { TypeaheadSelect as Select } from '../inputs/TypeaheadSelect';
+import { mediumFieldSx } from '../forms/formLayout';
 
 interface AreaAssignmentDialogProps {
   bedId: number | null;
@@ -463,9 +464,10 @@ function AreaAssignmentDialogComponent({
                 <Typography variant="body2" color="text.secondary" sx={{ mb: -0.25 }}>
                   {t('areaAssignment.hierarchyHint')}
                 </Typography>
-                <FormControl fullWidth size="small">
+                <FormControl size="small" sx={mediumFieldSx}>
                   <InputLabel id="assignment-location-label">{t('columns.location')}</InputLabel>
                   <Select
+                    fullWidth
                     ref={locationSelectRef}
                     id="assignment-location"
                     labelId="assignment-location-label"
@@ -485,9 +487,10 @@ function AreaAssignmentDialogComponent({
                   </Select>
                 </FormControl>
 
-                <FormControl fullWidth size="small">
+                <FormControl size="small" sx={mediumFieldSx}>
                   <InputLabel id="assignment-field-label">{t('columns.field')}</InputLabel>
                   <Select
+                    fullWidth
                     ref={fieldSelectRef}
                     id="assignment-field"
                     labelId="assignment-field-label"
@@ -507,9 +510,10 @@ function AreaAssignmentDialogComponent({
                   </Select>
                 </FormControl>
 
-                <FormControl fullWidth size="small">
+                <FormControl size="small" sx={mediumFieldSx}>
                   <InputLabel id="assignment-bed-label">{t('columns.bed')}</InputLabel>
                   <Select
+                    fullWidth
                     ref={bedSelectRef}
                     id="assignment-bed"
                     labelId="assignment-bed-label"

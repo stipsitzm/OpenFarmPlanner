@@ -6,13 +6,13 @@ import {
   InputLabel,
   MenuItem,
   Popover,
-  Select,
   Stack,
 } from '@mui/material';
 
 import { useTranslation } from '../../i18n';
 import type { Location } from '../../api/api';
 import type { OccupancyHierarchyNode } from '../../pages/ganttChartUtils';
+import { TypeaheadSelect as Select } from '../inputs/TypeaheadSelect';
 
 interface CalendarFiltersPopoverProps {
   anchorEl: HTMLElement | null;
@@ -65,6 +65,7 @@ export function CalendarFiltersPopover({
         <FormControl size="small" sx={{ minWidth: '100%' }}>
           <InputLabel id="calendar-location-filter-label">{t('ganttChart:treeFilters.locationLabel')}</InputLabel>
           <Select
+            fullWidth
             labelId="calendar-location-filter-label"
             value={locationFilter === 'all' ? 'all' : String(locationFilter)}
             label={t('ganttChart:treeFilters.locationLabel')}
@@ -82,6 +83,7 @@ export function CalendarFiltersPopover({
         <FormControl size="small" sx={{ minWidth: '100%' }}>
           <InputLabel id="calendar-field-filter-label">{t('ganttChart:treeFilters.fieldLabel')}</InputLabel>
           <Select
+            fullWidth
             labelId="calendar-field-filter-label"
             value={fieldFilter === 'all' ? 'all' : String(fieldFilter)}
             label={t('ganttChart:treeFilters.fieldLabel')}

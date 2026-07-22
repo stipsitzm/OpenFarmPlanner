@@ -319,15 +319,15 @@ export function buildFieldOccupancyTaskGroups({
         const tasks: GanttTask[] = [];
         bedPlans.forEach((plan) => {
           const plantingDate = parseDateString(plan.planting_date);
-          const harvestStartDate = parseDateString(plan.harvest_date!);
+          const harvestStartDate = parseDateString(plan.harvest_date);
+          const harvestEndDate = plan.harvest_end_date
+            ? parseDateString(plan.harvest_end_date)
+            : harvestStartDate;
           const baseColor = getCultureColor(cultures, plan.culture, plan.culture_name || '', plan.culture_display_color);
           const cultureLabel = formatCultureDisplayLabel(
             plan.culture_name || `Culture ${plan.culture}`,
             plan.culture_variety,
           );
-          const harvestEndDate = plan.harvest_end_date
-            ? parseDateString(plan.harvest_end_date)
-            : harvestStartDate;
 
           tasks.push({
             id: `plan-${plan.id}-growth`,
@@ -357,7 +357,7 @@ export function buildFieldOccupancyTaskGroups({
               cultureName: plan.culture_name ?? undefined,
               cultureVariety: plan.culture_variety ?? undefined,
               areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
-              notes: `Erntezeitraum: ${plan.notes || ''}`.trim(),
+              notes: plan.notes,
               harvestStartDate,
               harvestEndDate,
             });
@@ -484,15 +484,15 @@ export function buildFieldOccupancyHierarchy({
     const tasks: GanttTask[] = [];
     bedPlans.forEach((plan) => {
       const plantingDate = parseDateString(plan.planting_date);
-      const harvestStartDate = parseDateString(plan.harvest_date!);
+      const harvestStartDate = parseDateString(plan.harvest_date);
+      const harvestEndDate = plan.harvest_end_date
+        ? parseDateString(plan.harvest_end_date)
+        : harvestStartDate;
       const baseColor = getCultureColor(cultures, plan.culture, plan.culture_name || '', plan.culture_display_color);
       const cultureLabel = formatCultureDisplayLabel(
         plan.culture_name || `Culture ${plan.culture}`,
         plan.culture_variety,
       );
-      const harvestEndDate = plan.harvest_end_date
-        ? parseDateString(plan.harvest_end_date)
-        : harvestStartDate;
 
       tasks.push({
         id: `plan-${plan.id}-growth`,
@@ -522,7 +522,7 @@ export function buildFieldOccupancyHierarchy({
           cultureName: plan.culture_name ?? undefined,
           cultureVariety: plan.culture_variety ?? undefined,
           areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
-          notes: `Erntezeitraum: ${plan.notes || ''}`.trim(),
+          notes: plan.notes,
           harvestStartDate,
           harvestEndDate,
         });

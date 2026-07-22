@@ -14,6 +14,7 @@ import {
 import { supplierAPI } from '../../api/api';
 import type { Supplier } from '../../api/types';
 import { useTranslation } from '../../i18n';
+import { wideFieldSx } from '../forms/formLayout';
 
 interface SupplierDraft {
   name: string;
@@ -186,7 +187,7 @@ export function SupplierFormDialog({
           <TextField
             inputRef={nameInputRef}
             margin="dense"
-            fullWidth
+            sx={wideFieldSx}
             label={t('name')}
             value={draft.name}
             error={Boolean(fieldErrors.name)}
@@ -200,7 +201,7 @@ export function SupplierFormDialog({
           />
           <TextField
             margin="dense"
-            fullWidth
+            sx={wideFieldSx}
             label={t('homepage')}
             value={draft.homepage_url}
             error={Boolean(fieldErrors.homepage_url)}

@@ -20,6 +20,7 @@ const projectApiMocks = vi.hoisted(() => ({
   listDeleted: vi.fn(async () => ({ data: [] })),
   delete: vi.fn(async () => ({ data: {} })),
   restore: vi.fn(async () => ({ data: {} })),
+  permanentDelete: vi.fn(async () => ({ data: {} })),
 }));
 
 const authState = vi.hoisted(() => ({
@@ -47,6 +48,7 @@ vi.mock('../api/api', async () => {
       listDeleted: projectApiMocks.listDeleted,
       delete: projectApiMocks.delete,
       restore: projectApiMocks.restore,
+      permanentDelete: projectApiMocks.permanentDelete,
     },
   };
 });
@@ -61,6 +63,8 @@ describe('ProjectSelectionPage', () => {
     projectApiMocks.delete.mockResolvedValue({ data: {} });
     projectApiMocks.restore.mockClear();
     projectApiMocks.restore.mockResolvedValue({ data: {} });
+    projectApiMocks.permanentDelete.mockClear();
+    projectApiMocks.permanentDelete.mockResolvedValue({ data: {} });
     projectApiMocks.createDemo.mockResolvedValue({
       data: {
         id: 9,
@@ -103,6 +107,7 @@ describe('ProjectSelectionPage', () => {
     expect(screen.getByText('Wähle, ob du mit einem eigenen leeren Projekt beginnst oder OpenFarmPlanner zuerst mit realistischen Beispieldaten ausprobierst.')).toBeInTheDocument();
     expect(screen.getByText('Demo-Projekt ausprobieren')).toBeInTheDocument();
     expect(screen.queryByText('Papierkorb')).not.toBeInTheDocument();
+    expect(projectApiMocks.listDeleted).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Leeres Projekt anlegen' }));
     expect(dispatchSpy).toHaveBeenCalled();
     dispatchSpy.mockRestore();
@@ -115,6 +120,79 @@ describe('ProjectSelectionPage', () => {
 
     expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
     expect(screen.getByText('Demo-Projekt ausprobieren')).toBeInTheDocument();
+  });
+
+  it('hides the trash retention notice when the trash is empty', async () => {
+    render(<MemoryRouter initialEntries={['/app/project-selection?trash=1']}><ProjectSelectionPage /></MemoryRouter>);
+
+    expect(await screen.findByRole('heading', { name: 'Papierkorb' })).toBeInTheDocument();
+    expect(await screen.findByText('Der Papierkorb ist leer.')).toBeInTheDocument();
+    expect(screen.queryByText('Gelöschte Projekte werden nach 30 Tagen automatisch endgültig gelöscht.')).not.toBeInTheDocument();
+  });
+
+  it('opens the project trash from an explicit URL and restores deleted projects', async () => {
+    projectApiMocks.listDeleted.mockResolvedValue({
+      data: [{
+        id: 7,
+        name: 'Gelöschtes Projekt',
+        slug: 'geloeschtes-projekt',
+        description: '',
+        is_active: false,
+        deleted_at: '2026-01-01T00:00:00Z',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }],
+    });
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+
+    render(<MemoryRouter initialEntries={['/app/project-selection?trash=1']}><ProjectSelectionPage /></MemoryRouter>);
+
+    expect(await screen.findByRole('heading', { name: 'Papierkorb' })).toBeInTheDocument();
+    expect(screen.getByText('Gelöschte Projekte werden nach 30 Tagen automatisch endgültig gelöscht.')).toBeInTheDocument();
+    expect(screen.queryByText('Demo-Projekt ausprobieren')).not.toBeInTheDocument();
+    expect(await screen.findByText('Gelöschtes Projekt')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wiederherstellen' }));
+
+    await waitFor(() => {
+      expect(projectApiMocks.restore).toHaveBeenCalledWith(7);
+      expect(authState.refreshUser).toHaveBeenCalled();
+    });
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'ofp:project-trash-changed',
+    }));
+    dispatchSpy.mockRestore();
+  });
+
+  it('permanently deletes a project from the trash after confirmation', async () => {
+    projectApiMocks.listDeleted.mockResolvedValue({
+      data: [{
+        id: 7,
+        name: 'Gelöschtes Projekt',
+        slug: 'geloeschtes-projekt',
+        description: '',
+        is_active: false,
+        deleted_at: '2026-01-01T00:00:00Z',
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }],
+    });
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+
+    render(<MemoryRouter initialEntries={['/app/project-selection?trash=1']}><ProjectSelectionPage /></MemoryRouter>);
+
+    expect(await screen.findByText('Gelöschtes Projekt')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Endgültig löschen' }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Gelöschtes Projekt'));
+    await waitFor(() => expect(projectApiMocks.permanentDelete).toHaveBeenCalledWith(7));
+    expect(screen.queryByText('Gelöschtes Projekt')).not.toBeInTheDocument();
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'ofp:project-trash-changed',
+    }));
+    confirmSpy.mockRestore();
+    dispatchSpy.mockRestore();
   });
 
   it('creates and opens a demo project from onboarding', async () => {

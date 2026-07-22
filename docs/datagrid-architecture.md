@@ -36,6 +36,7 @@ frontend/src/components/data-grid/
   contextMenuFocus.ts      Arrow/Home/End/Enter/Esc navigation *inside* an open menu
   AreaM2EditCell.tsx, DateEditCell.tsx, PlantsCountEditCell.tsx,
   SearchableSelectEditCell.tsx                            custom edit cells
+  FullCellTooltip.tsx     full-cell hover/focus target for unavailable values
   GermanDateEditCell.tsx   shared German date parse/format helpers only
                            (its edit-cell component was removed as dead code)
   NotesCell.tsx, NotesDrawer.tsx, NotesPreviewPopover.tsx,
@@ -130,7 +131,11 @@ MUI's stock edit cells didn't fit a few OpenFarmPlanner-specific needs:
   `singleSelect` dropdown wouldn't make browsable; `columns.tsx` also
   exposes a `createSingleSelectColumn` builder (plain dropdown) for
   short option lists — pick whichever builder matches the option-list size,
-  don't default to the searchable one everywhere.
+  don't default to the searchable one everywhere. The plain editor renders
+  through `StandardSingleSelectEditCell`, which reuses the shared closed
+  Select typeahead hook from `components/inputs/selectTypeahead.ts` so typing
+  on a focused closed editor selects by the localized visible label just like
+  form-level Selects.
 
 ## Keyboard editing/navigation inside the grid
 
@@ -144,13 +149,26 @@ that's still true. But cell-level Tab/Arrow/Enter/F2 navigation
   columns, and Up/Down across rows — falling back to the nearest navigable
   cell in the target row if the same column isn't editable there (so Enter
   after editing one column doesn't get stuck on a read-only next-row cell).
+  When navigation lands inside a row that is already in edit mode, the shared
+  focus helper focuses the target cell's actual editor input instead of only
+  the DataGrid cell wrapper; otherwise the cell can look focused while
+  printable keystrokes are ignored.
 - **`keyboardEditing.ts`**'s `useSpreadsheetEditStarter` implements
   Excel-like "just start typing" (a printable keydown on a non-editing
   cell immediately opens edit mode and *replaces* the cell's value with the
   typed character, buffering rapid keystrokes typed before the edit-cell
   component has actually mounted) and F2 (opens edit mode *without*
   altering the value — the standard spreadsheet distinction between the
-  two).
+  two). The same starter also handles the row-edit edge case where Tab or
+  Shift+Tab has visibly focused another editable cell but DOM focus is still
+  on the cell container rather than the mounted editor input: the first
+  printable key is still captured, buffered, and written into that target
+  cell instead of being lost. If the editor input itself already owns DOM
+  focus, its native input event is left untouched; restarting row edit mode
+  there would discard other unsynchronized values in a newly created row. The
+  hierarchy's name and dimension editors disable MUI's default input debounce
+  because row-level validation across rapidly edited fields can otherwise
+  complete out of order and restore an older value after a focus change.
 - Notes cells (see below) are deliberately excluded from both spreadsheet
   auto-edit-start and the F2 flow — Enter/Space on a notes cell opens the
   notes drawer instead.
@@ -197,6 +215,12 @@ treat a UX fix to
 *when/how* the menu opens (or the row-type-specific actions inside it) as
 *not* automatically fixing the other; only a fix to the shared
 open/close/reposition/focus-restore mechanics itself applies to both.
+
+The hierarchy grid also coordinates its notes drawer with row editing
+directly: saving notes for a new or still-editing Standort/Parzelle/Beet row
+first persists the current row draft with the note value, then closes the
+drawer. Users should never need to click outside the grid to make a new row
+exist before saving its notes.
 
 ## Notes / markdown cells
 
@@ -274,7 +298,12 @@ grid," that's new work, not exposing something that already half-exists.
   works.
 - `styles.ts` — the single `dataGridSx` object defining every `ofp-*` CSS
   class referenced above (`.ofp-row-editing`, `.ofp-cell-dirty`,
-  `.ofp-cell-error`, `.ofp-row-long-press`, ...).
+  `.ofp-cell-error`, `.ofp-row-long-press`, ...). Cells that render
+  `FullCellTooltip` must also use `FULL_CELL_TOOLTIP_CELL_CLASS` so its
+  absolute trigger covers the cell and follows the grid's keyboard focus.
+  DataGrid renderers pass `cellHasFocus`; plain read-only table cells can use
+  `focusable` when the tooltip trigger itself needs a keyboard stop. Do not
+  use `focusable` inside DataGrid cells or around an already focusable link.
 
 ## What to check before changing this layer
 

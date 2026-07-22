@@ -28,7 +28,6 @@ import {
   TextField,
   FormControl,
   InputLabel,
-  Select,
   MenuItem,
   IconButton,
 } from '@mui/material';
@@ -40,6 +39,7 @@ import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
 import { hasEffectiveCultureFormChanges } from './cultureFormChangeDetection';
 import { validateCulture } from './validation';
 import { normalizeSeedRateUnit } from './enumNormalization';
+import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
 import { BasicInfoSection } from './sections/BasicInfoSection';
 import { TimingSection } from './sections/TimingSection';
 import { HarvestSection } from './sections/HarvestSection';
@@ -50,6 +50,13 @@ import { NotesSection } from './sections/NotesSection';
 import { hasSupplierDataRowMissingSupplier, hasSupplierInformation } from './supplierDataRows';
 import { stripCitationMarkers } from '../components/data-grid/markdown';
 import { SupplierFormDialog } from '../components/suppliers/SupplierFormDialog';
+import {
+  compactFieldSx,
+  formRowSx,
+  mediumFieldSx,
+  smallFieldSx,
+  wideFieldSx,
+} from '../components/forms/formLayout';
 
 interface CultureFormProps {
   culture?: Culture;
@@ -812,9 +819,10 @@ export function CultureForm({
                   }
 
                   return (
-                    <FormControl fullWidth size="small">
+                    <FormControl size="small" sx={mediumFieldSx}>
                       <InputLabel shrink>{t('form.supplier')}</InputLabel>
                       <Select
+                        fullWidth
                         value={selectValue}
                         label={t('form.supplier')}
                         renderValue={(selected) => {
@@ -853,21 +861,26 @@ export function CultureForm({
                   label={t('form.supplierProductNameLabel') }
                   value={row.supplier_product_name ?? ''}
                   onChange={(event) => updateSupplierRow(supplierIndex, { supplier_product_name: event.target.value })}
-                  fullWidth
+                  sx={wideFieldSx}
                 />
                 <Typography variant="subtitle2">{t('form.seedPackagesLabel')}</Typography>
                 {(row.packaging_sizes ?? []).map((pkg, packageIndex) => (
-                  <div key={`pkg-${supplierIndex}-${packageIndex}`} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <Box
+                    key={`pkg-${supplierIndex}-${packageIndex}`}
+                    sx={{ ...formRowSx, gap: 1, alignItems: 'center' }}
+                  >
                     <TextField
                       label={t('form.seedAmountLabel')}
                       type="number"
                       value={pkg.size_value}
                       onChange={(event) => updatePackageRow(supplierIndex, packageIndex, { size_value: Number(event.target.value) || 0 })}
+                      sx={compactFieldSx}
                     />
                     <Select
                       value={pkg.size_unit}
                       onChange={(event) => updatePackageRow(supplierIndex, packageIndex, { size_unit: event.target.value })}
                       size="small"
+                      sx={smallFieldSx}
                     >
                       <MenuItem value="g">{t('form.packageUnitGram')}</MenuItem>
                       <MenuItem value="seeds">{t('form.packageUnitSeeds')}</MenuItem>
@@ -879,12 +892,12 @@ export function CultureForm({
                     >
                       <DeleteIcon fontSize="small" />
                     </IconButton>
-                  </div>
+                  </Box>
                 ))}
-                <div style={{ display: 'flex', gap: 8 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                   <Button variant="outlined" onClick={() => addPackageRow(supplierIndex)}>{t('form.addSeedPackage')}</Button>
                   <Button variant="outlined" color="error" onClick={() => removeSupplierRow(supplierIndex)}>{t('form.removeSupplierData')}</Button>
-                </div>
+                </Box>
               </div>
             ))}
             <Button variant="outlined" onClick={addSupplierRow}>{t('form.addSupplierData')}</Button>

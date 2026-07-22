@@ -9,7 +9,15 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProjectSettings
-from farm.models import Bed, Culture, PlantingPlan, Project, ProjectInvitation, ProjectMembership, Location
+from farm.models import (
+    Bed,
+    Culture,
+    Location,
+    PlantingPlan,
+    Project,
+    ProjectInvitation,
+    ProjectMembership,
+)
 from farm.services.demo_project import DEMO_PROJECT_NAME
 
 User = get_user_model()
@@ -610,14 +618,54 @@ class ProjectsApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_cleanup_deleted_projects_command_purges_expired_trash(self) -> None:
+    def test_restore_deleted_project_before_retention_expires(self) -> None:
+        trashed_project = Project.objects.create(
+            name='Recently trashed',
+            slug='recently-trashed',
+            deleted_at=timezone.now() - timedelta(days=29),
+        )
+        ProjectMembership.objects.create(user=self.user, project=trashed_project, role='admin')
+
+        response = self.client.post(f'/openfarmplanner/api/projects/{trashed_project.id}/restore/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        trashed_project.refresh_from_db()
+        self.assertIsNone(trashed_project.deleted_at)
+
+    def test_permanent_project_delete_endpoint_removes_trashed_project_immediately(self) -> None:
+        trashed_project = Project.objects.create(
+            name='Delete now',
+            slug='delete-now',
+            deleted_at=timezone.now(),
+        )
+        ProjectMembership.objects.create(user=self.user, project=trashed_project, role='admin')
+        location = Location.objects.create(name='Cascade location', project=trashed_project)
+
+        response = self.client.delete(
+            f'/openfarmplanner/api/projects/{trashed_project.id}/permanent/',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Project.objects.filter(id=trashed_project.id).exists())
+        self.assertFalse(Location.objects.filter(id=location.id).exists())
+
+    def test_cleanup_deleted_projects_command_purges_expired_trash_only(self) -> None:
         self.project2.deleted_at = timezone.now() - timedelta(days=31)
         self.project2.save(update_fields=['deleted_at'])
+        expired_location = Location.objects.create(name='Expired location', project=self.project2)
 
-        recently_trashed = Project.objects.create(name='P3', slug='p3', deleted_at=timezone.now() - timedelta(days=1))
+        recently_trashed = Project.objects.create(
+            name='P3',
+            slug='p3',
+            deleted_at=timezone.now() - timedelta(days=1),
+        )
+        never_deleted = Project.objects.create(name='P4', slug='p4')
 
+        call_command('cleanup_deleted_projects')
         call_command('cleanup_deleted_projects')
 
         self.assertFalse(Project.objects.filter(id=self.project2.id).exists())
+        self.assertFalse(Location.objects.filter(id=expired_location.id).exists())
         self.assertTrue(Project.objects.filter(id=recently_trashed.id).exists())
         self.assertTrue(Project.objects.filter(id=self.project.id).exists())
+        self.assertTrue(Project.objects.filter(id=never_deleted.id).exists())

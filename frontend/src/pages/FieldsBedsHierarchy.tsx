@@ -296,6 +296,7 @@ function FieldsBedsHierarchy({
     || beds.length > 0
   );
   const { showContextMenuHint, closeContextMenuHint, markContextMenuHintUsed } = useContextMenuHint({
+    contextKey: "fieldsBeds",
     enabled: !suppressContextMenuHint,
     isLoading: loading,
     hasRows: hasUsableHierarchyRows,
@@ -364,10 +365,46 @@ function FieldsBedsHierarchy({
     t,
   });
 
+  const isUnsavedOrEditingHierarchyRow = useCallback((row: HierarchyRow): boolean => (
+    row.isNew === true
+    || rowModesModelRef.current[row.id]?.mode === GridRowModes.Edit
+    || rowModesModelRef.current[String(row.id)]?.mode === GridRowModes.Edit
+    || (row.type === "bed" && typeof row.bedId === "number" && row.bedId < 0)
+    || (row.type === "field" && typeof row.fieldId === "number" && row.fieldId < 0)
+  ), []);
+
+  const saveHierarchyRowDraftWithNotes = useCallback(async (
+    row: HierarchyRow,
+    notesValue: string,
+  ): Promise<HierarchyRow> => {
+    const draftRow = getDraftRow(row.id) ?? row;
+    const savedRow = await processRowUpdate({
+      ...draftRow,
+      notes: notesValue,
+    });
+
+    if (
+      rowModesModelRef.current[row.id]?.mode === GridRowModes.Edit
+      || rowModesModelRef.current[String(row.id)]?.mode === GridRowModes.Edit
+    ) {
+      setRowModesModel((previousModel) => ({
+        ...previousModel,
+        [row.id]: { mode: GridRowModes.View, ignoreModifications: true },
+      }));
+    }
+
+    return savedRow;
+  }, [getDraftRow, processRowUpdate]);
+
   // Notes editor - must be after rows definition
   const notesEditor = useNotesEditor<HierarchyRow>({
     rows,
     onSave: async ({ row, value }) => {
+      if (isUnsavedOrEditingHierarchyRow(row)) {
+        await saveHierarchyRowDraftWithNotes(row, value);
+        return;
+      }
+
       if (!row.name) {
         throw new Error(t("validation.nameRequired"));
       }

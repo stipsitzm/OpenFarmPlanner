@@ -175,14 +175,19 @@ vi.mock('@mui/x-data-grid', async () => {
     setCapturedOnCellKeyDown(onCellKeyDown);
     setCapturedOnRowEditStop(onRowEditStop);
     setCapturedProcessRowUpdate(processRowUpdate);
-    if (apiRef?.current) {
-      apiRef.current.setCellFocus = (id: string | number, field: string) => {
+    ReactModule.useLayoutEffect(() => {
+      if (!apiRef?.current) {
+        return;
+      }
+
+      const api = apiRef.current;
+      api.setCellFocus = (id: string | number, field: string) => {
         getSetCellFocusMock()(id, field);
         setFocusedCell({ id, field });
       };
-      apiRef.current.getAllRowIds = () => rows.map((row) => row.id);
-      apiRef.current.getVisibleColumns = () => columns;
-      apiRef.current.getCellParams = (id: string | number, field: string) => {
+      api.getAllRowIds = () => rows.map((row) => row.id);
+      api.getVisibleColumns = () => columns;
+      api.getCellParams = (id: string | number, field: string) => {
         const row = rows.find((currentRow) => String(currentRow.id) === String(id));
         return {
           id,
@@ -191,17 +196,20 @@ vi.mock('@mui/x-data-grid', async () => {
           isEditable: row ? (isCellEditable?.({ row, field }) ?? true) : false,
         };
       };
-      apiRef.current.getRowIndexRelativeToVisibleRows = (id: string | number) =>
+      api.getRowIndexRelativeToVisibleRows = (id: string | number) =>
         rows.findIndex((row) => String(row.id) === String(id));
-      apiRef.current.getColumnIndexRelativeToVisibleColumns = (field: string) =>
+      api.getColumnIndexRelativeToVisibleColumns = (field: string) =>
         columns.findIndex((column) => column.field === field);
-      apiRef.current.getCellElement = () => ({
-        focus: getEditCellFocusMock(),
-      });
-      apiRef.current.isCellEditable = (params: { row?: Record<string, unknown>; field: string }) =>
+      api.getCellElement = () => {
+        const element = document.createElement('div');
+        element.focus = getEditCellFocusMock();
+        return element;
+      };
+      api.isCellEditable = (params: { row?: Record<string, unknown>; field: string }) =>
         params.row ? (isCellEditable?.({ row: params.row, field: params.field }) ?? true) : false;
-      apiRef.current.scrollToIndexes = vi.fn();
-    }
+      api.scrollToIndexes = vi.fn();
+    }, [apiRef, columns, isCellEditable, rows]);
+
     return (
       <div data-testid="hierarchy-grid">
         <div data-testid="row-count">{rows.length}</div>

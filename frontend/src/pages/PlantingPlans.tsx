@@ -13,6 +13,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import type {
   GridCellParams,
   GridColDef,
+  GridRenderCellParams,
   GridRenderEditCellParams,
   GridValueOptionsParams,
 } from "@mui/x-data-grid";
@@ -70,7 +71,10 @@ import {
   toIsoDateString,
   parseGermanDateText,
   formatDateAsGerman,
+  FullCellTooltip,
+  FULL_CELL_TOOLTIP_CELL_CLASS,
 } from "../components/data-grid";
+import { CALCULATED_COLUMN_CELL_CLASS } from "../components/data-grid/calculatedColumns";
 import { MobileCardList } from "../components/mobile/MobileCardList";
 import { NotesDrawer } from "../components/data-grid/NotesDrawer";
 import ProjectRequiredState from "../components/project/ProjectRequiredState";
@@ -90,6 +94,7 @@ import {
 import { AreaAssignmentDialog } from "../components/planting-plans/AreaAssignmentDialog";
 import { CompactAreaCell } from "../components/planting-plans/CompactAreaCell";
 import EmptyStateCard from "../components/project/EmptyStateCard";
+import { useClosedSelectTypeahead } from "../components/inputs/selectTypeahead";
 
 export {
   collectHierarchyAvailability,
@@ -151,6 +156,19 @@ const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
 }: CultivationTypeEditCellProps) {
   const selectedValue = normalizeCultivationType(value) ?? "";
   const selectedOption = options.find((option) => option.value === selectedValue);
+  const handleTypeaheadSelect = useCallback((nextValue: string | string[]): void => {
+    const nextSelectedValue = Array.isArray(nextValue) ? nextValue[0] : nextValue;
+    void api.setEditCellValue({
+      id,
+      field,
+      value: nextSelectedValue,
+    });
+  }, [api, field, id]);
+  const handleSelectKeyDown = useClosedSelectTypeahead<string>({
+    options,
+    value: selectedValue,
+    onSelect: handleTypeaheadSelect,
+  });
 
   return (
     <TextField
@@ -165,6 +183,7 @@ const CultivationTypeEditCell = memo(function CultivationTypeEditCell({
         },
         select: {
           displayEmpty: true,
+          onKeyDown: handleSelectKeyDown,
           renderValue: () => selectedOption?.label ?? (
             <Box
               component="span"
@@ -479,6 +498,45 @@ function PlantingPlans() {
 
   useRegisterCommands("plans-page", commands);
 
+  const formatDateForDisplay = useCallback((value?: string | null): string => {
+    if (!value) {
+      return "—";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    return date.toLocaleDateString("de-DE");
+  }, []);
+
+  const renderCalculatedHarvestDateCell = useCallback((
+    params: GridRenderCellParams<PlantingPlanRow, Date | null>,
+  ) => {
+    const row = params.row as PlantingPlanRow;
+    const value = params.field === "harvest_end_date" ? row.harvest_end_date : row.harvest_date;
+    const culture = cultures.find((item) => item.id === row.culture);
+    const hasGrowthDuration = typeof culture?.growth_duration_days === "number";
+    const hasHarvestDuration = typeof culture?.harvest_duration_days === "number";
+    let missingDurationTooltip = t("plantingPlans:tooltips.missingGrowthDuration");
+    if (params.field === "harvest_end_date") {
+      if (!hasGrowthDuration && !hasHarvestDuration) {
+        missingDurationTooltip = t("plantingPlans:tooltips.missingGrowthAndHarvestDuration");
+      } else if (!hasHarvestDuration) {
+        missingDurationTooltip = t("plantingPlans:tooltips.missingHarvestDuration");
+      }
+    }
+
+    if (!value) {
+      return (
+        <FullCellTooltip title={missingDurationTooltip} cellHasFocus={params.hasFocus}>
+          <Box component="span">—</Box>
+        </FullCellTooltip>
+      );
+    }
+
+    return <Box component="span">{formatDateForDisplay(value)}</Box>;
+  }, [cultures, formatDateForDisplay, t]);
+
   const columns: GridColDef[] = useMemo(
     () => [
       {
@@ -661,10 +719,14 @@ function PlantingPlans() {
         maxWidth: dynamicWidths.harvestDate,
         ...getCalculatedColumnProps<PlantingPlanRow>({
           headerName: t("plantingPlans:columns.harvestStartDate"),
-          tooltip: t("plantingPlans:tooltips.calculatedHarvestDate"),
+          tooltip: t("plantingPlans:tooltips.calculatedHarvestStartDate"),
         }),
         type: "date",
         valueGetter: (value) => (value ? new Date(value) : null),
+        cellClassName: (params) => params.value
+          ? CALCULATED_COLUMN_CELL_CLASS
+          : `${CALCULATED_COLUMN_CELL_CLASS} ${FULL_CELL_TOOLTIP_CELL_CLASS}`,
+        renderCell: renderCalculatedHarvestDateCell,
       },
       {
         field: "harvest_end_date",
@@ -675,10 +737,14 @@ function PlantingPlans() {
         maxWidth: dynamicWidths.harvestEndDate,
         ...getCalculatedColumnProps<PlantingPlanRow>({
           headerName: t("plantingPlans:columns.harvestEndDate"),
-          tooltip: t("plantingPlans:tooltips.calculatedHarvestDate"),
+          tooltip: t("plantingPlans:tooltips.calculatedHarvestEndDate"),
         }),
         type: "date",
         valueGetter: (value) => (value ? new Date(value) : null),
+        cellClassName: (params) => params.value
+          ? CALCULATED_COLUMN_CELL_CLASS
+          : `${CALCULATED_COLUMN_CELL_CLASS} ${FULL_CELL_TOOLTIP_CELL_CLASS}`,
+        renderCell: renderCalculatedHarvestDateCell,
       },
       {
         field: "area_m2",
@@ -813,23 +879,13 @@ function PlantingPlans() {
       cultures,
       dynamicWidths,
       getBedLabelForRow,
+      renderCalculatedHarvestDateCell,
       areaColumnLabel,
       fieldBedColumnLabel,
       numberLocale,
       t,
     ],
   );
-
-  const formatDateForDisplay = (value?: string | null): string => {
-    if (!value) {
-      return "—";
-    }
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
-    return date.toLocaleDateString("de-DE");
-  };
 
   const getCultureLabel = (row: PlantingPlanRow): string => {
     const linkedCulture = cultures.find((culture) => culture.id === row.culture);
@@ -921,6 +977,7 @@ function PlantingPlans() {
     getCultivationTypeLabel,
     getDisplayArea,
     getPlantsCountLabel,
+    formatDateForDisplay,
     t,
   ]);
 

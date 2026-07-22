@@ -32,7 +32,9 @@
     "createNameLabel": "Projektname",
     "createCancel": "Abbrechen",
     "createSubmit": "Projekt anlegen",
-    "createError": "Projekt konnte nicht erstellt werden."
+    "createError": "Projekt konnte nicht erstellt werden.",
+    "loadDemoProject": "Demo-Projekt laden",
+    "trash": "Papierkorb ({{count}})"
   },
   "projectRoles": {
     "admin": "Admin",
@@ -75,6 +77,7 @@
   "projectTrash": {
     "title": "Papierkorb",
     "empty": "Der Papierkorb ist leer.",
+    "retentionNotice": "Gelöschte Projekte werden nach 30 Tagen automatisch endgültig gelöscht.",
     "loadError": "Gelöschte Projekte konnten nicht geladen werden.",
     "deletedDays_zero": "heute gelöscht",
     "deletedDays_one": "gelöscht vor {{count}} Tag",

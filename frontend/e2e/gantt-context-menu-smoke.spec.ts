@@ -56,6 +56,8 @@ test.describe('gantt calendar context-menu smoke test', () => {
     const culture = await api<{ id: number }>('/cultures/', {
       name: 'Testkultur',
       variety: 'Sorte A',
+      growth_duration_days: 30,
+      harvest_duration_days: 14,
       propagation_duration_days: 21,
       cultivation_type: 'pre_cultivation',
       cultivation_types: ['pre_cultivation'],
@@ -128,7 +130,7 @@ test.describe('gantt calendar context-menu smoke test', () => {
     await openMobileTaskMenu();
     await page.getByRole('menuitem', { name: 'Kultur öffnen' }).click();
     await expect(page).toHaveURL(new RegExp(`/app/cultures\\?cultureId=${culture.id}`), { timeout: 10_000 });
-    await expect(page.getByText('Testkultur')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Testkultur', { exact: true })).toBeVisible({ timeout: 10_000 });
 
     await openMobileTaskMenu();
     await page.getByRole('menuitem', { name: 'Beet öffnen' }).click();

@@ -72,6 +72,8 @@
     "resources": "Areas",
     "resourcesSeedlings": "Cultures",
     "today": "Today",
+    "actions": "Actions",
+    "adjustProgress": "Drag to adjust progress",
     "viewModes": {
       "minute": "Minute",
       "hour": "Hour",

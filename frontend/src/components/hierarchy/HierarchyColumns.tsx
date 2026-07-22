@@ -3,7 +3,12 @@
  */
 
 import type { ReactElement, KeyboardEvent, MouseEvent } from 'react';
-import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
+import { GridEditInputCell } from '@mui/x-data-grid';
+import type {
+  GridColDef,
+  GridRenderCellParams,
+  GridRenderEditCellParams,
+} from '@mui/x-data-grid';
 import type { TFunction } from 'i18next';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -20,6 +25,7 @@ import { CALCULATED_COLUMN_CELL_CLASS, getCalculatedColumnProps } from '../data-
 import { ContextMenuIndicator } from '../contextMenu/ContextMenuIndicator';
 import { contextMenuActionsOverlaySx } from '../contextMenu/contextMenuIndicatorStyles';
 import { HierarchyLevelButtons, type HierarchyLevelButtonsProps } from './HierarchyLevelToggle';
+import { FullCellTooltip, FULL_CELL_TOOLTIP_CELL_CLASS } from '../data-grid/FullCellTooltip';
 
 export interface HierarchyColumnWidths {
   name: number;
@@ -45,6 +51,10 @@ const NON_BLOCKING_TOOLTIP_PROPS = {
     },
   },
 };
+
+const renderImmediateEditInputCell = (
+  params: GridRenderEditCellParams<HierarchyRow>,
+): ReactElement => <GridEditInputCell {...params} debounceMs={0} />;
 
 interface NameCellCallbacks {
   onToggleExpand: (rowId: string | number) => void;
@@ -450,7 +460,7 @@ const getDimensionCellClassName = (row: HierarchyRow, type: DimensionCellType): 
   if (!rowState || !isDimensionCellIncomplete(type, rowState)) {
     return '';
   }
-  return 'ofp-hierarchy-cell-missing-dimension';
+  return `ofp-hierarchy-cell-missing-dimension ${FULL_CELL_TOOLTIP_CELL_CLASS}`;
 };
 
 const getNotesCellClassName = (): string => '';
@@ -469,7 +479,12 @@ const renderDimensionCell = (
   }
 
   return (
-    <Tooltip title={t('hierarchy:messages.missingDimensionsCellTooltip')} enterDelay={250} {...NON_BLOCKING_TOOLTIP_PROPS}>
+    <FullCellTooltip
+      title={t('hierarchy:messages.missingDimensionsCellTooltip')}
+      enterDelay={250}
+      cellHasFocus={params.hasFocus}
+      {...NON_BLOCKING_TOOLTIP_PROPS}
+    >
       <Box
         component="span"
         sx={{
@@ -493,7 +508,7 @@ const renderDimensionCell = (
           {hasDisplayValue ? String(displayValue) : '—'}
         </Box>
       </Box>
-    </Tooltip>
+    </FullCellTooltip>
   );
 };
 
@@ -560,6 +575,7 @@ export function createHierarchyColumns(
       headerName: t('hierarchy:columns.name'),
       width: widths.name,
       editable: true,
+      renderEditCell: renderImmediateEditInputCell,
       renderCell: (params) => renderNameCell(params, callbacks, t, options),
       preProcessEditCellProps: (params) => {
         const hasError = !params.props.value || params.props.value.trim() === '';
@@ -595,6 +611,7 @@ export function createHierarchyColumns(
       width: widths.dimensions,
       type: 'string',
       editable: true,
+      renderEditCell: renderImmediateEditInputCell,
       valueGetter: (_value, row: HierarchyRow) => row.type === 'location' ? undefined : row.length_m,
       cellClassName: (params) => getDimensionCellClassName(params.row, 'length'),
       renderCell: (params) => renderDimensionCell(params, 'length', t),
@@ -615,6 +632,7 @@ export function createHierarchyColumns(
       width: widths.dimensions,
       type: 'string',
       editable: true,
+      renderEditCell: renderImmediateEditInputCell,
       valueGetter: (_value, row: HierarchyRow) => row.type === 'location' ? undefined : row.width_m,
       cellClassName: (params) => getDimensionCellClassName(params.row, 'width'),
       renderCell: (params) => renderDimensionCell(params, 'width', t),

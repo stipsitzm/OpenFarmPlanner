@@ -98,19 +98,20 @@ test.describe('landing page product screenshots', () => {
       demoProject: true,
       loginAsAdmin: true,
     });
-    await page.evaluate(() => {
-      window.localStorage.setItem('ofp.contextMenuHintDismissed', '1');
-    });
     const currentUserId = await page.evaluate(async () => {
       const response = await fetch('/api/auth/me/', { credentials: 'include' });
       const payload = await response.json() as { id?: number };
       return payload.id ?? null;
     });
-    if (currentUserId !== null) {
-      await page.evaluate((userId) => {
-        window.localStorage.setItem(`ofp.contextMenuHintDismissed:user:${userId}`, '1');
-      }, currentUserId);
-    }
+    await page.evaluate((userId) => {
+      const contexts = ['fieldsBeds', 'plantingPlans', 'seedDemand', 'suppliers'];
+      contexts.forEach((contextKey) => {
+        window.localStorage.setItem(`ofp.contextMenuHintDismissed:context:${contextKey}`, '1');
+        if (userId !== null) {
+          window.localStorage.setItem(`ofp.contextMenuHintDismissed:user:${userId}:context:${contextKey}`, '1');
+        }
+      });
+    }, currentUserId);
 
     for (const item of screenshots) {
       await page.evaluate((fieldsViewMode) => {

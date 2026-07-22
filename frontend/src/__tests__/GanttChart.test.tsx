@@ -1149,7 +1149,7 @@ describe('GanttChartPage', () => {
     expect(screen.getByText('Auspflanzung: 10.5.2026')).toBeInTheDocument();
     expect(screen.getByText('Anzuchtdauer: 21 Tage')).toBeInTheDocument();
     expect(screen.queryByText('Fläche: 8,00 m²')).not.toBeInTheDocument();
-    expect(screen.getByText('Gesamtpflanzen: 24')).toBeInTheDocument();
+    expect(screen.getByText('Pflanzen gesamt: 24')).toBeInTheDocument();
     expect(screen.getByText('Anzahl Anbaupläne: 1')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Zeitraum verschieben' })).not.toBeInTheDocument();
     const latestProps = mocks.ganttProps.mock.calls.at(-1)?.[0];

@@ -6,7 +6,8 @@ OpenFarmPlanner defines its reusable demo project data in
 The service has two entry points:
 
 - `create_personal_demo_project(user=...)` creates one normal, editable
-  project for the authenticated user and is used by first-project onboarding.
+  project for the authenticated user and is used by first-project onboarding
+  and the project switcher's explicit "load demo project" action.
 - `create_or_reset_demo_project(...)` recreates the local screenshot/demo
   fixture used by the management command and landing-page screenshot workflow.
 
@@ -15,6 +16,13 @@ locations, four fields, twelve beds, three suppliers, eight vegetable cultures,
 seed package data, and twelve planting plans for the 2026 season. All created
 records are project-scoped and owned by the receiving user through a regular
 admin `ProjectMembership`.
+
+The frontend opens the first-project onboarding automatically only while the
+authenticated user's project membership list is empty. Loading the demo project
+from the project switcher remains a separate action.
+The onboarding screen itself stays focused on starting a project. Deleted
+projects are restored or permanently deleted through the project switcher's
+trash entry, which opens the existing project trash view.
 
 To adjust the template, update the specs in `demo_project.py` and extend the
 focused backend tests in `backend/farm/tests/test_demo_project.py`. The project
