@@ -554,6 +554,7 @@ export default function SeedDemandPage() {
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                           <FormControl size="small" sx={{ minWidth: 220 }}>
                             <Select
+                              fullWidth
                               value={selectValue}
                               sx={{
                                 '& .MuiSelect-select': { py: 0.75 },
@@ -579,6 +580,7 @@ export default function SeedDemandPage() {
                       ) : supplierCount === 1 && singleSupplierOption ? (
                         <FormControl size="small" sx={{ minWidth: 220 }}>
                           <Select
+                            fullWidth
                             value={singleSupplierValue}
                             disabled
                             sx={{

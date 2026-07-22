@@ -9,6 +9,7 @@ import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
 import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
 import { useTranslation } from '../i18n';
 import { showProjectDeleteUndoSnackbar } from '../projects/projectDeletionFeedback';
+import { compactFieldSx, formRowSx, wideFieldSx } from '../components/forms/formLayout';
 
 interface InviteFeedback {
   severity: 'success' | 'warning' | 'error';
@@ -320,7 +321,7 @@ export default function ProjectSettingsPage() {
               disabled={!isProjectAdmin || isSavingProjectName}
               error={projectNameDraft.trim().length > 0 && projectNameDraft.trim().length < 2}
               helperText={projectNameDraft.trim().length > 0 && projectNameDraft.trim().length < 2 ? t('projectRename.minLength') : ' '}
-              fullWidth
+              sx={wideFieldSx}
               autoFocus
               slotProps={{ htmlInput: { 'aria-label': t('projectRename.label') } }}
             />
@@ -345,17 +346,19 @@ export default function ProjectSettingsPage() {
         <Alert severity="info" sx={{ mb: 3 }}>{t('memberManagementNoAccess')}</Alert>
       ) : null}
       <Typography variant="h6" sx={{ mb: 2 }}>{t('inviteSectionTitle')}</Typography>
-      <Stack spacing={2}>
+      <Box sx={formRowSx}>
         <TextField
           label={t('emailLabel')}
           type="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           disabled={!canManageMembers}
+          sx={wideFieldSx}
         />
-        <FormControl disabled={!canManageMembers}>
+        <FormControl disabled={!canManageMembers} sx={compactFieldSx}>
           <InputLabel id="project-invite-role-label">{t('roleLabel')}</InputLabel>
           <Select
+            fullWidth
             labelId="project-invite-role-label"
             label={t('roleLabel')}
             value={role}
@@ -369,10 +372,11 @@ export default function ProjectSettingsPage() {
           variant="contained"
           onClick={() => void handleInvite()}
           disabled={!canManageMembers || !email.trim()}
+          sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}
         >
           {t('sendInvite')}
         </Button>
-      </Stack>
+      </Box>
 
       {!canManageMembers ? (
         <Alert severity="info" sx={{ mt: 2 }}>{t('projectMembers.invite.noPermission')}</Alert>
@@ -401,10 +405,11 @@ export default function ProjectSettingsPage() {
                   <FormControl
                     size="small"
                     disabled={!canManageMembers || isCurrentUser}
-                    sx={{ minWidth: 160 }}
+                    sx={compactFieldSx}
                   >
                     <InputLabel id={`project-member-role-label-${member.id}`}>{t('memberRoleLabel')}</InputLabel>
                     <Select
+                      fullWidth
                       labelId={`project-member-role-label-${member.id}`}
                       size="small"
                       label={t('memberRoleLabel')}
@@ -533,7 +538,7 @@ export default function ProjectSettingsPage() {
               value={deleteConfirmationText}
               onChange={(event) => setDeleteConfirmationText(event.target.value)}
               disabled={isDeletingProject}
-              fullWidth
+              sx={wideFieldSx}
               autoFocus
             />
           </Stack>

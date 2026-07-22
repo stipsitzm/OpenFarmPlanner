@@ -278,7 +278,7 @@ export function PublicCultureLibraryDialog({
     >
       <FormControl size="small">
         <InputLabel>{t('library.filters.variety')}</InputLabel>
-        <Select value={varietyFilter} label={t('library.filters.variety')} onChange={(event) => setVarietyFilter(event.target.value)}>
+        <Select fullWidth value={varietyFilter} label={t('library.filters.variety')} onChange={(event) => setVarietyFilter(event.target.value)}>
           <MenuItem value="">{t('filters.all')}</MenuItem>
           {varietyOptions.map((option) => (
             <MenuItem key={option} value={option}>{option}</MenuItem>
@@ -287,7 +287,7 @@ export function PublicCultureLibraryDialog({
       </FormControl>
       <FormControl size="small">
         <InputLabel>{t('library.filters.supplier')}</InputLabel>
-        <Select value={supplierFilter} label={t('library.filters.supplier')} onChange={(event) => setSupplierFilter(event.target.value)}>
+        <Select fullWidth value={supplierFilter} label={t('library.filters.supplier')} onChange={(event) => setSupplierFilter(event.target.value)}>
           <MenuItem value="">{t('filters.all')}</MenuItem>
           {supplierOptions.map((option) => (
             <MenuItem key={option} value={option}>{option}</MenuItem>
@@ -296,7 +296,7 @@ export function PublicCultureLibraryDialog({
       </FormControl>
       <FormControl size="small">
         <InputLabel>{t('library.filters.nutrientDemand')}</InputLabel>
-        <Select value={nutrientFilter} label={t('library.filters.nutrientDemand')} onChange={(event) => setNutrientFilter(event.target.value)}>
+        <Select fullWidth value={nutrientFilter} label={t('library.filters.nutrientDemand')} onChange={(event) => setNutrientFilter(event.target.value)}>
           <MenuItem value="">{t('filters.all')}</MenuItem>
           {nutrientOptions.map((option) => (
             <MenuItem key={option} value={option}>{nutrientLabel(option)}</MenuItem>
@@ -305,7 +305,7 @@ export function PublicCultureLibraryDialog({
       </FormControl>
       <FormControl size="small">
         <InputLabel>{t('library.filters.cropFamily')}</InputLabel>
-        <Select value={cropFamilyFilter} label={t('library.filters.cropFamily')} onChange={(event) => setCropFamilyFilter(event.target.value)}>
+        <Select fullWidth value={cropFamilyFilter} label={t('library.filters.cropFamily')} onChange={(event) => setCropFamilyFilter(event.target.value)}>
           <MenuItem value="">{t('filters.all')}</MenuItem>
           {cropFamilyOptions.map((option) => (
             <MenuItem key={option} value={option}>{option}</MenuItem>

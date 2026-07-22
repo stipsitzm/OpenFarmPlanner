@@ -1021,6 +1021,7 @@ function YieldFilterBar({
         </Typography>
         <FormControl size="small" fullWidth>
           <Select
+            fullWidth
             labelId="yield-culture-filter-label"
             value={selectedCultureId}
             onChange={(event) => onCultureChange(String(event.target.value))}
@@ -1046,6 +1047,7 @@ function YieldFilterBar({
         </Typography>
         <FormControl size="small" fullWidth>
           <Select
+            fullWidth
             labelId="yield-year-filter-label"
             value={String(selectedYear)}
             onChange={(event) => onYearChange(Number(event.target.value))}

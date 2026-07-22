@@ -1,11 +1,11 @@
 import type { ReactElement } from 'react';
 import {
+  Box,
   Button,
   FormControl,
   InputLabel,
   MenuItem,
   Popover,
-  Stack,
   TextField,
 } from '@mui/material';
 
@@ -55,14 +55,19 @@ export function CultureFiltersPopover({
       transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       PaperProps={{ sx: { width: { xs: 'min(92vw, 360px)', sm: 360 }, p: 1.5 } }}
     >
-      <Stack
-        direction="column"
-        spacing={1}
-        sx={{ pt: 0.5, pb: 0.5 }}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+          gap: 1,
+          pt: 0.5,
+          pb: 0.5,
+        }}
       >
-        <FormControl size="small" sx={{ minWidth: '100%' }}>
+        <FormControl size="small" sx={{ gridColumn: '1 / -1' }}>
           <InputLabel id="culture-family-filter-label">{t('filters.cropFamily')}</InputLabel>
           <Select
+            fullWidth
             labelId="culture-family-filter-label"
             value={filters.selectedFamilyFilter}
             label={t('filters.cropFamily')}
@@ -74,9 +79,10 @@ export function CultureFiltersPopover({
             ))}
           </Select>
         </FormControl>
-        <FormControl size="small" sx={{ minWidth: '100%' }}>
+        <FormControl size="small">
           <InputLabel id="culture-method-filter-label">{t('filters.cultivationType')}</InputLabel>
           <Select
+            fullWidth
             labelId="culture-method-filter-label"
             value={filters.selectedCultivationFilter}
             label={t('filters.cultivationType')}
@@ -88,9 +94,10 @@ export function CultureFiltersPopover({
             <MenuItem value="both">{t('filters.both')}</MenuItem>
           </Select>
         </FormControl>
-        <FormControl size="small" sx={{ minWidth: '100%' }}>
+        <FormControl size="small">
           <InputLabel id="culture-nutrient-filter-label">{t('filters.nutrientDemand')}</InputLabel>
           <Select
+            fullWidth
             labelId="culture-nutrient-filter-label"
             value={filters.selectedNutrientFilter}
             label={t('filters.nutrientDemand')}
@@ -102,9 +109,10 @@ export function CultureFiltersPopover({
             <MenuItem value="high">{t('filters.nutrientHigh')}</MenuItem>
           </Select>
         </FormControl>
-        <FormControl size="small" sx={{ minWidth: '100%' }}>
+        <FormControl size="small" sx={{ gridColumn: '1 / -1' }}>
           <InputLabel id="culture-supplier-filter-label">{t('filters.supplier')}</InputLabel>
           <Select
+            fullWidth
             labelId="culture-supplier-filter-label"
             value={filters.selectedSupplierFilter}
             label={t('filters.supplier')}
@@ -122,7 +130,6 @@ export function CultureFiltersPopover({
           label={t('filters.growthDaysMin')}
           value={filters.growthDaysMin}
           onChange={(event) => onFilterChange('growthDaysMin', event.target.value)}
-          sx={{ minWidth: '100%' }}
         />
         <TextField
           size="small"
@@ -130,11 +137,11 @@ export function CultureFiltersPopover({
           label={t('filters.growthDaysMax')}
           value={filters.growthDaysMax}
           onChange={(event) => onFilterChange('growthDaysMax', event.target.value)}
-          sx={{ minWidth: '100%' }}
         />
-        <FormControl size="small" sx={{ minWidth: '100%' }}>
+        <FormControl size="small" sx={{ gridColumn: '1 / -1' }}>
           <InputLabel id="culture-sowing-month-filter-label">{t('filters.sowingMonths')}</InputLabel>
           <Select
+            fullWidth
             multiple
             labelId="culture-sowing-month-filter-label"
             value={filters.selectedSowingMonths}
@@ -157,7 +164,6 @@ export function CultureFiltersPopover({
           label={t('filters.yieldMin')}
           value={filters.yieldMin}
           onChange={(event) => onFilterChange('yieldMin', event.target.value)}
-          sx={{ minWidth: '100%' }}
         />
         <TextField
           size="small"
@@ -165,17 +171,16 @@ export function CultureFiltersPopover({
           label={t('filters.yieldMax')}
           value={filters.yieldMax}
           onChange={(event) => onFilterChange('yieldMax', event.target.value)}
-          sx={{ minWidth: '100%' }}
         />
         <Button
           variant="text"
           size="small"
           onClick={onReset}
-          sx={{ alignSelf: 'flex-end', whiteSpace: 'nowrap' }}
+          sx={{ justifySelf: 'end', whiteSpace: 'nowrap', gridColumn: '1 / -1' }}
         >
           {t('filters.reset')}
         </Button>
-      </Stack>
+      </Box>
     </Popover>
   );
 }

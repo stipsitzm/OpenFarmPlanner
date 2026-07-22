@@ -28,6 +28,13 @@ import EmptyStateCard from '../components/project/EmptyStateCard';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useRegisterCreateActions } from '../commands/useCommandContext';
 import { confirmAction } from '../utils/confirmAction';
+import {
+  formRowSx,
+  fullWidthFieldSx,
+  mediumFieldSx,
+  smallFieldSx,
+  wideFieldSx,
+} from '../components/forms/formLayout';
 
 type SoilType = NonNullable<Location['soil_type']>;
 type Exposure = NonNullable<Location['exposure']>;
@@ -385,7 +392,7 @@ function Locations() {
         <DialogTitle>
           {editingLocation ? t('locations:editTitle') : t('locations:addButton')}
         </DialogTitle>
-        <DialogContent sx={{ display: 'grid', gap: 2, pt: 1 }}>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           <TextField
             autoFocus
             required
@@ -394,6 +401,7 @@ function Locations() {
             onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
             error={formErrorField === 'name'}
             helperText={formErrorField === 'name' ? formError : ' '}
+            sx={wideFieldSx}
           />
           <TextField
             label={t('locations:columns.coordinates')}
@@ -402,11 +410,13 @@ function Locations() {
             placeholder={t('locations:placeholders.coordinates')}
             error={formErrorField === 'coordinates'}
             helperText={formErrorField === 'coordinates' ? formError : t('locations:helpers.coordinatesExample')}
+            sx={mediumFieldSx}
           />
           <TextField
             label={t('locations:columns.address')}
             value={formState.address}
             onChange={(event) => setFormState((prev) => ({ ...prev, address: event.target.value }))}
+            sx={wideFieldSx}
           />
           <TextField
             label={t('locations:columns.description')}
@@ -414,41 +424,47 @@ function Locations() {
             onChange={(event) => setFormState((prev) => ({ ...prev, description: event.target.value }))}
             multiline
             minRows={2}
+            sx={fullWidthFieldSx}
           />
-          <TextField
-            select
-            label={t('locations:columns.soilType')}
-            value={formState.soil_type}
-            onChange={(event) => setFormState((prev) => ({ ...prev, soil_type: event.target.value as SoilType | '' }))}
-            helperText={t('locations:helpers.optionalField')}
-          >
-            <MenuItem value="">{t('common:messages.noData')}</MenuItem>
-            {SOIL_OPTIONS.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {t(`locations:soilType.${option.labelKey}`)}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label={t('locations:columns.exposure')}
-            value={formState.exposure}
-            onChange={(event) => setFormState((prev) => ({ ...prev, exposure: event.target.value as Exposure | '' }))}
-            helperText={t('locations:helpers.optionalField')}
-          >
-            <MenuItem value="">{t('common:messages.noData')}</MenuItem>
-            {EXPOSURE_OPTIONS.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {t(`locations:exposure.${option.labelKey}`)}
-              </MenuItem>
-            ))}
-          </TextField>
+          <Box sx={formRowSx}>
+            <TextField
+              select
+              label={t('locations:columns.soilType')}
+              value={formState.soil_type}
+              onChange={(event) => setFormState((prev) => ({ ...prev, soil_type: event.target.value as SoilType | '' }))}
+              helperText={t('locations:helpers.optionalField')}
+              sx={smallFieldSx}
+            >
+              <MenuItem value="">{t('common:messages.noData')}</MenuItem>
+              {SOIL_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {t(`locations:soilType.${option.labelKey}`)}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label={t('locations:columns.exposure')}
+              value={formState.exposure}
+              onChange={(event) => setFormState((prev) => ({ ...prev, exposure: event.target.value as Exposure | '' }))}
+              helperText={t('locations:helpers.optionalField')}
+              sx={smallFieldSx}
+            >
+              <MenuItem value="">{t('common:messages.noData')}</MenuItem>
+              {EXPOSURE_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {t(`locations:exposure.${option.labelKey}`)}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Box>
           <TextField
             label={t('common:fields.notes')}
             value={formState.notes}
             onChange={(event) => setFormState((prev) => ({ ...prev, notes: event.target.value }))}
             multiline
             minRows={3}
+            sx={fullWidthFieldSx}
           />
         </DialogContent>
         <DialogActions>

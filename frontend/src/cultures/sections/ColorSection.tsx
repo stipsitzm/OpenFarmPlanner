@@ -5,6 +5,7 @@
 import { Typography, TextField } from '@mui/material';
 import type { Culture } from '../../api/types';
 import type { TFunction } from 'i18next';
+import { compactFieldSx } from './styles.tsx';
 
 
 interface ColorSectionProps {
@@ -20,7 +21,7 @@ export function ColorSection({ formData, errors, onChange, t, defaultColor }: Co
     <>
       <Typography variant="h6" sx={{ mt: 2 }}>{t('form.displayColor')}</Typography>
       <TextField
-        sx={{ maxWidth: '300px' }}
+        sx={compactFieldSx}
         type="color"
         label={t('form.displayColor')}
         value={formData.display_color || defaultColor}

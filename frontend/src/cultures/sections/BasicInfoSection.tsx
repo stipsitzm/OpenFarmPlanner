@@ -3,7 +3,7 @@
  */
 import type { ReactNode } from 'react';
 import { Box, TextField, FormControl, InputLabel, MenuItem } from '@mui/material';
-import { fieldSx } from './styles.tsx';
+import { fieldRowSx, mediumFieldSx, smallFieldSx, wideFieldSx } from './styles.tsx';
 import type { Culture } from '../../api/types';
 import type { TFunction } from 'i18next';
 import { TypeaheadSelect as Select } from '../../components/inputs/TypeaheadSelect';
@@ -19,9 +19,9 @@ interface BasicInfoSectionProps {
 export function BasicInfoSection({ formData, errors, onChange, t, identityHint }: BasicInfoSectionProps) {
   return (
     <>
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+      <Box sx={fieldRowSx}>
         <TextField
-          sx={fieldSx}
+          sx={wideFieldSx}
           required
           label={t('form.name')}
           placeholder={t('form.namePlaceholder')}
@@ -32,7 +32,7 @@ export function BasicInfoSection({ formData, errors, onChange, t, identityHint }
           slotProps={{ htmlInput: { maxLength: 200 } }}
         />
         <TextField
-          sx={fieldSx}
+          sx={wideFieldSx}
           required
           label={t('form.variety')}
           placeholder={t('form.varietyPlaceholder')}
@@ -44,23 +44,23 @@ export function BasicInfoSection({ formData, errors, onChange, t, identityHint }
         />
       </Box>
       {identityHint}
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+      <Box sx={fieldRowSx}>
         <TextField
-          sx={fieldSx}
+          sx={mediumFieldSx}
           label={t('form.cropFamily')}
           placeholder={t('form.cropFamilyPlaceholder')}
           value={formData.crop_family}
           onChange={e => onChange('crop_family', e.target.value)}
         />
       </Box>
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <FormControl sx={fieldSx}>
+      <Box sx={fieldRowSx}>
+        <FormControl sx={smallFieldSx}>
           <InputLabel>{t('form.nutrientDemand')}</InputLabel>
           <Select
+            fullWidth
             value={formData.nutrient_demand || ''}
             onChange={e => onChange('nutrient_demand', e.target.value)}
             label={t('form.nutrientDemand')}
-            fullWidth
           >
             <MenuItem value="">{t('noData')}</MenuItem>
             <MenuItem value="low">{t('form.nutrientDemandLow')}</MenuItem>

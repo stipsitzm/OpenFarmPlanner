@@ -5,7 +5,7 @@
 import { Box, Typography, FormControl, InputLabel, MenuItem, TextField } from '@mui/material';
 import type { Culture } from '../../api/types';
 import type { TFunction } from 'i18next';
-import { fieldSx } from './styles.tsx';
+import { fieldRowSx, smallFieldSx } from './styles.tsx';
 import { TypeaheadSelect as Select } from '../../components/inputs/TypeaheadSelect';
 
 interface HarvestSectionProps {
@@ -19,14 +19,14 @@ export function HarvestSection({ formData, errors, onChange, t }: HarvestSection
   return (
     <>
       <Typography variant="h6" sx={{ mt: 2 }}>{t('form.sectionHarvest')}</Typography>
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <FormControl sx={fieldSx} error={Boolean(errors.harvest_method)}>
+      <Box sx={fieldRowSx}>
+        <FormControl sx={smallFieldSx} error={Boolean(errors.harvest_method)}>
           <InputLabel>{t('form.yieldUnit')}</InputLabel>
           <Select
+            fullWidth
             value={formData.harvest_method || ''}
             onChange={e => onChange('harvest_method', e.target.value)}
             label={t('form.yieldUnit')}
-            fullWidth
           >
             <MenuItem value="">{t('noData')}</MenuItem>
             <MenuItem value="per_plant">{t('form.yieldUnitPerPlant')}</MenuItem>
@@ -37,7 +37,7 @@ export function HarvestSection({ formData, errors, onChange, t }: HarvestSection
           )}
         </FormControl>
         <TextField
-          sx={fieldSx}
+          sx={smallFieldSx}
           type="number"
           label={t('form.expectedYieldWithUnit', { defaultValue: `${t('form.expectedYield')} (${t('form.expectedYieldUnit', { defaultValue: 'kg' })})` })}
           placeholder={t('form.expectedYieldPlaceholder')}

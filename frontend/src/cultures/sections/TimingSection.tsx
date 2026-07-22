@@ -3,7 +3,7 @@
  * @remarks Presentational, no internal state
  */
 import { Box, Typography, FormControl, InputLabel, MenuItem, TextField, Checkbox, ListItemText } from '@mui/material';
-import { smallFieldSx } from './styles.tsx';
+import { fieldRowSx, smallFieldSx } from './styles.tsx';
 import type { Culture, CultivationType } from '../../api/types';
 import type { TFunction } from 'i18next';
 import { DropdownAwareTooltip } from '../../components/DropdownAwareTooltip';
@@ -26,10 +26,11 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
     <>
       <Typography variant="h6" sx={{ mt: 2 }}>{t('form.sectionTiming')}</Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
-          <FormControl sx={{ minWidth: '180px' }}>
+        <Box sx={{ ...fieldRowSx, mb: 1 }}>
+          <FormControl sx={smallFieldSx}>
             <InputLabel id="cultivation-type-label">{t('form.cultivationType')}</InputLabel>
             <Select
+              fullWidth
               labelId="cultivation-type-label"
               multiple
               value={selectedCultivationTypes}
@@ -62,7 +63,7 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
             </Select>
           </FormControl>
         </Box>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <Box sx={{ ...fieldRowSx, alignItems: 'flex-end' }}>
           <DropdownAwareTooltip title={t('form.growthDurationDaysHelp')} arrow>
             <TextField
               sx={smallFieldSx}
