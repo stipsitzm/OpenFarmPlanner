@@ -1,7 +1,11 @@
 # International Public Crop Library: Target Data Model and Migration Plan
 
 Date: 2026-07-22<br>
-Status: architecture decision record and migration plan; no schema, data, API, or UI change is made by this document.
+Status: architecture decision record and migration plan. The first
+publishing-boundary slice now exists: `CropSpecies`, optional private
+`Culture.crop_species`, `PublicCulture.crop_species`,
+`PublicCulture.original_language_code`, and the Publishing Wizard. The
+larger variety/translation migration remains future work.
 
 ## 1. Scope and current-state analysis
 
@@ -14,17 +18,21 @@ specifies the future data model behind that library.
 
 ### Current model
 
-Today the project has two independent record types:
+Today the project has two independent record types plus the first official
+species identity table:
 
 - `Culture` is a project-owned record. It combines a user-entered crop name,
   variety, growing defaults, project supplier data, packages, display choices,
   and public-library import provenance.
 - `PublicCulture` is a shared record. It currently copies the same name,
   variety, free text, growing, and seed fields into one language-specific row.
-  Its identity and duplicate check use normalized `name + variety` (and, in the
-  publish bridge, supplier text). This permits `Tomate / Matina` and
-  `Tomato / Matina` to become distinct shared records even though they denote
-  the same variety.
+  New publications also store `crop_species` and `original_language_code`.
+  The Publishing Wizard duplicate check uses official `crop_species` plus
+  normalized `variety` (and supplier text in the bridge where relevant). Legacy
+  public rows without `crop_species` remain readable.
+- `CropSpecies` is the official species list. It is nullable on private
+  cultures so project work stays flexible, but it is required by the
+  publishing quality gate.
 
 `CultureSupplierData` and `SeedPackage` are project-owned child records.
 `PlantingPlan` intentionally points to the private `Culture` snapshot, not to

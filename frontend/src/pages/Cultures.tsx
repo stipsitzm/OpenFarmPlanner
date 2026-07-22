@@ -41,7 +41,7 @@ import { useCultureImportExport } from './useCultureImportExport';
 import { CulturesImportDialog } from './CulturesImportDialog';
 import { CulturesImportStartDialog } from './CulturesImportStartDialog';
 import { CulturesExportDialog } from './CulturesExportDialog';
-import { CulturesPublishConfirmDialog } from './CulturesPublishConfirmDialog';
+import { CulturesPublishingWizardDialog } from './CulturesPublishingWizardDialog';
 import { CulturesHistoryDialog } from './CulturesHistoryDialog';
 import { AlertSnackbar } from '../components/feedback/AlertSnackbar';
 import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
@@ -223,25 +223,23 @@ function Cultures() {
     showSnackbar,
   });
 
-  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
-  const [publicLibraryTermsAccepted, setPublicLibraryTermsAccepted] = useState(false);
+  const [publishWizardOpen, setPublishWizardOpen] = useState(false);
 
   const handleRequestPublishCulture = useCallback(() => {
-    if (user?.public_library_terms_accepted) {
-      void handlePublishCurrentCulture();
-      return;
-    }
-    setPublicLibraryTermsAccepted(false);
-    setPublishConfirmOpen(true);
-  }, [handlePublishCurrentCulture, user?.public_library_terms_accepted]);
+    setPublishWizardOpen(true);
+  }, []);
 
-  const handlePublishConfirm = useCallback(() => {
-    setPublishConfirmOpen(false);
-    void (async () => {
-      await handlePublishCurrentCulture(publicLibraryTermsAccepted);
-      setPublicLibraryTermsAccepted(false);
-    })();
-  }, [handlePublishCurrentCulture, publicLibraryTermsAccepted]);
+  const handlePublishingWizardPublish = useCallback((data: {
+    acceptedPublicLibraryTerms: boolean;
+    cropSpeciesId: number;
+    originalLanguageCode: string;
+  }) => {
+    setPublishWizardOpen(false);
+    void handlePublishCurrentCulture(data.acceptedPublicLibraryTerms, {
+      cropSpeciesId: data.cropSpeciesId,
+      originalLanguageCode: data.originalLanguageCode,
+    });
+  }, [handlePublishCurrentCulture]);
 
   // Fetch cultures on mount
   useEffect(() => {
@@ -614,17 +612,13 @@ function Cultures() {
         confirmButtonProps={{ color: 'error', variant: 'contained' }}
       />
 
-      <CulturesPublishConfirmDialog
-        open={publishConfirmOpen}
-        cultureName={selectedCulture?.name ?? ''}
-        accepted={publicLibraryTermsAccepted}
-        onAcceptedChange={setPublicLibraryTermsAccepted}
-        onClose={() => {
-          setPublishConfirmOpen(false);
-          setPublicLibraryTermsAccepted(false);
-        }}
-        onConfirm={handlePublishConfirm}
-        t={t}
+      <CulturesPublishingWizardDialog
+        open={publishWizardOpen}
+        culture={selectedCulture}
+        termsAlreadyAccepted={Boolean(user?.public_library_terms_accepted)}
+        publishing={Boolean(selectedCulture && publishingCultureId === selectedCulture.id)}
+        onClose={() => setPublishWizardOpen(false)}
+        onPublish={handlePublishingWizardPublish}
       />
 
       {showForm ? (

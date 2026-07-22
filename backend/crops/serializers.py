@@ -9,7 +9,17 @@ itself moves into this app.
 """
 from rest_framework import serializers
 
+from .models import CropSpecies
 from farm.models import PublicCulture
+
+
+class CropSpeciesSerializer(serializers.ModelSerializer):
+    """Official species that project cultures may link to before publication."""
+
+    class Meta:
+        model = CropSpecies
+        fields = ['id', 'name', 'status']
+        read_only_fields = ['id', 'status']
 
 
 class CropSerializer(serializers.ModelSerializer):
@@ -27,6 +37,9 @@ class CropSerializer(serializers.ModelSerializer):
             'notes',
             'seed_supplier',
             'supplier_name',
+            'crop_species',
+            'crop_species_name',
+            'original_language_code',
             'crop_family',
             'nutrient_demand',
             'cultivation_types',
@@ -56,6 +69,8 @@ class CropSerializer(serializers.ModelSerializer):
             'created_by_label',
         ]
         read_only_fields = fields
+
+    crop_species_name = serializers.CharField(source='crop_species.name', read_only=True, default='')
 
     def get_created_by_label(self, obj: PublicCulture) -> str:
         return obj.created_by_label

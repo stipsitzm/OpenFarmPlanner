@@ -13,6 +13,7 @@ from typing import Any
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
+from crops.models import CropSpecies
 from farm.models import Culture, Project, PublicCulture
 
 User = get_user_model()
@@ -45,6 +46,30 @@ CULTURE_COPY_FIELDS = [
     'display_color',
 ]
 
+PUBLIC_ORIGINAL_LANGUAGE_CODES = {'de', 'en'}
+
+PUBLIC_REQUIRED_FIELDS = [
+    'variety',
+    'growth_duration_days',
+    'harvest_duration_days',
+]
+
+
+@dataclass(frozen=True)
+class MissingRequiredField:
+    field: str
+    label_key: str
+
+
+@dataclass(frozen=True)
+class PublishingCheckResult:
+    crop_species: CropSpecies | None
+    original_language_code: str
+    available_language_codes: list[str]
+    missing_required_fields: list[MissingRequiredField]
+    duplicates: list['DuplicateCandidate']
+    can_publish: bool
+
 
 @dataclass(frozen=True)
 class DuplicateCandidate:
@@ -63,6 +88,14 @@ class DuplicatePublicCultureError(Exception):
         super().__init__('A similar public culture already exists.')
         self.duplicates = duplicates
         self.normalized_identity = normalized_identity
+
+
+class PublicCulturePublishingValidationError(Exception):
+    """Raised when the public-library quality gate rejects publication."""
+
+    def __init__(self, *, check_result: PublishingCheckResult) -> None:
+        super().__init__('Public culture publishing checks failed.')
+        self.check_result = check_result
 
 
 def _copy_fields(instance: Any) -> dict[str, Any]:
@@ -110,8 +143,38 @@ def build_public_culture_payload(culture: Culture) -> dict[str, Any]:
     return payload
 
 
+def normalize_language_code(value: str | None) -> str:
+    normalized = (value or '').strip().lower()
+    if normalized in PUBLIC_ORIGINAL_LANGUAGE_CODES:
+        return normalized
+    return ''
+
+
+def detect_available_language_codes(culture: Culture) -> list[str]:
+    # Legacy public cultures are single-language records. Until translated
+    # content rows exist, non-empty project text represents the source language
+    # the user selects in the wizard.
+    return []
+
+
+def get_public_required_field_gaps(culture: Culture) -> list[MissingRequiredField]:
+    gaps: list[MissingRequiredField] = []
+    for field in PUBLIC_REQUIRED_FIELDS:
+        value = getattr(culture, field)
+        if value is None or (isinstance(value, str) and not value.strip()):
+            gaps.append(MissingRequiredField(field=field, label_key=f'library.publishWizard.fields.{field}'))
+    return gaps
+
+
+def resolve_publishing_crop_species(*, culture: Culture, crop_species_id: int | None) -> CropSpecies | None:
+    if crop_species_id:
+        return CropSpecies.objects.filter(id=crop_species_id, status=CropSpecies.STATUS_PUBLISHED).first()
+    return culture.crop_species if culture.crop_species and culture.crop_species.status == CropSpecies.STATUS_PUBLISHED else None
+
+
 def build_project_culture_payload(public_culture: PublicCulture) -> dict[str, Any]:
     payload = _copy_fields(public_culture)
+    payload['crop_species'] = public_culture.crop_species
     payload['seed_supplier'] = public_culture.supplier_name or public_culture.seed_supplier or ''
     payload['source_public_culture'] = public_culture
     payload['source_public_version'] = public_culture.version
@@ -120,13 +183,17 @@ def build_project_culture_payload(public_culture: PublicCulture) -> dict[str, An
     return payload
 
 
-def detect_public_culture_duplicates(culture: Culture) -> list[DuplicateCandidate]:
+def detect_public_culture_duplicates(culture: Culture, *, crop_species: CropSpecies | None = None) -> list[DuplicateCandidate]:
     normalized_supplier = normalize_identity_value(get_culture_supplier_label(culture))
     queryset = PublicCulture.objects.filter(
-        name_normalized=culture.name_normalized,
         variety_normalized=culture.variety_normalized,
         status=PublicCulture.STATUS_PUBLISHED,
-    ).select_related('created_by').order_by('-published_at', '-id')
+    )
+    if crop_species is not None:
+        queryset = queryset.filter(crop_species=crop_species)
+    else:
+        queryset = queryset.filter(name_normalized=culture.name_normalized)
+    queryset = queryset.select_related('created_by').order_by('-published_at', '-id')
 
     candidates: list[DuplicateCandidate] = []
     for item in queryset:
@@ -143,6 +210,30 @@ def detect_public_culture_duplicates(culture: Culture) -> list[DuplicateCandidat
         if len(candidates) >= 5:
             break
     return candidates
+
+
+def build_publishing_check_result(
+    *,
+    culture: Culture,
+    crop_species_id: int | None,
+    original_language_code: str | None,
+) -> PublishingCheckResult:
+    crop_species = resolve_publishing_crop_species(culture=culture, crop_species_id=crop_species_id)
+    language_code = normalize_language_code(original_language_code)
+    available_language_codes = detect_available_language_codes(culture)
+    if language_code and language_code not in available_language_codes:
+        available_language_codes = [language_code, *available_language_codes]
+    duplicates = detect_public_culture_duplicates(culture, crop_species=crop_species) if crop_species else []
+    missing_required_fields = get_public_required_field_gaps(culture)
+    can_publish = bool(crop_species and language_code and not missing_required_fields and not duplicates)
+    return PublishingCheckResult(
+        crop_species=crop_species,
+        original_language_code=language_code,
+        available_language_codes=available_language_codes,
+        missing_required_fields=missing_required_fields,
+        duplicates=duplicates,
+        can_publish=can_publish,
+    )
 
 
 def find_owned_public_culture_for_update(*, culture: Culture, user: User | None) -> PublicCulture | None:
@@ -177,11 +268,30 @@ def _update_public_culture_from_project_culture(*, public_culture: PublicCulture
     return public_culture
 
 
-def publish_culture_to_public_library(*, culture: Culture, user: User | None) -> tuple[PublicCulture, list[DuplicateCandidate], str]:
+def publish_culture_to_public_library(
+    *,
+    culture: Culture,
+    user: User | None,
+    crop_species_id: int | None = None,
+    original_language_code: str | None = None,
+) -> tuple[PublicCulture, list[DuplicateCandidate], str]:
+    check_result = build_publishing_check_result(
+        culture=culture,
+        crop_species_id=crop_species_id,
+        original_language_code=original_language_code,
+    )
+    if not check_result.crop_species or not check_result.original_language_code or check_result.missing_required_fields:
+        raise PublicCulturePublishingValidationError(check_result=check_result)
+
     update_target = find_owned_public_culture_for_update(culture=culture, user=user)
-    duplicates = detect_public_culture_duplicates(culture)
+    duplicates = check_result.duplicates
     if update_target:
+        culture.crop_species = check_result.crop_species
+        culture.save(update_fields=['crop_species', 'updated_at'])
         updated_public_culture = _update_public_culture_from_project_culture(public_culture=update_target, culture=culture)
+        updated_public_culture.crop_species = check_result.crop_species
+        updated_public_culture.original_language_code = check_result.original_language_code
+        updated_public_culture.save(update_fields=['crop_species', 'original_language_code', 'updated_at'])
         non_target_duplicates = [item for item in duplicates if item.id != update_target.id]
         return updated_public_culture, non_target_duplicates, 'updated'
 
@@ -192,12 +302,17 @@ def publish_culture_to_public_library(*, culture: Culture, user: User | None) ->
                 'name': culture.name_normalized,
                 'variety': culture.variety_normalized,
                 'seed_supplier': normalize_identity_value(get_culture_supplier_label(culture)),
+                'crop_species': str(check_result.crop_species.id),
             },
         )
+    culture.crop_species = check_result.crop_species
+    culture.save(update_fields=['crop_species', 'updated_at'])
     public_culture = PublicCulture.objects.create(
         created_by=user,
         status=PublicCulture.STATUS_PUBLISHED,
         version=1,
+        crop_species=check_result.crop_species,
+        original_language_code=check_result.original_language_code,
         **build_public_culture_payload(culture),
     )
     return public_culture, duplicates, 'created'

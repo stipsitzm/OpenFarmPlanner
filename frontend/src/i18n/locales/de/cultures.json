@@ -515,6 +515,44 @@
       "linkSuffix": ".",
       "confirmButton": "Veröffentlichen"
     },
+    "publishWizard": {
+      "title": "Publishing Wizard",
+      "intro": "„{{name}}“ wird vor der Veröffentlichung geprüft.",
+      "publishNow": "Jetzt veröffentlichen",
+      "summaryTitle": "Zusammenfassung",
+      "speciesLabel": "Offizielle Kulturart",
+      "speciesMissing": "Keine offizielle Kulturart ausgewählt",
+      "proposeSpeciesLabel": "Neue Kulturart vorschlagen",
+      "proposeSpeciesButton": "Vorschlagen",
+      "proposalSent": "Der Vorschlag wurde gespeichert und kann später geprüft werden.",
+      "originalLanguageLabel": "Originalsprache",
+      "translationsOptional": "Fehlende Übersetzungen können später ergänzt werden.",
+      "translationAvailable": "Vorhanden",
+      "translationMissingOptional": "Fehlt, optional",
+      "requiredComplete": "Alle Pflichtfelder sind ausgefüllt.",
+      "noDuplicates": "Keine mögliche Dublette gefunden.",
+      "duplicateBlocking": "Eine mögliche Dublette blockiert die Veröffentlichung. Bitte verwenden oder prüfen Sie zuerst den bestehenden Eintrag.",
+      "licenseComplete": "Lizenz bestätigt",
+      "licenseMissing": "Lizenzbestätigung fehlt",
+      "licenseAlreadyAccepted": "Die Lizenzbedingungen für Beiträge zur öffentlichen Kulturbibliothek wurden bereits akzeptiert.",
+      "steps": {
+        "species": "Kulturart",
+        "language": "Originalsprache",
+        "translations": "Übersetzungen",
+        "requiredFields": "Pflichtfelder",
+        "duplicates": "Dublettenprüfung",
+        "license": "Lizenz"
+      },
+      "languages": {
+        "de": "Deutsch",
+        "en": "English"
+      },
+      "fields": {
+        "variety": "Sorte",
+        "growth_duration_days": "Kulturdauer",
+        "harvest_duration_days": "Erntedauer"
+      }
+    },
     "filters": {
       "variety": "Sorte",
       "supplier": "Saatgutlieferant",

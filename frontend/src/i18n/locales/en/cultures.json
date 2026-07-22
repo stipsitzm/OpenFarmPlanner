@@ -34,5 +34,54 @@
       "image": "Image",
       "selectedSeedDemandSupplier": "Seed demand supplier"
     }
+  },
+  "library": {
+    "publishing": "Publishing…",
+    "publishConfirm": {
+      "acceptLicense": "I am allowed to publish this dataset and agree that it becomes a durable part of the public crop library under CC BY-SA 4.0.",
+      "linkPrefix": "Details are available in the ",
+      "privacyLinkLabel": "privacy policy",
+      "linkMiddle": " and the ",
+      "termsLinkLabel": "terms of service",
+      "linkSuffix": "."
+    },
+    "publishWizard": {
+      "title": "Publishing Wizard",
+      "intro": "“{{name}}” is checked before publication.",
+      "publishNow": "Publish now",
+      "summaryTitle": "Summary",
+      "speciesLabel": "Official crop species",
+      "speciesMissing": "No official crop species selected",
+      "proposeSpeciesLabel": "Suggest new crop species",
+      "proposeSpeciesButton": "Suggest",
+      "proposalSent": "The suggestion was saved and can be reviewed later.",
+      "originalLanguageLabel": "Original language",
+      "translationsOptional": "Missing translations can be added later.",
+      "translationAvailable": "Available",
+      "translationMissingOptional": "Missing, optional",
+      "requiredComplete": "All required fields are complete.",
+      "noDuplicates": "No possible duplicate found.",
+      "duplicateBlocking": "A possible duplicate blocks publication. Please use or review the existing entry first.",
+      "licenseComplete": "License confirmed",
+      "licenseMissing": "License confirmation missing",
+      "licenseAlreadyAccepted": "The contribution terms for the public crop library have already been accepted.",
+      "steps": {
+        "species": "Crop species",
+        "language": "Original language",
+        "translations": "Translations",
+        "requiredFields": "Required fields",
+        "duplicates": "Duplicate check",
+        "license": "License"
+      },
+      "languages": {
+        "de": "Deutsch",
+        "en": "English"
+      },
+      "fields": {
+        "variety": "Variety",
+        "growth_duration_days": "Growth duration",
+        "harvest_duration_days": "Harvest duration"
+      }
+    }
   }
 }

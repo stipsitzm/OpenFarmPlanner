@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
 
 from accounts.models import DocumentConsent
+from crops.models import CropSpecies
 from farm.models import (
     Culture,
     Project,
@@ -22,9 +23,11 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         ProjectMembership.objects.create(user=self.user, project=self.project, role='admin')
         self.client.force_authenticate(user=self.user)
         self.client.defaults['HTTP_X_PROJECT_ID'] = str(self.project.id)
+        self.species = CropSpecies.objects.create(name='Lettuce')
         self.culture = Culture.objects.create(
             name='Lettuce',
             variety='Bijella',
+            crop_species=self.species,
             growth_duration_days=50,
             harvest_duration_days=20,
             notes='Project-local notes',
@@ -35,7 +38,11 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
     def publish_current_culture(self):
         return self.client.post(
             f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/',
-            {'accepted_public_library_terms': True},
+            {
+                'accepted_public_library_terms': True,
+                'crop_species_id': self.species.id,
+                'original_language_code': 'en',
+            },
             format='json',
         )
 
@@ -49,6 +56,8 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.assertEqual(public_culture.name, self.culture.name)
         self.assertEqual(public_culture.variety, self.culture.variety)
         self.assertEqual(public_culture.source_project_culture, self.culture)
+        self.assertEqual(public_culture.crop_species, self.species)
+        self.assertEqual(public_culture.original_language_code, 'en')
         self.assertEqual(public_culture.seed_packages[0]['size_value'], 25.0)
         self.assertEqual(response.data['duplicates'], [])
         self.assertTrue(
@@ -65,16 +74,43 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.assertEqual(response.data['code'], 'public_library_terms_required')
         self.assertEqual(PublicCulture.objects.count(), 0)
 
+    def test_publish_preview_reports_quality_gate_status(self):
+        response = self.client.get(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/preview/',
+            {'crop_species_id': self.species.id, 'original_language_code': 'en'},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['can_publish'])
+        self.assertEqual(response.data['crop_species']['name'], 'Lettuce')
+        self.assertEqual(response.data['original_language_code'], 'en')
+        self.assertEqual(response.data['missing_required_fields'], [])
+
+    def test_publish_preview_blocks_missing_required_public_fields(self):
+        self.culture.variety = ''
+        self.culture.save()
+
+        response = self.client.get(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/publish-public/preview/',
+            {'crop_species_id': self.species.id, 'original_language_code': 'en'},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data['can_publish'])
+        self.assertEqual(response.data['missing_required_fields'][0]['field'], 'variety')
+
     def test_publish_rejects_duplicates_with_conflict_response(self):
         other_culture = Culture.objects.create(
             name='Lettuce',
             variety='Bijella',
+            crop_species=self.species,
             project=self.project,
         )
         PublicCulture.objects.create(
             name='Lettuce',
             variety='Bijella',
             status='published',
+            crop_species=self.species,
             created_by=self.user,
             source_project=self.project,
             source_project_culture=other_culture,
@@ -119,6 +155,8 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
             name='Carrot',
             variety='Mokum',
             status='published',
+            crop_species=self.species,
+            original_language_code='en',
             created_by=self.user,
             source_project=self.project,
             version=3,
@@ -146,6 +184,7 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
             name='Lettuce',
             variety='Bijella',
             status='published',
+            crop_species=self.species,
             created_by=other_user,
             source_project=self.project,
             source_project_culture=self.culture,
@@ -169,6 +208,7 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
             name=' Lettuce ',
             variety='BIJELLA',
             status='published',
+            crop_species=self.species,
             created_by=self.user,
             source_project=self.project,
             supplier_name='  Rein   Saat  ',
@@ -188,12 +228,14 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         other_culture = Culture.objects.create(
             name='Lettuce',
             variety='Bijella',
+            crop_species=self.species,
             project=self.project,
         )
         PublicCulture.objects.create(
             name='Lettuce',
             variety='Bijella',
             status='published',
+            crop_species=self.species,
             created_by=self.user,
             source_project=self.project,
             source_project_culture=other_culture,

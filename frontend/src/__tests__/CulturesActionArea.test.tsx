@@ -12,6 +12,8 @@ const {
   locationListMock,
   fieldListMock,
   bedListMock,
+  cropSpeciesListMock,
+  publishPreviewMock,
   publicCultureListMock,
   publishPublicMock,
   deleteMock,
@@ -23,6 +25,8 @@ const {
   locationListMock: vi.fn(),
   fieldListMock: vi.fn(),
   bedListMock: vi.fn(),
+  cropSpeciesListMock: vi.fn(),
+  publishPreviewMock: vi.fn(),
   publicCultureListMock: vi.fn(),
   publishPublicMock: vi.fn(),
   deleteMock: vi.fn(),
@@ -43,6 +47,7 @@ vi.mock('../api/api', async () => {
     cultureAPI: {
       ...actual.cultureAPI,
       list: listMock,
+      publishPreview: publishPreviewMock,
       publishPublic: publishPublicMock,
       delete: deleteMock,
       undelete: undeleteMock,
@@ -58,6 +63,11 @@ vi.mock('../api/api', async () => {
     bedAPI: {
       ...actual.bedAPI,
       list: bedListMock,
+    },
+    cropSpeciesAPI: {
+      ...actual.cropSpeciesAPI,
+      list: cropSpeciesListMock,
+      propose: vi.fn(),
     },
     publicCultureAPI: {
       ...actual.publicCultureAPI,
@@ -152,7 +162,7 @@ describe('Cultures action area', () => {
         next: null,
         previous: null,
         results: [
-          { id: 1, name: 'Tomate', variety: 'Roma', cultivation_type: 'pre_cultivation', growth_duration_days: 1, harvest_duration_days: 1 },
+          { id: 1, name: 'Tomate', variety: 'Roma', crop_species: 1, cultivation_type: 'pre_cultivation', growth_duration_days: 1, harvest_duration_days: 1 },
         ],
       },
     });
@@ -170,6 +180,24 @@ describe('Cultures action area', () => {
     locationListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Hof' }] } });
     fieldListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Parzelle A', location: 1 }] } });
     bedListMock.mockResolvedValue({ data: { results: [{ id: 1, name: 'Beet A', field: 1 }] } });
+    cropSpeciesListMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [{ id: 1, name: 'Tomate', status: 'published' }],
+      },
+    });
+    publishPreviewMock.mockResolvedValue({
+      data: {
+        crop_species: { id: 1, name: 'Tomate' },
+        original_language_code: 'de',
+        available_language_codes: ['de'],
+        missing_required_fields: [],
+        duplicates: [],
+        can_publish: true,
+      },
+    });
     publishPublicMock.mockResolvedValue({
       data: {
         operation: 'created',
@@ -227,17 +255,18 @@ describe('Cultures action area', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
 
     const dialog = await screen.findByRole('dialog');
+    await within(dialog).findByText('Publishing Wizard');
     fireEvent.click(within(dialog).getByRole('checkbox', { name: /CC BY-SA 4\.0/ }));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Veröffentlichen' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' }));
 
     await waitFor(() => {
-      expect(publishPublicMock).toHaveBeenCalledWith(1, { accepted_public_library_terms: true });
+      expect(publishPublicMock).toHaveBeenCalledWith(1, { accepted_public_library_terms: true, crop_species_id: 1, original_language_code: 'de' });
       expect(screen.getByText('Diese Kultur ist bereits öffentlich vorhanden: Tomate (Roma)')).toBeInTheDocument();
     });
     expect(refreshUserMock).not.toHaveBeenCalled();
   });
 
-  it('shows a concise confirmation dialog before publishing, explaining permanence, privacy, reuse, and license acceptance', async () => {
+  it('shows a publishing wizard before publishing, explaining checks and license acceptance', async () => {
     renderCultures();
 
     await waitFor(() => {
@@ -247,16 +276,14 @@ describe('Cultures action area', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Kultur veröffentlichen?')).toBeInTheDocument();
-    expect(within(dialog).getByText(/dauerhaft Teil der öffentlichen Kulturbibliothek/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Private Daten wie E-Mail-Adresse/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/öffentlicher Anzeigename/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/dauerhaft importieren, nutzen und weiterentwickeln/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Lizenz: CC BY-SA 4\.0/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/Quelle genannt wird/)).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Veröffentlichen' })).toBeDisabled();
+    expect(within(dialog).getByText('Publishing Wizard')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('Kulturart').length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText('Originalsprache').length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText('Pflichtfelder').length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText('Dublettenprüfung').length).toBeGreaterThan(0);
+    expect(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' })).toBeDisabled();
     fireEvent.click(within(dialog).getByRole('checkbox', { name: /CC BY-SA 4\.0/ }));
-    expect(within(dialog).getByRole('button', { name: 'Veröffentlichen' })).toBeEnabled();
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' })).toBeEnabled());
     expect(publishPublicMock).not.toHaveBeenCalled();
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Abbrechen' }));
@@ -267,7 +294,7 @@ describe('Cultures action area', () => {
     expect(publishPublicMock).not.toHaveBeenCalled();
   });
 
-  it('publishes directly after the current public-library terms were already accepted', async () => {
+  it('still runs the publishing wizard after the current public-library terms were already accepted', async () => {
     authUser.public_library_terms_accepted = true;
     renderCultures();
 
@@ -277,10 +304,14 @@ describe('Cultures action area', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
 
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Die Lizenzbedingungen für Beiträge zur öffentlichen Kulturbibliothek wurden bereits akzeptiert.')).toBeInTheDocument();
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' })).toBeEnabled());
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' }));
+
     await waitFor(() => {
-      expect(publishPublicMock).toHaveBeenCalledWith(1, { accepted_public_library_terms: false });
+      expect(publishPublicMock).toHaveBeenCalledWith(1, { accepted_public_library_terms: false, crop_species_id: 1, original_language_code: 'de' });
     });
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('does not attempt to render public-library entries without a trigger', async () => {

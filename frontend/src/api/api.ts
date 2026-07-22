@@ -16,6 +16,8 @@ import type {
   PublicCulture,
   PublicCultureMatchResponse,
   PublicCultureDuplicateCandidate,
+  CropSpecies,
+  PublishPublicCulturePreview,
   PublishPublicCultureResponse,
   RemainingAreaResponse,
   BedLayoutEntry,
@@ -118,8 +120,16 @@ export const cultureAPI = {
     skipped_count: number;
     errors: Array<{ index: number; error: unknown }>;
   }>('/cultures/import/apply/', data),
-  publishPublic: (id: number, data: { accepted_public_library_terms: boolean }) =>
+  publishPreview: (id: number, params: { crop_species_id?: number | null; original_language_code?: string }) =>
+    http.get<PublishPublicCulturePreview>(`/cultures/${id}/publish-public/preview/`, { params }),
+  publishPublic: (id: number, data: { accepted_public_library_terms: boolean; crop_species_id?: number | null; original_language_code?: string }) =>
     http.post<PublishPublicCultureResponse>(`/cultures/${id}/publish-public/`, data),
+};
+
+export const cropSpeciesAPI = {
+  list: (params?: { q?: string; include_proposed?: boolean }) =>
+    http.get<PaginatedResponse<CropSpecies>>('/crop-species/', { params }),
+  propose: (name: string) => http.post<CropSpecies>('/crop-species/', { name }),
 };
 
 
@@ -358,6 +368,8 @@ export type {
   MediaFileRef,
   PublicCulture,
   PublicCultureDuplicateCandidate,
+  CropSpecies,
+  PublishPublicCulturePreview,
   RemainingAreaResponse,
   BedLayoutEntry,
   FieldLayoutEntry,
@@ -367,6 +379,7 @@ export type {
 
 export default {
   cultures: cultureAPI,
+  cropSpecies: cropSpeciesAPI,
   publicCultures: publicCultureAPI,
   suppliers: supplierAPI,
   cultureSupplierData: cultureSupplierDataAPI,

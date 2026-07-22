@@ -256,6 +256,14 @@ class Culture(TimestampedModel):
     )
     supplier_product_url = models.URLField(null=True, blank=True, help_text='Supplier product page URL')
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='cultures')
+    crop_species = models.ForeignKey(
+        'crops.CropSpecies',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='project_cultures',
+        help_text='Optional official crop species link used when publishing to the public library.',
+    )
     source_public_culture = models.ForeignKey('PublicCulture', null=True, blank=True, on_delete=models.SET_NULL, related_name='imported_cultures')
     source_public_version = models.IntegerField(null=True, blank=True)
     origin_type = models.CharField(max_length=50, choices=ORIGIN_TYPE_CHOICES, default=ORIGIN_MANUAL)
@@ -829,6 +837,15 @@ class PublicCulture(TimestampedModel):
     notes = models.TextField(blank=True)
     seed_supplier = models.CharField(max_length=200, blank=True)
     supplier_name = models.CharField(max_length=200, blank=True)
+    crop_species = models.ForeignKey(
+        'crops.CropSpecies',
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name='public_cultures',
+        help_text='Official crop species required for new public-library publications.',
+    )
+    original_language_code = models.CharField(max_length=20, blank=True)
     source_project_culture = models.ForeignKey('Culture', null=True, blank=True, on_delete=models.SET_NULL, related_name='published_public_cultures')
     source_project = models.ForeignKey(Project, null=True, blank=True, on_delete=models.SET_NULL, related_name='published_cultures')
     version = models.IntegerField(default=1)

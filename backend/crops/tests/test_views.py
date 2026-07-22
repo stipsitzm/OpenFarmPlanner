@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase as DRFAPITestCase
 
+from crops.models import CropSpecies
 from farm.models import PublicCulture
 
 User = get_user_model()
@@ -80,3 +81,22 @@ class CropViewSetTest(DRFAPITestCase):
         response = self.client.post('/openfarmplanner/api/crops/', {'name': 'X', 'variety': 'Y'})
 
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_lists_official_crop_species(self):
+        CropSpecies.objects.create(name='Tomato')
+        CropSpecies.objects.create(name='Draft species', status=CropSpecies.STATUS_PROPOSED)
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get('/openfarmplanner/api/crop-species/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        names = [item['name'] for item in response.data['results']]
+        self.assertEqual(names, ['Tomato'])
+
+    def test_species_create_stores_a_proposal(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post('/openfarmplanner/api/crop-species/', {'name': 'Tree onion'})
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['status'], CropSpecies.STATUS_PROPOSED)

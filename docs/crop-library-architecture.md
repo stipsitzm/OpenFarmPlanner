@@ -75,25 +75,27 @@ scratch.
 
 ### Backend — a new `crops` Django app
 
-`backend/crops/` is a real Django app (`INSTALLED_APPS`), but it
-**defines no models**. `PublicCulture` stays in `farm.models` — moving a
-model to a different app changes its migration state and (without
+`backend/crops/` is a real Django app (`INSTALLED_APPS`). It now owns
+`CropSpecies`, the official language-independent species list used at the
+publishing boundary. `PublicCulture` stays in `farm.models` — moving that
+existing model to a different app changes its migration state and (without
 careful `SeparateDatabaseAndState` migrations) its `app_label`-derived
-`db_table`. That's a real risk to existing data, and the task explicitly
-asks to avoid exactly this kind of unnecessary risk. `crops/models.py`
-documents this and names `PublicCulture` as the thing to move first in a
-future extraction.
+`db_table`. That's a real risk to existing data, and still isn't
+justified until the crop library is actually extracted into its own
+service.
 
 ```
 backend/crops/
   apps.py          CropsConfig
-  models.py        (empty — see above)
+  models.py        CropSpecies, the official species list used by the
+                    Publishing Wizard
   services.py      list_published_crops(), get_published_crop(),
                     find_exact_crop_match() — reads farm.models.PublicCulture,
                     nothing else
   serializers.py   CropSerializer (read-only; deliberately excludes
                     source_project/source_project_culture — see §3)
   views.py         CropViewSet (ReadOnlyModelViewSet, IsAuthenticated)
+                    CropSpeciesViewSet (official list + proposed entries)
   urls.py          router → included at /api/crops/
   tests/
 ```
@@ -207,6 +209,30 @@ for no functional benefit right now. German UI text (`"Kultur"`,
   path changed.
 - No new frontend route is reachable; the `/crops` reservation is a
   comment.
+
+## 7. Publishing Wizard quality gate
+
+Publishing a project-owned `Culture` is no longer a direct copy action from
+the Cultures page. The frontend opens `CulturesPublishingWizardDialog`,
+which calls `/api/cultures/<id>/publish-public/preview/` and shows each
+quality gate as complete, missing, or optional:
+
+- official `CropSpecies` selected;
+- exactly one original language selected (defaulted from the UI language);
+- available translations shown for German and English, with missing
+  translations treated as optional;
+- public-library required fields complete;
+- no published public duplicate for the same `CropSpecies` + normalized
+  variety; and
+- the existing CC BY-SA public-library contribution consent accepted or
+  already on file.
+
+The backend enforces the same checks in
+`farm.services.public_cultures.publish_culture_to_public_library()`, so the
+wizard is not only a UI affordance. Private project cultures remain
+flexible: `Culture.crop_species` is nullable, and incomplete project
+cultures can still be created and edited. The strictness lives at the
+public-library boundary where durable shared data is created.
 - Backend: 409 existing tests pass (1 pre-existing, unrelated failure —
   a German-umlaut encoding mismatch in
   `accounts/tests/test_auth_api.py`, confirmed present on `main` before
