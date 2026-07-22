@@ -19,3 +19,33 @@ test('starts the public guest demo and keeps the user in the app', async ({ page
   await expect(page).toHaveURL(/\/app\/fields-beds/);
   await expect(page.getByRole('heading', { name: 'Anbauflächen' })).toBeVisible();
 });
+
+test('keeps the guest demo after an older login-page auth refresh finishes', async ({ page }) => {
+  let releaseAuthRefresh: () => void = () => {};
+  const authRefreshReleased = new Promise<void>((resolve) => {
+    releaseAuthRefresh = resolve;
+  });
+  let authRefreshCount = 0;
+
+  await page.route('**/api/auth/me/', async (route) => {
+    authRefreshCount += 1;
+    if (authRefreshCount === 1) {
+      await authRefreshReleased;
+    }
+    await route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({ detail: 'Authentication credentials were not provided.' }),
+    });
+  });
+
+  await page.goto('/login');
+  await expect(page.getByRole('heading', { name: 'Anmelden' })).toBeVisible();
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Demo ohne Registrierung ansehen' }).click();
+
+  await expect(page).toHaveURL(/\/app\/fields-beds/);
+  releaseAuthRefresh();
+  await expect(page).toHaveURL(/\/app\/fields-beds/);
+  await expect(page.getByRole('heading', { name: 'Anbauflächen' })).toBeVisible();
+});

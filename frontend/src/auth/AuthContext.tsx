@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   acceptConsent as acceptConsentRequest,
   activate as activateRequest,
@@ -103,6 +104,12 @@ export function AuthProvider({
     setActiveProjectId(applyResolvedProjectId(me));
   }, []);
 
+  const applyAuthenticatedUserBeforeNavigation = useCallback((me: AuthUser): void => {
+    flushSync(() => {
+      applyAuthenticatedUser(me);
+    });
+  }, [applyAuthenticatedUser]);
+
   const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
     const requestGeneration = authGenerationRef.current;
     try {
@@ -174,7 +181,7 @@ export function AuthProvider({
         const me = await startGuestDemoRequest();
         if (generation === authGenerationRef.current) {
           window.sessionStorage.setItem(GUEST_DEMO_SESSION_KEY, String(me.guest_demo_session_id));
-          applyAuthenticatedUser(me);
+          applyAuthenticatedUserBeforeNavigation(me);
         }
         return me;
       },
@@ -189,7 +196,7 @@ export function AuthProvider({
         const generation = beginAuthMutation();
         const me = await loginRequest(email, password);
         if (generation === authGenerationRef.current) {
-          applyAuthenticatedUser(me);
+          applyAuthenticatedUserBeforeNavigation(me);
         }
         return me;
       },
@@ -214,7 +221,7 @@ export function AuthProvider({
         const generation = beginAuthMutation();
         const me = await acceptConsentRequest(document);
         if (generation === authGenerationRef.current) {
-          applyAuthenticatedUser(me);
+          applyAuthenticatedUserBeforeNavigation(me);
         }
         return me;
       },
@@ -222,7 +229,7 @@ export function AuthProvider({
         const generation = beginAuthMutation();
         const me = await activateRequest(uid, token);
         if (generation === authGenerationRef.current) {
-          applyAuthenticatedUser(me);
+          applyAuthenticatedUserBeforeNavigation(me);
         }
         return me;
       },
@@ -255,7 +262,7 @@ export function AuthProvider({
         const generation = beginAuthMutation();
         const me = await restoreAccountRequest(email, password);
         if (generation === authGenerationRef.current) {
-          applyAuthenticatedUser(me);
+          applyAuthenticatedUserBeforeNavigation(me);
         }
         return me;
       },
@@ -271,7 +278,15 @@ export function AuthProvider({
       },
       refreshUser,
     }),
-    [activeProjectId, applyAuthenticatedUser, beginAuthMutation, clearAuthenticatedUser, isLoading, refreshUser, user],
+    [
+      activeProjectId,
+      applyAuthenticatedUserBeforeNavigation,
+      beginAuthMutation,
+      clearAuthenticatedUser,
+      isLoading,
+      refreshUser,
+      user,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
