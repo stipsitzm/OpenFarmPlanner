@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Suppliers from '../pages/Suppliers';
 
 const mocks = vi.hoisted(() => ({
@@ -38,8 +38,27 @@ vi.mock('../commands/useCommandContext', () => ({
   useRegisterCreateActions: vi.fn(),
 }));
 
+const originalMatchMedia = window.matchMedia;
+
+function mockMatchMedia(matches: (query: string) => boolean = () => false): void {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: matches(query),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe('Suppliers page empty and table states', () => {
   beforeEach(() => {
+    mockMatchMedia();
     mocks.list.mockReset();
     mocks.create.mockReset();
     mocks.update.mockReset();
@@ -47,6 +66,13 @@ describe('Suppliers page empty and table states', () => {
     mocks.deleteUsage.mockReset();
     mocks.unlinkAndDelete.mockReset();
     mocks.restoreUnlinkedDelete.mockReset();
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: originalMatchMedia,
+    });
   });
 
   it('does not show the empty state while suppliers are still loading', async () => {
@@ -171,6 +197,32 @@ describe('Suppliers page empty and table states', () => {
     expect(supplierRow).not.toBeNull();
 
     fireEvent.keyDown(supplierRow as HTMLTableRowElement, { key: 'F10', shiftKey: true });
+
+    expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+  });
+
+  it('hides inline supplier actions on mobile while keeping context menu actions available', async () => {
+    mockMatchMedia((query) => query.includes('max-width:900px'));
+    mocks.list.mockResolvedValue({
+      data: {
+        results: [{ id: 1, name: 'Reinsaat', homepage_url: 'https://example.com' }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <Suppliers />
+      </MemoryRouter>,
+    );
+
+    const supplierName = await screen.findByText('Reinsaat');
+    expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Löschen' })).not.toBeInTheDocument();
+
+    const supplierRow = supplierName.closest('tr');
+    expect(supplierRow).not.toBeNull();
+    fireEvent(supplierRow as HTMLTableRowElement, new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
 
     expect(screen.getByRole('menuitem', { name: 'Bearbeiten' })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
