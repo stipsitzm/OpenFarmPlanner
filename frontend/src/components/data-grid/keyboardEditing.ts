@@ -40,7 +40,6 @@ interface UseSpreadsheetEditStarterResult<Row extends GridValidRowModel> {
   startEditFromPrintableKey: (
     params: GridCellParams<Row>,
     event: React.KeyboardEvent,
-    options?: { allowEditableEventTarget?: boolean },
   ) => boolean;
   startEditFromF2: (
     params: GridCellParams<Row>,
@@ -177,12 +176,11 @@ export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
   const canReplaceEditingCell = useCallback((
     params: GridCellParams<Row>,
     event: DataGridKeyboardEvent,
-    allowEditableEventTarget = false,
   ): boolean => {
     if (
       !params.isEditable
       || !isRowEditing(rowModesModel, params.id)
-      || (!allowEditableEventTarget && isEditableEventTarget(event))
+      || isEditableEventTarget(event)
     ) {
       return false;
     }
@@ -223,7 +221,6 @@ export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
   const startEditFromPrintableKey = useCallback((
     params: GridCellParams<Row>,
     event: React.KeyboardEvent,
-    options: { allowEditableEventTarget?: boolean } = {},
   ): boolean => {
     const keyboardEvent = event as DataGridKeyboardEvent;
     if (!isSpreadsheetPrintableKey(keyboardEvent)) {
@@ -233,17 +230,13 @@ export function useSpreadsheetEditStarter<Row extends GridValidRowModel>({
     const pendingKey = getPendingKey(params.id, params.field);
     const pendingValue = pendingValuesRef.current.get(pendingKey);
     const canEditFromView = canStartEdit(params);
-    const canEditFocusedCell = canReplaceEditingCell(
-      params,
-      keyboardEvent,
-      options.allowEditableEventTarget === true,
-    );
+    const canEditFocusedCell = canReplaceEditingCell(params, keyboardEvent);
     if (!pendingValue && !canEditFromView && !canEditFocusedCell) {
       return false;
     }
 
     markMuiEventHandled(keyboardEvent);
-    if (!pendingValue) {
+    if (!pendingValue && canEditFromView) {
       onBeforeEdit?.(params);
       focusCellForEdit(params);
     }

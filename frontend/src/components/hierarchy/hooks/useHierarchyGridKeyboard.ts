@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { GridRowModes } from "@mui/x-data-grid";
 import type {
   GridCellParams,
@@ -104,7 +104,6 @@ export function useHierarchyGridKeyboard({
   setTreeActive,
   toggleExpand,
 }: UseHierarchyGridKeyboardParams): UseHierarchyGridKeyboardResult {
-  const armedPrintableCellRef = useRef<{ id: GridRowId; field: string } | null>(null);
   const spreadsheetEditStarter = useSpreadsheetEditStarter<HierarchyRow>({
     apiRef: gridApiRef,
     rowModesModel,
@@ -174,9 +173,6 @@ export function useHierarchyGridKeyboard({
       cell: target,
       focusEditInput: editMode,
     });
-    if (editMode) {
-      armedPrintableCellRef.current = target;
-    }
     return true;
   }, [
     columns,
@@ -212,9 +208,6 @@ export function useHierarchyGridKeyboard({
     rememberRowSnapshot(params.id);
     selectRow(params.id);
     setTreeActive(true);
-    if (isRowEditing(rowModesModel, params.id)) {
-      armedPrintableCellRef.current = { id: params.id, field: params.field };
-    }
     handleEditableCellClick(params, rowModesModel, setRowModesModel);
   }, [
     discardRowEdit,
@@ -290,17 +283,7 @@ export function useHierarchyGridKeyboard({
       return;
     }
 
-    const armedPrintableCell = armedPrintableCellRef.current;
-    const shouldAllowFreshEditorTarget = Boolean(
-      armedPrintableCell
-      && String(armedPrintableCell.id) === String(params.id)
-      && armedPrintableCell.field === params.field
-      && isRowEditing(rowModesModel, params.id),
-    );
-    if (spreadsheetEditStarter.startEditFromPrintableKey(params, keyboardEvent, {
-      allowEditableEventTarget: shouldAllowFreshEditorTarget,
-    })) {
-      armedPrintableCellRef.current = null;
+    if (spreadsheetEditStarter.startEditFromPrintableKey(params, keyboardEvent)) {
       return;
     }
 

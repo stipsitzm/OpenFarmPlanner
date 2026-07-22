@@ -3,7 +3,12 @@
  */
 
 import type { ReactElement, KeyboardEvent, MouseEvent } from 'react';
-import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
+import { GridEditInputCell } from '@mui/x-data-grid';
+import type {
+  GridColDef,
+  GridRenderCellParams,
+  GridRenderEditCellParams,
+} from '@mui/x-data-grid';
 import type { TFunction } from 'i18next';
 import { Box, IconButton, Tooltip } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -45,6 +50,10 @@ const NON_BLOCKING_TOOLTIP_PROPS = {
     },
   },
 };
+
+const renderImmediateEditInputCell = (
+  params: GridRenderEditCellParams<HierarchyRow>,
+): ReactElement => <GridEditInputCell {...params} debounceMs={0} />;
 
 interface NameCellCallbacks {
   onToggleExpand: (rowId: string | number) => void;
@@ -560,6 +569,7 @@ export function createHierarchyColumns(
       headerName: t('hierarchy:columns.name'),
       width: widths.name,
       editable: true,
+      renderEditCell: renderImmediateEditInputCell,
       renderCell: (params) => renderNameCell(params, callbacks, t, options),
       preProcessEditCellProps: (params) => {
         const hasError = !params.props.value || params.props.value.trim() === '';
@@ -595,6 +605,7 @@ export function createHierarchyColumns(
       width: widths.dimensions,
       type: 'string',
       editable: true,
+      renderEditCell: renderImmediateEditInputCell,
       valueGetter: (_value, row: HierarchyRow) => row.type === 'location' ? undefined : row.length_m,
       cellClassName: (params) => getDimensionCellClassName(params.row, 'length'),
       renderCell: (params) => renderDimensionCell(params, 'length', t),
@@ -615,6 +626,7 @@ export function createHierarchyColumns(
       width: widths.dimensions,
       type: 'string',
       editable: true,
+      renderEditCell: renderImmediateEditInputCell,
       valueGetter: (_value, row: HierarchyRow) => row.type === 'location' ? undefined : row.width_m,
       cellClassName: (params) => getDimensionCellClassName(params.row, 'width'),
       renderCell: (params) => renderDimensionCell(params, 'width', t),

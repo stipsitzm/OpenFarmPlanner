@@ -150,6 +150,71 @@ async function editBedNameWithEnter(page: Page, currentName: string, nextName: s
 }
 
 test.describe('fields-beds keyboard focus after Enter save', () => {
+  test('keeps the first numeric key when tabbing through a new bed row', async ({ page, request }) => {
+    const errors = trackConsoleErrors(page);
+    await loginWithFreshProject(page, request, 'fields-new-bed-keyboard-edit');
+    await createFieldsBedsFixture(page);
+
+    await page.goto('/app/fields-beds');
+    const fieldRow = page.locator('[role="row"][data-id]').filter({
+      hasText: 'Keyboard Focus Parzelle',
+    }).first();
+    await expect(fieldRow).toBeVisible();
+    await fieldRow.hover();
+    await fieldRow.getByRole('button', {
+      name: 'Beet für diese Parzelle hinzufügen',
+    }).click();
+
+    const editRow = page.locator('.MuiDataGrid-row--editing').first();
+    const nameInput = editRow.locator('[data-field="name"] input');
+    const lengthInput = editRow.locator('[data-field="length_m"] input');
+    const widthInput = editRow.locator('[data-field="width_m"] input');
+
+    await expect(nameInput).toBeFocused();
+    await page.keyboard.type('Keyboard New Bed');
+    await expect(nameInput).toHaveValue('Keyboard New Bed');
+
+    await page.keyboard.press('Tab');
+    await expect(lengthInput).toBeFocused();
+    await page.keyboard.press('1');
+    await expect(lengthInput).toHaveValue('1');
+    await expect(nameInput).toHaveValue('Keyboard New Bed');
+
+    await page.keyboard.press('Tab');
+    await expect(widthInput).toBeFocused();
+    await page.keyboard.press('2');
+    await expect(widthInput).toHaveValue('2');
+
+    await page.keyboard.press('Shift+Tab');
+    await expect(lengthInput).toBeFocused();
+    await page.keyboard.press('3');
+    await expect(lengthInput).toHaveValue('13');
+
+    await widthInput.click();
+    await expect(widthInput).toBeFocused();
+    await page.keyboard.press('4');
+    await expect(widthInput).toHaveValue('24');
+    await expect(editRow.locator('[data-field="area_sqm"] input')).toHaveCount(0);
+
+    const createResponsePromise = page.waitForResponse((response) => (
+      response.url().includes('/api/beds/')
+      && response.request().method() === 'POST'
+      && response.status() === 201
+    ));
+    await page.keyboard.press('Enter');
+    await createResponsePromise;
+    await expect(page.locator('.MuiDataGrid-row--editing')).toHaveCount(0);
+
+    await page.reload();
+    const savedRow = page.locator('[role="row"][data-id]').filter({
+      hasText: 'Keyboard New Bed',
+    }).first();
+    await expect(savedRow.locator('[data-field="length_m"]')).toHaveText('13');
+    await expect(savedRow.locator('[data-field="width_m"]')).toHaveText('24');
+    await expect(savedRow.locator('[data-field="area_sqm"]')).toHaveText('312');
+    expect(errors).toEqual([]);
+  });
+
   test('keeps the first ArrowUp relative to the post-Enter focused bed', async ({ page, request }) => {
     const errors = trackConsoleErrors(page);
     await loginWithFreshProject(page, request, 'fields-keyboard-focus-up');

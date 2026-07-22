@@ -162,7 +162,12 @@ that's still true. But cell-level Tab/Arrow/Enter/F2 navigation
   Shift+Tab has visibly focused another editable cell but DOM focus is still
   on the cell container rather than the mounted editor input: the first
   printable key is still captured, buffered, and written into that target
-  cell instead of being lost.
+  cell instead of being lost. If the editor input itself already owns DOM
+  focus, its native input event is left untouched; restarting row edit mode
+  there would discard other unsynchronized values in a newly created row. The
+  hierarchy's name and dimension editors disable MUI's default input debounce
+  because row-level validation across rapidly edited fields can otherwise
+  complete out of order and restore an older value after a focus change.
 - Notes cells (see below) are deliberately excluded from both spreadsheet
   auto-edit-start and the F2 flow — Enter/Space on a notes cell opens the
   notes drawer instead.

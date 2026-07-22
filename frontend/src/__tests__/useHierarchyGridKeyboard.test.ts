@@ -229,12 +229,13 @@ describe('useHierarchyGridKeyboard', () => {
     });
   });
 
-  it('keeps the first numeric key after tabbing from a new row name into dimensions', async () => {
+  it('buffers the first numeric key when Tab leaves focus on a new-row cell container', async () => {
     const {
       result,
       editInputFocus,
       focusCell,
       setEditCellValue,
+      setRowModesModel,
     } = renderKeyboardHook(
       { [unsavedBedRow.id]: { mode: GridRowModes.Edit, fieldToFocus: 'name' } },
       [unsavedBedRow],
@@ -251,7 +252,7 @@ describe('useHierarchyGridKeyboard', () => {
     act(() => {
       result.current.handleCellKeyDown(
         makeCellParams(unsavedBedRow.id, 'length_m', unsavedBedRow),
-        makeKeyboardEvent('1', { target: document.createElement('input') } as Partial<KeyboardEventStub>),
+        makeKeyboardEvent('1', { target: document.createElement('div') } as Partial<KeyboardEventStub>),
       );
     });
 
@@ -262,6 +263,7 @@ describe('useHierarchyGridKeyboard', () => {
         value: '1',
       });
     });
+    expect(setRowModesModel).toHaveBeenCalledTimes(1);
     expect(editInputFocus).toHaveBeenCalledWith({ preventScroll: true });
 
     act(() => {
@@ -275,7 +277,7 @@ describe('useHierarchyGridKeyboard', () => {
     act(() => {
       result.current.handleCellKeyDown(
         makeCellParams(unsavedBedRow.id, 'width_m', unsavedBedRow),
-        makeKeyboardEvent('2', { target: document.createElement('input') } as Partial<KeyboardEventStub>),
+        makeKeyboardEvent('2', { target: document.createElement('div') } as Partial<KeyboardEventStub>),
       );
     });
 
@@ -305,7 +307,7 @@ describe('useHierarchyGridKeyboard', () => {
     act(() => {
       result.current.handleCellKeyDown(
         makeCellParams(unsavedBedRow.id, 'length_m', unsavedBedRow),
-        makeKeyboardEvent('3', { target: document.createElement('input') } as Partial<KeyboardEventStub>),
+        makeKeyboardEvent('3', { target: document.createElement('div') } as Partial<KeyboardEventStub>),
       );
     });
 
@@ -332,7 +334,7 @@ describe('useHierarchyGridKeyboard', () => {
     act(() => {
       result.current.handleCellKeyDown(
         makeCellParams(unsavedBedRow.id, 'width_m', unsavedBedRow),
-        makeKeyboardEvent('4', { target: document.createElement('input') } as Partial<KeyboardEventStub>),
+        makeKeyboardEvent('4', { target: document.createElement('div') } as Partial<KeyboardEventStub>),
       );
     });
 
