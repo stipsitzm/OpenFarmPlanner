@@ -305,7 +305,6 @@ export function PublicCultureLibraryDialog({
   const listEmptyDescription = hasLibraryEntries ? t('library.empty') : t('library.emptyState.emptyLibraryDescription');
   const detailEmptyTitle = hasLibraryEntries ? t('library.emptyState.noSelectionTitle') : t('library.emptyState.emptyLibraryTitle');
   const detailEmptyDescription = hasLibraryEntries ? t('library.emptyState.noSelectionDescription') : t('library.emptyState.emptyLibraryDescription');
-  const detailEmptySecondaryDescription = hasLibraryEntries ? t('library.emptyState.noSelectionSecondaryDescription') : undefined;
 
   const handleDialogClose = (): void => {
     if (useMobileFilterLayout && mobileStep === 'detail') {
@@ -556,7 +555,6 @@ export function PublicCultureLibraryDialog({
               <LibraryEmptyState
                 title={detailEmptyTitle}
                 description={detailEmptyDescription}
-                secondaryDescription={detailEmptySecondaryDescription}
               />
             )}
             </Box>

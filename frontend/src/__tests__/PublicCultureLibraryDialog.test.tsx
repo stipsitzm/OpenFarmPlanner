@@ -160,7 +160,7 @@ describe('PublicCultureLibraryDialog', () => {
 
     expect(screen.getByText('Die Kulturbibliothek wächst mit der Community')).toBeInTheDocument();
     expect(screen.getByText(/Veröffentliche deine bewährten Kulturen und teile dein Wissen/)).toBeInTheDocument();
-    expect(screen.getByText(/Eigene Kulturen können später direkt aus den Kulturdetails veröffentlicht werden/)).toBeInTheDocument();
+    expect(screen.queryByText(/Eigene Kulturen können später direkt aus den Kulturdetails veröffentlicht werden/)).not.toBeInTheDocument();
   });
 
   it('shows the community contribution empty state on mobile when the library is empty', async () => {
