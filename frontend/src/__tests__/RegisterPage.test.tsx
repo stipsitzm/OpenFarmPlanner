@@ -44,6 +44,7 @@ vi.mock('../i18n', () => ({
       }
       const map: Record<string, string> = {
         'auth:register.title': 'Registrieren',
+        'auth:register.subtitle': 'Erstellen Sie Ihr kostenloses OpenFarmPlanner-Konto.',
         'auth:register.logoutAndCreate': 'Abmelden & neuen Account erstellen',
         'auth:register.backToApp': 'Zur App zurückkehren',
         'auth:register.email': 'E-Mail',
@@ -61,6 +62,12 @@ vi.mock('../i18n', () => ({
         'auth:register.termsNoticePrivacyLinkLabel': 'Datenschutzerklärung',
         'auth:register.termsNoticeSuffix': '.',
         'auth:register.termsRequired': 'Bitte akzeptiere die Nutzungsbedingungen, um ein Konto zu erstellen.',
+        'benefits.title': 'Was OpenFarmPlanner bietet',
+        'benefits.openSource': 'Open Source',
+        'benefits.free': 'Kostenlos',
+        'benefits.marketGardens': 'Für SoLaWis und Marktgärtnereien entwickelt',
+        'benefits.unlimitedProjects': 'Unbegrenzte Projekte',
+        'benefits.privacyFriendly': 'Datenschutzfreundlich',
       };
       return map[key] ?? key;
     },
