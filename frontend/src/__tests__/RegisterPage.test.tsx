@@ -62,12 +62,6 @@ vi.mock('../i18n', () => ({
         'auth:register.termsNoticePrivacyLinkLabel': 'Datenschutzerklärung',
         'auth:register.termsNoticeSuffix': '.',
         'auth:register.termsRequired': 'Bitte akzeptiere die Nutzungsbedingungen, um ein Konto zu erstellen.',
-        'benefits.title': 'Was OpenFarmPlanner bietet',
-        'benefits.openSource': 'Open Source',
-        'benefits.free': 'Kostenlos',
-        'benefits.marketGardens': 'Für SoLaWis und Marktgärtnereien entwickelt',
-        'benefits.unlimitedProjects': 'Unbegrenzte Projekte',
-        'benefits.privacyFriendly': 'Datenschutzfreundlich',
       };
       return map[key] ?? key;
     },

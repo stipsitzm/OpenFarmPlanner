@@ -1,8 +1,6 @@
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { Box, Container, Paper, Stack, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 import LegalLinks from '../../components/legal/LegalLinks';
-import { useTranslation } from '../../i18n';
 
 type AuthPageShellProps = {
   title: string;
@@ -11,24 +9,18 @@ type AuthPageShellProps = {
   legalLinksDense?: boolean;
 };
 
-const benefits = [
-  'openSource',
-  'free',
-  'marketGardens',
-  'unlimitedProjects',
-  'privacyFriendly',
-] as const;
-
 export default function AuthPageShell({ title, subtitle, children, legalLinksDense = false }: AuthPageShellProps) {
-  const { t } = useTranslation('auth');
-
   return (
     <Box
       sx={{
         minHeight: '100vh',
-        bgcolor: '#f5f7f1',
         display: 'flex',
         flexDirection: 'column',
+        bgcolor: '#f5f7f1',
+        backgroundImage: 'linear-gradient(rgba(245, 247, 241, 0.88), rgba(245, 247, 241, 0.9)), url(/landing/hero-field.webp)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: { xs: 'scroll', md: 'fixed' },
       }}
     >
       <Container
@@ -68,7 +60,7 @@ export default function AuthPageShell({ title, subtitle, children, legalLinksDen
             elevation={0}
             sx={{
               width: '100%',
-              maxWidth: { xs: 560, md: 920 },
+              maxWidth: 560,
               borderRadius: { xs: 3, md: 4 },
               border: '1px solid rgba(46, 125, 50, 0.12)',
               boxShadow: '0 16px 44px rgba(28, 42, 30, 0.11)',
@@ -76,59 +68,35 @@ export default function AuthPageShell({ title, subtitle, children, legalLinksDen
               p: { xs: 2.5, sm: 4, md: 4.5 },
             }}
           >
-            <Box
+            <Typography
+              variant="h4"
+              component="h1"
               sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 440px) minmax(240px, 1fr)' },
-                gap: { xs: 3, md: 5 },
-                alignItems: 'center',
+                fontWeight: 600,
+                fontSize: { xs: '1.85rem', md: '2.15rem' },
+                lineHeight: 1.18,
+                mb: 1,
               }}
             >
-              <Box>
-                <Typography
-                  variant="h4"
-                  component="h1"
-                  sx={{
-                    fontWeight: 600,
-                    fontSize: { xs: '1.85rem', md: '2.15rem' },
-                    lineHeight: 1.18,
-                    mb: 1,
-                  }}
-                >
-                  {title}
-                </Typography>
-                <Typography color="text.secondary" sx={{ fontSize: '1rem', lineHeight: 1.55 }}>
-                  {subtitle}
-                </Typography>
-                <Box sx={{ mt: { xs: 2.75, sm: 3.25 } }}>{children}</Box>
-              </Box>
-
-              <Box
-                sx={{
-                  display: { xs: 'none', md: 'block' },
-                  borderLeft: '1px solid',
-                  borderColor: 'divider',
-                  pl: 4,
-                }}
-              >
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
-                  {t('benefits.title')}
-                </Typography>
-                <Stack spacing={1.4}>
-                  {benefits.map((benefit) => (
-                    <Stack key={benefit} direction="row" spacing={1.2} alignItems="center">
-                      <CheckCircleOutlineIcon color="primary" fontSize="small" aria-hidden />
-                      <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.5 }}>
-                        {t(`benefits.${benefit}`)}
-                      </Typography>
-                    </Stack>
-                  ))}
-                </Stack>
-              </Box>
-            </Box>
+              {title}
+            </Typography>
+            <Typography color="text.secondary" sx={{ fontSize: '1rem', lineHeight: 1.55 }}>
+              {subtitle}
+            </Typography>
+            <Box sx={{ mt: { xs: 2.75, sm: 3.25 } }}>{children}</Box>
           </Paper>
 
-          <LegalLinks dense={legalLinksDense} sx={{ justifyContent: 'center' }} />
+          <LegalLinks
+            dense={legalLinksDense}
+            sx={{
+              justifyContent: 'center',
+              px: 1.5,
+              py: 0.75,
+              borderRadius: 2,
+              bgcolor: 'rgba(255, 255, 255, 0.78)',
+              boxShadow: '0 8px 24px rgba(28, 42, 30, 0.08)',
+            }}
+          />
         </Stack>
       </Container>
     </Box>
