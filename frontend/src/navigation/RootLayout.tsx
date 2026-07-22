@@ -94,6 +94,7 @@ import { OPEN_CREATE_PROJECT_EVENT } from '../projects/projectCreationFlow';
 import { useGlobalOverlayKeyboardScroll } from '../hooks/useDialogKeyboardScroll';
 import { useFocusRegion } from '../focus/useFocusManager';
 import { useTopbarActionsRouteReset } from '../hooks/useTopbarActionsRouteReset';
+import { appRouteUrl } from '../utils/appRouteUrl';
 import { publicAssetUrl } from '../utils/publicAssetUrl';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, getKeyboardNavigationRouteFromPathname, normalizeMainRoutePath } from '../navigation/mainNavigation';
 import {
@@ -645,7 +646,7 @@ function RootLayout() {
 
   const applyProjectContextChange = useCallback(async (projectId: number): Promise<void> => {
     await switchActiveProject(projectId);
-    window.location.href = '/app/dashboard';
+    window.location.href = appRouteUrl('/app/dashboard');
   }, [switchActiveProject]);
 
   const closeCreateProjectDialog = (): void => {
