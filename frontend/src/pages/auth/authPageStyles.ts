@@ -67,3 +67,20 @@ export const authTextFieldSx = {
 export const authFormSx = {
   width: '100%',
 };
+
+export const authLegalLinkSx = {
+  color: 'text.primary',
+  transition: 'color 160ms ease',
+  '&:visited': {
+    color: 'text.primary',
+  },
+  '&:hover': {
+    color: 'primary.dark',
+  },
+  '&:focus-visible': {
+    color: 'primary.dark',
+    outline: '2px solid rgba(46, 125, 50, 0.32)',
+    outlineOffset: 3,
+    borderRadius: 0.5,
+  },
+};

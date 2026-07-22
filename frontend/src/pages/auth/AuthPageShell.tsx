@@ -1,6 +1,7 @@
 import { Box, Container, Paper, Stack, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 import LegalLinks from '../../components/legal/LegalLinks';
+import { authLegalLinkSx } from './authPageStyles';
 
 type AuthPageShellProps = {
   title: string;
@@ -93,18 +94,8 @@ export default function AuthPageShell({ title, subtitle, children, legalLinksDen
               textShadow: '0 1px 2px rgba(255, 255, 255, 0.9)',
             }}
             linkSx={{
-              color: 'text.primary',
+              ...authLegalLinkSx,
               fontWeight: 500,
-              transition: 'color 160ms ease',
-              '&:hover': {
-                color: 'primary.dark',
-              },
-              '&:focus-visible': {
-                color: 'primary.dark',
-                outline: '2px solid rgba(46, 125, 50, 0.32)',
-                outlineOffset: 3,
-                borderRadius: 0.5,
-              },
             }}
           />
         </Stack>

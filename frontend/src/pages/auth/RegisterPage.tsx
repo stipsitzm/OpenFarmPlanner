@@ -8,7 +8,7 @@ import PasswordVisibilityToggle from '../../components/inputs/PasswordVisibility
 import { useTranslation } from '../../i18n';
 import { getNextFromSearch, getTokenFromNextPath, storeInvitationRedirect } from '../invitationAcceptance';
 import AuthPageShell from './AuthPageShell';
-import { authFormSx, authPrimaryButtonSx, authSecondaryButtonSx, authTextButtonSx, authTextFieldSx } from './authPageStyles';
+import { authFormSx, authLegalLinkSx, authPrimaryButtonSx, authSecondaryButtonSx, authTextButtonSx, authTextFieldSx } from './authPageStyles';
 
 export default function RegisterPage() {
   const { user, register, resendActivation, logout } = useAuth();
@@ -227,11 +227,11 @@ export default function RegisterPage() {
             label={(
               <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.65 }}>
                 {t('auth:register.termsNoticePrefix')}
-                <Link component={RouterLink} to="/nutzungsbedingungen" target="_blank" rel="noopener">
+                <Link component={RouterLink} to="/nutzungsbedingungen" target="_blank" rel="noopener" sx={authLegalLinkSx}>
                   {t('auth:register.termsNoticeTermsLinkLabel')}
                 </Link>
                 {t('auth:register.termsNoticeMiddle')}
-                <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener">
+                <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener" sx={authLegalLinkSx}>
                   {t('auth:register.termsNoticePrivacyLinkLabel')}
                 </Link>
                 {t('auth:register.termsNoticeSuffix')}
