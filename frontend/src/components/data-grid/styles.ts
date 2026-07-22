@@ -98,6 +98,9 @@ export const dataGridSx = {
     borderColor: 'surface.surfaceSoftBorder',
     transition: 'background-color 0.15s ease, box-shadow 0.15s ease',
   },
+  '& .MuiDataGrid-cell.ofp-cell-full-tooltip': {
+    position: 'relative',
+  },
   '& .MuiDataGrid-cell--editable': {
     bgcolor: (theme: Theme) =>
       theme.palette.mode === 'dark'

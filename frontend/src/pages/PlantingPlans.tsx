@@ -71,7 +71,10 @@ import {
   toIsoDateString,
   parseGermanDateText,
   formatDateAsGerman,
+  FullCellTooltip,
+  FULL_CELL_TOOLTIP_CELL_CLASS,
 } from "../components/data-grid";
+import { CALCULATED_COLUMN_CELL_CLASS } from "../components/data-grid/calculatedColumns";
 import { MobileCardList } from "../components/mobile/MobileCardList";
 import { NotesDrawer } from "../components/data-grid/NotesDrawer";
 import ProjectRequiredState from "../components/project/ProjectRequiredState";
@@ -525,9 +528,9 @@ function PlantingPlans() {
 
     if (!value) {
       return (
-        <Tooltip title={missingDurationTooltip}>
+        <FullCellTooltip title={missingDurationTooltip} cellHasFocus={params.hasFocus}>
           <Box component="span">—</Box>
-        </Tooltip>
+        </FullCellTooltip>
       );
     }
 
@@ -720,6 +723,9 @@ function PlantingPlans() {
         }),
         type: "date",
         valueGetter: (value) => (value ? new Date(value) : null),
+        cellClassName: (params) => params.value
+          ? CALCULATED_COLUMN_CELL_CLASS
+          : `${CALCULATED_COLUMN_CELL_CLASS} ${FULL_CELL_TOOLTIP_CELL_CLASS}`,
         renderCell: renderCalculatedHarvestDateCell,
       },
       {
@@ -735,6 +741,9 @@ function PlantingPlans() {
         }),
         type: "date",
         valueGetter: (value) => (value ? new Date(value) : null),
+        cellClassName: (params) => params.value
+          ? CALCULATED_COLUMN_CELL_CLASS
+          : `${CALCULATED_COLUMN_CELL_CLASS} ${FULL_CELL_TOOLTIP_CELL_CLASS}`,
         renderCell: renderCalculatedHarvestDateCell,
       },
       {

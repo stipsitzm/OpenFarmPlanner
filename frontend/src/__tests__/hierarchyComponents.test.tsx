@@ -600,6 +600,7 @@ describe('hierarchy components and behaviors', () => {
     const completeRow = { id: 2, type: 'bed', level: 2, length_m: 5, width_m: 2, area_sqm: null };
 
     expect(lengthColumn?.cellClassName?.({ row: incompleteRow } as never)).toContain('ofp-hierarchy-cell-missing-dimension');
+    expect(lengthColumn?.cellClassName?.({ row: incompleteRow } as never)).toContain('ofp-cell-full-tooltip');
     expect(widthColumn?.cellClassName?.({ row: incompleteRow } as never)).toBe('');
 
     expect(lengthColumn?.cellClassName?.({ row: completeRow } as never)).toBe('');

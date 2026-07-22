@@ -864,6 +864,11 @@ describe('SeedDemandPage', () => {
     const packagesCell = cells[cells.length - 1];
     expect(packagesCell.textContent).toBe('—');
     expect(packagesCell.querySelector('a')).toBeNull();
+    const tooltipTrigger = packagesCell.querySelector('.ofp-full-cell-tooltip-trigger');
+    expect(tooltipTrigger).not.toBeNull();
+    expect(tooltipTrigger).toHaveStyle({ position: 'absolute', inset: '0' });
+    fireEvent.mouseOver(tooltipTrigger as Element);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('seedDemand.noSupplierConfiguredTooltip');
   });
 
   it('shows a not-configured link in the packages column when the supplier has no packaging sizes', async () => {

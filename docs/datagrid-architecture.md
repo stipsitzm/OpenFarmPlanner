@@ -36,6 +36,7 @@ frontend/src/components/data-grid/
   contextMenuFocus.ts      Arrow/Home/End/Enter/Esc navigation *inside* an open menu
   AreaM2EditCell.tsx, DateEditCell.tsx, PlantsCountEditCell.tsx,
   SearchableSelectEditCell.tsx                            custom edit cells
+  FullCellTooltip.tsx     full-cell hover/focus target for unavailable values
   GermanDateEditCell.tsx   shared German date parse/format helpers only
                            (its edit-cell component was removed as dead code)
   NotesCell.tsx, NotesDrawer.tsx, NotesPreviewPopover.tsx,
@@ -297,7 +298,9 @@ grid," that's new work, not exposing something that already half-exists.
   works.
 - `styles.ts` — the single `dataGridSx` object defining every `ofp-*` CSS
   class referenced above (`.ofp-row-editing`, `.ofp-cell-dirty`,
-  `.ofp-cell-error`, `.ofp-row-long-press`, ...).
+  `.ofp-cell-error`, `.ofp-row-long-press`, ...). Cells that render
+  `FullCellTooltip` must also use `FULL_CELL_TOOLTIP_CELL_CLASS` so its
+  absolute trigger covers the cell and follows the grid's keyboard focus.
 
 ## What to check before changing this layer
 

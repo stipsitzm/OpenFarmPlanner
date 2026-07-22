@@ -25,6 +25,7 @@ import { CALCULATED_COLUMN_CELL_CLASS, getCalculatedColumnProps } from '../data-
 import { ContextMenuIndicator } from '../contextMenu/ContextMenuIndicator';
 import { contextMenuActionsOverlaySx } from '../contextMenu/contextMenuIndicatorStyles';
 import { HierarchyLevelButtons, type HierarchyLevelButtonsProps } from './HierarchyLevelToggle';
+import { FullCellTooltip, FULL_CELL_TOOLTIP_CELL_CLASS } from '../data-grid/FullCellTooltip';
 
 export interface HierarchyColumnWidths {
   name: number;
@@ -459,7 +460,7 @@ const getDimensionCellClassName = (row: HierarchyRow, type: DimensionCellType): 
   if (!rowState || !isDimensionCellIncomplete(type, rowState)) {
     return '';
   }
-  return 'ofp-hierarchy-cell-missing-dimension';
+  return `ofp-hierarchy-cell-missing-dimension ${FULL_CELL_TOOLTIP_CELL_CLASS}`;
 };
 
 const getNotesCellClassName = (): string => '';
@@ -478,7 +479,12 @@ const renderDimensionCell = (
   }
 
   return (
-    <Tooltip title={t('hierarchy:messages.missingDimensionsCellTooltip')} enterDelay={250} {...NON_BLOCKING_TOOLTIP_PROPS}>
+    <FullCellTooltip
+      title={t('hierarchy:messages.missingDimensionsCellTooltip')}
+      enterDelay={250}
+      cellHasFocus={params.hasFocus}
+      {...NON_BLOCKING_TOOLTIP_PROPS}
+    >
       <Box
         component="span"
         sx={{
@@ -502,7 +508,7 @@ const renderDimensionCell = (
           {hasDisplayValue ? String(displayValue) : '—'}
         </Box>
       </Box>
-    </Tooltip>
+    </FullCellTooltip>
   );
 };
 

@@ -371,6 +371,9 @@ describe("PlantingPlans save-time area validation", () => {
       })
     );
 
+    expect(harvestStartColumn.cellClassName({ value: null })).toContain("ofp-cell-full-tooltip");
+    expect(harvestStartColumn.cellClassName({ value: new Date("2026-05-01") })).not.toContain("ofp-cell-full-tooltip");
+
     const completeStart = render(<>{renderCell(harvestStartColumn, {
       id: 1,
       culture: 4,
@@ -388,7 +391,9 @@ describe("PlantingPlans save-time area validation", () => {
     })}</>);
     const missingDash = missingStart.getByText("—");
     expect(missingDash).toBeInTheDocument();
-    await userEvent.hover(missingDash);
+    const missingCellTrigger = missingStart.container.querySelector(".ofp-full-cell-tooltip-trigger");
+    expect(missingCellTrigger).not.toBeNull();
+    await userEvent.hover(missingCellTrigger as Element);
     expect(await screen.findByText("Nicht berechenbar, da für diese Kultur kein Wachstumszeitraum hinterlegt ist.")).toBeInTheDocument();
     missingStart.unmount();
 

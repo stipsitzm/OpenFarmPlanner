@@ -13,7 +13,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Tooltip,
   Typography,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
@@ -35,7 +34,7 @@ import TableSurface from '../components/layout/TableSurface';
 import { useProjectRequirement } from '../hooks/useProjectRequirement';
 import ProjectRequiredState from '../components/project/ProjectRequiredState';
 import EmptyStateCard from '../components/project/EmptyStateCard';
-import { ContextMenuHint, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
+import { ContextMenuHint, FullCellTooltip, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
 import { handleContextMenuKeyboardNavigation } from '../components/data-grid/contextMenuFocus';
 import { getFirstMissingProjectSetupStep, getTranslatedProjectSetupActions } from './requirementFlow';
 import { formatLocalizedNumber } from '../utils/numberLocalization';
@@ -83,6 +82,11 @@ const getPackageCellState = (row: SeedDemand): PackageCellState => {
     return 'unavailableRequirement';
   }
   return 'calculationError';
+};
+
+const hasPackageCellTooltip = (row: SeedDemand): boolean => {
+  const state = getPackageCellState(row);
+  return state === 'chooseSupplier' || state === 'notConfigured' || state === 'calculationError';
 };
 
 export default function SeedDemandPage() {
@@ -258,16 +262,16 @@ export default function SeedDemandPage() {
           ? 'seedDemand.noSupplierConfiguredTooltip'
           : 'seedDemand.supplierNotSelectedTooltip';
         return (
-          <Tooltip title={t(tooltipKey)} describeChild>
+          <FullCellTooltip title={t(tooltipKey)} describeChild triggerSx={{ px: 2 }}>
             <Typography variant="body2" color="text.secondary">—</Typography>
-          </Tooltip>
+          </FullCellTooltip>
         );
       }
       case 'unavailableRequirement':
         return <Typography variant="body2" color="text.secondary">—</Typography>;
       case 'notConfigured':
         return (
-          <Tooltip title={t('seedDemand.noPackagesAvailableTooltip')} describeChild>
+          <FullCellTooltip title={t('seedDemand.noPackagesAvailableTooltip')} describeChild triggerSx={{ px: 2 }}>
             <Link
               component={RouterLink}
               to={editHref}
@@ -279,12 +283,12 @@ export default function SeedDemandPage() {
               <Inventory2OutlinedIcon fontSize="inherit" />
               {t('seedDemand.noPackagesAvailable')}
             </Link>
-          </Tooltip>
+          </FullCellTooltip>
         );
       case 'calculationError':
       default:
         return (
-          <Tooltip title={t('seedDemand.noPackageCalculationPossibleTooltip')} describeChild>
+          <FullCellTooltip title={t('seedDemand.noPackageCalculationPossibleTooltip')} describeChild triggerSx={{ px: 2 }}>
             <Typography
               variant="body2"
               color="warning.main"
@@ -293,7 +297,7 @@ export default function SeedDemandPage() {
               <WarningAmberOutlinedIcon fontSize="inherit" />
               {t('seedDemand.noPackageCalculationPossible')}
             </Typography>
-          </Tooltip>
+          </FullCellTooltip>
         );
     }
   }, [t]);
@@ -569,7 +573,9 @@ export default function SeedDemandPage() {
                     <TableCell align="right">
                       {getRequiredAmountLabel(row)}
                     </TableCell>
-                    <TableCell>{renderPackageCell(row)}</TableCell>
+                    <TableCell sx={hasPackageCellTooltip(row) ? { position: 'relative' } : undefined}>
+                      {renderPackageCell(row)}
+                    </TableCell>
                   </TableRow>
                 );
               })}
