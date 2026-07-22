@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Autocomplete,
@@ -10,27 +10,16 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   FormControl,
   FormControlLabel,
   InputLabel,
   Link,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
   MenuItem,
   Select,
   Stack,
-  Step,
-  StepLabel,
-  Stepper,
   TextField,
   Typography,
 } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { Link as RouterLink } from 'react-router-dom';
 import { cropSpeciesAPI, cultureAPI, type Culture } from '../api/api';
 import type { CropSpecies, PublishPublicCulturePreview } from '../api/types';
@@ -47,7 +36,6 @@ interface CulturesPublishingWizardDialogProps {
 }
 
 const LANGUAGE_CODES = ['de', 'en'] as const;
-const EMPTY_LANGUAGE_CODES: string[] = [];
 const EMPTY_REQUIRED_FIELDS: PublishPublicCulturePreview['missing_required_fields'] = [];
 const EMPTY_DUPLICATES: PublishPublicCulturePreview['duplicates'] = [];
 
@@ -55,16 +43,6 @@ const getDefaultLanguageCode = (): string => {
   const language = (i18n.language || 'de').split('-')[0];
   return LANGUAGE_CODES.includes(language as (typeof LANGUAGE_CODES)[number]) ? language : 'de';
 };
-
-function StatusIcon({ status }: { status: 'complete' | 'missing' | 'optional' }) {
-  if (status === 'complete') {
-    return <CheckCircleIcon color="success" fontSize="small" />;
-  }
-  if (status === 'missing') {
-    return <ErrorOutlineIcon color="warning" fontSize="small" />;
-  }
-  return <InfoOutlinedIcon color="info" fontSize="small" />;
-}
 
 export function CulturesPublishingWizardDialog({
   open,
@@ -80,17 +58,24 @@ export function CulturesPublishingWizardDialog({
   const [selectedSpecies, setSelectedSpecies] = useState<CropSpecies | null>(null);
   const [originalLanguageCode, setOriginalLanguageCode] = useState(getDefaultLanguageCode());
   const [acceptedLicense, setAcceptedLicense] = useState(false);
-  const [preview, setPreview] = useState<PublishPublicCulturePreview | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
+  const [validationResult, setValidationResult] = useState<PublishPublicCulturePreview | null>(null);
+  const [validationLoading, setValidationLoading] = useState(false);
+  const [showLicenseConfirmation, setShowLicenseConfirmation] = useState(false);
+  const [showProposalForm, setShowProposalForm] = useState(false);
   const [proposalName, setProposalName] = useState('');
   const [proposalSent, setProposalSent] = useState(false);
+  const speciesInputRef = useRef<HTMLInputElement | null>(null);
+  const languageInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
     queueMicrotask(() => {
       setAcceptedLicense(false);
+      setShowLicenseConfirmation(false);
+      setShowProposalForm(false);
       setProposalName('');
       setProposalSent(false);
+      setValidationResult(null);
       setOriginalLanguageCode(getDefaultLanguageCode());
     });
   }, [open]);
@@ -119,75 +104,10 @@ export function CulturesPublishingWizardDialog({
     };
   }, [culture?.crop_species, open]);
 
-  useEffect(() => {
-    if (!open || !culture?.id) return;
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (!cancelled) setPreviewLoading(true);
-    });
-    cultureAPI.publishPreview(culture.id, {
-      crop_species_id: selectedSpecies?.id,
-      original_language_code: originalLanguageCode,
-    })
-      .then((response) => {
-        if (!cancelled) setPreview(response.data);
-      })
-      .catch((error) => {
-        console.error('Error loading publishing preview:', error);
-        if (!cancelled) setPreview(null);
-      })
-      .finally(() => {
-        if (!cancelled) setPreviewLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [culture?.id, open, originalLanguageCode, selectedSpecies?.id]);
-
-  const availableLanguageCodes = preview?.available_language_codes ?? EMPTY_LANGUAGE_CODES;
-  const missingRequiredFields = preview?.missing_required_fields ?? EMPTY_REQUIRED_FIELDS;
-  const duplicates = preview?.duplicates ?? EMPTY_DUPLICATES;
+  const missingRequiredFields = validationResult?.missing_required_fields ?? EMPTY_REQUIRED_FIELDS;
+  const duplicates = validationResult?.duplicates ?? EMPTY_DUPLICATES;
   const licenseAccepted = termsAlreadyAccepted || acceptedLicense;
-  const canPublish = Boolean(preview?.can_publish && selectedSpecies && licenseAccepted && !publishing);
-
-  const summaryItems = useMemo(() => [
-    {
-      label: t('library.publishWizard.steps.species'),
-      status: selectedSpecies ? 'complete' : 'missing',
-      detail: selectedSpecies?.name ?? t('library.publishWizard.speciesMissing'),
-    },
-    {
-      label: t('library.publishWizard.steps.language'),
-      status: originalLanguageCode ? 'complete' : 'missing',
-      detail: t(`library.publishWizard.languages.${originalLanguageCode || 'de'}`),
-    },
-    {
-      label: t('library.publishWizard.steps.translations'),
-      status: 'optional',
-      detail: t('library.publishWizard.translationsOptional'),
-    },
-    {
-      label: t('library.publishWizard.steps.requiredFields'),
-      status: missingRequiredFields.length ? 'missing' : 'complete',
-      detail: missingRequiredFields.length
-        ? missingRequiredFields.map((item) => t(item.label_key)).join(', ')
-        : t('library.publishWizard.requiredComplete'),
-    },
-    {
-      label: t('library.publishWizard.steps.duplicates'),
-      status: duplicates.length ? 'missing' : 'complete',
-      detail: duplicates.length
-        ? duplicates.map((item) => item.variety ? `${item.name} (${item.variety})` : item.name).join(', ')
-        : t('library.publishWizard.noDuplicates'),
-    },
-    {
-      label: t('library.publishWizard.steps.license'),
-      status: licenseAccepted ? 'complete' : 'missing',
-      detail: licenseAccepted ? t('library.publishWizard.licenseComplete') : t('library.publishWizard.licenseMissing'),
-    },
-  ] as const, [duplicates, licenseAccepted, missingRequiredFields, originalLanguageCode, selectedSpecies, t]);
-  const firstMissingStep = summaryItems.findIndex((item) => item.status === 'missing');
-  const activeStep = firstMissingStep === -1 ? summaryItems.length : firstMissingStep;
+  const hasVisibleValidationIssues = missingRequiredFields.length > 0 || duplicates.length > 0;
 
   const handleProposeSpecies = useCallback(async () => {
     const trimmedName = proposalName.trim();
@@ -197,43 +117,86 @@ export function CulturesPublishingWizardDialog({
     setProposalSent(true);
   }, [proposalName]);
 
-  const handlePublish = useCallback(() => {
-    if (!selectedSpecies) return;
+  const resetValidationResult = useCallback(() => {
+    setValidationResult(null);
+  }, []);
+
+  const handlePublish = useCallback(async () => {
+    if (!culture?.id) return;
+    if (!selectedSpecies) {
+      speciesInputRef.current?.focus();
+      return;
+    }
+    if (!originalLanguageCode) {
+      languageInputRef.current?.focus();
+      return;
+    }
+    setValidationLoading(true);
+    try {
+      const response = await cultureAPI.publishPreview(culture.id, {
+        crop_species_id: selectedSpecies.id,
+        original_language_code: originalLanguageCode,
+      });
+      setValidationResult(response.data);
+      if (!response.data.can_publish) return;
+    } catch (error) {
+      console.error('Error checking publishing readiness:', error);
+      return;
+    } finally {
+      setValidationLoading(false);
+    }
+
+    if (!termsAlreadyAccepted && !showLicenseConfirmation) {
+      setShowLicenseConfirmation(true);
+      return;
+    }
+    if (!licenseAccepted) {
+      setShowLicenseConfirmation(true);
+      return;
+    }
+
     onPublish({
       acceptedPublicLibraryTerms: !termsAlreadyAccepted && acceptedLicense,
       cropSpeciesId: selectedSpecies.id,
       originalLanguageCode,
     });
-  }, [acceptedLicense, onPublish, originalLanguageCode, selectedSpecies, termsAlreadyAccepted]);
+  }, [
+    acceptedLicense,
+    culture?.id,
+    licenseAccepted,
+    onPublish,
+    originalLanguageCode,
+    selectedSpecies,
+    showLicenseConfirmation,
+    termsAlreadyAccepted,
+  ]);
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{t('library.publishWizard.title')}</DialogTitle>
       <DialogContent dividers>
-        <Stack spacing={3}>
-          <Stepper activeStep={activeStep} alternativeLabel>
-            {summaryItems.map((item) => (
-              <Step key={item.label} completed={item.status === 'complete'}>
-                <StepLabel error={item.status === 'missing'}>{item.label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
+        <Stack spacing={2.25} sx={{ pt: 0.5 }}>
+          <Typography variant="body2" color="text.secondary">
+            {t('library.publishWizard.intro', { name: culture?.name ?? '' })}
+          </Typography>
 
-          <Alert severity="info">{t('library.publishWizard.intro', { name: culture?.name ?? '' })}</Alert>
-
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>{t('library.publishWizard.steps.species')}</Typography>
+          <Stack spacing={2}>
             <Autocomplete
               options={species}
               value={selectedSpecies}
               loading={speciesLoading}
               getOptionLabel={(option) => option.name}
               isOptionEqualToValue={(option, value) => option.id === value.id}
-              onChange={(_, value) => setSelectedSpecies(value)}
+              onChange={(_, value) => {
+                setSelectedSpecies(value);
+                resetValidationResult();
+              }}
               renderInput={(params) => (
                 <TextField
                   {...params}
+                  inputRef={speciesInputRef}
                   label={t('library.publishWizard.speciesLabel')}
+                  required
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (
@@ -246,102 +209,91 @@ export function CulturesPublishingWizardDialog({
                 />
               )}
             />
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 1.5 }}>
-              <TextField
-                value={proposalName}
-                onChange={(event) => setProposalName(event.target.value)}
-                label={t('library.publishWizard.proposeSpeciesLabel')}
-                size="small"
-                fullWidth
-              />
-              <Button variant="outlined" onClick={() => void handleProposeSpecies()} disabled={!proposalName.trim()}>
-                {t('library.publishWizard.proposeSpeciesButton')}
-              </Button>
-            </Stack>
-            {proposalSent ? <Typography sx={{ mt: 1 }} variant="body2" color="success.main">{t('library.publishWizard.proposalSent')}</Typography> : null}
-          </Box>
 
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>{t('library.publishWizard.steps.language')}</Typography>
             <FormControl fullWidth>
               <InputLabel id="publishing-original-language-label">{t('library.publishWizard.originalLanguageLabel')}</InputLabel>
               <Select
                 labelId="publishing-original-language-label"
                 label={t('library.publishWizard.originalLanguageLabel')}
                 value={originalLanguageCode}
-                onChange={(event) => setOriginalLanguageCode(event.target.value)}
+                inputRef={languageInputRef}
+                onChange={(event) => {
+                  setOriginalLanguageCode(event.target.value);
+                  resetValidationResult();
+                }}
               >
                 {LANGUAGE_CODES.map((code) => (
                   <MenuItem key={code} value={code}>{t(`library.publishWizard.languages.${code}`)}</MenuItem>
                 ))}
               </Select>
             </FormControl>
-          </Box>
+          </Stack>
 
           <Box>
-            <Typography variant="subtitle1" gutterBottom>{t('library.publishWizard.steps.translations')}</Typography>
-            <List dense>
-              {LANGUAGE_CODES.map((code) => {
-                const available = availableLanguageCodes.includes(code);
-                return (
-                  <ListItem key={code} disableGutters>
-                    <ListItemIcon sx={{ minWidth: 32 }}>
-                      <StatusIcon status={available ? 'complete' : 'optional'} />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={t(`library.publishWizard.languages.${code}`)}
-                      secondary={available ? t('library.publishWizard.translationAvailable') : t('library.publishWizard.translationMissingOptional')}
-                    />
-                  </ListItem>
-                );
-              })}
-            </List>
-          </Box>
-
-          <Box>
-            <Typography variant="subtitle1" gutterBottom>{t('library.publishWizard.summaryTitle')}</Typography>
-            {previewLoading ? <CircularProgress size={24} /> : (
-              <List dense>
-                {summaryItems.map((item) => (
-                  <ListItem key={item.label} disableGutters>
-                    <ListItemIcon sx={{ minWidth: 32 }}>
-                      <StatusIcon status={item.status} />
-                    </ListItemIcon>
-                    <ListItemText primary={item.label} secondary={item.detail} />
-                  </ListItem>
-                ))}
-              </List>
-            )}
-            {duplicates.length ? (
-              <Alert severity="warning" sx={{ mt: 1 }}>
-                {t('library.publishWizard.duplicateBlocking')}
-              </Alert>
+            <Button size="small" variant="text" onClick={() => setShowProposalForm((value) => !value)}>
+              {t('library.publishWizard.proposeSpeciesToggle')}
+            </Button>
+            {showProposalForm ? (
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mt: 1 }}>
+                <TextField
+                  value={proposalName}
+                  onChange={(event) => setProposalName(event.target.value)}
+                  label={t('library.publishWizard.proposeSpeciesLabel')}
+                  size="small"
+                  fullWidth
+                />
+                <Button variant="outlined" onClick={() => void handleProposeSpecies()} disabled={!proposalName.trim()}>
+                  {t('library.publishWizard.proposeSpeciesButton')}
+                </Button>
+              </Stack>
             ) : null}
+            {proposalSent ? <Typography sx={{ mt: 1 }} variant="body2" color="success.main">{t('library.publishWizard.proposalSent')}</Typography> : null}
           </Box>
 
-          <Divider />
+          {hasVisibleValidationIssues ? (
+            <Stack spacing={1}>
+              {missingRequiredFields.length ? (
+                <Alert severity="warning">
+                  {t('library.publishWizard.requiredFieldsBlocking', {
+                    fields: missingRequiredFields.map((item) => t(item.label_key)).join(', '),
+                  })}
+                </Alert>
+              ) : null}
+              {duplicates.length ? (
+                <Alert severity="warning">
+                  {t('library.publishWizard.duplicateBlocking', {
+                    duplicates: duplicates.map((item) => item.variety ? `${item.name} (${item.variety})` : item.name).join(', '),
+                  })}
+                </Alert>
+              ) : null}
+            </Stack>
+          ) : null}
 
-          {termsAlreadyAccepted ? (
-            <Alert severity="success">{t('library.publishWizard.licenseAlreadyAccepted')}</Alert>
-          ) : (
-            <FormControlLabel
-              control={<Checkbox checked={acceptedLicense} onChange={(event) => setAcceptedLicense(event.target.checked)} />}
-              label={t('library.publishConfirm.acceptLicense')}
-            />
-          )}
-          <Typography variant="body2" color="text.secondary">
-            {t('library.publishConfirm.linkPrefix')}
-            <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener">{t('library.publishConfirm.privacyLinkLabel')}</Link>
-            {t('library.publishConfirm.linkMiddle')}
-            <Link component={RouterLink} to="/nutzungsbedingungen" target="_blank" rel="noopener">{t('library.publishConfirm.termsLinkLabel')}</Link>
-            {t('library.publishConfirm.linkSuffix')}
-          </Typography>
+          {showLicenseConfirmation && !termsAlreadyAccepted ? (
+            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+              <FormControlLabel
+                control={<Checkbox checked={acceptedLicense} onChange={(event) => setAcceptedLicense(event.target.checked)} />}
+                label={t('library.publishConfirm.acceptLicense')}
+              />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                {t('library.publishConfirm.linkPrefix')}
+                <Link component={RouterLink} to="/datenschutz" target="_blank" rel="noopener">{t('library.publishConfirm.privacyLinkLabel')}</Link>
+                {t('library.publishConfirm.linkMiddle')}
+                <Link component={RouterLink} to="/nutzungsbedingungen" target="_blank" rel="noopener">{t('library.publishConfirm.termsLinkLabel')}</Link>
+                {t('library.publishConfirm.linkSuffix')}
+              </Typography>
+            </Box>
+          ) : null}
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2 }}>
         <Button onClick={onClose} variant="outlined">{t('common:actions.cancel')}</Button>
-        <Button onClick={handlePublish} variant="contained" disabled={!canPublish}>
-          {publishing ? t('library.publishing') : t('library.publishWizard.publishNow')}
+        <Button
+          onClick={() => void handlePublish()}
+          variant="contained"
+          disabled={!selectedSpecies || !originalLanguageCode || publishing || validationLoading || (showLicenseConfirmation && !termsAlreadyAccepted && !acceptedLicense)}
+        >
+          {publishing || validationLoading ? t('library.publishing') : t('library.publishWizard.publishNow')}
         </Button>
       </DialogActions>
     </Dialog>

@@ -219,25 +219,33 @@ for no functional benefit right now. German UI text (`"Kultur"`,
 
 Publishing a project-owned `Culture` is no longer a direct copy action from
 the Cultures page. The frontend opens `CulturesPublishingWizardDialog`,
-which calls `/api/cultures/<id>/publish-public/preview/` and shows each
-quality gate as complete, missing, or optional:
+which keeps the normal path intentionally small: the user selects the
+official `CropSpecies`, confirms the original language, and clicks publish.
+The dialog calls `/api/cultures/<id>/publish-public/preview/` only as a
+background validation step when the user attempts publication, then shows
+only actionable problems:
 
 - official `CropSpecies` selected;
 - exactly one original language selected (defaulted from the UI language);
-- available translations shown for German and English, with missing
-  translations treated as optional;
-- public-library required fields complete;
+- public-library required fields complete; and
 - no published public duplicate for the same `CropSpecies` + normalized
-  variety; and
-- the existing CC BY-SA public-library contribution consent accepted or
-  already on file.
+  variety.
+
+Missing translations remain optional and are not shown as a normal blocking
+step. The existing CC BY-SA public-library contribution consent is also not
+shown permanently; if it has not already been accepted, the dialog reveals it
+immediately before the final publication action.
 
 The backend enforces the same checks in
 `farm.services.public_cultures.publish_culture_to_public_library()`, so the
 wizard is not only a UI affordance. Private project cultures remain
 flexible: `Culture.crop_species` is nullable, and incomplete project
 cultures can still be created and edited. The strictness lives at the
-public-library boundary where durable shared data is created.
+public-library boundary where durable shared data is created. The official
+species dropdown is seeded from `crops.seed_data.CROP_SPECIES_SEED_DATA`, a
+central starter catalogue for common German and Austrian crop species whose
+entries already carry stable keys and translation maps for the future
+multilingual species library.
 
 ## 8. Withdrawal, removal, and hard delete
 

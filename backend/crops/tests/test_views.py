@@ -83,15 +83,15 @@ class CropViewSetTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_lists_official_crop_species(self):
-        CropSpecies.objects.create(name='Tomato')
         CropSpecies.objects.create(name='Draft species', status=CropSpecies.STATUS_PROPOSED)
         self.client.force_authenticate(user=self.user)
 
-        response = self.client.get('/openfarmplanner/api/crop-species/')
+        response = self.client.get('/openfarmplanner/api/crop-species/', {'q': 'tom'})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         names = [item['name'] for item in response.data['results']]
-        self.assertEqual(names, ['Tomato'])
+        self.assertEqual(names, ['Tomate'])
+        self.assertNotIn('Draft species', names)
 
     def test_species_create_stores_a_proposal(self):
         self.client.force_authenticate(user=self.user)

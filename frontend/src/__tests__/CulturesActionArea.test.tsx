@@ -280,8 +280,9 @@ describe('Cultures action area', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
 
     const dialog = await screen.findByRole('dialog');
-    await within(dialog).findByText('Publishing Wizard');
-    fireEvent.click(within(dialog).getByRole('checkbox', { name: /CC BY-SA 4\.0/ }));
+    await within(dialog).findByText('Kultur veröffentlichen');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' }));
+    fireEvent.click(await within(dialog).findByRole('checkbox', { name: /CC BY-SA 4\.0/ }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' }));
 
     await waitFor(() => {
@@ -291,7 +292,7 @@ describe('Cultures action area', () => {
     expect(refreshUserMock).not.toHaveBeenCalled();
   });
 
-  it('shows a publishing wizard before publishing, explaining checks and license acceptance', async () => {
+  it('shows a lightweight publishing dialog and delays license details until publishing', async () => {
     renderCultures();
 
     await waitFor(() => {
@@ -301,12 +302,19 @@ describe('Cultures action area', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Publishing Wizard')).toBeInTheDocument();
-    expect(within(dialog).getAllByText('Kulturart').length).toBeGreaterThan(0);
-    expect(within(dialog).getAllByText('Originalsprache').length).toBeGreaterThan(0);
-    expect(within(dialog).getAllByText('Pflichtfelder').length).toBeGreaterThan(0);
-    expect(within(dialog).getAllByText('Dublettenprüfung').length).toBeGreaterThan(0);
+    expect(within(dialog).getByText('Kultur veröffentlichen')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/Offizielle Kulturart/)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Originalsprache')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Zusammenfassung')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('Pflichtfelder')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('Dublettenprüfung')).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('checkbox', { name: /CC BY-SA 4\.0/ })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' })).toBeEnabled();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' }));
+    expect(await within(dialog).findByRole('checkbox', { name: /CC BY-SA 4\.0/ })).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' })).toBeDisabled();
+
     fireEvent.click(within(dialog).getByRole('checkbox', { name: /CC BY-SA 4\.0/ }));
     await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' })).toBeEnabled());
     expect(publishPublicMock).not.toHaveBeenCalled();
@@ -330,8 +338,8 @@ describe('Cultures action area', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Die Lizenzbedingungen für Beiträge zur öffentlichen Kulturbibliothek wurden bereits akzeptiert.')).toBeInTheDocument();
     await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' })).toBeEnabled());
+    expect(within(dialog).queryByRole('checkbox', { name: /CC BY-SA 4\.0/ })).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' }));
 
     await waitFor(() => {
