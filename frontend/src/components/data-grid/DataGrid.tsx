@@ -74,6 +74,26 @@ import { useScrollDrivenRowWindow } from './hooks/useScrollDrivenRowWindow';
 import { useStableDataGridScrollbar } from './hooks/useStableDataGridScrollbar';
 import { StableScrollbarTrack } from './StableScrollbarTrack';
 import {
+  CONTINUOUS_SCROLL_PAGE_SIZE,
+  CONTINUOUS_SCROLL_REQUESTED_ROW_HEIGHT_PX,
+  CONTINUOUS_SCROLL_COMPACT_ROW_HEIGHT_PX,
+  CONTINUOUS_SCROLL_HEADER_HEIGHT_PX,
+  CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX,
+  CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX,
+  CONTINUOUS_SCROLL_MIN_HEIGHT_PX,
+  DATA_GRID_ROOT_SELECTOR,
+  DATA_GRID_VIRTUAL_SCROLLER_SELECTOR,
+  DATA_GRID_MAIN_SELECTOR,
+  DATA_GRID_CONTINUOUS_SCROLL_FOOTER_CLASS,
+  CONTINUOUS_SCROLL_FIT_EPSILON_PX,
+  cssEscape,
+  DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS,
+  getElementHeight,
+  getVerticalBorderHeight,
+  continuousScrollLayoutHeightsEqual,
+  type ContinuousScrollLayoutHeights,
+} from './continuousScrollLayout';
+import {
   getSortedRowIds,
   isSaveBlockedError,
   isUnsavedDraftRow,
@@ -114,72 +134,6 @@ export type {
 type DataGridKeyboardEvent = KeyboardEvent & {
   defaultMuiPrevented?: boolean;
 };
-
-const CONTINUOUS_SCROLL_PAGE_SIZE = 100;
-const CONTINUOUS_SCROLL_REQUESTED_ROW_HEIGHT_PX = 44;
-const CONTINUOUS_SCROLL_COMPACT_ROW_HEIGHT_PX = 30;
-const CONTINUOUS_SCROLL_HEADER_HEIGHT_PX = 56;
-const CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX = 61;
-const CONTINUOUS_SCROLL_BORDER_HEIGHT_PX = 2;
-// Slack kept below the grid so it sits comfortably above the fold. Small
-// margins here are risky: any tiny under-measurement (rounding, a font
-// metrics difference, browser chrome) can push the page a few pixels taller
-// than the viewport, which brings in a second, native page-level scrollbar
-// right alongside the grid's own continuous-scroll thumb.
-const CONTINUOUS_SCROLL_BOTTOM_MARGIN_PX = 35;
-const CONTINUOUS_SCROLL_MIN_HEIGHT_PX = 240;
-const DATA_GRID_ROOT_SELECTOR = '.MuiDataGrid-root';
-const DATA_GRID_VIRTUAL_SCROLLER_SELECTOR = '.MuiDataGrid-virtualScroller';
-const DATA_GRID_MAIN_SELECTOR = '.MuiDataGrid-main';
-const DATA_GRID_CONTINUOUS_SCROLL_FOOTER_CLASS = 'ofp-data-grid-continuous-footer';
-const CONTINUOUS_SCROLL_FIT_EPSILON_PX = 2;
-
-const cssEscape = (value: string): string => {
-  if (typeof window !== 'undefined' && window.CSS?.escape) {
-    return window.CSS.escape(value);
-  }
-  return value.replace(/["\\]/g, '\\$&');
-};
-
-type ContinuousScrollLayoutHeights = {
-  header: number;
-  footer: number;
-  border: number;
-};
-
-const DEFAULT_CONTINUOUS_SCROLL_LAYOUT_HEIGHTS: ContinuousScrollLayoutHeights = {
-  header: CONTINUOUS_SCROLL_HEADER_HEIGHT_PX,
-  footer: CONTINUOUS_SCROLL_FOOTER_HEIGHT_PX,
-  border: CONTINUOUS_SCROLL_BORDER_HEIGHT_PX,
-};
-
-const getElementHeight = (element: Element | null, fallback: number): number => {
-  if (!(element instanceof HTMLElement)) {
-    return fallback;
-  }
-
-  const measuredHeight = element.getBoundingClientRect().height;
-  return measuredHeight > 0 ? measuredHeight : fallback;
-};
-
-const getVerticalBorderHeight = (element: Element | null, fallback: number): number => {
-  if (!(element instanceof HTMLElement)) {
-    return fallback;
-  }
-
-  const styles = window.getComputedStyle(element);
-  const borderHeight = Number.parseFloat(styles.borderTopWidth || '0') + Number.parseFloat(styles.borderBottomWidth || '0');
-  return Number.isFinite(borderHeight) ? borderHeight : fallback;
-};
-
-const continuousScrollLayoutHeightsEqual = (
-  current: ContinuousScrollLayoutHeights,
-  next: ContinuousScrollLayoutHeights,
-): boolean => (
-  current.header === next.header
-  && current.footer === next.footer
-  && current.border === next.border
-);
 
 export function EditableDataGrid<T extends EditableRow>({
   columns,
