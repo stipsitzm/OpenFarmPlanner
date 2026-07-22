@@ -19,31 +19,32 @@ import { AuthApiError } from '../../auth/authApi';
 import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
 import LegalLinks from '../../components/legal/LegalLinks';
+import { publicAssetUrl } from '../../utils/publicAssetUrl';
 
 const PRODUCT_TOUR_ITEMS = [
   {
     key: 'areas',
-    image: '/landing/screenshots/demo-areas.webp',
+    image: publicAssetUrl('/landing/screenshots/demo-areas.webp'),
   },
   {
     key: 'cultures',
-    image: '/landing/screenshots/demo-cultures.webp',
+    image: publicAssetUrl('/landing/screenshots/demo-cultures.webp'),
   },
   {
     key: 'plantingPlans',
-    image: '/landing/screenshots/demo-planting-plans.webp',
+    image: publicAssetUrl('/landing/screenshots/demo-planting-plans.webp'),
   },
   {
     key: 'calendar',
-    image: '/landing/screenshots/demo-calendar.webp',
+    image: publicAssetUrl('/landing/screenshots/demo-calendar.webp'),
   },
   {
     key: 'yieldOverview',
-    image: '/landing/screenshots/demo-yield-overview.webp',
+    image: publicAssetUrl('/landing/screenshots/demo-yield-overview.webp'),
   },
   {
     key: 'seedDemand',
-    image: '/landing/screenshots/demo-seed-demand.webp',
+    image: publicAssetUrl('/landing/screenshots/demo-seed-demand.webp'),
   },
 ] as const;
 
@@ -226,7 +227,7 @@ export default function HomePage() {
           <Stack direction="row" spacing={1.4} alignItems="center" justifyContent="center">
             <Box
               component="img"
-              src="/favicon.png"
+              src={publicAssetUrl('/favicon.png')}
               alt=""
               aria-hidden
               sx={{
@@ -263,7 +264,7 @@ export default function HomePage() {
             px: 2,
             py: { xs: 4, md: 5 },
             overflow: 'hidden',
-            backgroundImage: 'url(/landing/hero-field.webp)',
+            backgroundImage: `url(${publicAssetUrl('/landing/hero-field.webp')})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}

@@ -2,6 +2,7 @@ import { Box } from '@mui/material';
 import { NavLink, useLocation } from 'react-router-dom';
 import { normalizeMainRoutePath } from '../../navigation/mainNavigation';
 import { useTranslation } from '../../i18n';
+import { publicAssetUrl } from '../../utils/publicAssetUrl';
 
 interface AppLogoProps {
   to?: string;
@@ -47,7 +48,7 @@ export default function AppLogo({ to = '/app/dashboard', size = 28, showText = t
     >
       <Box
         component="img"
-        src="/favicon.png"
+        src={publicAssetUrl('/favicon.png')}
         alt="OpenFarmPlanner"
         sx={{ height: size, width: size, borderRadius: 0.5, flexShrink: 0 }}
       />

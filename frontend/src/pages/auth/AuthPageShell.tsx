@@ -1,6 +1,7 @@
 import { Box, Container, Paper, Stack, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
 import LegalLinks from '../../components/legal/LegalLinks';
+import { publicAssetUrl } from '../../utils/publicAssetUrl';
 import { authLegalLinkSx } from './authPageStyles';
 
 type AuthPageShellProps = {
@@ -18,7 +19,7 @@ export default function AuthPageShell({ title, subtitle, children, legalLinksDen
         display: 'flex',
         flexDirection: 'column',
         bgcolor: '#f5f7f1',
-        backgroundImage: 'linear-gradient(rgba(245, 247, 241, 0.88), rgba(245, 247, 241, 0.9)), url(/landing/hero-field.webp)',
+        backgroundImage: `linear-gradient(rgba(245, 247, 241, 0.88), rgba(245, 247, 241, 0.9)), url(${publicAssetUrl('/landing/hero-field.webp')})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundAttachment: { xs: 'scroll', md: 'fixed' },
@@ -39,7 +40,7 @@ export default function AuthPageShell({ title, subtitle, children, legalLinksDen
           <Stack direction="row" spacing={1.4} alignItems="center" justifyContent="center">
             <Box
               component="img"
-              src="/favicon.png"
+              src={publicAssetUrl('/favicon.png')}
               alt=""
               aria-hidden
               sx={{ width: { xs: 40, md: 48 }, height: 'auto', opacity: 0.95 }}
