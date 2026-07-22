@@ -35,6 +35,8 @@ export interface GanttLocaleText {
   title?: string;
   resources?: string;
   today?: string;
+  actions?: string;
+  adjustProgress?: string;
   viewModes?: Partial<Record<ViewMode, string>>;
 }
 
@@ -165,6 +167,8 @@ export interface TaskRowProps {
   allowTaskResize?: boolean; // Allow task resizing
   allowTaskMove?: boolean; // Allow task movement
   showProgress?: boolean;
+  contextMenuLabel?: string;
+  progressHandleLabel?: string;
   className?: string;
   tooltipClassName?: string;
   smoothDragging?: boolean;
@@ -209,6 +213,7 @@ export interface TaskRowProps {
 export interface TaskListProps {
   tasks: TaskGroup[];
   headerLabel?: React.ReactNode;
+  contextMenuLabel?: string;
   showIcon?: boolean;
   showTaskCount?: boolean;
   showDescription?: boolean;
@@ -248,6 +253,8 @@ export interface TaskItemProps {
   allowTaskResize?: boolean; // Allow task resizing
   allowTaskMove?: boolean; // Allow task movement
   showProgress?: boolean;
+  contextMenuLabel?: string;
+  progressHandleLabel?: string;
   instanceId: string;
   className?: string;
   getTaskColor?: (props: TaskColorProps) => {

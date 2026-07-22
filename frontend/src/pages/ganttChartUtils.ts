@@ -357,7 +357,7 @@ export function buildFieldOccupancyTaskGroups({
               cultureName: plan.culture_name ?? undefined,
               cultureVariety: plan.culture_variety ?? undefined,
               areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
-              notes: `Erntezeitraum: ${plan.notes || ''}`.trim(),
+              notes: plan.notes,
               harvestStartDate,
               harvestEndDate,
             });
@@ -522,7 +522,7 @@ export function buildFieldOccupancyHierarchy({
           cultureName: plan.culture_name ?? undefined,
           cultureVariety: plan.culture_variety ?? undefined,
           areaUsage: plan.area_usage_sqm ? Number(plan.area_usage_sqm) : undefined,
-          notes: `Erntezeitraum: ${plan.notes || ''}`.trim(),
+          notes: plan.notes,
           harvestStartDate,
           harvestEndDate,
         });

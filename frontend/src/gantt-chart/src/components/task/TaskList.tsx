@@ -29,6 +29,7 @@ const ChevronIcon: React.FC<{ expanded: boolean }> = ({ expanded }) => (
 const TaskList: React.FC<TaskListProps> = ({
   tasks = [],
   headerLabel = "Resources",
+  contextMenuLabel = "Actions",
   showIcon = false,
   showTaskCount = false,
   showDescription = true,
@@ -203,7 +204,7 @@ const TaskList: React.FC<TaskListProps> = ({
 
               {onGroupContextMenu && (
                 <ContextMenuIndicator
-                  label="Aktionen"
+                  label={contextMenuLabel}
                   tabIndex={-1}
                   onClick={(event) => onGroupContextMenu(event, taskGroup)}
                   sx={{ position: "absolute", top: "50%", right: 4, transform: "translateY(-50%)" }}

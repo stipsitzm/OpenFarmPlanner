@@ -347,13 +347,37 @@ describe("PlantingPlans save-time area validation", () => {
     expect(dateColumns.every((column) => column?.renderEditCell === undefined)).toBe(true);
   });
 
+  it("explains the harvest start and end calculations separately", async () => {
+    render(<MemoryRouter><PlantingPlans /></MemoryRouter>);
+    await waitForPlansToLoad();
+
+    const latestProps = commandApiSpies.gridProps.mock.calls.at(-1)?.[0];
+    const columns = latestProps?.columns ?? [];
+    const harvestStartColumn = columns.find((column: { field: string }) => column.field === "harvest_date");
+    const harvestEndColumn = columns.find((column: { field: string }) => column.field === "harvest_end_date");
+
+    const startHeader = render(<>{harvestStartColumn.renderHeader()}</>);
+    await userEvent.hover(startHeader.getByText("Erntebeginn"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Wird automatisch aus Pflanzdatum und Wachstumszeit der Kultur berechnet.",
+    );
+    startHeader.unmount();
+
+    const endHeader = render(<>{harvestEndColumn.renderHeader()}</>);
+    await userEvent.hover(endHeader.getByText("Ernteende"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Wird automatisch aus Erntebeginn und Erntezeit der Kultur berechnet.",
+    );
+    endHeader.unmount();
+  });
+
   it("renders unavailable calculated harvest dates with a dash and explanatory tooltip", async () => {
     apiMocks.cultureList.mockResolvedValue({
       data: {
         results: [
-          { id: 2, name: "Ohne Zeiträume", plants_per_m2: 10, growth_duration_days: null, harvest_duration_days: null },
-          { id: 3, name: "Nur Wachstumszeitraum", plants_per_m2: 10, growth_duration_days: 30, harvest_duration_days: null },
-          { id: 4, name: "Vollständige Zeiträume", plants_per_m2: 10, growth_duration_days: 30, harvest_duration_days: 7 },
+          { id: 2, name: "Ohne Zeitangaben", plants_per_m2: 10, growth_duration_days: null, harvest_duration_days: null },
+          { id: 3, name: "Nur Wachstumszeit", plants_per_m2: 10, growth_duration_days: 30, harvest_duration_days: null },
+          { id: 4, name: "Vollständige Zeitangaben", plants_per_m2: 10, growth_duration_days: 30, harvest_duration_days: 7 },
         ],
       },
     });
@@ -394,7 +418,7 @@ describe("PlantingPlans save-time area validation", () => {
     const missingCellTrigger = missingStart.container.querySelector(".ofp-full-cell-tooltip-trigger");
     expect(missingCellTrigger).not.toBeNull();
     await userEvent.hover(missingCellTrigger as Element);
-    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur kein Wachstumszeitraum hinterlegt ist.")).toBeInTheDocument();
+    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur keine Wachstumszeit hinterlegt ist.")).toBeInTheDocument();
     missingStart.unmount();
 
     const missingEnd = render(<>{renderCell(harvestEndColumn, {
@@ -406,7 +430,7 @@ describe("PlantingPlans save-time area validation", () => {
     const missingEndDash = missingEnd.getByText("—");
     expect(missingEndDash).toBeInTheDocument();
     await userEvent.hover(missingEndDash);
-    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur weder Wachstumszeitraum noch Erntezeitraum hinterlegt sind.")).toBeInTheDocument();
+    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur weder eine Wachstumszeit noch eine Erntezeit hinterlegt ist.")).toBeInTheDocument();
     missingEnd.unmount();
 
     const partialEnd = render(<>{renderCell(harvestEndColumn, {
@@ -418,7 +442,7 @@ describe("PlantingPlans save-time area validation", () => {
     const partialDash = partialEnd.getByText("—");
     expect(partialDash).toBeInTheDocument();
     await userEvent.hover(partialDash);
-    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur kein Erntezeitraum hinterlegt ist.")).toBeInTheDocument();
+    expect(await screen.findByText("Nicht berechenbar, da für diese Kultur keine Erntezeit hinterlegt ist.")).toBeInTheDocument();
     partialEnd.unmount();
   });
 

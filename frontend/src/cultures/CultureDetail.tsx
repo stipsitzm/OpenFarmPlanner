@@ -936,12 +936,12 @@ export function CultureDetail({
             {/* Timing Section */}
             <Box sx={{ mb: 3 }}>
               <Typography variant="h6" gutterBottom>
-                Zeitplanung
+                {t('form.sectionTiming')}
               </Typography>
               <Box sx={detailSectionGridSx}>
                 <Box>
                   <Typography variant="body2" color="text.secondary">
-                    Wachstumszeitraum
+                    {t('form.growthDurationDays')}
                   </Typography>
                   <Typography variant="body1">
                     {formatNumber(selectedCulture.growth_duration_days, t)} Tage
@@ -949,7 +949,7 @@ export function CultureDetail({
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">
-                    Erntezeitraum
+                    {t('form.harvestDurationDays')}
                   </Typography>
                   <Typography variant="body1">
                     {formatNumber(selectedCulture.harvest_duration_days, t)} Tage
@@ -958,7 +958,7 @@ export function CultureDetail({
                 {selectedCulture.propagation_duration_days && (
                   <Box>
                     <Typography variant="body2" color="text.secondary">
-                      Anzuchtdauer
+                      {t('form.propagationDurationDays')}
                     </Typography>
                     <Typography variant="body1">
                       {formatNumber(selectedCulture.propagation_duration_days, t)} Tage

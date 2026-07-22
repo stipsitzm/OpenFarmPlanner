@@ -28,3 +28,30 @@ in `qa-coverage-2026-06-30.md`.
 - Scoped ESLint passed with one pre-existing `SeedDemand.tsx` hook dependency
   warning. Repository-wide lint remains blocked by generated `.vite/deps`
   files and unrelated pre-existing React Compiler findings.
+
+## Tooltip copy audit
+
+A follow-up audit reviewed rendered MUI tooltips, full-cell explanations,
+Gantt task details, topbar mode help, graphical controls, and tooltip labels in
+the reusable Gantt component.
+
+- Culture timing terminology now consistently uses `Wachstumszeit` for the
+  interval from planting to first harvest and `Erntezeit` for the interval
+  from first to last harvest.
+- The Erntebeginn and Ernteende column headers explain their calculations
+  separately, and unavailable cells name the exact missing interval.
+- Seed-demand package explanations distinguish missing supplier ordering data,
+  missing package sizes, unit-conversion failures, and unavailable totals.
+- Hierarchy dimension tooltips explain the downstream planning impact, while
+  graphical controls use localized, explicit action labels.
+- Calendar harvest tasks no longer manufacture an `Erntezeitraum` note; the
+  tooltip displays the planting-plan note only when one exists.
+- Focused tooltip and related regression suite: 9 files, 171 tests passed.
+- Full frontend suite after the audit: 133 files, 1,226 tests passed.
+- Production TypeScript/Vite build passed; changed files have no new ESLint
+  errors when the repository's pre-existing fast-refresh export rule failure is
+  excluded.
+- Playwright verified the rendered Erntebeginn, Ernteende, missing timing,
+  seed-package, culture timing, missing-dimension, and graphical-control
+  tooltips against the local hint-test project at 1600×1000.
+- Targeted hint-project backend suite: 7 tests passed.

@@ -18,6 +18,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
   allowTaskResize = true,
   allowTaskMove = true,
   showProgress = false,
+  contextMenuLabel = "Actions",
+  progressHandleLabel = "Drag to adjust progress",
   instanceId,
   renderTask,
   getTaskColor,
@@ -209,7 +211,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
         {customTaskContent}
         {onContextMenu && (
           <ContextMenuIndicator
-            label="Aktionen"
+            label={contextMenuLabel}
             tabIndex={-1}
             onClick={(e) => onContextMenu(e, task)}
             withBackdrop
@@ -277,7 +279,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
 
       {onContextMenu && (
         <ContextMenuIndicator
-          label="Aktionen"
+          label={contextMenuLabel}
           tabIndex={-1}
           onClick={(e) => onContextMenu(e, task)}
           withBackdrop
@@ -321,7 +323,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
                     pointerEvents: "auto",
                     zIndex: 1000,
                   }}
-                  title="Drag to adjust progress"
+                  title={progressHandleLabel}
                   data-rmg-component="progress-handle"
                 />
                 {/* Progress percentage tooltip */}

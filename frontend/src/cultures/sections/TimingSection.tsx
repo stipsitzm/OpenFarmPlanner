@@ -77,18 +77,25 @@ export function TimingSection({ formData, errors, onChange, t }: TimingSectionPr
               slotProps={{ htmlInput: { min: 1, step: 1 } }}
             />
           </DropdownAwareTooltip>
-          <TextField
-            sx={smallFieldSx}
-            type="number"
-            label={t('form.harvestDurationDays')}
-            placeholder={t('form.harvestDurationDaysPlaceholder')}
-            value={formData.harvest_duration_days ?? ''}
-            onChange={e => onChange('harvest_duration_days', e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
-            error={Boolean(errors.harvest_duration_days)}
-            helperText={errors.harvest_duration_days}
-            slotProps={{ htmlInput: { min: 0, step: 1 } }}
-          />
-          <DropdownAwareTooltip title={isDirectSowingOnly ? t('form.directSowingPropagationDisabledHelp') : ''} arrow>
+          <DropdownAwareTooltip title={t('form.harvestDurationDaysHelp')} arrow>
+            <TextField
+              sx={smallFieldSx}
+              type="number"
+              label={t('form.harvestDurationDays')}
+              placeholder={t('form.harvestDurationDaysPlaceholder')}
+              value={formData.harvest_duration_days ?? ''}
+              onChange={e => onChange('harvest_duration_days', e.target.value === '' ? 0 : parseInt(e.target.value, 10))}
+              error={Boolean(errors.harvest_duration_days)}
+              helperText={errors.harvest_duration_days}
+              slotProps={{ htmlInput: { min: 0, step: 1 } }}
+            />
+          </DropdownAwareTooltip>
+          <DropdownAwareTooltip
+            title={isDirectSowingOnly
+              ? t('form.directSowingPropagationDisabledHelp')
+              : t('form.propagationDurationDaysHelp')}
+            arrow
+          >
             <TextField
               sx={smallFieldSx}
               type="number"

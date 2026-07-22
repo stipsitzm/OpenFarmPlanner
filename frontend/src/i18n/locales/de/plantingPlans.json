@@ -56,10 +56,11 @@
     "areaInputTitle": "Vom Anbauplan belegte Fläche",
     "areaInputDescription": "Die Fläche des Beets, die durch diesen Anbauplan beansprucht wird. Änderungen an Fläche oder Pflanzenanzahl aktualisieren automatisch den jeweils anderen Wert. Leer oder „max“ verwendet die maximal verfügbare Restfläche.",
     "plantsFromSpacing": "Pflanzenanzahl: Mit genutzter Fläche gekoppelt. Änderungen aktualisieren automatisch den anderen Wert.",
-    "calculatedHarvestDate": "Wird automatisch aus Pflanzdatum und den Daten der Kulturbibliothek berechnet.",
-    "missingGrowthDuration": "Nicht berechenbar, da für diese Kultur kein Wachstumszeitraum hinterlegt ist.",
-    "missingHarvestDuration": "Nicht berechenbar, da für diese Kultur kein Erntezeitraum hinterlegt ist.",
-    "missingGrowthAndHarvestDuration": "Nicht berechenbar, da für diese Kultur weder Wachstumszeitraum noch Erntezeitraum hinterlegt sind."
+    "calculatedHarvestStartDate": "Wird automatisch aus Pflanzdatum und Wachstumszeit der Kultur berechnet.",
+    "calculatedHarvestEndDate": "Wird automatisch aus Erntebeginn und Erntezeit der Kultur berechnet.",
+    "missingGrowthDuration": "Nicht berechenbar, da für diese Kultur keine Wachstumszeit hinterlegt ist.",
+    "missingHarvestDuration": "Nicht berechenbar, da für diese Kultur keine Erntezeit hinterlegt ist.",
+    "missingGrowthAndHarvestDuration": "Nicht berechenbar, da für diese Kultur weder eine Wachstumszeit noch eine Erntezeit hinterlegt ist."
   },
   "errors": {
     "load": "Fehler beim Laden der Anbaupläne",

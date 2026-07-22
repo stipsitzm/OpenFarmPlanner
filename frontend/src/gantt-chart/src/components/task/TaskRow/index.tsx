@@ -19,6 +19,8 @@ const TaskRow: React.FC<TaskRowProps> = ({
   allowTaskResize = true,
   allowTaskMove = true,
   showProgress = false,
+  contextMenuLabel = "Actions",
+  progressHandleLabel = "Drag to adjust progress",
   className = "",
   tooltipClassName = "",
   onTaskUpdate,
@@ -972,6 +974,8 @@ const TaskRow: React.FC<TaskRowProps> = ({
                   allowTaskResize={allowTaskResize}
                   allowTaskMove={allowTaskMove}
                   showProgress={showProgress}
+                  contextMenuLabel={contextMenuLabel}
+                  progressHandleLabel={progressHandleLabel}
                   instanceId={instanceId.current}
                   onMouseDown={handleMouseDown}
                   onMouseEnter={handleTaskMouseEnter}

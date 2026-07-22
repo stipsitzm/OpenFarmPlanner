@@ -44,7 +44,7 @@
     "expand": "Eintrag aufklappen",
     "collapse": "Eintrag zuklappen",
     "addField": "Parzelle hinzufügen",
-    "calculatedArea": "Wird automatisch aus Länge × Breite berechnet. Nicht direkt bearbeitbar."
+    "calculatedArea": "Die Fläche wird automatisch aus Länge × Breite berechnet und kann nicht direkt bearbeitet werden."
   },
   "messages": {
     "createLocationFirst": "Bitte erstellen Sie zuerst einen Standort.",
@@ -56,7 +56,7 @@
     "noBedsHintMobile": "Drücke lange auf die jeweilige Parzelle und wähle „Beet hinzufügen“.",
     "missingDimensionsHint": "Länge und Breite sind wichtig für Flächenberechnungen, Saatgutbedarf und Anbauplanung.",
     "missingDimensionsHintOptional": "Du kannst die Werte später ergänzen.",
-    "missingDimensionsCellTooltip": "Für Flächenberechnung erforderlich.",
+    "missingDimensionsCellTooltip": "Dieser Wert wird für die Flächenberechnung und darauf basierende Planungen benötigt.",
     "createLocationError": "Fehler beim Erstellen des Standorts.",
     "locationCreated": "Standort wurde angelegt.",
     "unsavedMissingName": "Zeile wurde nicht gespeichert, da der Name fehlt.",

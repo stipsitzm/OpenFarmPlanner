@@ -164,15 +164,15 @@ class HintTestProjectServiceTests(TestCase):
 
         no_timing = PlantingPlan.objects.get(
             project=result.project,
-            culture__name='Kultur – keine Zeiträume',
+            culture__name='Kultur – keine Zeitangaben',
         )
         partial_timing = PlantingPlan.objects.get(
             project=result.project,
-            culture__name='Kultur – nur Wachstumszeitraum',
+            culture__name='Kultur – nur Wachstumszeit',
         )
         complete_timing = PlantingPlan.objects.filter(
             project=result.project,
-            culture__name='Kultur – vollständige Zeiträume',
+            culture__name='Kultur – vollständige Zeitangaben',
         ).order_by('planting_date').first()
 
         self.assertIsNone(no_timing.harvest_date)

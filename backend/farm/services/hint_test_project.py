@@ -430,7 +430,7 @@ def _create_cultures(project: Project, suppliers: dict[str, Supplier]) -> dict[s
         },
         'no_timing': {
             **base_kwargs,
-            'name': 'Kultur – keine Zeiträume',
+            'name': 'Kultur – keine Zeitangaben',
             'variety': 'Erntedatum offen',
             'growth_duration_days': None,
             'harvest_duration_days': None,
@@ -442,7 +442,7 @@ def _create_cultures(project: Project, suppliers: dict[str, Supplier]) -> dict[s
         },
         'partial_timing': {
             **base_kwargs,
-            'name': 'Kultur – nur Wachstumszeitraum',
+            'name': 'Kultur – nur Wachstumszeit',
             'variety': 'Ernteende offen',
             'growth_duration_days': 35,
             'harvest_duration_days': None,
@@ -454,7 +454,7 @@ def _create_cultures(project: Project, suppliers: dict[str, Supplier]) -> dict[s
         },
         'complete_timing': {
             **base_kwargs,
-            'name': 'Kultur – vollständige Zeiträume',
+            'name': 'Kultur – vollständige Zeitangaben',
             'variety': 'Referenz',
             'growth_duration_days': 40,
             'harvest_duration_days': 12,

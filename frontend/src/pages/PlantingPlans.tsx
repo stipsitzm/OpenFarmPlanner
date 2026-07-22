@@ -719,7 +719,7 @@ function PlantingPlans() {
         maxWidth: dynamicWidths.harvestDate,
         ...getCalculatedColumnProps<PlantingPlanRow>({
           headerName: t("plantingPlans:columns.harvestStartDate"),
-          tooltip: t("plantingPlans:tooltips.calculatedHarvestDate"),
+          tooltip: t("plantingPlans:tooltips.calculatedHarvestStartDate"),
         }),
         type: "date",
         valueGetter: (value) => (value ? new Date(value) : null),
@@ -737,7 +737,7 @@ function PlantingPlans() {
         maxWidth: dynamicWidths.harvestEndDate,
         ...getCalculatedColumnProps<PlantingPlanRow>({
           headerName: t("plantingPlans:columns.harvestEndDate"),
-          tooltip: t("plantingPlans:tooltips.calculatedHarvestDate"),
+          tooltip: t("plantingPlans:tooltips.calculatedHarvestEndDate"),
         }),
         type: "date",
         valueGetter: (value) => (value ? new Date(value) : null),

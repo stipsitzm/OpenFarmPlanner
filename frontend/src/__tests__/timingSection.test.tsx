@@ -1,12 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { TimingSection } from '../cultures/sections/TimingSection';
 
 const translations: Record<string, string> = {
   'form.cultivationType': 'Anbauart',
   'form.cultivationTypeDirectSowing': 'Direktsaat',
   'form.cultivationTypePreCultivation': 'Pflanzung',
+  'form.growthDurationDays': 'Wachstumszeit (Tage)',
+  'form.growthDurationDaysHelp': 'Zeit vom Pflanzdatum bis zum Erntebeginn.',
+  'form.harvestDurationDays': 'Erntezeit (Tage)',
+  'form.harvestDurationDaysHelp': 'Zeit vom Erntebeginn bis zum Ernteende.',
   'form.propagationDurationDays': 'Anzuchtdauer (Tage)',
+  'form.propagationDurationDaysHelp': 'Zeit vom Beginn der Anzucht bis zum Pflanzdatum.',
 };
 
 const t = (key: string) => translations[key] ?? key;
@@ -31,6 +37,32 @@ describe('TimingSection', () => {
     expect(onChange).toHaveBeenCalledWith('growth_duration_days', 30);
     expect(onChange).toHaveBeenCalledWith('harvest_duration_days', 12);
     expect(onChange).toHaveBeenCalledWith('propagation_duration_days', 8);
+  });
+
+  it('explains each timing field using the dates used by the calculation', async () => {
+    const user = userEvent.setup();
+    render(
+      <TimingSection
+        formData={{ cultivation_type: 'pre_cultivation', cultivation_types: ['pre_cultivation'] }}
+        errors={{}}
+        onChange={vi.fn()}
+        t={t}
+      />
+    );
+
+    const assertions = [
+      ['Wachstumszeit (Tage)', 'Zeit vom Pflanzdatum bis zum Erntebeginn.'],
+      ['Erntezeit (Tage)', 'Zeit vom Erntebeginn bis zum Ernteende.'],
+      ['Anzuchtdauer (Tage)', 'Zeit vom Beginn der Anzucht bis zum Pflanzdatum.'],
+    ] as const;
+
+    for (const [label, explanation] of assertions) {
+      const field = screen.getByLabelText(label);
+      await user.hover(field);
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(explanation);
+      await user.unhover(field);
+      await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    }
   });
 
   it('uses fallback values and direct sowing behavior', () => {

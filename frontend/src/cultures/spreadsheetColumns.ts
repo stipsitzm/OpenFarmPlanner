@@ -115,14 +115,14 @@ export const CULTURE_COLUMNS: SpreadsheetColumnDef[] = [
   },
   {
     key: 'growth_duration_days',
-    header: 'Wachstumsdauer (Tage)',
-    aliases: ['wachstumsdauer', 'wachstumstage', 'tage bis ernte', 'growth_duration_days'],
+    header: 'Wachstumszeit (Tage)',
+    aliases: ['wachstumszeit', 'wachstumsdauer', 'wachstumstage', 'tage bis ernte', 'growth_duration_days'],
     type: 'number',
   },
   {
     key: 'harvest_duration_days',
-    header: 'Erntezeitraum (Tage)',
-    aliases: ['erntezeitraum', 'erntedauer', 'erntedauer tage', 'harvest_duration_days'],
+    header: 'Erntezeit (Tage)',
+    aliases: ['erntezeit', 'erntezeitraum', 'erntedauer', 'erntedauer tage', 'harvest_duration_days'],
     type: 'number',
   },
   {
