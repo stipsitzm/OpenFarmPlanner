@@ -140,7 +140,7 @@ describe('PublicCultureLibraryDialog', () => {
     });
   });
 
-  it('shows a friendly desktop empty state in the detail area when nothing is selected', async () => {
+  it('shows a community invitation in the desktop detail empty state', async () => {
     mockDesktopViewport();
 
     render(
@@ -158,8 +158,9 @@ describe('PublicCultureLibraryDialog', () => {
 
     await screen.findByRole('dialog');
 
-    expect(screen.getByText('Noch keine öffentliche Kultur ausgewählt')).toBeInTheDocument();
-    expect(screen.getByText(/Die Kulturbibliothek wächst mit den Beiträgen der Community/)).toBeInTheDocument();
+    expect(screen.getByText('Die Kulturbibliothek wächst mit der Community')).toBeInTheDocument();
+    expect(screen.getByText(/Veröffentliche deine bewährten Kulturen und teile dein Wissen/)).toBeInTheDocument();
+    expect(screen.getByText(/Eigene Kulturen können später direkt aus den Kulturdetails veröffentlicht werden/)).toBeInTheDocument();
   });
 
   it('shows the community contribution empty state on mobile when the library is empty', async () => {

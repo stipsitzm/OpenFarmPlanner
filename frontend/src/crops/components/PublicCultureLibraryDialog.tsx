@@ -30,7 +30,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import PublicIcon from '@mui/icons-material/Public';
+import SpaOutlinedIcon from '@mui/icons-material/SpaOutlined';
 // Cross-domain import: a markdown helper that today lives under the
 // app-specific data-grid module. Kept as-is rather than duplicated/moved —
 // see docs/crop-library-architecture.md for why this is flagged as a
@@ -64,10 +64,12 @@ const PUBLIC_CULTURE_LIBRARY_HISTORY_KEY = 'openFarmPlannerPublicCultureLibrary'
 function LibraryEmptyState({
   title,
   description,
+  secondaryDescription,
   compact = false,
 }: {
   title: string;
   description: string;
+  secondaryDescription?: string;
   compact?: boolean;
 }) {
   return (
@@ -86,27 +88,36 @@ function LibraryEmptyState({
     >
       <Box
         sx={{
-          width: 40,
-          height: 40,
+          width: compact ? 40 : 48,
+          height: compact ? 40 : 48,
           borderRadius: '50%',
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
-          mb: 1.25,
+          mb: compact ? 1.25 : 1.5,
           color: 'success.main',
           bgcolor: 'success.50',
           border: '1px solid',
           borderColor: 'success.200',
         }}
       >
-        <PublicIcon fontSize="small" />
+        <SpaOutlinedIcon fontSize={compact ? 'small' : 'medium'} />
       </Box>
-      <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.75 }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.75, color: 'text.primary' }}>
         {title}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360, lineHeight: 1.5 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: compact ? 360 : 420, lineHeight: 1.6 }}>
         {description}
       </Typography>
+      {secondaryDescription ? (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ display: 'block', maxWidth: compact ? 360 : 420, mt: 1.25, lineHeight: 1.5 }}
+        >
+          {secondaryDescription}
+        </Typography>
+      ) : null}
     </Box>
   );
 }
@@ -294,6 +305,7 @@ export function PublicCultureLibraryDialog({
   const listEmptyDescription = hasLibraryEntries ? t('library.empty') : t('library.emptyState.emptyLibraryDescription');
   const detailEmptyTitle = hasLibraryEntries ? t('library.emptyState.noSelectionTitle') : t('library.emptyState.emptyLibraryTitle');
   const detailEmptyDescription = hasLibraryEntries ? t('library.emptyState.noSelectionDescription') : t('library.emptyState.emptyLibraryDescription');
+  const detailEmptySecondaryDescription = hasLibraryEntries ? t('library.emptyState.noSelectionSecondaryDescription') : undefined;
 
   const handleDialogClose = (): void => {
     if (useMobileFilterLayout && mobileStep === 'detail') {
@@ -541,7 +553,11 @@ export function PublicCultureLibraryDialog({
                 )}
               </>
             ) : (
-              <LibraryEmptyState title={detailEmptyTitle} description={detailEmptyDescription} />
+              <LibraryEmptyState
+                title={detailEmptyTitle}
+                description={detailEmptyDescription}
+                secondaryDescription={detailEmptySecondaryDescription}
+              />
             )}
             </Box>
           ) : null}
