@@ -9,7 +9,9 @@
       "openApp": "Open OpenFarmPlanner",
       "register": "Register",
       "demo": "View demo",
-      "startingDemo": "Starting demo..."
+      "demoWithoutRegistration": "View demo without registering",
+      "startingDemo": "Starting demo...",
+      "demoStartError": "Demo could not be started. Please try again."
     }
   },
   "statusNote": "Currently in beta - continuously improved.",

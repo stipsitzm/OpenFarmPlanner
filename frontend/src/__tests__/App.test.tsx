@@ -8,6 +8,28 @@ import { FocusManagerProvider } from '../focus/FocusManager';
 import translations from '@/test-utils/translations';
 import type { AuthUser } from '../auth/types';
 
+function createGuestDemoUser(): AuthUser {
+  return {
+    id: 99,
+    email: 'guest-demo@example.com',
+    display_name: 'Demo',
+    display_label: 'Demo',
+    public_display_name: 'Demo',
+    is_active: true,
+    default_project_id: 9,
+    last_project_id: 9,
+    resolved_project_id: 9,
+    needs_project_selection: false,
+    memberships: [{ project_id: 9, project_name: 'Solawi Sonnenacker', role: 'admin' }],
+    account_pending_deletion: false,
+    scheduled_deletion_at: null,
+    pending_consents: [],
+    public_library_terms_accepted: false,
+    is_guest_demo: true,
+    guest_demo_session_id: 123,
+  };
+}
+
 const authState = {
   user: null as AuthUser | null,
   isLoading: false,
@@ -22,6 +44,8 @@ const authState = {
   requestAccountDeletion: vi.fn(async () => ({ detail: 'ok', scheduled_deletion_at: new Date().toISOString() })),
   restoreAccount: vi.fn(async () => ({}) as AuthUser),
   switchActiveProject: vi.fn(async () => {}),
+  startGuestDemo: vi.fn(async () => createGuestDemoUser()),
+  endGuestDemo: vi.fn(async () => {}),
 };
 
 const projectApiMocks = vi.hoisted(() => ({
@@ -91,6 +115,9 @@ describe('App', () => {
     authState.isLoading = false;
     authState.activeProjectId = null;
     authState.switchActiveProject.mockClear();
+    authState.startGuestDemo.mockClear();
+    authState.endGuestDemo.mockClear();
+    authState.startGuestDemo.mockResolvedValue(createGuestDemoUser());
     projectApiMocks.create.mockClear();
     projectApiMocks.createDemo.mockClear();
     projectApiMocks.listDeleted.mockClear();
@@ -153,6 +180,40 @@ describe('App', () => {
     expect(screen.getByRole('img', {
       name: 'Ertragsübersicht mit erwarteten Erntemengen nach Kalenderwochen und Kulturen',
     })).toHaveAttribute('src', '/landing/screenshots/demo-yield-overview.webp');
+  });
+
+  it('starts the public guest demo from the landing page', async () => {
+    const user = userEvent.setup();
+
+    authState.startGuestDemo.mockImplementationOnce(async () => {
+      const demoUser = createGuestDemoUser();
+      authState.user = demoUser;
+      authState.activeProjectId = demoUser.resolved_project_id;
+      return demoUser;
+    });
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    await user.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    await waitFor(() => {
+      expect(authState.startGuestDemo).toHaveBeenCalledTimes(1);
+      expect(window.location.pathname).toBe('/app/fields-beds');
+    });
+  });
+
+  it('shows an error when the public guest demo cannot be started', async () => {
+    const user = userEvent.setup();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    authState.startGuestDemo.mockRejectedValueOnce(new Error('boom'));
+
+    render(<FocusManagerProvider><CommandProvider><App /></CommandProvider></FocusManagerProvider>);
+
+    await user.click(await screen.findByRole('button', { name: 'Demo ohne Registrierung ansehen' }));
+
+    expect(await screen.findByText('Demo konnte nicht gestartet werden. Bitte versuche es erneut.')).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/');
+    consoleErrorSpy.mockRestore();
   });
 
   it('renders imprint route', async () => {

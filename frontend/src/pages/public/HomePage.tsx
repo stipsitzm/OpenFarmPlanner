@@ -1,5 +1,6 @@
 import GitHubIcon from '@mui/icons-material/GitHub';
 import {
+  Alert,
   Box,
   Button,
   Container,
@@ -57,8 +58,8 @@ const HERO_CARD_SX = {
   width: '100%',
   maxWidth: 640,
   mx: 'auto',
-  px: { xs: 3, sm: 4, md: 5 },
-  py: { xs: 3.5, sm: 4, md: 5 },
+  px: { xs: 3, sm: 4, md: 4.5 },
+  py: { xs: 3, sm: 3.5, md: 4 },
   borderRadius: { xs: 4, md: 6 },
   border: '1px solid rgba(255,255,255,0.28)',
   backgroundColor: 'rgba(8,24,14,0.5)',
@@ -77,6 +78,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   const { startGuestDemo } = useAuth();
   const [isStartingDemo, setIsStartingDemo] = useState(false);
+  const [demoStartError, setDemoStartError] = useState<string | null>(null);
   const [activeTourKey, setActiveTourKey] = useState<ProductTourKey>('areas');
   const activeTourItem = PRODUCT_TOUR_ITEMS.find((item) => item.key === activeTourKey) ?? PRODUCT_TOUR_ITEMS[0];
 
@@ -84,7 +86,24 @@ export default function HomePage() {
     setActiveTourKey(value);
   };
 
-  
+  const handleStartDemo = async (): Promise<void> => {
+    if (isStartingDemo) {
+      return;
+    }
+
+    setIsStartingDemo(true);
+    setDemoStartError(null);
+    try {
+      await startGuestDemo();
+      navigate('/app/fields-beds');
+    } catch (error) {
+      console.error('Error starting guest demo:', error);
+      setDemoStartError(t('landing.actions.demoStartError'));
+    } finally {
+      setIsStartingDemo(false);
+    }
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
       <Box component="main" sx={{ flex: 1 }}>
@@ -127,7 +146,7 @@ export default function HomePage() {
             justifyContent: 'center',
             textAlign: 'center',
             px: 2,
-            py: { xs: 4.5, md: 6 },
+            py: { xs: 4, md: 5 },
             overflow: 'hidden',
             backgroundImage: 'url(/landing/hero-field.webp)',
             backgroundSize: 'cover',
@@ -135,7 +154,7 @@ export default function HomePage() {
           }}
         >
           <Box sx={HERO_CARD_SX}>
-            <Stack spacing={2.4} alignItems="center">
+            <Stack spacing={{ xs: 2, md: 2.2 }} alignItems="center">
               <Typography
                 variant="h6"
                 sx={{
@@ -159,71 +178,104 @@ export default function HomePage() {
                 {t('landing.description')}
               </Typography>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} sx={{ width: '100%', maxWidth: 500, pt: 0.5 }}>
+              <Stack spacing={1.15} alignItems="center" sx={{ width: '100%', pt: 0.3 }}>
+                <Stack
+                  direction="row"
+                  spacing={{ xs: 1, sm: 1.2 }}
+                  alignItems="center"
+                  justifyContent="center"
+                  sx={{ width: '100%', flexWrap: 'nowrap' }}
+                >
+                  <Button
+                    component={RouterLink}
+                    to="/register"
+                    variant="contained"
+                    size="large"
+                    sx={{
+                      minHeight: 46,
+                      borderRadius: 2,
+                      px: { xs: 2, sm: 3.2 },
+                      whiteSpace: 'nowrap',
+                      boxShadow: (theme) => theme.shadows[3],
+                      transition: 'transform 160ms ease, box-shadow 160ms ease',
+                      '&:hover': {
+                        transform: 'translateY(-1px)',
+                        boxShadow: (theme) => theme.shadows[5],
+                      },
+                    }}
+                  >
+                    {t('landing.actions.register')}
+                  </Button>
+                  <Button
+                    component={RouterLink}
+                    to="/login"
+                    variant="outlined"
+                    size="large"
+                    sx={{
+                      minHeight: 46,
+                      borderRadius: 2,
+                      px: { xs: 2, sm: 3.2 },
+                      color: '#fff',
+                      borderColor: 'rgba(255,255,255,0.84)',
+                      bgcolor: 'rgba(255,255,255,0.08)',
+                      whiteSpace: 'nowrap',
+                      boxShadow: 'none',
+                      transition: 'transform 160ms ease, border-color 160ms ease, background-color 160ms ease',
+                      '&:hover': {
+                        transform: 'translateY(-1px)',
+                        borderColor: '#fff',
+                        bgcolor: 'rgba(255,255,255,0.16)',
+                      },
+                    }}
+                  >
+                    {t('landing.actions.openApp')}
+                  </Button>
+                </Stack>
                 <Button
-                  variant="contained"
-                  color="secondary"
-                  size="large"
+                  variant="text"
                   disabled={isStartingDemo}
                   onClick={() => {
-                    setIsStartingDemo(true);
-                    void startGuestDemo().then(() => navigate('/app/fields-beds')).finally(() => setIsStartingDemo(false));
+                    void handleStartDemo();
                   }}
-                  sx={{ flex: 1, minHeight: 46, borderRadius: 2.5 }}
-                >
-                  {isStartingDemo ? t('landing.actions.startingDemo') : t('landing.actions.demo')}
-                </Button>
-                <Button
-                  component={RouterLink}
-                  to="/login"
-                  variant="contained"
-                  size="large"
                   sx={{
-                    flex: 1,
-                    minHeight: 46,
-                    borderRadius: 2.5,
-                    boxShadow: (theme) => theme.shadows[2],
-                    transition: 'transform 160ms ease, box-shadow 160ms ease',
-                    '&:hover': {
-                      transform: 'translateY(-1px)',
-                      boxShadow: (theme) => theme.shadows[5],
+                    minHeight: 34,
+                    px: 1.2,
+                    py: 0.4,
+                    borderRadius: 1,
+                    color: 'rgba(255,255,255,0.94)',
+                    fontSize: { xs: '0.9rem', sm: '0.94rem' },
+                    fontWeight: 600,
+                    textDecoration: 'underline',
+                    textUnderlineOffset: '3px',
+                    textShadow: HERO_TEXT_SHADOW,
+                    whiteSpace: 'nowrap',
+                    '&:hover, &:focus-visible': {
+                      color: '#fff',
+                      bgcolor: 'rgba(255,255,255,0.1)',
+                      textDecoration: 'underline',
+                    },
+                    '&.Mui-disabled': {
+                      color: 'rgba(255,255,255,0.58)',
                     },
                   }}
                 >
-                  {t('landing.actions.openApp')}
-                </Button>
-
-                <Button
-                  component={RouterLink}
-                  to="/register"
-                  variant="outlined"
-                  size="large"
-                  sx={{
-                    flex: 1,
-                    minHeight: 46,
-                    borderRadius: 2.5,
-                    bgcolor: '#fff',
-                    boxShadow: (theme) => theme.shadows[2],
-                    transition: 'transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease',
-                    '&:hover': {
-                      bgcolor: '#fff',
-                      transform: 'translateY(-1px)',
-                      boxShadow: (theme) => theme.shadows[5],
-                    },
-                  }}
-                >
-                  {t('landing.actions.register')}
+                  {isStartingDemo ? t('landing.actions.startingDemo') : t('landing.actions.demoWithoutRegistration')}
                 </Button>
               </Stack>
+              {demoStartError ? (
+                <Alert severity="error" sx={{ width: '100%', maxWidth: 500, textAlign: 'left' }}>
+                  {demoStartError}
+                </Alert>
+              ) : null}
 
-              <Stack spacing={0.8} alignItems="center" textAlign="center" sx={{ pt: { xs: 0.6, md: 0.9 } }}>
-                <Typography sx={{ lineHeight: 1.5, color: '#fff', textShadow: HERO_TEXT_SHADOW }}>
+              <Stack spacing={0.7} alignItems="center" textAlign="center" sx={{ pt: { xs: 0.3, md: 0.5 } }}>
+                <Typography sx={{ lineHeight: 1.45, color: '#fff', textShadow: HERO_TEXT_SHADOW }}>
                   {t('statusNote')}
                 </Typography>
                 <Typography
                   sx={{
                     fontSize: { xs: '0.84rem', md: '0.9rem' },
-                    lineHeight: 1.45,
+                    lineHeight: 1.4,
                     color: 'rgba(255,255,255,0.92)',
                     textShadow: HERO_TEXT_SHADOW,
                   }}
@@ -243,7 +295,7 @@ export default function HomePage() {
                     gap: 0.55,
                     px: 1.1,
                     py: 0.5,
-                    mt: 0.5,
+                    mt: 0.3,
                     borderRadius: 1,
                     border: 2,
                     borderColor: 'primary.main',

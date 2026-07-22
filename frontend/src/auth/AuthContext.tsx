@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   acceptConsent as acceptConsentRequest,
   activate as activateRequest,
@@ -65,6 +65,12 @@ export function AuthProvider({
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
+  const authGenerationRef = useRef(0);
+
+  const beginAuthMutation = useCallback((): number => {
+    authGenerationRef.current += 1;
+    return authGenerationRef.current;
+  }, []);
 
   const clearAuthenticatedUser = useCallback((): void => {
     setUser(null);
@@ -79,8 +85,12 @@ export function AuthProvider({
   }, []);
 
   const refreshUser = useCallback(async (): Promise<AuthUser | null> => {
+    const requestGeneration = authGenerationRef.current;
     try {
       const me = await getMe();
+      if (requestGeneration !== authGenerationRef.current) {
+        return null;
+      }
       if (me.is_guest_demo && String(me.guest_demo_session_id) !== window.sessionStorage.getItem(GUEST_DEMO_SESSION_KEY)) {
         await logoutRequest();
         clearAuthenticatedUser();
@@ -89,7 +99,9 @@ export function AuthProvider({
       applyAuthenticatedUser(me);
       return me;
     } catch {
-      clearAuthenticatedUser();
+      if (requestGeneration === authGenerationRef.current) {
+        clearAuthenticatedUser();
+      }
       return null;
     }
   }, [applyAuthenticatedUser, clearAuthenticatedUser]);
@@ -135,23 +147,35 @@ export function AuthProvider({
       isLoading,
       activeProjectId,
       startGuestDemo: async () => {
+        const generation = beginAuthMutation();
         const me = await startGuestDemoRequest();
-        window.sessionStorage.setItem(GUEST_DEMO_SESSION_KEY, String(me.guest_demo_session_id));
-        applyAuthenticatedUser(me);
+        if (generation === authGenerationRef.current) {
+          window.sessionStorage.setItem(GUEST_DEMO_SESSION_KEY, String(me.guest_demo_session_id));
+          applyAuthenticatedUser(me);
+        }
         return me;
       },
       endGuestDemo: async () => {
+        const generation = beginAuthMutation();
         await endGuestDemoRequest();
-        clearAuthenticatedUser();
+        if (generation === authGenerationRef.current) {
+          clearAuthenticatedUser();
+        }
       },
       login: async (email, password) => {
+        const generation = beginAuthMutation();
         const me = await loginRequest(email, password);
-        applyAuthenticatedUser(me);
+        if (generation === authGenerationRef.current) {
+          applyAuthenticatedUser(me);
+        }
         return me;
       },
       logout: async () => {
+        const generation = beginAuthMutation();
         await logoutRequest();
-        clearAuthenticatedUser();
+        if (generation === authGenerationRef.current) {
+          clearAuthenticatedUser();
+        }
       },
       register: async (email, password, passwordConfirm, displayName = "", acceptTerms = false) => {
         const response = await registerRequest(
@@ -164,13 +188,19 @@ export function AuthProvider({
         return response.detail;
       },
       acceptConsent: async (document) => {
+        const generation = beginAuthMutation();
         const me = await acceptConsentRequest(document);
-        applyAuthenticatedUser(me);
+        if (generation === authGenerationRef.current) {
+          applyAuthenticatedUser(me);
+        }
         return me;
       },
       activate: async (uid, token) => {
+        const generation = beginAuthMutation();
         const me = await activateRequest(uid, token);
-        applyAuthenticatedUser(me);
+        if (generation === authGenerationRef.current) {
+          applyAuthenticatedUser(me);
+        }
         return me;
       },
       resendActivation: async (email) => {
@@ -191,13 +221,19 @@ export function AuthProvider({
         return response.detail;
       },
       requestAccountDeletion: async (password) => {
+        const generation = beginAuthMutation();
         const response = await requestAccountDeletionRequest(password);
-        clearAuthenticatedUser();
+        if (generation === authGenerationRef.current) {
+          clearAuthenticatedUser();
+        }
         return response;
       },
       restoreAccount: async (email, password) => {
+        const generation = beginAuthMutation();
         const me = await restoreAccountRequest(email, password);
-        applyAuthenticatedUser(me);
+        if (generation === authGenerationRef.current) {
+          applyAuthenticatedUser(me);
+        }
         return me;
       },
       switchActiveProject: async (projectId: number) => {
@@ -212,7 +248,7 @@ export function AuthProvider({
       },
       refreshUser,
     }),
-    [activeProjectId, applyAuthenticatedUser, clearAuthenticatedUser, isLoading, refreshUser, user],
+    [activeProjectId, applyAuthenticatedUser, beginAuthMutation, clearAuthenticatedUser, isLoading, refreshUser, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

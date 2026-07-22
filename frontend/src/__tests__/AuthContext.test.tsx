@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useContext } from 'react';
 import { AuthProvider } from '../auth/AuthContext';
 import { AUTHENTICATION_EXPIRED_EVENT } from '../auth/authEvents';
@@ -21,13 +21,28 @@ const baseUser: AuthUser = {
   scheduled_deletion_at: null,
   pending_consents: [],
   public_library_terms_accepted: false,
+  is_guest_demo: false,
+  guest_demo_session_id: null,
 };
 
 const getMeMock = vi.hoisted(() => vi.fn(async () => baseUser));
+const startGuestDemoMock = vi.hoisted(() => vi.fn(async () => ({
+  ...baseUser,
+  id: 2,
+  email: 'demo-guest@example.invalid',
+  default_project_id: 2,
+  last_project_id: 2,
+  resolved_project_id: 2,
+  memberships: [{ project_id: 2, project_name: 'Solawi Sonnenacker', role: 'admin' as const }],
+  is_guest_demo: true,
+  guest_demo_session_id: 77,
+})));
 
 vi.mock('../auth/authApi', () => ({
   getMe: getMeMock,
   login: vi.fn(),
+  startGuestDemo: startGuestDemoMock,
+  endGuestDemo: vi.fn(),
   logout: vi.fn(),
   register: vi.fn(),
   activate: vi.fn(),
@@ -42,6 +57,16 @@ vi.mock('../auth/authApi', () => ({
 function ActiveProjectProbe() {
   const auth = useContext(AuthContext);
   return <div data-testid="active-project-id">{auth?.activeProjectId ?? 'none'}</div>;
+}
+
+function GuestDemoStartProbe() {
+  const auth = useContext(AuthContext);
+  return (
+    <>
+      <button type="button" onClick={() => { void auth?.startGuestDemo(); }}>Start demo</button>
+      <div data-testid="active-project-id">{auth?.activeProjectId ?? 'none'}</div>
+    </>
+  );
 }
 
 describe('AuthProvider cross-tab project sync', () => {
@@ -62,7 +87,21 @@ describe('AuthProvider cross-tab project sync', () => {
 
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
     getMeMock.mockClear();
+    startGuestDemoMock.mockClear();
+    getMeMock.mockResolvedValue(baseUser);
+    startGuestDemoMock.mockResolvedValue({
+      ...baseUser,
+      id: 2,
+      email: 'demo-guest@example.invalid',
+      default_project_id: 2,
+      last_project_id: 2,
+      resolved_project_id: 2,
+      memberships: [{ project_id: 2, project_name: 'Solawi Sonnenacker', role: 'admin' }],
+      is_guest_demo: true,
+      guest_demo_session_id: 77,
+    });
   });
 
   afterEach(() => {
@@ -116,5 +155,25 @@ describe('AuthProvider cross-tab project sync', () => {
 
     await waitFor(() => expect(screen.getByTestId('active-project-id')).toHaveTextContent('none'));
     expect(localStorage.getItem('activeProjectId')).toBeNull();
+  });
+
+  it('keeps a guest demo login when an older startup refresh fails afterwards', async () => {
+    let rejectStartupRefresh: (reason?: unknown) => void = () => {};
+    getMeMock.mockImplementationOnce(() => new Promise((_resolve, reject) => {
+      rejectStartupRefresh = reject;
+    }));
+
+    render(<AuthProvider><GuestDemoStartProbe /></AuthProvider>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start demo' }));
+    await waitFor(() => expect(screen.getByTestId('active-project-id')).toHaveTextContent('2'));
+
+    await act(async () => {
+      rejectStartupRefresh(new Error('Unauthorized'));
+    });
+
+    await waitFor(() => expect(screen.getByTestId('active-project-id')).toHaveTextContent('2'));
+    expect(localStorage.getItem('activeProjectId')).toBe('2');
+    expect(sessionStorage.getItem('guestDemoSessionId')).toBe('77');
   });
 });

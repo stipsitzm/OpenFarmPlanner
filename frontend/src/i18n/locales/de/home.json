@@ -9,7 +9,9 @@
       "openApp": "Anmelden",
       "register": "Registrieren",
       "demo": "Demo ansehen",
-      "startingDemo": "Demo wird gestartet…"
+      "demoWithoutRegistration": "Demo ohne Registrierung ansehen",
+      "startingDemo": "Demo wird gestartet…",
+      "demoStartError": "Demo konnte nicht gestartet werden. Bitte versuche es erneut."
     }
   },
   "statusNote": "OpenFarmPlanner befindet sich aktuell in der Beta-Phase und wird laufend weiterentwickelt.",
