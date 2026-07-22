@@ -358,7 +358,7 @@ describe('buildSeedlingTaskGroups', () => {
     expect(groups[0].tasks[1].name).toBe('Salat (Bijella) (Ernte)');
   });
 
-  it('ignores occupancy plans without a computed harvest end date', () => {
+  it('keeps the growth task but omits the harvest period without a computed harvest end date', () => {
     const groups = buildFieldOccupancyTaskGroups({
       locations,
       fields,
@@ -378,7 +378,15 @@ describe('buildSeedlingTaskGroups', () => {
       ],
     });
 
-    expect(groups).toEqual([]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].tasks).toHaveLength(1);
+    expect(groups[0].tasks[0]).toMatchObject({
+      id: 'plan-26-growth',
+      startDate: new Date('2026-03-01T00:00:00.000Z'),
+      endDate: new Date('2026-04-15T00:00:00.000Z'),
+      harvestStartDate: new Date('2026-04-15T00:00:00.000Z'),
+      harvestEndDate: new Date('2026-04-15T00:00:00.000Z'),
+    });
   });
 });
 

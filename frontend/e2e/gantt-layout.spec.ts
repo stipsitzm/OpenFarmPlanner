@@ -94,6 +94,8 @@ async function createCalendarFixture(page: Page, options: { bedCount?: number } 
   const field = await api<{ id: number }>('/fields/', { name: 'Layout Testfeld', location: location.id });
   const culture = await api<{ id: number }>('/cultures/', {
     name: 'Layout Kultur',
+    growth_duration_days: 30,
+    harvest_duration_days: 14,
     propagation_duration_days: 21,
     cultivation_type: 'pre_cultivation',
     cultivation_types: ['pre_cultivation'],

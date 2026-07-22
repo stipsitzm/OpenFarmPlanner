@@ -39,7 +39,7 @@ test.describe('context menu hint dismissal', () => {
     await expect(page.getByText(hintText)).toBeVisible();
 
     await (await firstDataRow(page)).click({ button: 'right', position: { x: 24, y: 18 } });
-    await expect(page.getByText(hintText)).toBeHidden();
+    await expect(page.getByText(hintText)).toBeVisible();
 
     const plantingPlansDismissed = await page.evaluate((currentUserId) => {
       if (currentUserId === null) {
@@ -48,6 +48,9 @@ test.describe('context menu hint dismissal', () => {
       return window.localStorage.getItem(`ofp.contextMenuHintDismissed:user:${currentUserId}:context:plantingPlans`);
     }, userId);
     expect(plantingPlansDismissed).toBe('1');
+
+    await page.reload();
+    await expect(page.getByText(hintText)).toBeHidden();
 
     await page.goto('/app/fields-beds');
     const fieldsBedsHint = page.getByRole('note').filter({ hasText: hintText });
