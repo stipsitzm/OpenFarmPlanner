@@ -94,6 +94,7 @@ import { OPEN_CREATE_PROJECT_EVENT } from '../projects/projectCreationFlow';
 import { useGlobalOverlayKeyboardScroll } from '../hooks/useDialogKeyboardScroll';
 import { useFocusRegion } from '../focus/useFocusManager';
 import { useTopbarActionsRouteReset } from '../hooks/useTopbarActionsRouteReset';
+import { publicAssetUrl } from '../utils/publicAssetUrl';
 import { KEYBOARD_NAV_ROUTES, MAIN_NAV_ITEMS, getKeyboardNavigationRouteFromPathname, normalizeMainRoutePath } from '../navigation/mainNavigation';
 import {
   getMobileNavigationIconSx,
@@ -971,7 +972,7 @@ function RootLayout() {
                 >
                   <Box
                     component="img"
-                    src="/favicon.png"
+                    src={publicAssetUrl('/favicon.png')}
                     alt="OpenFarmPlanner"
                     sx={{ width: 24, height: 24, borderRadius: 0.5, flexShrink: 0 }}
                   />
