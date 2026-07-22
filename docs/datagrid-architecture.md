@@ -301,6 +301,9 @@ grid," that's new work, not exposing something that already half-exists.
   `.ofp-cell-error`, `.ofp-row-long-press`, ...). Cells that render
   `FullCellTooltip` must also use `FULL_CELL_TOOLTIP_CELL_CLASS` so its
   absolute trigger covers the cell and follows the grid's keyboard focus.
+  DataGrid renderers pass `cellHasFocus`; plain read-only table cells can use
+  `focusable` when the tooltip trigger itself needs a keyboard stop. Do not
+  use `focusable` inside DataGrid cells or around an already focusable link.
 
 ## What to check before changing this layer
 

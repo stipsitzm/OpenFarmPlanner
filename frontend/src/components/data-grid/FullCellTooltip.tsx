@@ -7,27 +7,33 @@ export interface FullCellTooltipProps
   extends Pick<TooltipProps, 'title' | 'describeChild' | 'disableInteractive' | 'enterDelay' | 'slotProps'> {
   children: ReactNode;
   cellHasFocus?: boolean;
+  focusable?: boolean;
   triggerSx?: SxProps<Theme>;
 }
 
 export function FullCellTooltip({
   children,
   cellHasFocus = false,
+  focusable = false,
   triggerSx,
   ...tooltipProps
 }: FullCellTooltipProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isInteractionOpen, setIsInteractionOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   return (
     <Tooltip
       {...tooltipProps}
-      open={cellHasFocus || isOpen}
-      onOpen={() => setIsOpen(true)}
-      onClose={() => setIsOpen(false)}
+      open={cellHasFocus || isFocused || isInteractionOpen}
+      onOpen={() => setIsInteractionOpen(true)}
+      onClose={() => setIsInteractionOpen(false)}
     >
       <Box
         component="span"
         className="ofp-full-cell-tooltip-trigger"
+        tabIndex={focusable ? 0 : undefined}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         sx={[
           {
             position: 'absolute',

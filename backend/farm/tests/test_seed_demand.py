@@ -88,6 +88,8 @@ def test_seed_demand_applies_safety_margin(api_client: APIClient, bed: Bed):
     row = response.json()['results'][0]
     assert response.status_code == 200
     assert row['required_amount_value'] == pytest.approx(110.0)
+    assert row['calculation_blockers'] == []
+    assert row['package_blocker'] is None
     assert row['required_amount_unit'] == 'g'
     assert row['package_suggestion']['pack_count'] == 5
 
@@ -250,6 +252,29 @@ def test_seed_demand_ignores_inactive_method_rates(api_client: APIClient, bed: B
     assert response.status_code == 200
     row = next(item for item in response.json()['results'] if item['culture_name'] == 'InactiveDirect')
     assert row['warning'] == 'Missing seed rate value or unit.'
+
+
+@pytest.mark.django_db
+def test_seed_demand_reports_all_missing_inputs_for_one_plan(api_client: APIClient, bed: Bed):
+    culture = Culture.objects.create(
+        name='Incomplete lfm crop',
+        cultivation_types=['direct_sowing'],
+        seed_rate_direct_value=3,
+        seed_rate_direct_unit='g_per_lfm',
+        row_spacing_m=None,
+        project=bed.project,
+    )
+    _create_plan(culture, bed, 0)
+    _create_supplier_data(culture, 25, 'g')
+
+    response = api_client.get('/openfarmplanner/api/seed-demand/')
+    assert response.status_code == 200
+    row = response.json()['results'][0]
+
+    assert row['required_amount_value'] is None
+    assert row['calculation_blockers'] == ['missing_area', 'missing_row_spacing']
+    assert row['package_suggestion'] is None
+    assert row['package_blocker'] == 'required_amount_unavailable'
 
 
 @pytest.mark.django_db

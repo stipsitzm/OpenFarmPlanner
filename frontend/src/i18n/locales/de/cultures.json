@@ -294,6 +294,23 @@
     "noPackageCalculationPossible": "Nicht berechenbar",
     "noPackageCalculationPossibleTooltip": "Die Berechnung ist trotz vorhandener Lieferanten- und Packungsdaten aktuell nicht möglich. Bitte prüfe die Kultur- und Lieferantendaten auf Vollständigkeit.",
     "requiredAmountMissingTkg": "Nicht berechenbar (TKG fehlt)",
+    "requiredAmountUnavailable": "Nicht berechenbar ({{reason}})",
+    "requiredAmountUnavailableTooltip": "Nicht berechenbar. Fehlende Angabe: {{reason}}.",
+    "requiredAmountUnavailableMultipleTooltip": "Nicht berechenbar. Fehlende Angaben: {{reasons}}.",
+    "calculationBlockers": {
+      "missingSeedRate": "Aussaatmenge fehlt",
+      "missingArea": "Beetfläche fehlt",
+      "missingPlantQuantity": "Pflanzenanzahl fehlt",
+      "missingRowSpacing": "Reihenabstand fehlt",
+      "missingTkg": "TKG fehlt",
+      "unsupportedSeedRateUnit": "Einheit der Aussaatmenge wird nicht unterstützt",
+      "missingData": "notwendige Angaben fehlen"
+    },
+    "packageBlockers": {
+      "requiredAmountUnavailable": "Es können keine Packungsgrößen berechnet werden, weil der Gesamtbedarf nicht berechenbar ist. {{details}}",
+      "unitConversionUnavailable": "Bedarf und Packungsgrößen können nicht in dieselbe Einheit umgerechnet werden. Prüfe insbesondere das TKG.",
+      "noMatchingPackageSizes": "Für den berechneten Bedarf sind keine passenden Packungsgrößen verfügbar. Prüfe die hinterlegten Packungsgrößen."
+    },
     "unitSeeds": "Korn",
     "unitGrams": "g",
     "columns": {

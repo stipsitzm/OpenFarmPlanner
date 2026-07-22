@@ -121,6 +121,10 @@ class HintTestProjectServiceTests(TestCase):
             'Missing seed rate value or unit.',
         )
         self.assertEqual(
+            rows['Saatgutmenge – Aussaatmenge fehlt']['calculation_blockers'],
+            ['missing_seed_rate'],
+        )
+        self.assertEqual(
             rows['Saatgutmenge – Beetfläche fehlt']['warning'],
             'Missing area usage for m²-based seed requirement.',
         )
@@ -139,6 +143,10 @@ class HintTestProjectServiceTests(TestCase):
         self.assertEqual(
             rows['Saatgutmenge – Lieferant fehlt']['warning'],
             'Keine Lieferantendaten vorhanden.',
+        )
+        self.assertEqual(
+            rows['Saatgutmenge – Lieferant fehlt']['package_blocker'],
+            'supplier_data_missing',
         )
         self.assertEqual(len(rows['Saatgutmenge – Lieferant auswählen']['supplier_options']), 2)
         self.assertIsNone(rows['Saatgutmenge – Lieferant auswählen']['selected_supplier_id'])

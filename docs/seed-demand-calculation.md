@@ -55,11 +55,12 @@ For each culture with at least one planting plan:
 
 3. **Sum across all of a culture's plans**, keeping grams and seed-count
    totals in separate buckets (a culture can have plans using either unit).
-   **Important quirk**: if any single plan fails to compute a requirement
-   (missing row spacing, missing quantity, etc.), the *entire culture's row*
-   for that request stops accumulating further plans — one bad plan doesn't
-   just get skipped, it poisons the rest of that culture's total for this
-   request.
+   If any single plan fails to compute a requirement (missing row spacing,
+   missing quantity, etc.), the *entire culture's row* is marked as not
+   calculable — one bad plan is never silently skipped to produce an
+   understated partial total. Remaining plans are still inspected for
+   diagnostics so `calculation_blockers` can report every distinct missing
+   input.
 
 4. **Supplier resolution**, in priority order: an explicit
    `?supplier_selection=cultureId:supplierId` query param (read-only, used
@@ -109,6 +110,22 @@ For each culture with at least one planting plan:
    while a `package_suggestion` is still present (or vice versa) — this
    inconsistent-looking pairing is expected, see the "missing TKG" example
    below.
+
+## Calculation diagnostics
+
+The API preserves the legacy `warning` and `required_amount_warning` fields
+for compatibility and additionally returns stable, non-localized diagnostics:
+
+- `calculation_blockers`: all distinct inputs preventing `Gesamtbedarf`
+  from being calculated, such as `missing_seed_rate`, `missing_area`,
+  `missing_plant_quantity`, `missing_row_spacing`, or `missing_tkg`.
+- `package_blocker`: the reason no package suggestion exists, such as
+  `required_amount_unavailable`, `supplier_data_missing`,
+  `supplier_not_selected`, `package_sizes_missing`,
+  `unit_conversion_unavailable`, or `no_matching_package_sizes`.
+
+The frontend only prioritizes and localizes these codes. Calculation and
+package-availability rules remain in `farm/services/seed_demand.py`.
 
 ## Worked examples (from `backend/farm/tests/test_seed_demand.py`)
 
