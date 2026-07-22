@@ -31,6 +31,54 @@ class MediaUploadApiTest(ProjectApiTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('file', response.data)
 
+    def test_media_upload_rejects_spoofed_image_content_type(self):
+        """A non-image payload sent with an image Content-Type must be rejected.
+
+        The Content-Type header and filename are attacker-controlled, so the
+        endpoint must validate the actual bytes rather than trusting them.
+        """
+        upload = SimpleUploadedFile(
+            'payload.html',
+            b'<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+            content_type='image/png',
+        )
+        response = self.client.post(
+            '/openfarmplanner/api/media-files/upload/',
+            {'file': upload},
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('file', response.data)
+
+    def test_media_upload_stores_image_with_format_derived_extension(self):
+        """A genuine image is stored under an extension derived from its bytes."""
+        from io import BytesIO
+
+        from PIL import Image
+
+        from farm.models import MediaFile
+
+        buffer = BytesIO()
+        Image.new('RGB', (8, 8), (10, 20, 30)).save(buffer, format='PNG')
+        upload = SimpleUploadedFile(
+            'evil.html',
+            buffer.getvalue(),
+            content_type='image/png',
+        )
+        response = self.client.post(
+            '/openfarmplanner/api/media-files/upload/',
+            {'file': upload},
+            format='multipart',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        storage_path = response.data['storage_path']
+        self.assertTrue(storage_path.endswith('.png'), storage_path)
+        self.assertFalse(storage_path.endswith('.html'), storage_path)
+        media = MediaFile.objects.get(id=response.data['id'])
+        MediaFile.objects.filter(id=media.id).delete()
+
 
 class NoteAttachmentApiTest(DRFAPITestCase):
     def setUp(self):

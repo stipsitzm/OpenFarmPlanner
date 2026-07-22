@@ -18,6 +18,51 @@ from farm.models import (
 from farm.tests.api_base import ProjectApiTestCase, User
 
 
+class TenantScopeApiTest(ProjectApiTestCase):
+    """The active project's records must not be reassignable to other projects."""
+
+    def test_update_cannot_move_location_to_foreign_project(self):
+        foreign_project = Project.objects.create(name='Foreign', slug='foreign-scope-proj')
+        response = self.client.patch(
+            f'/openfarmplanner/api/locations/{self.location.id}/',
+            {'project': foreign_project.id},
+            format='json',
+        )
+        self.location.refresh_from_db()
+        self.assertNotEqual(self.location.project_id, foreign_project.id)
+        self.assertEqual(self.location.project_id, self.project.id)
+
+    def test_update_cannot_move_field_to_foreign_project(self):
+        foreign_project = Project.objects.create(name='Foreign2', slug='foreign-scope-proj-2')
+        self.client.patch(
+            f'/openfarmplanner/api/fields/{self.field.id}/',
+            {'project': foreign_project.id},
+            format='json',
+        )
+        self.field.refresh_from_db()
+        self.assertEqual(self.field.project_id, self.project.id)
+
+    def test_update_cannot_move_bed_to_foreign_project(self):
+        foreign_project = Project.objects.create(name='Foreign3', slug='foreign-scope-proj-3')
+        self.client.patch(
+            f'/openfarmplanner/api/beds/{self.bed.id}/',
+            {'project': foreign_project.id},
+            format='json',
+        )
+        self.bed.refresh_from_db()
+        self.assertEqual(self.bed.project_id, self.project.id)
+
+    def test_update_cannot_move_culture_to_foreign_project(self):
+        foreign_project = Project.objects.create(name='Foreign4', slug='foreign-scope-proj-4')
+        self.client.patch(
+            f'/openfarmplanner/api/cultures/{self.culture.id}/',
+            {'project': foreign_project.id},
+            format='json',
+        )
+        self.culture.refresh_from_db()
+        self.assertEqual(self.culture.project_id, self.project.id)
+
+
 class StructureApiTest(ProjectApiTestCase):
     def test_location_create_and_update_with_agronomic_fields(self):
         create_response = self.client.post(

@@ -11,6 +11,7 @@ from farm.image_processing import (
     ImageProcessingBackendUnavailableError,
     ImageProcessingError,
     process_note_image,
+    validate_image_upload,
 )
 from farm.models import (
     EntityRevision,
@@ -46,7 +47,19 @@ class MediaFileUploadView(APIView):
         if content_type not in ALLOWED_MEDIA_UPLOAD_CONTENT_TYPES:
             return Response({'file': ['Unsupported file type. Only image uploads are allowed.']}, status=status.HTTP_400_BAD_REQUEST)
 
-        rel_path = culture_media_upload_path(None, upload.name)
+        # The client-supplied Content-Type header and filename are both
+        # attacker-controlled, so validate the actual bytes and derive the
+        # stored extension from the decoded image format. Without this a member
+        # could upload HTML/SVG/script content under an image/* header and have
+        # it persisted with a dangerous extension (stored-XSS vector).
+        try:
+            extension, _mime_type = validate_image_upload(upload)
+        except ImageProcessingBackendUnavailableError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        except ImageProcessingError:
+            return Response({'file': ['Unsupported file type. Only image uploads are allowed.']}, status=status.HTTP_400_BAD_REQUEST)
+
+        rel_path = culture_media_upload_path(None, f'image.{extension}')
         saved_path = default_storage.save(rel_path, upload)
         media = MediaFile.objects.create(storage_path=saved_path)
         record_entity_revision(

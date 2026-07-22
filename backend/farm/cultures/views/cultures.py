@@ -370,10 +370,13 @@ class CultureViewSet(ProjectScopedMixin, viewsets.ModelViewSet):
                         # Skip update without confirmation
                         skipped_count += 1
                 else:
-                    # Create new culture
+                    # Create new culture. `project` is read-only on the
+                    # serializer, so it is assigned server-side from the active
+                    # project here; any client-supplied project in the payload
+                    # is intentionally ignored to keep imports project-scoped.
                     serializer = CultureSerializer(data=culture_data)
                     if serializer.is_valid():
-                        serializer.save()
+                        serializer.save(project=request.active_project)
                         created_count += 1
                     else:
                         errors.append({
