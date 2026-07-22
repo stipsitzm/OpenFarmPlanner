@@ -37,6 +37,14 @@
   },
   "library": {
     "publishing": "Publishing…",
+    "empty": "No public cultures found.",
+    "emptyState": {
+      "noSelectionTitle": "No public culture selected yet",
+      "noSelectionDescription": "Select a culture on the left to view details and import it. The crop library grows through community contributions, and your own cultures can be published later.",
+      "emptyLibraryTitle": "No public cultures yet",
+      "emptyLibraryDescription": "The crop library lives from community contributions. Once suitable project cultures are published, everyone can use and improve them here.",
+      "noResultsTitle": "No matching public culture found"
+    },
     "publishConfirm": {
       "acceptLicense": "I am allowed to publish this dataset and agree that it becomes a durable part of the public crop library under CC BY-SA 4.0.",
       "linkPrefix": "Details are available in the ",

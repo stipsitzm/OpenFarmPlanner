@@ -480,6 +480,13 @@
     "searchLabel": "Öffentliche Kulturen durchsuchen",
     "selectPrompt": "Wählen Sie eine öffentliche Kultur aus, um Details und Import anzuzeigen.",
     "empty": "Keine öffentlichen Kulturen gefunden.",
+    "emptyState": {
+      "noSelectionTitle": "Noch keine öffentliche Kultur ausgewählt",
+      "noSelectionDescription": "Wählen Sie links eine Kultur aus, um Details und Import anzuzeigen. Die Kulturbibliothek wächst mit den Beiträgen der Community – eigene Kulturen können später veröffentlicht werden.",
+      "emptyLibraryTitle": "Noch keine öffentlichen Kulturen vorhanden",
+      "emptyLibraryDescription": "Die Kulturbibliothek lebt von den Beiträgen der Community. Sobald passende Projektkulturen veröffentlicht werden, können sie hier von allen genutzt und weiterentwickelt werden.",
+      "noResultsTitle": "Keine passende öffentliche Kultur gefunden"
+    },
     "importButton": "In Projekt importieren",
     "importing": "Importiere…",
     "importSuccess": "„{{name}}“ wurde in dieses Projekt importiert.",

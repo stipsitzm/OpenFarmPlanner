@@ -31,6 +31,22 @@ function mockMobileViewport(): void {
   });
 }
 
+function mockDesktopViewport(): void {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query.includes('min-width:900px'),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 describe('PublicCultureLibraryDialog', () => {
   beforeEach(() => {
     mockMobileViewport();
@@ -122,5 +138,47 @@ describe('PublicCultureLibraryDialog', () => {
       maxHeight: '100dvh',
       margin: '0px',
     });
+  });
+
+  it('shows a friendly desktop empty state in the detail area when nothing is selected', async () => {
+    mockDesktopViewport();
+
+    render(
+      <PublicCultureLibraryDialog
+        open
+        loading={false}
+        error={null}
+        cultures={[culture]}
+        importingId={null}
+        onClose={vi.fn()}
+        onSearch={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole('dialog');
+
+    expect(screen.getByText('Noch keine öffentliche Kultur ausgewählt')).toBeInTheDocument();
+    expect(screen.getByText(/Die Kulturbibliothek wächst mit den Beiträgen der Community/)).toBeInTheDocument();
+  });
+
+  it('shows the community contribution empty state on mobile when the library is empty', async () => {
+    render(
+      <PublicCultureLibraryDialog
+        open
+        loading={false}
+        error={null}
+        cultures={[]}
+        importingId={null}
+        onClose={vi.fn()}
+        onSearch={vi.fn()}
+        onImport={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole('dialog');
+
+    expect(screen.getByText('Noch keine öffentlichen Kulturen vorhanden')).toBeInTheDocument();
+    expect(screen.getByText(/Die Kulturbibliothek lebt von den Beiträgen der Community/)).toBeInTheDocument();
   });
 });

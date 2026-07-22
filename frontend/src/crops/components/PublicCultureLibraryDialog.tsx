@@ -30,6 +30,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import PublicIcon from '@mui/icons-material/Public';
 // Cross-domain import: a markdown helper that today lives under the
 // app-specific data-grid module. Kept as-is rather than duplicated/moved —
 // see docs/crop-library-architecture.md for why this is flagged as a
@@ -59,6 +60,56 @@ const previewBadgeSx = {
 } as const;
 
 const PUBLIC_CULTURE_LIBRARY_HISTORY_KEY = 'openFarmPlannerPublicCultureLibrary';
+
+function LibraryEmptyState({
+  title,
+  description,
+  compact = false,
+}: {
+  title: string;
+  description: string;
+  compact?: boolean;
+}) {
+  return (
+    <Box
+      sx={{
+        height: '100%',
+        minHeight: compact ? 180 : 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        px: compact ? 2 : 3,
+        py: compact ? 3 : 4,
+      }}
+    >
+      <Box
+        sx={{
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          mb: 1.25,
+          color: 'success.main',
+          bgcolor: 'success.50',
+          border: '1px solid',
+          borderColor: 'success.200',
+        }}
+      >
+        <PublicIcon fontSize="small" />
+      </Box>
+      <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.75 }}>
+        {title}
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360, lineHeight: 1.5 }}>
+        {description}
+      </Typography>
+    </Box>
+  );
+}
 
 export function PublicCultureLibraryDialog({
   open,
@@ -238,6 +289,11 @@ export function PublicCultureLibraryDialog({
     () => filteredCultures.find((entry) => entry.id === selectedId) ?? null,
     [filteredCultures, selectedId],
   );
+  const hasLibraryEntries = cultures.length > 0;
+  const listEmptyTitle = hasLibraryEntries ? t('library.emptyState.noResultsTitle') : t('library.emptyState.emptyLibraryTitle');
+  const listEmptyDescription = hasLibraryEntries ? t('library.empty') : t('library.emptyState.emptyLibraryDescription');
+  const detailEmptyTitle = hasLibraryEntries ? t('library.emptyState.noSelectionTitle') : t('library.emptyState.emptyLibraryTitle');
+  const detailEmptyDescription = hasLibraryEntries ? t('library.emptyState.noSelectionDescription') : t('library.emptyState.emptyLibraryDescription');
 
   const handleDialogClose = (): void => {
     if (useMobileFilterLayout && mobileStep === 'detail') {
@@ -385,7 +441,11 @@ export function PublicCultureLibraryDialog({
           {(!useMobileFilterLayout || mobileStep === 'list') ? (
             <List sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, height: useMobileFilterLayout ? '100%' : 420, minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable' }}>
             {filteredCultures.length === 0 ? (
-              <Typography color="text.secondary" sx={{ p: 2 }}>{t('library.empty')}</Typography>
+              useMobileFilterLayout ? (
+                <LibraryEmptyState title={listEmptyTitle} description={listEmptyDescription} compact />
+              ) : (
+                <Typography color="text.secondary" sx={{ p: 2 }}>{t('library.empty')}</Typography>
+              )
             ) : filteredCultures.map((culture) => (
                 <ListItemButton
                   key={culture.id}
@@ -481,7 +541,7 @@ export function PublicCultureLibraryDialog({
                 )}
               </>
             ) : (
-              <Typography color="text.secondary">{t('library.selectPrompt')}</Typography>
+              <LibraryEmptyState title={detailEmptyTitle} description={detailEmptyDescription} />
             )}
             </Box>
           ) : null}
