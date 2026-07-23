@@ -6,14 +6,19 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  FormControl,
+  InputLabel,
   List,
   ListItemButton,
   ListItemText,
+  MenuItem,
+  Select,
   Stack,
   Tab,
   Tabs,
   TextField,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
@@ -32,6 +37,9 @@ import { useTranslation } from '../../i18n';
 import { showGlobalSnackbar } from '../../utils/globalSnackbar';
 
 type CollaborationLoadStatus = 'idle' | 'loading' | 'success' | 'error';
+type ProposalField = 'notes' | 'supplier_name' | 'growth_duration_days' | 'harvest_duration_days';
+
+const PROPOSAL_FIELDS: ProposalField[] = ['notes', 'supplier_name', 'growth_duration_days', 'harvest_duration_days'];
 
 const getCultureTitle = (culture: PublicCulture): string => (
   culture.variety ? `${culture.name} (${culture.variety})` : culture.name
@@ -68,6 +76,26 @@ function getNutrientDemandLabel(
     return t(`library.page.fields.nutrientDemandValues.${value}`);
   }
   return fallback;
+}
+
+function getProposalFieldLabel(field: string, t: (key: string, options?: Record<string, unknown>) => string): string {
+  if (PROPOSAL_FIELDS.includes(field as ProposalField)) {
+    return t(`library.page.proposals.fields.${field}`);
+  }
+  return field;
+}
+
+function getProposalValueLabel(value: unknown, fallback: string): string {
+  if (value === null || value === undefined || value === '') {
+    return fallback;
+  }
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
 }
 
 interface DetailRowProps {
@@ -110,7 +138,7 @@ function ProposalCard({
   t,
 }: ProposalCardProps) {
   const [reviewing, setReviewing] = useState<'approve' | 'reject' | null>(null);
-  const proposedNotes = typeof proposal.proposed_data.notes === 'string' ? proposal.proposed_data.notes : '';
+  const changedFields = Object.entries(proposal.proposed_data);
 
   const reviewProposal = async (decision: 'approve' | 'reject'): Promise<void> => {
     setReviewing(decision);
@@ -146,10 +174,19 @@ function ProposalCard({
         </Box>
         <Chip size="small" label={statusLabel} color={proposal.status === 'pending' ? 'warning' : proposal.status === 'approved' ? 'success' : 'default'} />
       </Stack>
-      {proposedNotes ? (
-        <Typography variant="body2" sx={{ mt: 1.25, whiteSpace: 'pre-wrap', color: 'text.secondary' }}>
-          {proposedNotes}
-        </Typography>
+      {changedFields.length > 0 ? (
+        <Stack spacing={0.75} sx={{ mt: 1.25 }}>
+          {changedFields.map(([field, value]) => (
+            <Box key={field}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                {getProposalFieldLabel(field, t)}
+              </Typography>
+              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                {getProposalValueLabel(value, t('library.page.notSpecified'))}
+              </Typography>
+            </Box>
+          ))}
+        </Stack>
       ) : null}
       {proposal.review_note ? (
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
@@ -196,10 +233,12 @@ export default function PublicCropLibraryPage() {
   const [collaborationStatus, setCollaborationStatus] = useState<CollaborationLoadStatus>('idle');
   const [commentBody, setCommentBody] = useState('');
   const [proposalSummary, setProposalSummary] = useState('');
-  const [proposalNotes, setProposalNotes] = useState('');
+  const [proposalField, setProposalField] = useState<ProposalField>('notes');
+  const [proposalValue, setProposalValue] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [submittingProposal, setSubmittingProposal] = useState(false);
   const [importingId, setImportingId] = useState<number | null>(null);
+  const isMobile = useMediaQuery('(max-width:600px)');
 
   const locale = i18n.resolvedLanguage === 'de' ? 'de-DE' : 'en-US';
   const anonymousLabel = t('library.anonymousAuthor');
@@ -255,8 +294,11 @@ export default function PublicCropLibraryPage() {
   }, []);
 
   useEffect(() => {
-    void loadCultures('');
-  }, [loadCultures]);
+    const timeout = window.setTimeout(() => {
+      void loadCultures(query);
+    }, query.trim() ? 250 : 0);
+    return () => window.clearTimeout(timeout);
+  }, [loadCultures, query]);
 
   useEffect(() => {
     if (selectedCultureId === null) {
@@ -271,7 +313,8 @@ export default function PublicCropLibraryPage() {
   useEffect(() => {
     setCommentBody('');
     setProposalSummary('');
-    setProposalNotes('');
+    setProposalField('notes');
+    setProposalValue('');
   }, [selectedCultureId]);
 
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>): void => {
@@ -314,17 +357,25 @@ export default function PublicCropLibraryPage() {
 
   const handleProposalSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    if (!selectedCulture || !proposalSummary.trim() || !proposalNotes.trim()) {
+    if (!selectedCulture || !proposalSummary.trim() || !proposalValue.trim()) {
+      return;
+    }
+    const proposedValue = proposalField === 'growth_duration_days' || proposalField === 'harvest_duration_days'
+      ? Number(proposalValue)
+      : proposalValue.trim();
+    if (typeof proposedValue === 'number' && (!Number.isFinite(proposedValue) || proposedValue < 0)) {
+      showGlobalSnackbar({ message: t('library.page.proposals.invalidNumber'), severity: 'error' });
       return;
     }
     setSubmittingProposal(true);
     try {
       await publicCultureAPI.createChangeProposal(selectedCulture.id, {
         summary: proposalSummary.trim(),
-        proposed_data: { notes: proposalNotes.trim() },
+        proposed_data: { [proposalField]: proposedValue },
       });
       setProposalSummary('');
-      setProposalNotes('');
+      setProposalField('notes');
+      setProposalValue('');
       await loadCollaboration(selectedCulture.id);
       showGlobalSnackbar({ message: t('library.page.proposals.createSuccess'), severity: 'success' });
     } catch {
@@ -396,7 +447,7 @@ export default function PublicCropLibraryPage() {
                   </Typography>
                 </Box>
               ) : (
-                <List disablePadding sx={{ maxHeight: { md: 640 }, overflow: 'auto' }}>
+                <List disablePadding sx={{ maxHeight: { xs: 280, sm: 340, md: 640 }, overflow: 'auto' }}>
                   {cultures.map((culture) => (
                     <ListItemButton
                       key={culture.id}
@@ -447,13 +498,13 @@ export default function PublicCropLibraryPage() {
                   <Tabs
                     value={activeTab}
                     onChange={(_, value: number) => setActiveTab(value)}
-                    variant="scrollable"
+                    variant={isMobile ? 'fullWidth' : 'scrollable'}
                     allowScrollButtonsMobile
                     sx={{ px: { xs: 1, sm: 2 } }}
                   >
-                    <Tab icon={<SpaOutlinedIcon />} iconPosition="start" label={t('library.page.tabs.details')} />
-                    <Tab icon={<RateReviewOutlinedIcon />} iconPosition="start" label={t('library.page.tabs.proposals')} />
-                    <Tab icon={<ForumOutlinedIcon />} iconPosition="start" label={t('library.page.tabs.discussion')} />
+                    <Tab icon={isMobile ? undefined : <SpaOutlinedIcon />} iconPosition="start" label={t('library.page.tabs.details')} />
+                    <Tab icon={isMobile ? undefined : <RateReviewOutlinedIcon />} iconPosition="start" label={t('library.page.tabs.proposals')} />
+                    <Tab icon={isMobile ? undefined : <ForumOutlinedIcon />} iconPosition="start" label={t('library.page.tabs.discussion')} />
                   </Tabs>
                   <Divider />
 
@@ -497,18 +548,37 @@ export default function PublicCropLibraryPage() {
                           size="small"
                           fullWidth
                         />
+                        <FormControl size="small" fullWidth>
+                          <InputLabel>{t('library.page.proposals.fieldLabel')}</InputLabel>
+                          <Select
+                            value={proposalField}
+                            label={t('library.page.proposals.fieldLabel')}
+                            inputProps={{ 'aria-label': t('library.page.proposals.fieldLabel') }}
+                            onChange={(event) => {
+                              setProposalField(event.target.value as ProposalField);
+                              setProposalValue('');
+                            }}
+                          >
+                            {PROPOSAL_FIELDS.map((field) => (
+                              <MenuItem key={field} value={field}>
+                                {t(`library.page.proposals.fields.${field}`)}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
                         <TextField
-                          value={proposalNotes}
-                          onChange={(event) => setProposalNotes(event.target.value)}
-                          label={t('library.page.proposals.notesLabel')}
-                          multiline
-                          minRows={4}
+                          value={proposalValue}
+                          onChange={(event) => setProposalValue(event.target.value)}
+                          label={t('library.page.proposals.valueLabel')}
+                          type={proposalField === 'growth_duration_days' || proposalField === 'harvest_duration_days' ? 'number' : 'text'}
+                          multiline={proposalField === 'notes'}
+                          minRows={proposalField === 'notes' ? 4 : undefined}
                           fullWidth
                         />
                         <Button
                           type="submit"
                           variant="contained"
-                          disabled={submittingProposal || !proposalSummary.trim() || !proposalNotes.trim()}
+                          disabled={submittingProposal || !proposalSummary.trim() || !proposalValue.trim()}
                           sx={{ justifySelf: { xs: 'stretch', sm: 'start' } }}
                         >
                           {submittingProposal ? t('library.page.proposals.creating') : t('library.page.proposals.create')}

@@ -97,7 +97,10 @@
       "proposals": {
         "intro": "Public crops are not overwritten directly. Suggest changes so they can be reviewed and adopted transparently.",
         "summaryLabel": "Short summary",
+        "fieldLabel": "Field",
+        "valueLabel": "Suggested value",
         "notesLabel": "Proposed notes",
+        "invalidNumber": "Please enter a valid number.",
         "create": "Suggest change",
         "creating": "Sending proposal…",
         "createSuccess": "Change proposal saved.",
@@ -110,6 +113,12 @@
         "approveSuccess": "Change proposal applied.",
         "rejectSuccess": "Change proposal rejected.",
         "reviewError": "Change proposal could not be reviewed.",
+        "fields": {
+          "notes": "Notes",
+          "supplier_name": "Seed supplier",
+          "growth_duration_days": "Growth duration (days)",
+          "harvest_duration_days": "Harvest duration (days)"
+        },
         "status": {
           "pending": "Open",
           "approved": "Applied",

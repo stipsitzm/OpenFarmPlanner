@@ -30,3 +30,38 @@ on branch `fix/simplify-publishing-wizard`.
   immediately after publishing, without a page reload.
 - Frontend/backend served through the standard Playwright web-server setup.
 - No temporary QA spec or generated Playwright artifacts are tracked.
+
+---
+
+Targeted public crop-library collaboration-page audit based on Git commit
+`49626ba3` plus the follow-up working-tree fixes on branch
+`fix/simplify-publishing-wizard`.
+
+## Audited areas
+
+| Area | Viewports | Result |
+|---|---|---|
+| Full crop-library page | 1440x900, 390x844 | page loads, search/list/detail stay usable |
+| Public culture import from full page | 1440x900 | published E2E culture imports into the active project |
+| Discussion flow | 1440x900 | comment can be created and appears immediately |
+| Change proposal flow | 1440x900 | field-based proposal can be created and appears with status `Offen` |
+| Mobile crop-library layout | 390x844 | result list is capped before details; tabs no longer depend on icon-heavy labels |
+
+## Findings
+
+- Local load errors on `/comments/` and `/change-proposals/` were caused by
+  unapplied migration `farm.0079_publicculturechangeproposal_and_more`.
+  Applying the migration fixed the 500 responses.
+- The mobile page let the result list grow too tall before the selected
+  details, which made the workflow feel buried on phones.
+- The proposal form only allowed note changes. The flow now supports field
+  proposals for notes, seed supplier, growth duration, and harvest duration.
+- The proposal field selector needed an explicit accessible label for robust
+  keyboard/test access.
+
+## Verification
+
+- `cd frontend && npx eslint src/crops/pages/PublicCropLibraryPage.tsx e2e/public-crop-library.spec.ts`
+- `jq empty frontend/src/i18n/locales/de/cultures.json frontend/src/i18n/locales/en/cultures.json`
+- `cd frontend && npm run build`
+- `cd frontend && npx playwright test e2e/public-crop-library.spec.ts`

@@ -524,7 +524,10 @@
       "proposals": {
         "intro": "Öffentliche Kulturen werden nicht direkt überschrieben. Schlage Änderungen vor, damit sie geprüft und nachvollziehbar übernommen werden können.",
         "summaryLabel": "Kurze Zusammenfassung",
+        "fieldLabel": "Feld",
+        "valueLabel": "Vorgeschlagener Wert",
         "notesLabel": "Vorgeschlagene Notizen",
+        "invalidNumber": "Bitte gib eine gültige Zahl ein.",
         "create": "Änderung vorschlagen",
         "creating": "Sende Vorschlag…",
         "createSuccess": "Änderungsvorschlag wurde gespeichert.",
@@ -537,6 +540,12 @@
         "approveSuccess": "Änderungsvorschlag wurde übernommen.",
         "rejectSuccess": "Änderungsvorschlag wurde abgelehnt.",
         "reviewError": "Änderungsvorschlag konnte nicht geprüft werden.",
+        "fields": {
+          "notes": "Notizen",
+          "supplier_name": "Saatgutlieferant",
+          "growth_duration_days": "Wachstumszeit (Tage)",
+          "harvest_duration_days": "Erntezeit (Tage)"
+        },
         "status": {
           "pending": "Offen",
           "approved": "Übernommen",
