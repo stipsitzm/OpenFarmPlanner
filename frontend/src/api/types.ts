@@ -257,6 +257,8 @@ export type PublicCultureUpdatePayload = Partial<Pick<
   | 'growth_duration_days'
   | 'harvest_duration_days'
   | 'propagation_duration_days'
+  | 'harvest_method'
+  | 'allow_deviation_delivery_weeks'
   | 'distance_within_row_m'
   | 'row_spacing_m'
   | 'sowing_depth_m'
@@ -265,7 +267,10 @@ export type PublicCultureUpdatePayload = Partial<Pick<
   | 'sowing_calculation_safety_percent'
   | 'thousand_kernel_weight_g'
   | 'expected_yield'
+  | 'seeding_requirement'
+  | 'seeding_requirement_type'
   | 'display_color'
+  | 'seed_packages'
 >> & { change_comment?: string };
 
 export interface PublicCultureDiscussionComment {

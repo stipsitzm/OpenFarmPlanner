@@ -11,10 +11,6 @@ import {
   Chip,
   CircularProgress,
   Divider,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControl,
   IconButton,
   InputLabel,
@@ -39,6 +35,8 @@ import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import SpaOutlinedIcon from '@mui/icons-material/SpaOutlined';
 import { publicCultureAPI } from '../../api/api';
 import type {
+  Culture,
+  CultivationType,
   PublicCulture,
   PublicCultureDiscussionComment,
   PublicCultureUpdatePayload,
@@ -49,6 +47,7 @@ import PageContainer from '../../components/layout/PageContainer';
 import { useTranslation } from '../../i18n';
 import { showGlobalSnackbar } from '../../utils/globalSnackbar';
 import { stripCitationMarkers } from '../../components/data-grid/markdown';
+import { CultureForm } from '../../cultures/CultureForm';
 
 type CollaborationLoadStatus = 'idle' | 'loading' | 'success' | 'error';
 type VersionLoadStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -313,57 +312,106 @@ function DetailGrid({ children }: { children: ReactNode }) {
   );
 }
 
-interface PublicCultureEditDraft {
-  name: string;
-  variety: string;
-  crop_family: string;
-  nutrient_demand: PublicCulture['nutrient_demand'];
-  cultivation_type: PublicCulture['cultivation_type'];
-  growth_duration_days: string;
-  harvest_duration_days: string;
-  propagation_duration_days: string;
-  distance_within_row_m: string;
-  row_spacing_m: string;
-  sowing_depth_m: string;
-  seed_rate_value: string;
-  seed_rate_unit: PublicCulture['seed_rate_unit'] | '';
-  sowing_calculation_safety_percent: string;
-  thousand_kernel_weight_g: string;
-  expected_yield: string;
-  notes: string;
-  change_comment: string;
+function metersToCentimeters(value: number | null | undefined): number | undefined {
+  return value === null || value === undefined ? undefined : value * 100;
 }
 
-function createEditDraft(culture: PublicCulture): PublicCultureEditDraft {
+function centimetersToMeters(value: number | null | undefined): number | null {
+  return value === null || value === undefined ? null : value / 100;
+}
+
+function getPublicCultureCultivationTypes(culture: PublicCulture): CultivationType[] {
+  if (culture.cultivation_types?.length) {
+    return culture.cultivation_types;
+  }
+  return culture.cultivation_type ? [culture.cultivation_type] : ['pre_cultivation'];
+}
+
+function buildCultureFormDataFromPublicCulture(culture: PublicCulture): Culture {
+  const cultivationTypes = getPublicCultureCultivationTypes(culture);
+  const primaryCultivationType = cultivationTypes[0] ?? 'pre_cultivation';
+  const usesDirectSowing = cultivationTypes.includes('direct_sowing');
+  const usesPreCultivation = cultivationTypes.includes('pre_cultivation');
   return {
+    id: culture.id,
     name: culture.name,
     variety: culture.variety ?? '',
+    crop_species: culture.crop_species ?? null,
     crop_family: culture.crop_family ?? '',
     nutrient_demand: culture.nutrient_demand ?? '',
-    cultivation_type: culture.cultivation_type ?? '',
-    growth_duration_days: culture.growth_duration_days === null || culture.growth_duration_days === undefined ? '' : String(culture.growth_duration_days),
-    harvest_duration_days: culture.harvest_duration_days === null || culture.harvest_duration_days === undefined ? '' : String(culture.harvest_duration_days),
-    propagation_duration_days: culture.propagation_duration_days === null || culture.propagation_duration_days === undefined ? '' : String(culture.propagation_duration_days),
-    distance_within_row_m: culture.distance_within_row_m === null || culture.distance_within_row_m === undefined ? '' : String(culture.distance_within_row_m),
-    row_spacing_m: culture.row_spacing_m === null || culture.row_spacing_m === undefined ? '' : String(culture.row_spacing_m),
-    sowing_depth_m: culture.sowing_depth_m === null || culture.sowing_depth_m === undefined ? '' : String(culture.sowing_depth_m),
-    seed_rate_value: culture.seed_rate_value === null || culture.seed_rate_value === undefined ? '' : String(culture.seed_rate_value),
-    seed_rate_unit: culture.seed_rate_unit ?? '',
-    sowing_calculation_safety_percent: culture.sowing_calculation_safety_percent === null || culture.sowing_calculation_safety_percent === undefined ? '' : String(culture.sowing_calculation_safety_percent),
-    thousand_kernel_weight_g: culture.thousand_kernel_weight_g === null || culture.thousand_kernel_weight_g === undefined ? '' : String(culture.thousand_kernel_weight_g),
-    expected_yield: culture.expected_yield === null || culture.expected_yield === undefined ? '' : String(culture.expected_yield),
+    cultivation_type: primaryCultivationType,
+    cultivation_types: cultivationTypes,
+    growth_duration_days: culture.growth_duration_days ?? undefined,
+    harvest_duration_days: culture.harvest_duration_days ?? undefined,
+    propagation_duration_days: culture.propagation_duration_days ?? undefined,
+    harvest_method: culture.harvest_method ?? '',
+    expected_yield: culture.expected_yield ?? undefined,
+    allow_deviation_delivery_weeks: culture.allow_deviation_delivery_weeks ?? false,
+    distance_within_row_cm: metersToCentimeters(culture.distance_within_row_m),
+    row_spacing_cm: metersToCentimeters(culture.row_spacing_m),
+    sowing_depth_cm: metersToCentimeters(culture.sowing_depth_m),
+    seed_rate_direct_value: usesDirectSowing ? culture.seed_rate_value ?? null : null,
+    seed_rate_direct_unit: usesDirectSowing ? culture.seed_rate_unit ?? null : null,
+    seed_rate_pre_cultivation_value: usesPreCultivation ? culture.seed_rate_value ?? null : null,
+    seed_rate_pre_cultivation_unit: usesPreCultivation ? culture.seed_rate_unit ?? null : null,
+    sowing_calculation_safety_percent_direct: usesDirectSowing ? culture.sowing_calculation_safety_percent ?? null : null,
+    sowing_calculation_safety_percent_pre_cultivation: usesPreCultivation ? culture.sowing_calculation_safety_percent ?? null : null,
+    seed_rate_value: culture.seed_rate_value ?? null,
+    seed_rate_unit: culture.seed_rate_unit ?? null,
+    seed_rate_by_cultivation: culture.seed_rate_by_cultivation ?? null,
+    sowing_calculation_safety_percent: culture.sowing_calculation_safety_percent ?? undefined,
+    thousand_kernel_weight_g: culture.thousand_kernel_weight_g ?? undefined,
+    seeding_requirement: culture.seeding_requirement ?? undefined,
+    seeding_requirement_type: culture.seeding_requirement_type ?? '',
+    seed_packages: culture.seed_packages ?? [],
+    display_color: culture.display_color ?? '',
     notes: culture.notes ?? '',
-    change_comment: '',
   };
 }
 
-function parseOptionalNumber(value: string): number | null {
-  const trimmedValue = value.trim();
-  if (!trimmedValue) {
-    return null;
-  }
-  const parsedValue = Number(trimmedValue.replace(',', '.'));
-  return Number.isFinite(parsedValue) ? parsedValue : null;
+function buildPublicCultureUpdatePayload(formData: Culture, changeComment: string): PublicCultureUpdatePayload {
+  const cultivationTypes = formData.cultivation_types?.length
+    ? formData.cultivation_types
+    : formData.cultivation_type ? [formData.cultivation_type] : [];
+  const primarySeedRateSource = cultivationTypes.includes('direct_sowing')
+    ? {
+      value: formData.seed_rate_direct_value,
+      unit: formData.seed_rate_direct_unit,
+      safety: formData.sowing_calculation_safety_percent_direct,
+    }
+    : {
+      value: formData.seed_rate_pre_cultivation_value,
+      unit: formData.seed_rate_pre_cultivation_unit,
+      safety: formData.sowing_calculation_safety_percent_pre_cultivation,
+    };
+
+  return {
+    name: formData.name.trim(),
+    variety: formData.variety?.trim() ?? '',
+    notes: formData.notes ?? '',
+    crop_family: formData.crop_family?.trim() ?? '',
+    nutrient_demand: formData.nutrient_demand ?? '',
+    cultivation_type: formData.cultivation_type ?? '',
+    cultivation_types: cultivationTypes,
+    growth_duration_days: formData.growth_duration_days ?? null,
+    harvest_duration_days: formData.harvest_duration_days ?? null,
+    propagation_duration_days: formData.propagation_duration_days ?? null,
+    harvest_method: formData.harvest_method ?? '',
+    expected_yield: formData.expected_yield ?? null,
+    allow_deviation_delivery_weeks: formData.allow_deviation_delivery_weeks ?? false,
+    distance_within_row_m: centimetersToMeters(formData.distance_within_row_cm),
+    row_spacing_m: centimetersToMeters(formData.row_spacing_cm),
+    sowing_depth_m: centimetersToMeters(formData.sowing_depth_cm),
+    seed_rate_value: primarySeedRateSource.value ?? null,
+    seed_rate_unit: primarySeedRateSource.unit ?? null,
+    sowing_calculation_safety_percent: primarySeedRateSource.safety ?? null,
+    thousand_kernel_weight_g: formData.thousand_kernel_weight_g ?? null,
+    seeding_requirement: formData.seeding_requirement ?? null,
+    seeding_requirement_type: formData.seeding_requirement_type ?? '',
+    display_color: formData.display_color ?? '',
+    seed_packages: formData.seed_packages ?? [],
+    change_comment: changeComment.trim(),
+  };
 }
 
 export default function PublicCropLibraryPage() {
@@ -390,9 +438,8 @@ export default function PublicCropLibraryPage() {
   const [commentBody, setCommentBody] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [importingId, setImportingId] = useState<number | null>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editDraft, setEditDraft] = useState<PublicCultureEditDraft | null>(null);
-  const [savingEdit, setSavingEdit] = useState(false);
+  const [editingPublicCulture, setEditingPublicCulture] = useState(false);
+  const [editChangeComment, setEditChangeComment] = useState('');
   const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
   const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -442,6 +489,10 @@ export default function PublicCropLibraryPage() {
   const selectedCulture = useMemo(
     () => cultures.find((culture) => culture.id === selectedCultureId) ?? null,
     [cultures, selectedCultureId],
+  );
+  const selectedCultureFormData = useMemo(
+    () => selectedCulture ? buildCultureFormDataFromPublicCulture(selectedCulture) : null,
+    [selectedCulture],
   );
 
   useEffect(() => {
@@ -627,53 +678,26 @@ export default function PublicCropLibraryPage() {
     if (!selectedCulture) {
       return;
     }
-    setEditDraft(createEditDraft(selectedCulture));
-    setEditDialogOpen(true);
+    setEditChangeComment('');
+    setEditingPublicCulture(true);
   };
 
-  const updateEditDraft = (field: keyof PublicCultureEditDraft, value: string): void => {
-    setEditDraft((current) => current ? { ...current, [field]: value } : current);
-  };
-
-  const handleEditSave = async (): Promise<void> => {
-    if (!selectedCulture || !editDraft || !editDraft.name.trim()) {
+  const handleEditSave = async (formData: Culture): Promise<void> => {
+    if (!selectedCulture) {
       return;
     }
-    const payload: PublicCultureUpdatePayload = {
-      name: editDraft.name.trim(),
-      variety: editDraft.variety.trim(),
-      crop_family: editDraft.crop_family.trim(),
-      nutrient_demand: editDraft.nutrient_demand,
-      cultivation_type: editDraft.cultivation_type,
-      cultivation_types: editDraft.cultivation_type ? [editDraft.cultivation_type] : [],
-      growth_duration_days: parseOptionalNumber(editDraft.growth_duration_days),
-      harvest_duration_days: parseOptionalNumber(editDraft.harvest_duration_days),
-      propagation_duration_days: parseOptionalNumber(editDraft.propagation_duration_days),
-      distance_within_row_m: parseOptionalNumber(editDraft.distance_within_row_m),
-      row_spacing_m: parseOptionalNumber(editDraft.row_spacing_m),
-      sowing_depth_m: parseOptionalNumber(editDraft.sowing_depth_m),
-      seed_rate_value: parseOptionalNumber(editDraft.seed_rate_value),
-      seed_rate_unit: editDraft.seed_rate_unit || null,
-      sowing_calculation_safety_percent: parseOptionalNumber(editDraft.sowing_calculation_safety_percent),
-      thousand_kernel_weight_g: parseOptionalNumber(editDraft.thousand_kernel_weight_g),
-      expected_yield: parseOptionalNumber(editDraft.expected_yield),
-      notes: editDraft.notes,
-      change_comment: editDraft.change_comment.trim(),
-    };
-    setSavingEdit(true);
+    const payload = buildPublicCultureUpdatePayload(formData, editChangeComment);
     try {
       const response = await publicCultureAPI.update(selectedCulture.id, payload);
       setCultures((currentCultures) => currentCultures.map((culture) => (culture.id === response.data.id ? response.data : culture)));
-      setEditDialogOpen(false);
-      setEditDraft(null);
+      setEditingPublicCulture(false);
+      setEditChangeComment('');
       if (activeTab === 1) {
         await loadVersions(response.data.id);
       }
       showGlobalSnackbar({ message: t('library.page.edit.success'), severity: 'success' });
     } catch {
       showGlobalSnackbar({ message: t('library.page.edit.error'), severity: 'error' });
-    } finally {
-      setSavingEdit(false);
     }
   };
 
@@ -1251,136 +1275,32 @@ export default function PublicCropLibraryPage() {
           </Box>
         </Stack>
       </Box>
-      <Dialog
-        open={editDialogOpen}
-        onClose={() => {
-          if (!savingEdit) {
-            setEditDialogOpen(false);
-          }
-        }}
-        fullWidth
-        maxWidth="md"
-        fullScreen={isMobile}
-      >
-        <DialogTitle>{t('library.page.edit.title')}</DialogTitle>
-        <DialogContent dividers>
-          {editDraft ? (
-            <Stack spacing={2}>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
-                <TextField
-                  value={editDraft.name}
-                  onChange={(event) => updateEditDraft('name', event.target.value)}
-                  label={t('library.page.fields.name')}
-                  size="small"
-                  fullWidth
-                  required
-                />
-                <TextField
-                  value={editDraft.variety}
-                  onChange={(event) => updateEditDraft('variety', event.target.value)}
-                  label={t('library.page.fields.variety')}
-                  size="small"
-                  fullWidth
-                />
-                <TextField
-                  value={editDraft.crop_family}
-                  onChange={(event) => updateEditDraft('crop_family', event.target.value)}
-                  label={t('library.page.fields.cropFamily')}
-                  size="small"
-                  fullWidth
-                />
-                <FormControl size="small" fullWidth>
-                  <InputLabel>{t('library.page.fields.nutrientDemand')}</InputLabel>
-                  <Select
-                    value={editDraft.nutrient_demand}
-                    label={t('library.page.fields.nutrientDemand')}
-                    onChange={(event) => updateEditDraft('nutrient_demand', event.target.value)}
-                  >
-                    <MenuItem value="">{t('library.page.notSpecified')}</MenuItem>
-                    <MenuItem value="low">{t('library.page.fields.nutrientDemandValues.low')}</MenuItem>
-                    <MenuItem value="medium">{t('library.page.fields.nutrientDemandValues.medium')}</MenuItem>
-                    <MenuItem value="high">{t('library.page.fields.nutrientDemandValues.high')}</MenuItem>
-                  </Select>
-                </FormControl>
-                <FormControl size="small" fullWidth>
-                  <InputLabel>{t('library.page.fields.cultivationType')}</InputLabel>
-                  <Select
-                    value={editDraft.cultivation_type}
-                    label={t('library.page.fields.cultivationType')}
-                    onChange={(event) => updateEditDraft('cultivation_type', event.target.value)}
-                  >
-                    <MenuItem value="">{t('library.page.notSpecified')}</MenuItem>
-                    <MenuItem value="direct_sowing">{t('library.page.fields.cultivationTypes.directSowing')}</MenuItem>
-                    <MenuItem value="pre_cultivation">{t('library.page.fields.cultivationTypes.preCultivation')}</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-
-              <Divider />
-
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
-                <TextField value={editDraft.growth_duration_days} onChange={(event) => updateEditDraft('growth_duration_days', event.target.value)} label={t('library.page.fields.growthDurationDays')} type="number" size="small" fullWidth />
-                <TextField value={editDraft.harvest_duration_days} onChange={(event) => updateEditDraft('harvest_duration_days', event.target.value)} label={t('library.page.fields.harvestDurationDays')} type="number" size="small" fullWidth />
-                <TextField value={editDraft.propagation_duration_days} onChange={(event) => updateEditDraft('propagation_duration_days', event.target.value)} label={t('library.page.fields.propagationDurationDays')} type="number" size="small" fullWidth />
-                <TextField value={editDraft.distance_within_row_m} onChange={(event) => updateEditDraft('distance_within_row_m', event.target.value)} label={t('library.page.fields.distanceWithinRow')} type="number" size="small" fullWidth />
-                <TextField value={editDraft.row_spacing_m} onChange={(event) => updateEditDraft('row_spacing_m', event.target.value)} label={t('library.page.fields.rowSpacing')} type="number" size="small" fullWidth />
-                <TextField value={editDraft.sowing_depth_m} onChange={(event) => updateEditDraft('sowing_depth_m', event.target.value)} label={t('library.page.fields.sowingDepth')} type="number" size="small" fullWidth />
-                <TextField value={editDraft.seed_rate_value} onChange={(event) => updateEditDraft('seed_rate_value', event.target.value)} label={t('library.page.fields.seedRate')} type="number" size="small" fullWidth />
-                <FormControl size="small" fullWidth>
-                  <InputLabel>{t('library.page.edit.seedRateUnit')}</InputLabel>
-                  <Select
-                    value={editDraft.seed_rate_unit ?? ''}
-                    label={t('library.page.edit.seedRateUnit')}
-                    onChange={(event) => updateEditDraft('seed_rate_unit', event.target.value)}
-                  >
-                    <MenuItem value="">{t('library.page.notSpecified')}</MenuItem>
-                    <MenuItem value="g_per_m2">{t('library.page.seedUnits.g_per_m2')}</MenuItem>
-                    <MenuItem value="g_per_lfm">{t('library.page.seedUnits.g_per_lfm')}</MenuItem>
-                    <MenuItem value="seeds_per_m2">{t('library.page.seedUnits.seeds_per_m2')}</MenuItem>
-                    <MenuItem value="seeds_per_lfm">{t('library.page.seedUnits.seeds_per_lfm')}</MenuItem>
-                    <MenuItem value="seeds_per_plant">{t('library.page.seedUnits.seeds_per_plant')}</MenuItem>
-                  </Select>
-                </FormControl>
-                <TextField value={editDraft.sowing_calculation_safety_percent} onChange={(event) => updateEditDraft('sowing_calculation_safety_percent', event.target.value)} label={t('library.page.fields.sowingSafetyPercent')} type="number" size="small" fullWidth />
-                <TextField value={editDraft.thousand_kernel_weight_g} onChange={(event) => updateEditDraft('thousand_kernel_weight_g', event.target.value)} label={t('library.page.fields.thousandKernelWeight')} type="number" size="small" fullWidth />
-                <TextField value={editDraft.expected_yield} onChange={(event) => updateEditDraft('expected_yield', event.target.value)} label={t('library.page.fields.expectedYield')} type="number" size="small" fullWidth />
-              </Box>
-
-              <TextField
-                value={editDraft.notes}
-                onChange={(event) => updateEditDraft('notes', event.target.value)}
-                label={t('library.page.fields.notes')}
-                multiline
-                minRows={5}
-                fullWidth
-              />
-              <TextField
-                value={editDraft.change_comment}
-                onChange={(event) => updateEditDraft('change_comment', event.target.value)}
-                label={t('library.page.edit.changeComment')}
-                placeholder={t('library.page.edit.changeCommentPlaceholder')}
-                size="small"
-                fullWidth
-              />
-            </Stack>
-          ) : null}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setEditDialogOpen(false)}
-            disabled={savingEdit}
-          >
-            {t('common:actions.cancel')}
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => void handleEditSave()}
-            disabled={savingEdit || !editDraft?.name.trim()}
-          >
-            {savingEdit ? t('library.page.edit.saving') : t('library.page.edit.save')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {editingPublicCulture && selectedCulture && selectedCultureFormData ? (
+        <CultureForm
+          culture={selectedCultureFormData}
+          title={t('library.page.edit.title')}
+          saveLabel={t('library.page.edit.save')}
+          showSupplierSection={false}
+          enableDuplicateCheck={false}
+          enablePublicLibraryMatchHint={false}
+          extraAfterNotes={(
+            <TextField
+              value={editChangeComment}
+              onChange={(event) => setEditChangeComment(event.target.value)}
+              label={t('library.page.edit.changeComment')}
+              placeholder={t('library.page.edit.changeCommentPlaceholder')}
+              size="small"
+              fullWidth
+              sx={{ mt: 2 }}
+            />
+          )}
+          onSave={handleEditSave}
+          onCancel={() => {
+            setEditingPublicCulture(false);
+            setEditChangeComment('');
+          }}
+        />
+      ) : null}
     </PageContainer>
   );
 }

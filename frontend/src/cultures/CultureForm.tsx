@@ -12,7 +12,7 @@
  * @returns JSX element rendering the culture form
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from '../i18n';
 import type { Culture, PublicCultureMatchResponse, Supplier } from '../api/types';
 import { extractApiErrorMessage } from '../api/errors';
@@ -40,13 +40,7 @@ import { hasEffectiveCultureFormChanges } from './cultureFormChangeDetection';
 import { validateCulture } from './validation';
 import { normalizeSeedRateUnit } from './enumNormalization';
 import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
-import { BasicInfoSection } from './sections/BasicInfoSection';
-import { TimingSection } from './sections/TimingSection';
-import { HarvestSection } from './sections/HarvestSection';
-import { SpacingSection } from './sections/SpacingSection';
-import { SeedingSection } from './sections/SeedingSection';
-import { ColorSection } from './sections/ColorSection';
-import { NotesSection } from './sections/NotesSection';
+import { CultureFormSections, DEFAULT_CULTURE_DISPLAY_COLOR } from './CultureFormSections';
 import { hasSupplierDataRowMissingSupplier, hasSupplierInformation } from './supplierDataRows';
 import { stripCitationMarkers } from '../components/data-grid/markdown';
 import { SupplierFormDialog } from '../components/suppliers/SupplierFormDialog';
@@ -63,10 +57,14 @@ interface CultureFormProps {
   onSave: (culture: Culture) => Promise<void>;
   onCancel: () => void;
   onViewPublicLibraryMatch?: (culture: NonNullable<PublicCultureMatchResponse['culture']>) => void;
+  title?: string;
+  saveLabel?: string;
+  showSupplierSection?: boolean;
+  enableDuplicateCheck?: boolean;
+  enablePublicLibraryMatchHint?: boolean;
+  extraAfterNotes?: ReactNode;
 }
 
-// Default color for display color picker
-const DEFAULT_DISPLAY_COLOR = '#3498db';
 const FOCUSABLE_DIALOG_ELEMENT_SELECTOR = [
   'a[href]',
   'button:not([disabled])',
@@ -207,6 +205,12 @@ export function CultureForm({
   onSave,
   onCancel,
   onViewPublicLibraryMatch,
+  title,
+  saveLabel,
+  showSupplierSection = true,
+  enableDuplicateCheck = true,
+  enablePublicLibraryMatchHint = true,
+  extraAfterNotes,
 }: CultureFormProps) {
   const { t } = useTranslation('cultures');
   const isEdit = Boolean(culture);
@@ -320,6 +324,12 @@ export function CultureForm({
   }, [culture]);
 
   useEffect(() => {
+    if (!showSupplierSection) {
+      supplierOptionsRef.current = [];
+      setSupplierOptions([]);
+      return undefined;
+    }
+
     void loadSuppliers();
 
     const onWindowFocus = () => {
@@ -328,7 +338,7 @@ export function CultureForm({
 
     window.addEventListener('focus', onWindowFocus);
     return () => window.removeEventListener('focus', onWindowFocus);
-  }, [loadSuppliers]);
+  }, [loadSuppliers, showSupplierSection]);
 
   // Validate on every change
   const validateAndSet = useCallback((draft: Partial<Culture>, mode: 'live' | 'submit' = hasSubmitted ? 'submit' : 'live') => {
@@ -351,7 +361,7 @@ export function CultureForm({
     setDuplicateErrorKey('');
     setProjectDuplicateClearedKey(null);
 
-    if (!identityKey) {
+    if (!enableDuplicateCheck || !identityKey) {
       setIsDuplicateChecking(false);
       return;
     }
@@ -402,7 +412,7 @@ export function CultureForm({
       window.clearTimeout(timeoutId);
       abortController.abort();
     };
-  }, [culture?.id, culture?.name, culture?.variety, formData.name, formData.variety]);
+  }, [culture?.id, culture?.name, culture?.variety, enableDuplicateCheck, formData.name, formData.variety]);
 
   useEffect(() => {
     const name = formData.name ?? '';
@@ -412,7 +422,7 @@ export function CultureForm({
     publicLibraryMatchSequenceRef.current = currentSequence;
     setPublicLibraryMatch(null);
 
-    if (isEdit) {
+    if (isEdit || !enablePublicLibraryMatchHint) {
       return;
     }
 
@@ -458,7 +468,7 @@ export function CultureForm({
       window.clearTimeout(timeoutId);
       abortController.abort();
     };
-  }, [formData.name, formData.variety, isEdit, projectDuplicateClearedKey]);
+  }, [enablePublicLibraryMatchHint, formData.name, formData.variety, isEdit, projectDuplicateClearedKey]);
 
   // Handle field changes
   // Strongly typed change handler
@@ -533,7 +543,7 @@ export function CultureForm({
     }
     setHasSubmitted(true);
     if (!validateAndSet(formData, 'submit')) return;
-    if (hasSupplierDataRowMissingSupplier(formData.supplier_data)) {
+    if (showSupplierSection && hasSupplierDataRowMissingSupplier(formData.supplier_data)) {
       setSaveError(t('form.supplierDataMissingSupplier'));
       return;
     }
@@ -700,7 +710,7 @@ export function CultureForm({
     >
       <form ref={formRef} onSubmit={handleSubmit}>
         <DialogTitle id="culture-form-dialog-title">
-          {isEdit ? t('form.editTitle') : t('form.createTitle')}
+          {title ?? (isEdit ? t('form.editTitle') : t('form.createTitle'))}
         </DialogTitle>
         <DialogContent
           ref={dialogContentRef}
@@ -715,15 +725,12 @@ export function CultureForm({
           tabIndex={-1}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 8 }}>
-            <Typography variant="h6">{t('form.generalInfoSectionTitle')}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {t('form.generalInfoSectionDescription')}
-            </Typography>
-            <BasicInfoSection
+            <CultureFormSections
               formData={formData}
               errors={displayErrors}
               onChange={handleChange}
               t={t}
+              defaultColor={DEFAULT_CULTURE_DISPLAY_COLOR}
               identityHint={!isEdit && publicLibraryMatch && currentIdentityKey !== null && projectDuplicateClearedKey === currentIdentityKey && !duplicateErrorKey && !isDuplicateChecking ? (
                 <Box
                   sx={(theme) => ({
@@ -760,23 +767,20 @@ export function CultureForm({
                   ) : null}
                 </Box>
               ) : null}
+              extraAfterNotes={extraAfterNotes}
             />
-            <TimingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
-            <HarvestSection formData={formData} errors={errors} onChange={handleChange} t={t} />
-            <SpacingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
-            <SeedingSection formData={formData} errors={errors} onChange={handleChange} t={t} />
-            <ColorSection formData={formData} errors={errors} onChange={handleChange} t={t} defaultColor={DEFAULT_DISPLAY_COLOR} />
-            <NotesSection formData={formData} onChange={handleChange} t={t} errors={errors} />
-            <Typography variant="h6" sx={{ mt: 1 }}>{t('form.supplierDataSectionTitle')}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {t('form.supplierDataSectionDescription')}
-            </Typography>
-            {supplierRows.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                {t('form.noSupplierDataRows')}
-              </Typography>
-            ) : null}
-            {supplierRows.map((row, supplierIndex) => (
+            {showSupplierSection ? (
+              <>
+                <Typography variant="h6" sx={{ mt: 1 }}>{t('form.supplierDataSectionTitle')}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {t('form.supplierDataSectionDescription')}
+                </Typography>
+                {supplierRows.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    {t('form.noSupplierDataRows')}
+                  </Typography>
+                ) : null}
+                {supplierRows.map((row, supplierIndex) => (
               <div key={`supplier-row-${supplierIndex}`} style={{ border: '1px solid #e0e0e0', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {(() => {
                   const selectedSupplierId = row.supplier_id ?? row.supplier?.id ?? null;
@@ -899,8 +903,10 @@ export function CultureForm({
                   <Button variant="outlined" color="error" onClick={() => removeSupplierRow(supplierIndex)}>{t('form.removeSupplierData')}</Button>
                 </Box>
               </div>
-            ))}
-            <Button variant="outlined" onClick={addSupplierRow}>{t('form.addSupplierData')}</Button>
+                ))}
+                <Button variant="outlined" onClick={addSupplierRow}>{t('form.addSupplierData')}</Button>
+              </>
+            ) : null}
           </div>
         </DialogContent>
         <DialogActions sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', alignItems: 'center', mt: 1, flexWrap: 'wrap' }}>
@@ -932,7 +938,7 @@ export function CultureForm({
           >
             {isSaving
               ? t('messages.saving', { defaultValue: 'Speichern...' })
-              : isEdit ? t('form.save') : t('form.create')}
+              : saveLabel ?? (isEdit ? t('form.save') : t('form.create'))}
           </Button>
         </DialogActions>
       </form>
