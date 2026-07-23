@@ -21,7 +21,7 @@ import {
   collectHierarchyAvailability,
   filterFieldOptionsByLocation,
 } from './areaHierarchySelection';
-import { formatLocalizedNumber } from '../../utils/numberLocalization';
+import { formatAreaM2, toNumericValue } from '../../pages/plantingPlansUtils';
 import { TypeaheadSelect as Select } from '../inputs/TypeaheadSelect';
 import { mediumFieldSx } from '../forms/formLayout';
 
@@ -50,20 +50,6 @@ interface DialogKeyboardControl {
   focusTarget: HTMLElement | null;
   disabled: boolean;
 }
-
-const formatArea = (value: number, locale: string): string =>
-  `${formatLocalizedNumber(value, locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
-
-const toNumericValue = (value: unknown): number | null => {
-  if (typeof value === 'number') {
-    return Number.isNaN(value) ? null : value;
-  }
-  if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = Number(value);
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-  return null;
-};
 
 const normalizeState = (
   bedId: number | null,
@@ -287,7 +273,7 @@ function AreaAssignmentDialogComponent({
     const areaSqm = toNumericValue(item.area_sqm);
     const label = areaSqm === null
       ? item.name
-      : `${item.name} (${formatArea(areaSqm, locale)})`;
+      : `${item.name} (${formatAreaM2(areaSqm, locale)})`;
     return label;
   };
 
