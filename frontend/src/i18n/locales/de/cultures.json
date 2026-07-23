@@ -420,6 +420,7 @@
   "buttons": {
     "addNew": "Kultur hinzufügen",
     "edit": "Bearbeiten",
+    "versions": "Versionen",
     "delete": "Löschen",
     "deleteConfirm": "Möchten Sie diese Kultur wirklich löschen?",
     "createPlantingPlan": "Anbauplan hinzufügen",
@@ -480,6 +481,14 @@
     "searchLabel": "Öffentliche Kulturen durchsuchen",
     "selectPrompt": "Wählen Sie eine öffentliche Kultur aus, um Details und Import anzuzeigen.",
     "empty": "Keine öffentlichen Kulturen gefunden.",
+    "emptyState": {
+      "noSelectionTitle": "Die Kulturbibliothek wächst mit der Community",
+      "noSelectionDescription": "Veröffentliche deine bewährten Kulturen und teile dein Wissen mit anderen. Jede veröffentlichte Kultur erweitert die gemeinsame Kulturbibliothek und kann von anderen Projekten übernommen werden.",
+      "noSelectionSecondaryDescription": "Eigene Kulturen können später direkt aus den Kulturdetails veröffentlicht werden.",
+      "emptyLibraryTitle": "Noch keine öffentlichen Kulturen vorhanden",
+      "emptyLibraryDescription": "Die Kulturbibliothek lebt von den Beiträgen der Community. Sobald passende Projektkulturen veröffentlicht werden, können sie hier von allen genutzt und weiterentwickelt werden.",
+      "noResultsTitle": "Keine passende öffentliche Kultur gefunden"
+    },
     "importButton": "In Projekt importieren",
     "importing": "Importiere…",
     "importSuccess": "„{{name}}“ wurde in dieses Projekt importiert.",
@@ -494,6 +503,36 @@
     "publishDuplicateError": "Diese Kultur ist bereits in der Kulturbibliothek vorhanden.",
     "publishDuplicateErrorWithCandidates": "Diese Kultur ist bereits öffentlich vorhanden: {{duplicates}}",
     "publishError": "Die Kultur konnte nicht veröffentlicht werden.",
+    "withdrawAction": "Veröffentlichung zurückziehen",
+    "withdrawSuccess": "Die Veröffentlichung von „{{name}}“ wurde zurückgezogen.",
+    "withdrawError": "Die Veröffentlichung konnte nicht zurückgezogen werden.",
+    "removeAction": "Aus Bibliothek entfernen",
+    "removeSuccess": "„{{name}}“ wurde aus der öffentlichen Kulturbibliothek entfernt.",
+    "removeError": "Die Kultur konnte nicht aus der Bibliothek entfernt werden.",
+    "hardDeleteAction": "Endgültig löschen",
+    "hardDeleteSuccess": "„{{name}}“ wurde endgültig gelöscht.",
+    "hardDeleteError": "Die Kultur konnte nicht endgültig gelöscht werden. Wahrscheinlich existieren noch Referenzen oder Herkunftsdaten.",
+    "withdrawDialog": {
+      "title": "Veröffentlichung zurückziehen?",
+      "message": "„{{name}}“ verschwindet aus der öffentlichen Kulturbibliothek. Bereits importierte Kulturen in Projekten bleiben vollständig erhalten. Du kannst die Kultur später erneut veröffentlichen."
+    },
+    "removeDialog": {
+      "title": "Aus Bibliothek entfernen?",
+      "message": "„{{name}}“ wird für alle Nutzer aus der öffentlichen Kulturbibliothek entfernt. Bereits importierte Projektkulturen bleiben unverändert. Bitte wähle den Moderationsgrund.",
+      "reasonLabel": "Grund"
+    },
+    "hardDeleteDialog": {
+      "title": "Endgültig löschen?",
+      "message": "„{{name}}“ wird nur gelöscht, wenn keine Importe, Herkunftsdaten oder Abhängigkeiten mehr existieren. Für normale Moderationsfälle ist Entfernen aus der Bibliothek vorgesehen."
+    },
+    "removeReasons": {
+      "accidental_publication": "Versehentliche Veröffentlichung",
+      "test_data": "Testdatensatz",
+      "duplicate": "Duplikat",
+      "wrong_mapping": "Falsche Zuordnung",
+      "unlawful_content": "Unzulässiger Inhalt",
+      "other": "Sonstiges"
+    },
     "loadError": "Die Kulturbibliothek konnte nicht geladen werden.",
     "versionLabel": "Version",
     "createdByLabel": "Von",
@@ -514,6 +553,44 @@
       "termsLinkLabel": "Nutzungsbedingungen",
       "linkSuffix": ".",
       "confirmButton": "Veröffentlichen"
+    },
+    "publishWizard": {
+      "title": "Publishing Wizard",
+      "intro": "„{{name}}“ wird vor der Veröffentlichung geprüft.",
+      "publishNow": "Jetzt veröffentlichen",
+      "summaryTitle": "Zusammenfassung",
+      "speciesLabel": "Offizielle Kulturart",
+      "speciesMissing": "Keine offizielle Kulturart ausgewählt",
+      "proposeSpeciesLabel": "Neue Kulturart vorschlagen",
+      "proposeSpeciesButton": "Vorschlagen",
+      "proposalSent": "Der Vorschlag wurde gespeichert und kann später geprüft werden.",
+      "originalLanguageLabel": "Originalsprache",
+      "translationsOptional": "Fehlende Übersetzungen können später ergänzt werden.",
+      "translationAvailable": "Vorhanden",
+      "translationMissingOptional": "Fehlt, optional",
+      "requiredComplete": "Alle Pflichtfelder sind ausgefüllt.",
+      "noDuplicates": "Keine mögliche Dublette gefunden.",
+      "duplicateBlocking": "Eine mögliche Dublette blockiert die Veröffentlichung. Bitte verwenden oder prüfen Sie zuerst den bestehenden Eintrag.",
+      "licenseComplete": "Lizenz bestätigt",
+      "licenseMissing": "Lizenzbestätigung fehlt",
+      "licenseAlreadyAccepted": "Die Lizenzbedingungen für Beiträge zur öffentlichen Kulturbibliothek wurden bereits akzeptiert.",
+      "steps": {
+        "species": "Kulturart",
+        "language": "Originalsprache",
+        "translations": "Übersetzungen",
+        "requiredFields": "Pflichtfelder",
+        "duplicates": "Dublettenprüfung",
+        "license": "Lizenz"
+      },
+      "languages": {
+        "de": "Deutsch",
+        "en": "English"
+      },
+      "fields": {
+        "variety": "Sorte",
+        "growth_duration_days": "Kulturdauer",
+        "harvest_duration_days": "Erntedauer"
+      }
     },
     "filters": {
       "variety": "Sorte",

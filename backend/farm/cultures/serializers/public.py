@@ -7,17 +7,22 @@ from farm.models import PublicCulture
 
 class PublicCultureSerializer(serializers.ModelSerializer):
     created_by_label = serializers.SerializerMethodField()
+    crop_species_name = serializers.CharField(source='crop_species.name', read_only=True, default='')
 
     class Meta:
         model = PublicCulture
         fields = [
             'id',
             'status',
+            'removal_reason',
             'name',
             'variety',
             'notes',
             'seed_supplier',
             'supplier_name',
+            'crop_species',
+            'crop_species_name',
+            'original_language_code',
             'crop_family',
             'nutrient_demand',
             'cultivation_types',

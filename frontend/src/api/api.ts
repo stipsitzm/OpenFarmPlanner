@@ -15,7 +15,10 @@ import type {
   MediaFileRef,
   PublicCulture,
   PublicCultureMatchResponse,
+  PublicCultureRemovalReason,
   PublicCultureDuplicateCandidate,
+  CropSpecies,
+  PublishPublicCulturePreview,
   PublishPublicCultureResponse,
   RemainingAreaResponse,
   BedLayoutEntry,
@@ -118,8 +121,16 @@ export const cultureAPI = {
     skipped_count: number;
     errors: Array<{ index: number; error: unknown }>;
   }>('/cultures/import/apply/', data),
-  publishPublic: (id: number, data: { accepted_public_library_terms: boolean }) =>
+  publishPreview: (id: number, params: { crop_species_id?: number | null; original_language_code?: string }) =>
+    http.get<PublishPublicCulturePreview>(`/cultures/${id}/publish-public/preview/`, { params }),
+  publishPublic: (id: number, data: { accepted_public_library_terms: boolean; crop_species_id?: number | null; original_language_code?: string }) =>
     http.post<PublishPublicCultureResponse>(`/cultures/${id}/publish-public/`, data),
+};
+
+export const cropSpeciesAPI = {
+  list: (params?: { q?: string; include_proposed?: boolean }) =>
+    http.get<PaginatedResponse<CropSpecies>>('/crop-species/', { params }),
+  propose: (name: string) => http.post<CropSpecies>('/crop-species/', { name }),
 };
 
 
@@ -129,6 +140,10 @@ export const publicCultureAPI = {
   match: (params: { name: string; variety: string }, signal?: AbortSignal) =>
     http.get<PublicCultureMatchResponse>('/public-cultures/match/', { params, signal }),
   importToProject: (id: number) => http.post<Culture>(`/public-cultures/${id}/import/`, {}),
+  withdraw: (id: number) => http.post<PublicCulture>(`/public-cultures/${id}/withdraw/`, {}),
+  remove: (id: number, reason: PublicCultureRemovalReason) =>
+    http.post<PublicCulture>(`/public-cultures/${id}/remove/`, { reason }),
+  hardDelete: (id: number) => http.post<void>(`/public-cultures/${id}/hard-delete/`, {}),
 };
 
 export const supplierAPI = {
@@ -357,7 +372,10 @@ export type {
   CultureHistoryEntry,
   MediaFileRef,
   PublicCulture,
+  PublicCultureRemovalReason,
   PublicCultureDuplicateCandidate,
+  CropSpecies,
+  PublishPublicCulturePreview,
   RemainingAreaResponse,
   BedLayoutEntry,
   FieldLayoutEntry,
@@ -367,6 +385,7 @@ export type {
 
 export default {
   cultures: cultureAPI,
+  cropSpecies: cropSpeciesAPI,
   publicCultures: publicCultureAPI,
   suppliers: supplierAPI,
   cultureSupplierData: cultureSupplierDataAPI,

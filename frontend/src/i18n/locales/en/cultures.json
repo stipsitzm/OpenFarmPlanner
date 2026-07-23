@@ -16,6 +16,10 @@
     "restoreSuccess": "Version restored",
     "restoreError": "Version could not be restored"
   },
+  "buttons": {
+    "versions": "Versions",
+    "delete": "Delete"
+  },
   "history": {
     "currentVersion": "Current version",
     "changedFields": "Changed:",
@@ -33,6 +37,97 @@
       "supplier": "Supplier",
       "image": "Image",
       "selectedSeedDemandSupplier": "Seed demand supplier"
+    }
+  },
+  "library": {
+    "publishing": "Publishing…",
+    "publishButton": "Publish",
+    "updateButton": "Update public crop library",
+    "updating": "Updating…",
+    "withdrawAction": "Withdraw publication",
+    "withdrawSuccess": "The publication of “{{name}}” was withdrawn.",
+    "withdrawError": "The publication could not be withdrawn.",
+    "removeAction": "Remove from library",
+    "removeSuccess": "“{{name}}” was removed from the public crop library.",
+    "removeError": "The culture could not be removed from the library.",
+    "hardDeleteAction": "Permanently delete",
+    "hardDeleteSuccess": "“{{name}}” was permanently deleted.",
+    "hardDeleteError": "The culture could not be permanently deleted. There are probably still references or provenance data.",
+    "withdrawDialog": {
+      "title": "Withdraw publication?",
+      "message": "“{{name}}” disappears from the public crop library. Cultures already imported into projects remain fully intact. You can publish the culture again later."
+    },
+    "removeDialog": {
+      "title": "Remove from library?",
+      "message": "“{{name}}” is removed from the public crop library for all users. Already imported project cultures remain unchanged. Please select the moderation reason.",
+      "reasonLabel": "Reason"
+    },
+    "hardDeleteDialog": {
+      "title": "Permanently delete?",
+      "message": "“{{name}}” is deleted only if no imports, provenance data, or dependencies remain. Removing from the library is intended for normal moderation cases."
+    },
+    "removeReasons": {
+      "accidental_publication": "Accidental publication",
+      "test_data": "Test data",
+      "duplicate": "Duplicate",
+      "wrong_mapping": "Wrong mapping",
+      "unlawful_content": "Unlawful content",
+      "other": "Other"
+    },
+    "empty": "No public cultures found.",
+    "emptyState": {
+      "noSelectionTitle": "The crop library grows with the community",
+      "noSelectionDescription": "Publish your proven cultures and share your knowledge with others. Every published culture expands the shared crop library and can be adopted by other projects.",
+      "noSelectionSecondaryDescription": "Your own cultures can be published later directly from the culture details.",
+      "emptyLibraryTitle": "No public cultures yet",
+      "emptyLibraryDescription": "The crop library lives from community contributions. Once suitable project cultures are published, everyone can use and improve them here.",
+      "noResultsTitle": "No matching public culture found"
+    },
+    "publishConfirm": {
+      "acceptLicense": "I am allowed to publish this dataset and agree that it becomes a durable part of the public crop library under CC BY-SA 4.0.",
+      "linkPrefix": "Details are available in the ",
+      "privacyLinkLabel": "privacy policy",
+      "linkMiddle": " and the ",
+      "termsLinkLabel": "terms of service",
+      "linkSuffix": "."
+    },
+    "publishWizard": {
+      "title": "Publishing Wizard",
+      "intro": "“{{name}}” is checked before publication.",
+      "publishNow": "Publish now",
+      "summaryTitle": "Summary",
+      "speciesLabel": "Official crop species",
+      "speciesMissing": "No official crop species selected",
+      "proposeSpeciesLabel": "Suggest new crop species",
+      "proposeSpeciesButton": "Suggest",
+      "proposalSent": "The suggestion was saved and can be reviewed later.",
+      "originalLanguageLabel": "Original language",
+      "translationsOptional": "Missing translations can be added later.",
+      "translationAvailable": "Available",
+      "translationMissingOptional": "Missing, optional",
+      "requiredComplete": "All required fields are complete.",
+      "noDuplicates": "No possible duplicate found.",
+      "duplicateBlocking": "A possible duplicate blocks publication. Please use or review the existing entry first.",
+      "licenseComplete": "License confirmed",
+      "licenseMissing": "License confirmation missing",
+      "licenseAlreadyAccepted": "The contribution terms for the public crop library have already been accepted.",
+      "steps": {
+        "species": "Crop species",
+        "language": "Original language",
+        "translations": "Translations",
+        "requiredFields": "Required fields",
+        "duplicates": "Duplicate check",
+        "license": "License"
+      },
+      "languages": {
+        "de": "Deutsch",
+        "en": "English"
+      },
+      "fields": {
+        "variety": "Variety",
+        "growth_duration_days": "Growth duration",
+        "harvest_duration_days": "Harvest duration"
+      }
     }
   }
 }

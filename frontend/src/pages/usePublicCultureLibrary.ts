@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { cultureAPI, publicCultureAPI } from '../api/api';
 import type { Culture } from '../api/api';
-import type { PublicCulture, PublishPublicCultureDuplicateError } from '../api/types';
+import type { PublicCulture, PublicCultureRemovalReason, PublishPublicCultureDuplicateError } from '../api/types';
 import { useTranslation } from '../i18n';
 import { useAuth } from '../auth/useAuth';
 import { extractApiErrorMessage } from '../api/errors';
@@ -13,6 +13,7 @@ interface UsePublicCultureLibraryConfig {
   shouldShowProjectRequiredState: boolean;
   selectedCulture: Culture | undefined;
   onImportSuccess: (cultureId: number) => Promise<void>;
+  onPublicCultureStatusChange?: () => Promise<void>;
   onClearForm: () => void;
   showSnackbar: (message: string, severity: 'success' | 'error' | 'info') => void;
 }
@@ -21,6 +22,7 @@ export function usePublicCultureLibrary({
   shouldShowProjectRequiredState,
   selectedCulture,
   onImportSuccess,
+  onPublicCultureStatusChange,
   onClearForm,
   showSnackbar,
 }: UsePublicCultureLibraryConfig) {
@@ -88,7 +90,10 @@ export function usePublicCultureLibrary({
     }
   };
 
-  const handlePublishCurrentCulture = async (acceptedPublicLibraryTerms = false): Promise<boolean> => {
+  const handlePublishCurrentCulture = async (
+    acceptedPublicLibraryTerms = false,
+    publishingData?: { cropSpeciesId: number; originalLanguageCode: string },
+  ): Promise<boolean> => {
     if (!selectedCulture?.id) {
       return false;
     }
@@ -97,6 +102,10 @@ export function usePublicCultureLibrary({
       setPublishingCultureId(selectedCulture.id);
       const response = await cultureAPI.publishPublic(selectedCulture.id, {
         accepted_public_library_terms: acceptedPublicLibraryTerms,
+        ...(publishingData ? {
+          crop_species_id: publishingData.cropSpeciesId,
+          original_language_code: publishingData.originalLanguageCode,
+        } : {}),
       });
       if (response.data.operation === 'updated') {
         showSnackbar(t('library.updateSuccess', { name: selectedCulture.name }), 'success');
@@ -125,6 +134,64 @@ export function usePublicCultureLibrary({
       return false;
     } finally {
       setPublishingCultureId(null);
+    }
+  };
+
+  const refreshPublicCultureStatusContext = useCallback(async () => {
+    await onPublicCultureStatusChange?.();
+    if (publicLibraryOpen) {
+      await fetchPublicCultures();
+    }
+  }, [fetchPublicCultures, onPublicCultureStatusChange, publicLibraryOpen]);
+
+  const handleWithdrawPublicCulture = async (culture: Culture): Promise<boolean> => {
+    if (!culture.owned_public_culture_id) {
+      return false;
+    }
+    try {
+      await publicCultureAPI.withdraw(culture.owned_public_culture_id);
+      await refreshPublicCultureStatusContext();
+      showSnackbar(t('library.withdrawSuccess', { name: culture.name }), 'success');
+      return true;
+    } catch (error) {
+      console.error('Error withdrawing public culture:', error);
+      showSnackbar(extractApiErrorMessage(error, t, t('library.withdrawError')), 'error');
+      return false;
+    }
+  };
+
+  const handleRemovePublicCulture = async (
+    culture: Culture,
+    reason: PublicCultureRemovalReason,
+  ): Promise<boolean> => {
+    if (!culture.owned_public_culture_id) {
+      return false;
+    }
+    try {
+      await publicCultureAPI.remove(culture.owned_public_culture_id, reason);
+      await refreshPublicCultureStatusContext();
+      showSnackbar(t('library.removeSuccess', { name: culture.name }), 'success');
+      return true;
+    } catch (error) {
+      console.error('Error removing public culture:', error);
+      showSnackbar(extractApiErrorMessage(error, t, t('library.removeError')), 'error');
+      return false;
+    }
+  };
+
+  const handleHardDeletePublicCulture = async (culture: Culture): Promise<boolean> => {
+    if (!culture.owned_public_culture_id) {
+      return false;
+    }
+    try {
+      await publicCultureAPI.hardDelete(culture.owned_public_culture_id);
+      await refreshPublicCultureStatusContext();
+      showSnackbar(t('library.hardDeleteSuccess', { name: culture.name }), 'success');
+      return true;
+    } catch (error) {
+      console.error('Error permanently deleting public culture:', error);
+      showSnackbar(extractApiErrorMessage(error, t, t('library.hardDeleteError')), 'error');
+      return false;
     }
   };
 
@@ -165,5 +232,8 @@ export function usePublicCultureLibrary({
     handleViewPublicLibraryMatch,
     handleImportPublicCulture,
     handlePublishCurrentCulture,
+    handleWithdrawPublicCulture,
+    handleRemovePublicCulture,
+    handleHardDeletePublicCulture,
   };
 }

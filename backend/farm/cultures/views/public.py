@@ -1,6 +1,7 @@
 """Read-only public culture library endpoints."""
 
 
+from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -11,7 +12,12 @@ from farm.models import (
 )
 from farm.project_context import get_active_project_or_400
 from farm.services.public_cultures import (
+    PublicCulturePermissionError,
+    PublicCultureStatusTransitionError,
+    hard_delete_public_culture,
     import_public_culture_into_project,
+    remove_public_culture,
+    withdraw_public_culture,
 )
 
 from ..serializers import (
@@ -46,6 +52,17 @@ class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(variety__icontains=variety)
         return queryset
 
+    def _get_public_culture_for_status_action(self) -> PublicCulture:
+        return get_object_or_404(
+            PublicCulture.objects.select_related('created_by'),
+            pk=self.kwargs.get(self.lookup_url_kwarg or self.lookup_field),
+        )
+
+    @staticmethod
+    def _transition_error_response(error: Exception, response_status: int) -> Response:
+        code = getattr(error, 'code', 'invalid_status_transition')
+        return Response({'detail': str(error), 'code': code}, status=response_status)
+
     @action(detail=False, methods=['get'], url_path='match')
     def match(self, request):
         """Check whether an exact normalized public culture match exists."""
@@ -79,3 +96,40 @@ class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
         imported = import_public_culture_into_project(public_culture=public_culture, project=request.active_project)
         serializer = CultureSerializer(imported)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='withdraw')
+    def withdraw(self, request, pk=None):
+        public_culture = self._get_public_culture_for_status_action()
+        try:
+            updated = withdraw_public_culture(public_culture=public_culture, user=request.user)
+        except PublicCulturePermissionError as error:
+            return self._transition_error_response(error, status.HTTP_403_FORBIDDEN)
+        except PublicCultureStatusTransitionError as error:
+            return self._transition_error_response(error, status.HTTP_400_BAD_REQUEST)
+        return Response(PublicCultureSerializer(updated).data)
+
+    @action(detail=True, methods=['post'], url_path='remove')
+    def remove(self, request, pk=None):
+        public_culture = self._get_public_culture_for_status_action()
+        try:
+            updated = remove_public_culture(
+                public_culture=public_culture,
+                user=request.user,
+                reason=(request.data.get('reason') or '').strip(),
+            )
+        except PublicCulturePermissionError as error:
+            return self._transition_error_response(error, status.HTTP_403_FORBIDDEN)
+        except PublicCultureStatusTransitionError as error:
+            return self._transition_error_response(error, status.HTTP_400_BAD_REQUEST)
+        return Response(PublicCultureSerializer(updated).data)
+
+    @action(detail=True, methods=['post'], url_path='hard-delete')
+    def hard_delete(self, request, pk=None):
+        public_culture = self._get_public_culture_for_status_action()
+        try:
+            hard_delete_public_culture(public_culture=public_culture, user=request.user)
+        except PublicCulturePermissionError as error:
+            return self._transition_error_response(error, status.HTTP_403_FORBIDDEN)
+        except PublicCultureStatusTransitionError as error:
+            return self._transition_error_response(error, status.HTTP_409_CONFLICT)
+        return Response(status=status.HTTP_204_NO_CONTENT)

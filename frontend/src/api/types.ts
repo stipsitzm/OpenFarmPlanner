@@ -81,6 +81,7 @@ export interface Culture {
   origin_type?: 'manual' | 'imported';
   owned_public_culture_id?: number | null;
   is_modified_from_source?: boolean;
+  crop_species?: number | null;
   thousand_kernel_weight_g?: number;
   package_size_g?: number; // deprecated, replaced by seed_packages
   seeding_requirement?: number;
@@ -174,12 +175,16 @@ export interface CultureSupplierDataInput {
 
 export interface PublicCulture {
   id: number;
-  status: 'published';
+  status: 'draft' | 'published' | 'withdrawn' | 'removed';
+  removal_reason?: PublicCultureRemovalReason | '';
   name: string;
   variety?: string;
   notes?: string;
   seed_supplier?: string;
   supplier_name?: string;
+  crop_species?: number | null;
+  crop_species_name?: string;
+  original_language_code?: string;
   crop_family?: string;
   nutrient_demand?: 'low' | 'medium' | 'high' | '';
   cultivation_type?: CultivationType | '';
@@ -217,6 +222,14 @@ export interface PublicCulture {
   source_project?: number | null;
 }
 
+export type PublicCultureRemovalReason =
+  | 'accidental_publication'
+  | 'test_data'
+  | 'duplicate'
+  | 'wrong_mapping'
+  | 'unlawful_content'
+  | 'other';
+
 export interface PublicCultureDuplicateCandidate {
   id: number;
   name: string;
@@ -244,6 +257,21 @@ export interface PublishPublicCultureDuplicateError {
     variety: string;
     seed_supplier: string;
   };
+}
+
+export interface CropSpecies {
+  id: number;
+  name: string;
+  status: 'published' | 'proposed';
+}
+
+export interface PublishPublicCulturePreview {
+  crop_species: Pick<CropSpecies, 'id' | 'name'> | null;
+  original_language_code: string;
+  available_language_codes: string[];
+  missing_required_fields: Array<{ field: string; label_key: string }>;
+  duplicates: PublicCultureDuplicateCandidate[];
+  can_publish: boolean;
 }
 
 export interface PublishPublicCultureResponse {

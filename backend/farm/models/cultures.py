@@ -256,6 +256,14 @@ class Culture(TimestampedModel):
     )
     supplier_product_url = models.URLField(null=True, blank=True, help_text='Supplier product page URL')
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='cultures')
+    crop_species = models.ForeignKey(
+        'crops.CropSpecies',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='project_cultures',
+        help_text='Optional official crop species link used when publishing to the public library.',
+    )
     source_public_culture = models.ForeignKey('PublicCulture', null=True, blank=True, on_delete=models.SET_NULL, related_name='imported_cultures')
     source_public_version = models.IntegerField(null=True, blank=True)
     origin_type = models.CharField(max_length=50, choices=ORIGIN_TYPE_CHOICES, default=ORIGIN_MANUAL)
@@ -810,25 +818,62 @@ class PublicCulture(TimestampedModel):
     PublicCultureViewSet loosely coupled from farm-project-scoped models/logic
     (Culture, EntityRevision, etc.) so such an extraction stays feasible.
 
-    TODO(privacy): STATUS_CHOICES only has STATUS_PUBLISHED — publishing is
-    immediate and self-service with no review/moderation step. Future
-    moderation should add non-destructive statuses such as hidden/removed so
-    public URLs, attribution, and revision history can remain auditable while
-    spam, personal data, or unlawful entries are no longer shown.
+    Public library entries use non-destructive statuses. Project cultures
+    imported from this table are copied into private project data and keep
+    working even when the public entry is later withdrawn or removed.
     """
 
+    STATUS_DRAFT = 'draft'
     STATUS_PUBLISHED = 'published'
+    STATUS_WITHDRAWN = 'withdrawn'
+    STATUS_REMOVED = 'removed'
     STATUS_CHOICES = [
+        (STATUS_DRAFT, 'Draft'),
         (STATUS_PUBLISHED, 'Published'),
+        (STATUS_WITHDRAWN, 'Withdrawn'),
+        (STATUS_REMOVED, 'Removed'),
+    ]
+    REMOVAL_REASON_ACCIDENTAL = 'accidental_publication'
+    REMOVAL_REASON_TEST_DATA = 'test_data'
+    REMOVAL_REASON_DUPLICATE = 'duplicate'
+    REMOVAL_REASON_WRONG_MAPPING = 'wrong_mapping'
+    REMOVAL_REASON_UNLAWFUL_CONTENT = 'unlawful_content'
+    REMOVAL_REASON_OTHER = 'other'
+    REMOVAL_REASON_CHOICES = [
+        (REMOVAL_REASON_ACCIDENTAL, 'Accidental publication'),
+        (REMOVAL_REASON_TEST_DATA, 'Test data'),
+        (REMOVAL_REASON_DUPLICATE, 'Duplicate'),
+        (REMOVAL_REASON_WRONG_MAPPING, 'Wrong mapping'),
+        (REMOVAL_REASON_UNLAWFUL_CONTENT, 'Unlawful content'),
+        (REMOVAL_REASON_OTHER, 'Other'),
     ]
 
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='public_cultures')
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default=STATUS_PUBLISHED)
+    status_changed_at = models.DateTimeField(null=True, blank=True)
+    status_changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='moderated_public_cultures',
+    )
+    removal_reason = models.CharField(max_length=50, choices=REMOVAL_REASON_CHOICES, blank=True)
+    status_note = models.TextField(blank=True)
     name = models.CharField(max_length=200)
     variety = models.CharField(max_length=200, blank=True)
     notes = models.TextField(blank=True)
     seed_supplier = models.CharField(max_length=200, blank=True)
     supplier_name = models.CharField(max_length=200, blank=True)
+    crop_species = models.ForeignKey(
+        'crops.CropSpecies',
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name='public_cultures',
+        help_text='Official crop species required for new public-library publications.',
+    )
+    original_language_code = models.CharField(max_length=20, blank=True)
     source_project_culture = models.ForeignKey('Culture', null=True, blank=True, on_delete=models.SET_NULL, related_name='published_public_cultures')
     source_project = models.ForeignKey(Project, null=True, blank=True, on_delete=models.SET_NULL, related_name='published_cultures')
     version = models.IntegerField(default=1)
@@ -887,6 +932,27 @@ class PublicCulture(TimestampedModel):
 
     def __str__(self) -> str:
         return f"{self.name} ({self.variety})" if self.variety else self.name
+
+
+class PublicCultureStatusEvent(models.Model):
+    """Audit trail for public culture publication and moderation status changes."""
+
+    public_culture = models.ForeignKey(PublicCulture, on_delete=models.CASCADE, related_name='status_events')
+    from_status = models.CharField(max_length=50, blank=True)
+    to_status = models.CharField(max_length=50)
+    reason = models.CharField(max_length=50, blank=True)
+    note = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='public_culture_status_events',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
 
 
 class SeedPackage(TimestampedModel):

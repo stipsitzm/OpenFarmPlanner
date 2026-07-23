@@ -15,14 +15,25 @@ import PageContainer from '../components/layout/PageContainer';
 import { bedAPI, cultureAPI, fieldAPI, type Culture } from '../api/api';
 import type {
   CultureHistoryEntry,
+  PublicCultureRemovalReason,
 } from '../api/types';
 import { CultureDetail } from '../cultures/CultureDetail';
 import { CultureForm } from '../cultures/CultureForm';
 import { PublicCultureLibraryDialog } from '../crops/components/PublicCultureLibraryDialog';
 import {
   Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   type SxProps,
   type Theme,
+  Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -41,7 +52,7 @@ import { useCultureImportExport } from './useCultureImportExport';
 import { CulturesImportDialog } from './CulturesImportDialog';
 import { CulturesImportStartDialog } from './CulturesImportStartDialog';
 import { CulturesExportDialog } from './CulturesExportDialog';
-import { CulturesPublishConfirmDialog } from './CulturesPublishConfirmDialog';
+import { CulturesPublishingWizardDialog } from './CulturesPublishingWizardDialog';
 import { CulturesHistoryDialog } from './CulturesHistoryDialog';
 import { AlertSnackbar } from '../components/feedback/AlertSnackbar';
 import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
@@ -88,6 +99,10 @@ function Cultures() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyItems, setHistoryItems] = useState<CultureHistoryEntry[]>([]);
   const [historyScope, setHistoryScope] = useState<HistoryScope>('culture');
+  const [withdrawDialogCulture, setWithdrawDialogCulture] = useState<Culture | null>(null);
+  const [removeDialogCulture, setRemoveDialogCulture] = useState<Culture | null>(null);
+  const [removeReason, setRemoveReason] = useState<PublicCultureRemovalReason | ''>('');
+  const [hardDeleteDialogCulture, setHardDeleteDialogCulture] = useState<Culture | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const focusSearch = useCallback(() => {
     searchInputRef.current?.focus();
@@ -96,6 +111,7 @@ function Cultures() {
   const [hasFields, setHasFields] = useState(false);
   const [hasBeds, setHasBeds] = useState(false);
   const selectedCulture = cultures.find((culture) => culture.id === selectedCultureId);
+  const canModeratePublicCulture = Boolean(user?.is_staff || user?.is_superuser);
 
   const showSnackbar = useCallback((message: string, severity: 'success' | 'error' | 'info') => {
     setSnackbar({ open: true, message, severity });
@@ -215,33 +231,66 @@ function Cultures() {
     handleViewPublicLibraryMatch,
     handleImportPublicCulture,
     handlePublishCurrentCulture,
+    handleWithdrawPublicCulture,
+    handleRemovePublicCulture,
+    handleHardDeletePublicCulture,
   } = usePublicCultureLibrary({
     shouldShowProjectRequiredState,
     selectedCulture,
     onImportSuccess: onPublicLibraryImportSuccess,
+    onPublicCultureStatusChange: fetchCultures,
     onClearForm: onClearFormForLibrary,
     showSnackbar,
   });
 
-  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
-  const [publicLibraryTermsAccepted, setPublicLibraryTermsAccepted] = useState(false);
+  const [publishWizardOpen, setPublishWizardOpen] = useState(false);
 
   const handleRequestPublishCulture = useCallback(() => {
-    if (user?.public_library_terms_accepted) {
-      void handlePublishCurrentCulture();
+    setPublishWizardOpen(true);
+  }, []);
+
+  const handlePublishingWizardPublish = useCallback((data: {
+    acceptedPublicLibraryTerms: boolean;
+    cropSpeciesId: number;
+    originalLanguageCode: string;
+  }) => {
+    setPublishWizardOpen(false);
+    void handlePublishCurrentCulture(data.acceptedPublicLibraryTerms, {
+      cropSpeciesId: data.cropSpeciesId,
+      originalLanguageCode: data.originalLanguageCode,
+    });
+  }, [handlePublishCurrentCulture]);
+
+  const handleConfirmWithdrawPublicCulture = useCallback(async () => {
+    if (!withdrawDialogCulture) {
       return;
     }
-    setPublicLibraryTermsAccepted(false);
-    setPublishConfirmOpen(true);
-  }, [handlePublishCurrentCulture, user?.public_library_terms_accepted]);
+    const success = await handleWithdrawPublicCulture(withdrawDialogCulture);
+    if (success) {
+      setWithdrawDialogCulture(null);
+    }
+  }, [handleWithdrawPublicCulture, withdrawDialogCulture]);
 
-  const handlePublishConfirm = useCallback(() => {
-    setPublishConfirmOpen(false);
-    void (async () => {
-      await handlePublishCurrentCulture(publicLibraryTermsAccepted);
-      setPublicLibraryTermsAccepted(false);
-    })();
-  }, [handlePublishCurrentCulture, publicLibraryTermsAccepted]);
+  const handleConfirmRemovePublicCulture = useCallback(async () => {
+    if (!removeDialogCulture || !removeReason) {
+      return;
+    }
+    const success = await handleRemovePublicCulture(removeDialogCulture, removeReason);
+    if (success) {
+      setRemoveDialogCulture(null);
+      setRemoveReason('');
+    }
+  }, [handleRemovePublicCulture, removeDialogCulture, removeReason]);
+
+  const handleConfirmHardDeletePublicCulture = useCallback(async () => {
+    if (!hardDeleteDialogCulture) {
+      return;
+    }
+    const success = await handleHardDeletePublicCulture(hardDeleteDialogCulture);
+    if (success) {
+      setHardDeleteDialogCulture(null);
+    }
+  }, [handleHardDeletePublicCulture, hardDeleteDialogCulture]);
 
   // Fetch cultures on mount
   useEffect(() => {
@@ -556,7 +605,14 @@ function Cultures() {
           onCreatePlan={handleCreatePlantingPlan}
           onOpenHistory={handleOpenHistory}
           onPublishCulture={handleRequestPublishCulture}
+          onWithdrawPublicCulture={(culture) => setWithdrawDialogCulture(culture)}
+          onRemovePublicCulture={(culture) => {
+            setRemoveReason('');
+            setRemoveDialogCulture(culture);
+          }}
+          onHardDeletePublicCulture={(culture) => setHardDeleteDialogCulture(culture)}
           onDeleteCulture={handleDelete}
+          canModeratePublicCulture={canModeratePublicCulture}
           canCreatePlan={canCreatePlantingPlan}
           isPublishingCulture={Boolean(selectedCulture && publishingCultureId === selectedCulture.id)}
           publishActionLabel={publishingCultureId === selectedCulture?.id
@@ -614,17 +670,107 @@ function Cultures() {
         confirmButtonProps={{ color: 'error', variant: 'contained' }}
       />
 
-      <CulturesPublishConfirmDialog
-        open={publishConfirmOpen}
-        cultureName={selectedCulture?.name ?? ''}
-        accepted={publicLibraryTermsAccepted}
-        onAcceptedChange={setPublicLibraryTermsAccepted}
+      <ConfirmationDialog
+        open={Boolean(withdrawDialogCulture)}
+        fullWidth
+        title={t('library.withdrawDialog.title')}
+        message={t('library.withdrawDialog.message', { name: withdrawDialogCulture?.name ?? '' })}
+        cancelLabel={t('common:actions.cancel')}
+        confirmLabel={t('library.withdrawAction')}
+        onCancel={() => setWithdrawDialogCulture(null)}
+        onConfirm={handleConfirmWithdrawPublicCulture}
+        titleSx={{ pb: 1 }}
+        contentSx={{ pt: 1 }}
+        messageTypographyProps={{ variant: 'body1', color: 'text.secondary' }}
+        actionsSx={{ px: 3, pb: 2.5, pt: 1 }}
+        cancelButtonProps={{ variant: 'outlined' }}
+        confirmButtonProps={{ color: 'warning', variant: 'contained' }}
+      />
+
+      <Dialog
+        open={Boolean(removeDialogCulture)}
         onClose={() => {
-          setPublishConfirmOpen(false);
-          setPublicLibraryTermsAccepted(false);
+          setRemoveDialogCulture(null);
+          setRemoveReason('');
         }}
-        onConfirm={handlePublishConfirm}
-        t={t}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>{t('library.removeDialog.title')}</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+            {t('library.removeDialog.message', { name: removeDialogCulture?.name ?? '' })}
+          </Typography>
+          <FormControl fullWidth size="small">
+            <InputLabel id="public-culture-removal-reason-label">
+              {t('library.removeDialog.reasonLabel')}
+            </InputLabel>
+            <Select
+              labelId="public-culture-removal-reason-label"
+              value={removeReason}
+              label={t('library.removeDialog.reasonLabel')}
+              onChange={(event) => setRemoveReason(event.target.value as PublicCultureRemovalReason)}
+            >
+              {([
+                'accidental_publication',
+                'test_data',
+                'duplicate',
+                'wrong_mapping',
+                'unlawful_content',
+                'other',
+              ] as PublicCultureRemovalReason[]).map((reason) => (
+                <MenuItem key={reason} value={reason}>
+                  {t(`library.removeReasons.${reason}`)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              setRemoveDialogCulture(null);
+              setRemoveReason('');
+            }}
+          >
+            {t('common:actions.cancel')}
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            disabled={!removeReason}
+            onClick={() => void handleConfirmRemovePublicCulture()}
+          >
+            {t('library.removeAction')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <ConfirmationDialog
+        open={Boolean(hardDeleteDialogCulture)}
+        fullWidth
+        title={t('library.hardDeleteDialog.title')}
+        message={t('library.hardDeleteDialog.message', { name: hardDeleteDialogCulture?.name ?? '' })}
+        cancelLabel={t('common:actions.cancel')}
+        confirmLabel={t('library.hardDeleteAction')}
+        onCancel={() => setHardDeleteDialogCulture(null)}
+        onConfirm={handleConfirmHardDeletePublicCulture}
+        titleSx={{ pb: 1 }}
+        contentSx={{ pt: 1 }}
+        messageTypographyProps={{ variant: 'body1', color: 'text.secondary' }}
+        actionsSx={{ px: 3, pb: 2.5, pt: 1 }}
+        cancelButtonProps={{ variant: 'outlined' }}
+        confirmButtonProps={{ color: 'error', variant: 'contained' }}
+      />
+
+      <CulturesPublishingWizardDialog
+        open={publishWizardOpen}
+        culture={selectedCulture}
+        termsAlreadyAccepted={Boolean(user?.public_library_terms_accepted)}
+        publishing={Boolean(selectedCulture && publishingCultureId === selectedCulture.id)}
+        onClose={() => setPublishWizardOpen(false)}
+        onPublish={handlePublishingWizardPublish}
       />
 
       {showForm ? (
