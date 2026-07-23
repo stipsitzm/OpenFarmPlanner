@@ -2,6 +2,15 @@ import { type YieldCalendarWeek } from "../api/api";
 
 export type ChartPeriod = "week" | "month";
 
+/** Sentinel filter value representing "all cultures" in the yield overview. */
+export const ALL_CULTURES = "all";
+
+export interface YieldCultureMeta {
+  id: number;
+  name: string;
+  color: string;
+}
+
 export type YieldCalendarCulture = YieldCalendarWeek["cultures"][number];
 
 export function formatCompactYield(value: number, locale: string): string {
