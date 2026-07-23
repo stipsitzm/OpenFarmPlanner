@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Alert,
   Box,
@@ -44,6 +45,19 @@ type CollaborationLoadStatus = 'idle' | 'loading' | 'success' | 'error';
 type ProposalField = 'notes' | 'supplier_name' | 'growth_duration_days' | 'harvest_duration_days';
 
 const PROPOSAL_FIELDS: ProposalField[] = ['notes', 'supplier_name', 'growth_duration_days', 'harvest_duration_days'];
+const SELECTED_PUBLIC_CULTURE_STORAGE_KEY = 'selectedPublicCultureId';
+
+function parsePublicCultureId(value: string | null): number | null {
+  if (!value) {
+    return null;
+  }
+  const parsedId = Number.parseInt(value, 10);
+  return Number.isFinite(parsedId) ? parsedId : null;
+}
+
+function getStoredPublicCultureId(): number | null {
+  return parsePublicCultureId(window.localStorage.getItem(SELECTED_PUBLIC_CULTURE_STORAGE_KEY));
+}
 
 const getCultureTitle = (culture: PublicCulture): string => (
   culture.variety ? `${culture.name} (${culture.variety})` : culture.name
@@ -382,10 +396,16 @@ function ProposalCard({
 export default function PublicCropLibraryPage() {
   const { t, i18n } = useTranslation('cultures');
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const selectedCultureParam = searchParams.get('cultureId');
+  const selectedCultureIdFromUrl = parsePublicCultureId(selectedCultureParam);
   const canModerate = Boolean(user?.is_staff || user?.is_superuser);
   const [query, setQuery] = useState('');
   const [cultures, setCultures] = useState<PublicCulture[]>([]);
-  const [selectedCultureId, setSelectedCultureId] = useState<number | null>(null);
+  const [selectedCultureId, setSelectedCultureId] = useState<number | null>(() => selectedCultureIdFromUrl ?? getStoredPublicCultureId());
+  const selectedCultureIdRef = useRef<number | null>(selectedCultureId);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [activeTab, setActiveTab] = useState(0);
@@ -404,6 +424,39 @@ export default function PublicCropLibraryPage() {
   const locale = i18n.resolvedLanguage === 'de' ? 'de-DE' : 'en-US';
   const anonymousLabel = t('library.anonymousAuthor');
 
+  const replaceSelectedCultureSearchParam = useCallback((cultureId: number | null): void => {
+    const nextParams = new URLSearchParams(location.search);
+    if (cultureId === null) {
+      nextParams.delete('cultureId');
+    } else {
+      nextParams.set('cultureId', String(cultureId));
+    }
+    const nextSearch = nextParams.toString();
+    const currentSearch = location.search.startsWith('?') ? location.search.slice(1) : location.search;
+    if (nextSearch === currentSearch) {
+      return;
+    }
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : '',
+        hash: location.hash,
+      },
+      { replace: true },
+    );
+  }, [location.hash, location.pathname, location.search, navigate]);
+
+  const updateSelectedCultureId = useCallback((cultureId: number | null): void => {
+    setSelectedCultureId(cultureId);
+    selectedCultureIdRef.current = cultureId;
+    if (cultureId === null) {
+      window.localStorage.removeItem(SELECTED_PUBLIC_CULTURE_STORAGE_KEY);
+    } else {
+      window.localStorage.setItem(SELECTED_PUBLIC_CULTURE_STORAGE_KEY, String(cultureId));
+    }
+    replaceSelectedCultureSearchParam(cultureId);
+  }, [replaceSelectedCultureSearchParam]);
+
   const formatDate = useCallback((value?: string | null): string => {
     if (!value) {
       return t('library.page.unknownDate');
@@ -416,26 +469,54 @@ export default function PublicCropLibraryPage() {
     [cultures, selectedCultureId],
   );
 
+  useEffect(() => {
+    selectedCultureIdRef.current = selectedCultureId;
+  }, [selectedCultureId]);
+
+  useEffect(() => {
+    if (selectedCultureIdFromUrl !== null) {
+      if (selectedCultureId !== selectedCultureIdFromUrl) {
+        setSelectedCultureId(selectedCultureIdFromUrl);
+        selectedCultureIdRef.current = selectedCultureIdFromUrl;
+        window.localStorage.setItem(SELECTED_PUBLIC_CULTURE_STORAGE_KEY, String(selectedCultureIdFromUrl));
+      }
+      return;
+    }
+
+    const storedCultureId = getStoredPublicCultureId();
+    if (storedCultureId !== null) {
+      if (selectedCultureId !== storedCultureId) {
+        setSelectedCultureId(storedCultureId);
+        selectedCultureIdRef.current = storedCultureId;
+      }
+      replaceSelectedCultureSearchParam(storedCultureId);
+    }
+  }, [replaceSelectedCultureSearchParam, selectedCultureId, selectedCultureIdFromUrl]);
+
   const loadCultures = useCallback(async (searchQuery: string): Promise<void> => {
     setLoading(true);
     setLoadError('');
     try {
       const response = await publicCultureAPI.list(searchQuery.trim() ? { q: searchQuery.trim() } : undefined);
-      const results = response.data.results;
+      let results = response.data.results;
+      const currentSelectedCultureId = selectedCultureIdRef.current;
+      if (currentSelectedCultureId !== null && !results.some((culture) => culture.id === currentSelectedCultureId)) {
+        try {
+          const selectedCultureResponse = await publicCultureAPI.get(currentSelectedCultureId);
+          results = [selectedCultureResponse.data, ...results];
+        } catch {
+          updateSelectedCultureId(null);
+        }
+      }
       setCultures(results);
-      setSelectedCultureId((currentId) => (
-        currentId && results.some((culture) => culture.id === currentId)
-          ? currentId
-          : null
-      ));
     } catch {
       setLoadError(t('library.loadError'));
       setCultures([]);
-      setSelectedCultureId(null);
+      updateSelectedCultureId(null);
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, updateSelectedCultureId]);
 
   const loadCollaboration = useCallback(async (cultureId: number): Promise<void> => {
     setCollaborationStatus('loading');
@@ -599,7 +680,7 @@ export default function PublicCropLibraryPage() {
                     <ListItemButton
                       key={culture.id}
                       selected={culture.id === selectedCultureId}
-                      onClick={() => setSelectedCultureId(culture.id)}
+                      onClick={() => updateSelectedCultureId(culture.id)}
                       sx={{
                         borderBottom: '1px solid',
                         borderColor: 'divider',

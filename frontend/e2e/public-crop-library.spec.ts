@@ -101,6 +101,16 @@ test('public crop library supports quick import, discussion, proposal, and mobil
   await expect(page.getByText('42 Tage')).toBeVisible();
   await expect(page.getByText('14 Tage')).toBeVisible();
   await expect(page.getByText('Bestehende öffentliche Notiz.')).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`cultureId=${publicCulture.id}`));
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name: new RegExp(publicCulture.variety) })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bibliotheksdaten' })).toBeVisible();
+
+  await page.goto('/app/cultures');
+  await page.goto('/app/crop-library');
+  await expect(page.getByRole('heading', { name: new RegExp(publicCulture.variety) })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Allgemeine Informationen' })).toBeVisible();
 
   await expect(page.getByRole('button', { name: 'In Projekt importieren' })).toBeEnabled();
   await page.getByRole('button', { name: 'In Projekt importieren' }).click();
