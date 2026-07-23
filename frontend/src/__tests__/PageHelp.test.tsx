@@ -73,6 +73,18 @@ describe('PageHelp', () => {
     expect(screen.queryByText('Kultur entfernen')).not.toBeInTheDocument();
   });
 
+  it('renders public crop library help for collaborative editing', async () => {
+    render(<PageHelp pageKey="cropLibrary" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hilfe anzeigen' }));
+
+    expect(await screen.findByText('Hilfe: Kulturbibliothek')).toBeInTheDocument();
+    expect(screen.getByText('Die Kulturbibliothek ist eine gemeinsame Wissensdatenbank für öffentliche Kulturdaten. Du kannst Einträge suchen, ansehen, in dein Projekt übernehmen und vorhandene Kulturen direkt verbessern.')).toBeInTheDocument();
+    expect(screen.getByText('Mit „In Projekt importieren“ übernimmst du eine Kopie in dein aktuelles Projekt; spätere Änderungen in der Bibliothek verändern deine Projektkultur nicht.', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('Jede gespeicherte Änderung erzeugt automatisch eine neue Version.', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('Die Diskussion dient dem fachlichen Austausch zu Quellen, Erfahrungen und offenen Fragen.', { exact: false })).toBeInTheDocument();
+  });
+
   it('renders compact calendar help without controls or icon guidance', async () => {
     render(<PageHelp pageKey="calendar" />);
 

@@ -871,6 +871,7 @@ function RootLayout() {
         : { pageKey: 'areas' as const, label: t('pageHelp.areas') };
     }
     if (location.pathname.startsWith('/app/cultures')) return { pageKey: 'cultures' as const, label: t('pageHelp.cultures') };
+    if (location.pathname.startsWith('/app/crop-library') || location.pathname.startsWith('/app/crops')) return { pageKey: 'cropLibrary' as const, label: t('pageHelp.cropLibrary') };
     if (location.pathname.startsWith('/app/anbauplaene') || location.pathname.startsWith('/app/planting-plans')) return { pageKey: 'plantingPlans' as const, label: t('pageHelp.plantingPlans') };
     if (location.pathname.startsWith('/app/gantt-chart')) return { pageKey: 'calendar' as const, label: t('pageHelp.calendar') };
     if (location.pathname.startsWith('/app/yield-overview')) return { pageKey: 'yieldOverview' as const, label: t('pageHelp.yieldOverview') };

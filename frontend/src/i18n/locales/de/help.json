@@ -160,6 +160,28 @@
         "edit": "Kulturdaten bearbeiten"
       }
     },
+    "cropLibrary": {
+      "title": "Hilfe: Kulturbibliothek",
+      "intro": "Die Kulturbibliothek ist eine gemeinsame Wissensdatenbank für öffentliche Kulturdaten. Du kannst Einträge suchen, ansehen, in dein Projekt übernehmen und vorhandene Kulturen direkt verbessern.",
+      "sections": [
+        {
+          "title": "Bedienung",
+          "points": [
+            "Wähle links eine Kultur aus, um die vollständigen Details anzuzeigen.",
+            "Mit „In Projekt importieren“ übernimmst du eine Kopie in dein aktuelles Projekt; spätere Änderungen in der Bibliothek verändern deine Projektkultur nicht.",
+            "Über „Bearbeiten“ kannst du öffentliche Kulturen direkt korrigieren oder ergänzen. Jede gespeicherte Änderung erzeugt automatisch eine neue Version."
+          ]
+        },
+        {
+          "title": "Zusammenarbeit",
+          "points": [
+            "Im Tab „Versionen“ bleibt nachvollziehbar, wer wann welche Felder geändert hat.",
+            "Ältere Versionen können wiederhergestellt werden, ohne die Historie zu löschen.",
+            "Die Diskussion dient dem fachlichen Austausch zu Quellen, Erfahrungen und offenen Fragen."
+          ]
+        }
+      ]
+    },
     "plantingPlans": {
       "title": "Hilfe: Anbaupläne",
       "intro": "Hier planst du, welche Kultur wann auf welchem Beet angebaut wird.\n\nEinträge können direkt in der Tabelle erstellt und bearbeitet werden.",

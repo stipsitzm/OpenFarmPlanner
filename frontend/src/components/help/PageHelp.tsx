@@ -54,6 +54,7 @@ export type HelpPageKey =
   | 'beds'
   | 'areas'
   | 'cultures'
+  | 'cropLibrary'
   | 'plantingPlans'
   | 'seedDemand'
   | 'suppliers'
