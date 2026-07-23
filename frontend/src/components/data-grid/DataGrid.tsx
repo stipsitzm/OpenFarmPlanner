@@ -101,7 +101,7 @@ import {
   prepareDataGridColumn,
   SaveBlockedError,
 } from './dataGridUtils';
-import { parseGermanDateText } from './GermanDateEditCell';
+import { mergeVisibleDateEditInputValues, readDraftRow } from './draftRowReaders';
 import {
   focusKeyboardNavigableCell as focusDataGridKeyboardNavigableCell,
   getKeyboardNavigationTarget,
@@ -1029,49 +1029,17 @@ export function EditableDataGrid<T extends EditableRow>({
     if (!baseRow) {
       return null;
     }
-
-    const draftRow = { ...baseRow } as Record<string, unknown>;
-    for (const column of columns) {
-      const rowWithUpdatedField = api.getRowWithUpdatedValues(rowId, column.field) as Record<string, unknown> | null;
-      if (rowWithUpdatedField && Object.prototype.hasOwnProperty.call(rowWithUpdatedField, column.field)) {
-        draftRow[column.field] = rowWithUpdatedField[column.field];
-      }
-    }
-    return draftRow as T;
+    return readDraftRow(api, columns, baseRow, rowId);
   }, [columns, gridApiRef, rowsById]);
 
-  const mergeVisibleEditInputValues = useCallback((rowId: GridRowId, draftRow: T): T => {
-    const root = gridApiRef.current?.rootElementRef?.current;
-    if (!root) {
-      return draftRow;
-    }
-
-    const rowElement = root.querySelector<HTMLElement>(`[role="row"][data-id="${cssEscape(String(rowId))}"]`);
-    if (!rowElement) {
-      return draftRow;
-    }
-
-    const nextDraft = { ...draftRow } as Record<string, unknown>;
-    for (const column of columns) {
-      if (column.type !== 'date') {
-        continue;
-      }
-
-      const cellElement = rowElement.querySelector<HTMLElement>(
-        `[data-field="${cssEscape(column.field)}"].MuiDataGrid-cell--editing`,
-      );
-      const inputElement = cellElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-        'input:not([type="hidden"]):not([aria-hidden="true"]), textarea',
-      );
-      const inputValue = inputElement?.value;
-      if (inputValue === undefined) {
-        continue;
-      }
-
-      nextDraft[column.field] = parseGermanDateText(inputValue) ?? inputValue;
-    }
-    return nextDraft as T;
-  }, [columns, gridApiRef]);
+  const mergeVisibleEditInputValues = useCallback((rowId: GridRowId, draftRow: T): T => (
+    mergeVisibleDateEditInputValues(
+      gridApiRef.current?.rootElementRef?.current ?? null,
+      columns,
+      rowId,
+      draftRow,
+    )
+  ), [columns, gridApiRef]);
 
   const applyDraftValues = useCallback(async (rowId: GridRowId, values: Partial<T>): Promise<void> => {
     const rowKey = String(rowId);
