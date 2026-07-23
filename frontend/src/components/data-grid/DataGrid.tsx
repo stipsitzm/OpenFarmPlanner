@@ -106,6 +106,7 @@ import {
   focusKeyboardNavigableCell as focusDataGridKeyboardNavigableCell,
   getKeyboardNavigationTarget,
   getVerticalKeyboardNavigationTarget,
+  getCellLocationFromDomTarget,
   isCellKeyboardNavigable,
   isInteractiveCellTarget,
   preventReadOnlyCellMouseFocus,
@@ -796,21 +797,16 @@ export function EditableDataGrid<T extends EditableRow>({
       return;
     }
 
-    const cellElement = target.closest<HTMLElement>('[role="gridcell"][data-field]');
-    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
-    const field = cellElement?.dataset.field;
-    const id = rowElement?.dataset.id;
-    if (!field || id === undefined) {
+    const cellLocation = getCellLocationFromDomTarget(target);
+    if (!cellLocation) {
       return;
     }
 
-    const numericId = Number(id);
-    const rowId = Number.isNaN(numericId) ? id : numericId;
     if (isCellKeyboardNavigable<T>({
       api: gridApiRef.current,
-      field,
+      field: cellLocation.field,
       isActionCell: isActionCellKeyboardNavigable,
-      rowId,
+      rowId: cellLocation.id,
     })) {
       return;
     }
