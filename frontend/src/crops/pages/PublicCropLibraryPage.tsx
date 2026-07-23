@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   Alert,
   Box,
@@ -41,6 +43,7 @@ import PageSurface from '../../components/layout/PageSurface';
 import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
 import { showGlobalSnackbar } from '../../utils/globalSnackbar';
+import { stripCitationMarkers } from '../../components/data-grid/markdown';
 
 type CollaborationLoadStatus = 'idle' | 'loading' | 'success' | 'error';
 type ProposalField = 'notes' | 'growth_duration_days' | 'harvest_duration_days';
@@ -222,10 +225,6 @@ function formatSeedRateByCultivation(
     .join(', ');
 }
 
-function getValueOrFallback(value: string | null | undefined, fallback: string): string {
-  return value?.trim() ? value : fallback;
-}
-
 function getProposalFieldLabel(field: string, t: (key: string, options?: Record<string, unknown>) => string): string {
   if (PROPOSAL_FIELDS.includes(field as ProposalField)) {
     return t(`library.page.proposals.fields.${field}`);
@@ -254,10 +253,10 @@ interface DetailRowProps {
 function DetailRow({ label, value }: DetailRowProps) {
   return (
     <Box>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+      <Typography variant="body2" color="text.secondary" sx={{ display: 'block' }}>
         {label}
       </Typography>
-      <Typography variant="body2" sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
+      <Typography variant="body1" sx={{ overflowWrap: 'anywhere' }}>
         {value}
       </Typography>
     </Box>
@@ -267,12 +266,13 @@ function DetailRow({ label, value }: DetailRowProps) {
 interface DetailSectionProps {
   title: string;
   children: ReactNode;
+  outlined?: boolean;
 }
 
-function DetailSection({ title, children }: DetailSectionProps) {
+function DetailSection({ title, children, outlined = false }: DetailSectionProps) {
   return (
-    <Box sx={{ pb: 2.25, borderBottom: '1px solid', borderColor: 'divider', '&:last-of-type': { borderBottom: 0, pb: 0 } }}>
-      <Typography variant="h6" sx={{ fontWeight: 800, mb: 1.5 }}>
+    <Box sx={outlined ? { p: { xs: 1.25, sm: 2 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 } : undefined}>
+      <Typography variant="h6" gutterBottom>
         {title}
       </Typography>
       {children}
@@ -771,17 +771,39 @@ export default function PublicCropLibraryPage() {
                 </Box>
               ) : (
                 <Stack sx={{ minHeight: '100%' }}>
-                  <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } }, bgcolor: 'action.hover' }}>
+                  <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
                     <Stack direction="row" spacing={1.5} alignItems="flex-start" justifyContent="space-between">
-                      <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <Typography variant="h5" component="h2" sx={{ fontWeight: 800, overflowWrap: 'anywhere' }}>
-                          {getCultureTitle(selectedCulture)}
-                        </Typography>
-                        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mt: 0.75 }}>
-                          <Chip size="small" label={t('library.versionLabel', { defaultValue: 'Version' }) + ` ${selectedCulture.version}`} />
-                          <Chip size="small" label={selectedCulture.crop_species_name || selectedCulture.name} variant="outlined" />
-                          <Chip size="small" label={t('library.page.byAuthor', { author: selectedCulture.created_by_label || anonymousLabel })} variant="outlined" />
-                        </Stack>
+                      <Box sx={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'stretch', gap: 1.75 }}>
+                        {selectedCulture.display_color ? (
+                          <Box
+                            sx={{
+                              width: 4,
+                              borderRadius: 1,
+                              backgroundColor: selectedCulture.display_color,
+                              opacity: 0.75,
+                              my: 0.5,
+                              alignSelf: 'stretch',
+                              flexShrink: 0,
+                            }}
+                            aria-label={t('library.page.fields.displayColor')}
+                            title={selectedCulture.display_color}
+                          />
+                        ) : null}
+                        <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', py: 0.25 }}>
+                          <Typography variant="h5" component="h2" sx={{ fontWeight: 600, overflowWrap: 'anywhere', lineHeight: 1.2 }}>
+                            {selectedCulture.name}
+                          </Typography>
+                          {selectedCulture.variety ? (
+                            <Typography variant="body2" color="text.secondary">
+                              {selectedCulture.variety}
+                            </Typography>
+                          ) : null}
+                          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
+                            <Chip size="small" label={t('library.versionLabel', { defaultValue: 'Version' }) + ` ${selectedCulture.version}`} />
+                            <Chip size="small" label={selectedCulture.crop_species_name || selectedCulture.name} variant="outlined" />
+                            <Chip size="small" label={t('library.page.byAuthor', { author: selectedCulture.created_by_label || anonymousLabel })} variant="outlined" />
+                          </Stack>
+                        </Box>
                       </Box>
                       {isMobile ? (
                         <Tooltip title={t('library.importButton')}>
@@ -826,8 +848,8 @@ export default function PublicCropLibraryPage() {
                   <Divider />
 
                   {activeTab === 0 ? (
-                    <Stack spacing={2.25} sx={{ p: { xs: 2, sm: 2.5 } }}>
-                      <DetailSection title={t('library.page.sections.general')}>
+                    <Stack spacing={2.5} sx={{ p: { xs: 2, sm: 2.5 } }}>
+                      <DetailSection title={t('library.page.sections.general')} outlined>
                         <DetailGrid>
                           <DetailRow label={t('library.page.fields.cropSpecies')} value={selectedCulture.crop_species_name || selectedCulture.name || t('library.page.notSpecified')} />
                           <DetailRow label={t('library.page.fields.variety')} value={selectedCulture.variety || t('library.page.notSpecified')} />
@@ -843,6 +865,8 @@ export default function PublicCropLibraryPage() {
                         </DetailGrid>
                       </DetailSection>
 
+                      <Divider />
+
                       <DetailSection title={t('library.page.sections.timing')}>
                         <DetailGrid>
                           <DetailRow label={t('library.page.fields.growthDurationDays')} value={formatDays(selectedCulture.growth_duration_days, locale, t('library.page.notSpecified'), t('library.page.units.days'))} />
@@ -851,6 +875,8 @@ export default function PublicCropLibraryPage() {
                         </DetailGrid>
                       </DetailSection>
 
+                      <Divider />
+
                       <DetailSection title={t('library.page.sections.spacing')}>
                         <DetailGrid>
                           <DetailRow label={t('library.page.fields.distanceWithinRow')} value={formatMetersAsCentimeters(selectedCulture.distance_within_row_m, locale, t('library.page.notSpecified'))} />
@@ -858,6 +884,8 @@ export default function PublicCropLibraryPage() {
                           <DetailRow label={t('library.page.fields.sowingDepth')} value={formatMetersAsCentimeters(selectedCulture.sowing_depth_m, locale, t('library.page.notSpecified'))} />
                         </DetailGrid>
                       </DetailSection>
+
+                      <Divider />
 
                       <DetailSection title={t('library.page.sections.seed')}>
                         <DetailGrid>
@@ -891,6 +919,8 @@ export default function PublicCropLibraryPage() {
                         </DetailGrid>
                       </DetailSection>
 
+                      <Divider />
+
                       <DetailSection title={t('library.page.sections.harvest')}>
                         <DetailGrid>
                           <DetailRow label={t('library.page.fields.harvestMethod')} value={getHarvestMethodLabel(selectedCulture.harvest_method, t, t('library.page.notSpecified'))} />
@@ -898,6 +928,8 @@ export default function PublicCropLibraryPage() {
                           <DetailRow label={t('library.page.fields.allowDeviationDeliveryWeeks')} value={selectedCulture.allow_deviation_delivery_weeks ? t('library.page.boolean.yes') : t('library.page.boolean.no')} />
                         </DetailGrid>
                       </DetailSection>
+
+                      <Divider />
 
                       <DetailSection title={t('library.page.sections.metadata')}>
                         <DetailGrid>
@@ -907,14 +939,33 @@ export default function PublicCropLibraryPage() {
                           <DetailRow label={t('library.page.fields.publishedAt')} value={formatDate(selectedCulture.published_at)} />
                           <DetailRow label={t('library.page.fields.updatedAt')} value={formatDate(selectedCulture.updated_at)} />
                           <DetailRow label={t('library.page.fields.status')} value={getPublicCultureStatusLabel(selectedCulture.status, t)} />
-                          <DetailRow label={t('library.page.fields.displayColor')} value={getValueOrFallback(selectedCulture.display_color, t('library.page.notSpecified'))} />
                         </DetailGrid>
                       </DetailSection>
 
-                      <DetailSection title={t('library.page.sections.notes')}>
-                        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.65 }}>
-                          {selectedCulture.notes || t('library.page.noNotes')}
-                        </Typography>
+                      <Divider />
+
+                      <DetailSection title={t('library.page.sections.notes')} outlined>
+                        {selectedCulture.notes ? (
+                          <Box
+                            sx={{
+                              '& h3': { mt: 2, mb: 1, fontSize: '1.05rem' },
+                              '& h3:first-of-type': { mt: 0.25 },
+                              '& p': { mb: 1, maxWidth: '95ch' },
+                              '& ul': { pl: 3, mb: 1 },
+                              '& li': { mb: 0.5 },
+                              '& a': { color: 'primary.main' },
+                              '& em': { color: 'text.secondary' },
+                            }}
+                          >
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {stripCitationMarkers(selectedCulture.notes)}
+                            </ReactMarkdown>
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            {t('library.page.noNotes')}
+                          </Typography>
+                        )}
                       </DetailSection>
                     </Stack>
                   ) : null}
