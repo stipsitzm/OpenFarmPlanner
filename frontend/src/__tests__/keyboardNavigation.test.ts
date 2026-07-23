@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   focusKeyboardNavigableCell,
   getCellLocationFromDomTarget,
+  getHorizontalKeyboardNavigationTarget,
   resolveFocusedCellFromEvent,
 } from '../components/data-grid/keyboardNavigation';
 
@@ -61,6 +62,33 @@ describe('getCellLocationFromDomTarget', () => {
   it('returns null for targets outside a grid cell', () => {
     expect(getCellLocationFromDomTarget(null)).toBeNull();
     expect(getCellLocationFromDomTarget(document.createElement('span'))).toBeNull();
+  });
+});
+
+describe('getHorizontalKeyboardNavigationTarget', () => {
+  const fields = ['name', 'width_m', 'notes'];
+
+  it('moves to the next field when navigating forward', () => {
+    expect(getHorizontalKeyboardNavigationTarget(fields, 5, 'name', 1)).toEqual({
+      id: 5,
+      field: 'width_m',
+    });
+  });
+
+  it('moves to the previous field when navigating backward', () => {
+    expect(getHorizontalKeyboardNavigationTarget(fields, 5, 'width_m', -1)).toEqual({
+      id: 5,
+      field: 'name',
+    });
+  });
+
+  it('returns null at the row edges', () => {
+    expect(getHorizontalKeyboardNavigationTarget(fields, 5, 'notes', 1)).toBeNull();
+    expect(getHorizontalKeyboardNavigationTarget(fields, 5, 'name', -1)).toBeNull();
+  });
+
+  it('returns null when the current field is not navigable', () => {
+    expect(getHorizontalKeyboardNavigationTarget(fields, 5, 'unknown', 1)).toBeNull();
   });
 });
 
