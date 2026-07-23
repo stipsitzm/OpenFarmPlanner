@@ -39,7 +39,6 @@ import type {
   PublicCultureDiscussionComment,
 } from '../../api/types';
 import PageContainer from '../../components/layout/PageContainer';
-import PageSurface from '../../components/layout/PageSurface';
 import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
 import { showGlobalSnackbar } from '../../utils/globalSnackbar';
@@ -635,20 +634,26 @@ export default function PublicCropLibraryPage() {
 
   return (
     <PageContainer variant="xwide">
-      <PageSurface variant="contentFit" sx={{ width: '100%', maxWidth: 1180 }}>
-        <Stack spacing={2.25}>
+      <Box sx={{ width: '100%' }}>
+        <Stack spacing={2}>
           {loadError ? <Alert severity="error">{loadError}</Alert> : null}
 
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: 'minmax(280px, 360px) minmax(0, 1fr)' },
-              gap: 2,
-              alignItems: 'stretch',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: '220px minmax(0, 1fr)',
+                md: '230px minmax(0, 1fr)',
+                lg: '300px minmax(0, 1fr)',
+                xl: '330px minmax(0, 1fr)',
+              },
+              gap: { xs: 1.25, lg: 1.1, xl: 1.25 },
+              alignItems: 'start',
               minHeight: { md: 560 },
             }}
           >
-            <Card variant="outlined" sx={{ ...libraryCardSx, minHeight: 280 }}>
+            <Card variant="outlined" sx={{ ...libraryCardSx, minHeight: 280, maxHeight: { md: 'calc(100vh - 210px)' } }}>
               <Box component="form" onSubmit={handleSearchSubmit} sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'action.hover' }}>
                 <TextField
                   value={query}
@@ -672,7 +677,7 @@ export default function PublicCropLibraryPage() {
                   </Typography>
                 </Box>
               ) : (
-                <List disablePadding sx={{ maxHeight: { xs: 280, sm: 340, md: 640 }, overflow: 'auto' }}>
+                <List disablePadding sx={{ maxHeight: { xs: 280, sm: 'calc(100vh - 290px)' }, overflow: 'auto' }}>
                   {cultures.map((culture) => (
                     <ListItemButton
                       key={culture.id}
@@ -707,8 +712,9 @@ export default function PublicCropLibraryPage() {
               )}
             </Card>
 
-            <Card variant="outlined" sx={{ ...libraryCardSx, minHeight: 420 }}>
-              {!selectedCulture ? (
+            <Box sx={{ minWidth: 0, width: '100%', display: 'flex', justifyContent: 'flex-start' }}>
+              <Card variant="outlined" sx={{ ...libraryCardSx, width: '100%', maxWidth: { sm: 920, lg: 980, xl: 1040 }, minHeight: 420 }}>
+                {!selectedCulture ? (
                 <Box sx={{ height: '100%', minHeight: { xs: 360, md: 520 }, display: 'flex', flexDirection: 'column' }}>
                   <Box sx={{ p: { xs: 3, sm: 4 }, bgcolor: 'action.hover', borderBottom: '1px solid', borderColor: 'divider' }}>
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'center', sm: 'flex-start' }} sx={{ maxWidth: 780 }}>
@@ -769,7 +775,7 @@ export default function PublicCropLibraryPage() {
                     </Box>
                   </Box>
                 </Box>
-              ) : (
+                ) : (
                 <Stack sx={{ minHeight: '100%' }}>
                   <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } } }}>
                     <Stack direction="row" spacing={1.5} alignItems="flex-start" justifyContent="space-between">
@@ -1095,11 +1101,12 @@ export default function PublicCropLibraryPage() {
                     </Stack>
                   ) : null}
                 </Stack>
-              )}
-            </Card>
+                )}
+              </Card>
+            </Box>
           </Box>
         </Stack>
-      </PageSurface>
+      </Box>
     </PageContainer>
   );
 }
