@@ -27,6 +27,10 @@ Scope: `frontend/src`
 | `Alt+P` | Create planting plan from culture context | UI in `pages/Cultures.tsx` |
 | `Alt+J` / `Alt+Shift+J` / `Alt+I` | Export current/all cultures; import JSON | `pages/Cultures.tsx` |
 | `Alt+U` / `Alt+R` / `Alt+A` | AI complete / re-research / complete all cultures | `pages/Cultures.tsx` |
+| `/` | Focus the current page search field | `pages/culturesCommandSpecs.ts`, `crops/pages/publicCropLibraryCommandSpecs.ts` |
+| `Alt+E` / `Alt+I` | Edit/import selected public crop-library entry | `crops/pages/publicCropLibraryCommandSpecs.ts` |
+| `Alt+Shift+←` / `Alt+Shift+→` | Select previous/next culture or public crop-library entry | `pages/culturesCommandSpecs.ts`, `crops/pages/publicCropLibraryCommandSpecs.ts` |
+| `Alt+Shift+O` / `Alt+Shift+V` / `Alt+Shift+C` | Open public crop-library Details/Versions/Discussion tabs | `crops/pages/publicCropLibraryCommandSpecs.ts` |
 | `Ctrl+Enter` / `Cmd+Enter` | Save notes drawer | `components/data-grid/NotesDrawer.tsx` |
 | `Ctrl+S` / `Cmd+S` | Save grid row while editing | `components/data-grid/DataGrid.tsx` |
 | `Esc` | Close dialogs / cancel edit in many places | `CommandPalette.tsx`, `App.tsx`, `pages/Cultures.tsx`, several dialogs/components |

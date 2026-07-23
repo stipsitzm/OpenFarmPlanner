@@ -48,6 +48,8 @@ import { useTranslation } from '../../i18n';
 import { showGlobalSnackbar } from '../../utils/globalSnackbar';
 import { stripCitationMarkers } from '../../components/data-grid/markdown';
 import { CultureForm } from '../../cultures/CultureForm';
+import { useCommandContextTag, useRegisterCommands } from '../../commands/useCommandContext';
+import { createPublicCropLibraryCommandSpecs } from './publicCropLibraryCommandSpecs';
 
 type CollaborationLoadStatus = 'idle' | 'loading' | 'success' | 'error';
 type VersionLoadStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -441,10 +443,18 @@ export default function PublicCropLibraryPage() {
   const [editingPublicCulture, setEditingPublicCulture] = useState(false);
   const [editChangeComment, setEditChangeComment] = useState('');
   const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const isMobile = useMediaQuery('(max-width:600px)');
 
   const locale = i18n.resolvedLanguage === 'de' ? 'de-DE' : 'en-US';
   const anonymousLabel = t('library.anonymousAuthor');
+
+  useCommandContextTag('cropLibrary');
+
+  const focusSearch = useCallback((): void => {
+    searchInputRef.current?.focus();
+    searchInputRef.current?.select();
+  }, []);
 
   const replaceSelectedCultureSearchParam = useCallback((cultureId: number | null): void => {
     const nextParams = new URLSearchParams(location.search);
@@ -641,7 +651,7 @@ export default function PublicCropLibraryPage() {
     void loadCultures(query);
   };
 
-  const handleImport = async (): Promise<void> => {
+  const handleImport = useCallback(async (): Promise<void> => {
     if (!selectedCulture) {
       return;
     }
@@ -654,7 +664,7 @@ export default function PublicCropLibraryPage() {
     } finally {
       setImportingId(null);
     }
-  };
+  }, [selectedCulture, t]);
 
   const handleCommentSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
@@ -674,13 +684,13 @@ export default function PublicCropLibraryPage() {
     }
   };
 
-  const openEditDialog = (): void => {
+  const openEditDialog = useCallback((): void => {
     if (!selectedCulture) {
       return;
     }
     setEditChangeComment('');
     setEditingPublicCulture(true);
-  };
+  }, [selectedCulture]);
 
   const handleEditSave = async (formData: Culture): Promise<void> => {
     if (!selectedCulture) {
@@ -722,6 +732,56 @@ export default function PublicCropLibraryPage() {
     }
   };
 
+  const goToRelativeCulture = useCallback((direction: 'next' | 'previous'): void => {
+    if (!selectedCultureId || cultures.length === 0) {
+      return;
+    }
+
+    const currentIndex = cultures.findIndex((culture) => culture.id === selectedCultureId);
+    if (currentIndex === -1) {
+      return;
+    }
+
+    const delta = direction === 'next' ? 1 : -1;
+    const nextIndex = (currentIndex + delta + cultures.length) % cultures.length;
+    const nextCulture = cultures[nextIndex];
+    if (nextCulture) {
+      updateSelectedCultureId(nextCulture.id);
+    }
+  }, [cultures, selectedCultureId, updateSelectedCultureId]);
+
+  const publicLibraryCommands = useMemo(() => createPublicCropLibraryCommandSpecs({
+    cultures,
+    focusSearch,
+    goToRelativeCulture,
+    importSelectedCulture: handleImport,
+    openEditDialog,
+    selectTab: setActiveTab,
+    selectedCulture,
+    selectedCultureId,
+    labels: {
+      focusSearch: t('library.page.commands.focusSearch'),
+      edit: t('library.page.commands.edit'),
+      importToProject: t('library.page.commands.importToProject'),
+      showDetails: t('library.page.commands.showDetails'),
+      showVersions: t('library.page.commands.showVersions'),
+      showDiscussion: t('library.page.commands.showDiscussion'),
+      previous: t('library.page.commands.previous'),
+      next: t('library.page.commands.next'),
+    },
+  }), [
+    cultures,
+    focusSearch,
+    goToRelativeCulture,
+    handleImport,
+    openEditDialog,
+    selectedCulture,
+    selectedCultureId,
+    t,
+  ]);
+
+  useRegisterCommands('public-crop-library-page', publicLibraryCommands);
+
   const libraryCardSx = {
     borderRadius: 1,
     border: '1px solid',
@@ -755,6 +815,7 @@ export default function PublicCropLibraryPage() {
             <Card variant="outlined" sx={{ ...libraryCardSx, minHeight: 280, maxHeight: { md: 'calc(100vh - 210px)' } }}>
               <Box component="form" onSubmit={handleSearchSubmit} sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'action.hover' }}>
                 <TextField
+                  inputRef={searchInputRef}
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   label={t('library.searchLabel')}

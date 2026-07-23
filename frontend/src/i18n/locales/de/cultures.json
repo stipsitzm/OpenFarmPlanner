@@ -614,6 +614,16 @@
         "restoreSuccess": "Die Version wurde als neue aktuelle Version wiederhergestellt.",
         "restoreError": "Die Version konnte nicht wiederhergestellt werden.",
         "restoreComment": "Version {{version}} wiederhergestellt"
+      },
+      "commands": {
+        "focusSearch": "Öffentliche Kulturen suchen",
+        "edit": "Öffentliche Kultur bearbeiten",
+        "importToProject": "Öffentliche Kultur in Projekt importieren",
+        "showDetails": "Details anzeigen",
+        "showVersions": "Versionen anzeigen",
+        "showDiscussion": "Diskussion anzeigen",
+        "previous": "Vorherige öffentliche Kultur",
+        "next": "Nächste öffentliche Kultur"
       }
     },
     "searchLabel": "Öffentliche Kulturen durchsuchen",
