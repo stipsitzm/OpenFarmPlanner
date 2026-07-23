@@ -103,6 +103,10 @@ import {
 } from './dataGridUtils';
 import { mergeVisibleDateEditInputValues, readDraftRow } from './draftRowReaders';
 import {
+  collectRowValidationErrors,
+  hasInvalidRowInEditMode as hasInvalidRowInEditModeState,
+} from './rowValidation';
+import {
   focusKeyboardNavigableCell as focusDataGridKeyboardNavigableCell,
   getKeyboardNavigationTarget,
   getVerticalKeyboardNavigationTarget,
@@ -816,31 +820,12 @@ export function EditableDataGrid<T extends EditableRow>({
 
   const hasInvalidRowInEditMode = useMemo(() => {
     if (!hasRowsInEditMode) return false;
-    
-    // Find rows that are in edit mode
-    const editingRowIds = Object.entries(rowModesModel)
-      .filter(([, mode]) => mode.mode === GridRowModes.Edit)
-      .map(([id]) => id);
-    
-    // Check if any of those rows have validation errors
-    return editingRowIds.some(id => {
-      const row = rowsById.get(String(id));
-      if (!row) return false;
-      const validationError = validateRow(row);
-      return validationError !== null;
-    });
+    return hasInvalidRowInEditModeState(rowModesModel, rowsById, validateRow);
   }, [hasRowsInEditMode, rowModesModel, rowsById, validateRow]);
 
   const rowValidationErrors = useMemo(() => {
     if (!getRowValidationErrors) return {};
-    const errorsByRow: Record<string, Record<string, string>> = {};
-    for (const row of rows as T[]) {
-      const errors = getRowValidationErrors(row);
-      if (Object.keys(errors).length > 0) {
-        errorsByRow[String(row.id)] = errors;
-      }
-    }
-    return errorsByRow;
+    return collectRowValidationErrors(rows as T[], getRowValidationErrors);
   }, [getRowValidationErrors, rows]);
 
   /**
