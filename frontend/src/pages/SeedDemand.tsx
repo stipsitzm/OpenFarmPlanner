@@ -37,7 +37,6 @@ import EmptyStateCard from '../components/project/EmptyStateCard';
 import { ContextMenuHint, FullCellTooltip, TableCopyMenuItems, useContextMenuHint } from '../components/data-grid';
 import { handleContextMenuKeyboardNavigation } from '../components/data-grid/contextMenuFocus';
 import { getFirstMissingProjectSetupStep, getTranslatedProjectSetupActions } from './requirementFlow';
-import { formatLocalizedNumber } from '../utils/numberLocalization';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
 import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
 import {
@@ -46,26 +45,11 @@ import {
   getRequiredAmountDiagnostic,
   hasPackageCellTooltip,
 } from './seedDemandDiagnostics';
-
-const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
-  unit === 'seeds' ? t('seedDemand.unitSeeds') : t('seedDemand.unitGrams')
-);
-
-const formatSeedAmount = (value: number, options?: Intl.NumberFormatOptions): string => (
-  formatLocalizedNumber(value, 'de-DE', options)
-);
-
-const formatRequiredSeedAmount = (value: number): string => (
-  formatSeedAmount(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-);
-
-type Translator = (key: string, options?: Record<string, unknown>) => string;
-
-const formatPackageSelection = (row: SeedDemand, t: Translator): string => (
-  (row.package_suggestion?.selection ?? [])
-    .map((item) => `${formatSeedAmount(item.size_value)} ${formatUnit(item.size_unit, t)}${item.count > 1 ? ` × ${item.count}` : ''}`)
-    .join(' + ')
-);
+import {
+  formatPackageSelection,
+  formatRequiredSeedAmount,
+  formatUnit,
+} from './seedDemandFormat';
 
 export default function SeedDemandPage() {
   useCommandContextTag('seedDemand');
