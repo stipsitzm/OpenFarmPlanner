@@ -41,9 +41,10 @@ import { formatLocalizedNumber } from '../utils/numberLocalization';
 import { shouldOpenCustomContextMenu, suppressNativeContextMenu } from '../utils/contextMenu';
 import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
 import {
-  getEffectivePackageBlocker,
   getPackageBlockerTooltip,
+  getPackageCellState,
   getRequiredAmountDiagnostic,
+  hasPackageCellTooltip,
 } from './seedDemandDiagnostics';
 
 const formatUnit = (unit: 'g' | 'seeds', t: (key: string) => string): string => (
@@ -65,28 +66,6 @@ const formatPackageSelection = (row: SeedDemand, t: Translator): string => (
     .map((item) => `${formatSeedAmount(item.size_value)} ${formatUnit(item.size_unit, t)}${item.count > 1 ? ` × ${item.count}` : ''}`)
     .join(' + ')
 );
-
-type PackageCellState = 'computed' | 'chooseSupplier' | 'notConfigured' | 'unavailableRequirement' | 'calculationError';
-
-const getPackageCellState = (row: SeedDemand): PackageCellState => {
-  const blocker = getEffectivePackageBlocker(row);
-  if (!blocker) {
-    return 'computed';
-  }
-  switch (blocker) {
-    case 'supplier_data_missing':
-    case 'supplier_not_selected':
-      return 'chooseSupplier';
-    case 'package_sizes_missing':
-      return 'notConfigured';
-    case 'required_amount_unavailable':
-      return 'unavailableRequirement';
-    default:
-      return 'calculationError';
-  }
-};
-
-const hasPackageCellTooltip = (row: SeedDemand): boolean => getEffectivePackageBlocker(row) !== null;
 
 export default function SeedDemandPage() {
   useCommandContextTag('seedDemand');
