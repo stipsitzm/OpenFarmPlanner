@@ -109,6 +109,7 @@ import {
   isCellKeyboardNavigable,
   isInteractiveCellTarget,
   preventReadOnlyCellMouseFocus,
+  resolveFocusedCellFromEvent,
 } from './keyboardNavigation';
 import { useSpreadsheetEditStarter } from './keyboardEditing';
 import type {
@@ -696,32 +697,9 @@ export function EditableDataGrid<T extends EditableRow>({
     }
   }, [gridApiRef]);
 
-  const getFocusedCellFromEvent = useCallback((event: KeyboardEvent): { id: GridRowId; field: string } | null => {
-    const api = gridApiRef.current;
-    const focusedCell = api?.state.focus.cell;
-    if (focusedCell) {
-      return focusedCell;
-    }
-
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return null;
-    }
-
-    const cellElement = target.closest<HTMLElement>('[role="gridcell"][data-field]');
-    const rowElement = target.closest<HTMLElement>('[role="row"][data-id]');
-    const field = cellElement?.dataset.field;
-    const id = rowElement?.dataset.id;
-    if (!field || id === undefined) {
-      return null;
-    }
-
-    const numericId = Number(id);
-    return {
-      id: Number.isNaN(numericId) ? id : numericId,
-      field,
-    };
-  }, [gridApiRef]);
+  const getFocusedCellFromEvent = useCallback((event: KeyboardEvent): { id: GridRowId; field: string } | null => (
+    resolveFocusedCellFromEvent(gridApiRef.current, event)
+  ), [gridApiRef]);
 
   const isActionCellKeyboardNavigable = useCallback((params: GridCellParams<T>): boolean => (
     notesFieldNames.includes(params.field)
