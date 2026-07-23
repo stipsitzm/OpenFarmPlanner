@@ -269,7 +269,7 @@ export default function PublicCropLibraryPage() {
       setSelectedCultureId((currentId) => (
         currentId && results.some((culture) => culture.id === currentId)
           ? currentId
-          : results[0]?.id ?? null
+          : null
       ));
     } catch {
       setLoadError(t('library.loadError'));

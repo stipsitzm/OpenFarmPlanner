@@ -88,6 +88,8 @@ test('public crop library supports quick import, discussion, proposal, and mobil
 
   await page.goto('/app/crop-library');
   await expect(page.getByRole('heading', { name: 'Kulturbibliothek' })).toBeVisible();
+  await expect(page.getByText('Die Kulturbibliothek wächst mit der Community')).toBeVisible();
+  await expect(page.getByText(/Veröffentliche deine bewährten Kulturen/)).toBeVisible();
   await page.getByLabel('Öffentliche Kulturen durchsuchen').fill(publicCulture.variety);
   await page.keyboard.press('Enter');
   await expect(page.getByText(publicCulture.variety).first()).toBeVisible();
