@@ -17,7 +17,6 @@ const {
   publicCultureListMock,
   publicCultureWithdrawMock,
   publicCultureRemoveMock,
-  publicCultureHardDeleteMock,
   publishPublicMock,
   deleteMock,
   undeleteMock,
@@ -33,7 +32,6 @@ const {
   publicCultureListMock: vi.fn(),
   publicCultureWithdrawMock: vi.fn(),
   publicCultureRemoveMock: vi.fn(),
-  publicCultureHardDeleteMock: vi.fn(),
   publishPublicMock: vi.fn(),
   deleteMock: vi.fn(),
   undeleteMock: vi.fn(),
@@ -82,7 +80,6 @@ vi.mock('../api/api', async () => {
       list: publicCultureListMock,
       withdraw: publicCultureWithdrawMock,
       remove: publicCultureRemoveMock,
-      hardDelete: publicCultureHardDeleteMock,
     },
   };
 });
@@ -96,7 +93,6 @@ vi.mock('../cultures/CultureDetail', () => ({
     onPublishCulture,
     onWithdrawPublicCulture,
     onRemovePublicCulture,
-    onHardDeletePublicCulture,
     onEditCulture,
     onDeleteCulture,
     canCreatePlan,
@@ -110,7 +106,6 @@ vi.mock('../cultures/CultureDetail', () => ({
     onPublishCulture?: () => void;
     onWithdrawPublicCulture?: (culture: { id?: number; name: string; owned_public_culture_id?: number | null }) => void;
     onRemovePublicCulture?: (culture: { id?: number; name: string; owned_public_culture_id?: number | null }) => void;
-    onHardDeletePublicCulture?: (culture: { id?: number; name: string; owned_public_culture_id?: number | null }) => void;
     onEditCulture?: (culture: { id?: number; name: string }) => void;
     onDeleteCulture?: (culture: { id?: number; name: string; variety?: string; cultivation_type?: string }) => void;
     canCreatePlan?: boolean;
@@ -126,7 +121,6 @@ vi.mock('../cultures/CultureDetail', () => ({
       <button type="button" onClick={() => onPublishCulture?.()}>{publishActionLabel ?? 'Veröffentlichen'}</button>
       <button type="button" onClick={() => onWithdrawPublicCulture?.(cultures[0])}>Veröffentlichung zurückziehen</button>
       <button type="button" onClick={() => onRemovePublicCulture?.(cultures[0])}>Aus Bibliothek entfernen</button>
-      <button type="button" onClick={() => onHardDeletePublicCulture?.(cultures[0])}>Endgültig löschen</button>
       <button type="button" onClick={() => onCreatePlan?.()} disabled={!canCreatePlan}>Anbauplan erstellen</button>
       <button type="button" onClick={() => onEditCulture?.(cultures[0])}>Kultur bearbeiten</button>
       <button type="button" onClick={() => onDeleteCulture?.(cultures[0])}>Kultur löschen</button>
@@ -229,7 +223,6 @@ describe('Cultures action area', () => {
     });
     publicCultureWithdrawMock.mockResolvedValue({ data: { id: 77, name: 'Tomate', version: 1, status: 'withdrawn' } });
     publicCultureRemoveMock.mockResolvedValue({ data: { id: 77, name: 'Tomate', version: 1, status: 'removed' } });
-    publicCultureHardDeleteMock.mockResolvedValue({ data: undefined });
   });
 
   afterEach(() => {
@@ -344,6 +337,7 @@ describe('Cultures action area', () => {
 
     await waitFor(() => {
       expect(publishPublicMock).toHaveBeenCalledWith(1, { accepted_public_library_terms: false, crop_species_id: 1, original_language_code: 'de' });
+      expect(listMock).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -446,7 +440,7 @@ describe('Cultures action area', () => {
     });
   });
 
-  it('requests hard delete only through a destructive confirmation dialog', async () => {
+  it('does not expose hard delete from the standard culture action area', async () => {
     authUser.is_superuser = true;
     listMock.mockResolvedValue({
       data: {
@@ -461,17 +455,8 @@ describe('Cultures action area', () => {
 
     renderCultures('/cultures?cultureId=1');
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Endgültig löschen' })).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'Endgültig löschen' }));
-
-    const dialog = await screen.findByRole('dialog', { name: 'Endgültig löschen?' });
-    expect(dialog).toHaveTextContent('wenn keine Importe, Herkunftsdaten oder Abhängigkeiten mehr existieren');
-    expect(publicCultureHardDeleteMock).not.toHaveBeenCalled();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Endgültig löschen' }));
-
-    await waitFor(() => {
-      expect(publicCultureHardDeleteMock).toHaveBeenCalledWith(77);
-    });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Aus Bibliothek entfernen' })).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Endgültig löschen' })).not.toBeInTheDocument();
   });
 
   it('renders a compact culture delete confirmation dialog', async () => {

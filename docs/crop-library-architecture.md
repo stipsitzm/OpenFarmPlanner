@@ -265,6 +265,9 @@ The status-change API lives on `/api/public-cultures/<id>/`:
 - `hard-delete/` is staff-only and intentionally narrow. It is blocked when
   the public entry has imported project copies or source-project provenance;
   ordinary cleanup and moderation should use `removed` instead.
+  Because it is exceptional, the normal culture overflow menu does not expose
+  hard delete; it should live in a dedicated moderation/admin surface if a
+  human-facing UI is needed later.
 
 Every status transition writes `PublicCultureStatusEvent`, establishing the
 audit trail needed for later moderation queues, review steps, duplicate

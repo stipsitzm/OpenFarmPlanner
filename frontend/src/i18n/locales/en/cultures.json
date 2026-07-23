@@ -17,8 +17,10 @@
     "restoreError": "Version could not be restored"
   },
   "buttons": {
+    "edit": "Edit",
     "versions": "Versions",
-    "delete": "Delete"
+    "delete": "Delete",
+    "deleteProjectCulture": "Delete project culture"
   },
   "history": {
     "currentVersion": "Current version",

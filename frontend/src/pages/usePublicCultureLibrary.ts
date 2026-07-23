@@ -90,6 +90,13 @@ export function usePublicCultureLibrary({
     }
   };
 
+  const refreshPublicCultureStatusContext = useCallback(async () => {
+    await onPublicCultureStatusChange?.();
+    if (publicLibraryOpen) {
+      await fetchPublicCultures();
+    }
+  }, [fetchPublicCultures, onPublicCultureStatusChange, publicLibraryOpen]);
+
   const handlePublishCurrentCulture = async (
     acceptedPublicLibraryTerms = false,
     publishingData?: { cropSpeciesId: number; originalLanguageCode: string },
@@ -115,6 +122,7 @@ export function usePublicCultureLibrary({
       if (acceptedPublicLibraryTerms) {
         await refreshUser();
       }
+      await refreshPublicCultureStatusContext();
       return true;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 409) {
@@ -136,13 +144,6 @@ export function usePublicCultureLibrary({
       setPublishingCultureId(null);
     }
   };
-
-  const refreshPublicCultureStatusContext = useCallback(async () => {
-    await onPublicCultureStatusChange?.();
-    if (publicLibraryOpen) {
-      await fetchPublicCultures();
-    }
-  }, [fetchPublicCultures, onPublicCultureStatusChange, publicLibraryOpen]);
 
   const handleWithdrawPublicCulture = async (culture: Culture): Promise<boolean> => {
     if (!culture.owned_public_culture_id) {
@@ -175,22 +176,6 @@ export function usePublicCultureLibrary({
     } catch (error) {
       console.error('Error removing public culture:', error);
       showSnackbar(extractApiErrorMessage(error, t, t('library.removeError')), 'error');
-      return false;
-    }
-  };
-
-  const handleHardDeletePublicCulture = async (culture: Culture): Promise<boolean> => {
-    if (!culture.owned_public_culture_id) {
-      return false;
-    }
-    try {
-      await publicCultureAPI.hardDelete(culture.owned_public_culture_id);
-      await refreshPublicCultureStatusContext();
-      showSnackbar(t('library.hardDeleteSuccess', { name: culture.name }), 'success');
-      return true;
-    } catch (error) {
-      console.error('Error permanently deleting public culture:', error);
-      showSnackbar(extractApiErrorMessage(error, t, t('library.hardDeleteError')), 'error');
       return false;
     }
   };
@@ -234,6 +219,5 @@ export function usePublicCultureLibrary({
     handlePublishCurrentCulture,
     handleWithdrawPublicCulture,
     handleRemovePublicCulture,
-    handleHardDeletePublicCulture,
   };
 }

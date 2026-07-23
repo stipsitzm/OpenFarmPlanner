@@ -102,7 +102,6 @@ function Cultures() {
   const [withdrawDialogCulture, setWithdrawDialogCulture] = useState<Culture | null>(null);
   const [removeDialogCulture, setRemoveDialogCulture] = useState<Culture | null>(null);
   const [removeReason, setRemoveReason] = useState<PublicCultureRemovalReason | ''>('');
-  const [hardDeleteDialogCulture, setHardDeleteDialogCulture] = useState<Culture | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const focusSearch = useCallback(() => {
     searchInputRef.current?.focus();
@@ -233,7 +232,6 @@ function Cultures() {
     handlePublishCurrentCulture,
     handleWithdrawPublicCulture,
     handleRemovePublicCulture,
-    handleHardDeletePublicCulture,
   } = usePublicCultureLibrary({
     shouldShowProjectRequiredState,
     selectedCulture,
@@ -281,16 +279,6 @@ function Cultures() {
       setRemoveReason('');
     }
   }, [handleRemovePublicCulture, removeDialogCulture, removeReason]);
-
-  const handleConfirmHardDeletePublicCulture = useCallback(async () => {
-    if (!hardDeleteDialogCulture) {
-      return;
-    }
-    const success = await handleHardDeletePublicCulture(hardDeleteDialogCulture);
-    if (success) {
-      setHardDeleteDialogCulture(null);
-    }
-  }, [handleHardDeletePublicCulture, hardDeleteDialogCulture]);
 
   // Fetch cultures on mount
   useEffect(() => {
@@ -610,7 +598,6 @@ function Cultures() {
             setRemoveReason('');
             setRemoveDialogCulture(culture);
           }}
-          onHardDeletePublicCulture={(culture) => setHardDeleteDialogCulture(culture)}
           onDeleteCulture={handleDelete}
           canModeratePublicCulture={canModeratePublicCulture}
           canCreatePlan={canCreatePlantingPlan}
@@ -746,23 +733,6 @@ function Cultures() {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <ConfirmationDialog
-        open={Boolean(hardDeleteDialogCulture)}
-        fullWidth
-        title={t('library.hardDeleteDialog.title')}
-        message={t('library.hardDeleteDialog.message', { name: hardDeleteDialogCulture?.name ?? '' })}
-        cancelLabel={t('common:actions.cancel')}
-        confirmLabel={t('library.hardDeleteAction')}
-        onCancel={() => setHardDeleteDialogCulture(null)}
-        onConfirm={handleConfirmHardDeletePublicCulture}
-        titleSx={{ pb: 1 }}
-        contentSx={{ pt: 1 }}
-        messageTypographyProps={{ variant: 'body1', color: 'text.secondary' }}
-        actionsSx={{ px: 3, pb: 2.5, pt: 1 }}
-        cancelButtonProps={{ variant: 'outlined' }}
-        confirmButtonProps={{ color: 'error', variant: 'contained' }}
-      />
 
       <CulturesPublishingWizardDialog
         open={publishWizardOpen}

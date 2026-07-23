@@ -1,15 +1,16 @@
-import { Menu, MenuItem } from '@mui/material';
+import { Divider, Menu, MenuItem } from '@mui/material';
+import EditIcon from '@mui/icons-material/Edit';
 import HistoryIcon from '@mui/icons-material/History';
 import PublicIcon from '@mui/icons-material/Public';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PublicOffIcon from '@mui/icons-material/PublicOff';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import type { TFunction } from 'i18next';
 
 interface CultureHeaderActionsMenuProps {
   anchorEl: HTMLElement | null;
   onClose: () => void;
+  onEdit: () => void;
   onOpenHistory: () => void;
   onPublish: () => void;
   isPublishing: boolean;
@@ -17,7 +18,6 @@ interface CultureHeaderActionsMenuProps {
   onDelete: () => void;
   onWithdrawPublicCulture?: () => void;
   onRemovePublicCulture?: () => void;
-  onHardDeletePublicCulture?: () => void;
   canWithdrawPublicCulture?: boolean;
   canModeratePublicCulture?: boolean;
   t: TFunction<'cultures'>;
@@ -32,6 +32,7 @@ interface CultureHeaderActionsMenuProps {
 export function CultureHeaderActionsMenu({
   anchorEl,
   onClose,
+  onEdit,
   onOpenHistory,
   onPublish,
   isPublishing,
@@ -39,7 +40,6 @@ export function CultureHeaderActionsMenu({
   onDelete,
   onWithdrawPublicCulture,
   onRemovePublicCulture,
-  onHardDeletePublicCulture,
   canWithdrawPublicCulture = false,
   canModeratePublicCulture = false,
   t,
@@ -50,6 +50,10 @@ export function CultureHeaderActionsMenu({
       open={Boolean(anchorEl)}
       onClose={onClose}
     >
+      <MenuItem onClick={() => { onClose(); onEdit(); }}>
+        <EditIcon sx={{ fontSize: 18, mr: 1, color: 'rgba(37, 111, 42, 0.86)' }} />
+        {t('buttons.edit')}
+      </MenuItem>
       <MenuItem onClick={() => { onClose(); onOpenHistory(); }}>
         <HistoryIcon sx={{ fontSize: 18, mr: 1, color: 'text.secondary' }} />
         {t('buttons.versions')}
@@ -72,26 +76,22 @@ export function CultureHeaderActionsMenu({
         </MenuItem>
       ) : null}
       {canModeratePublicCulture ? (
-        <MenuItem
-          onClick={() => { onClose(); onRemovePublicCulture?.(); }}
-          sx={{ color: 'error.main' }}
-        >
-          <RemoveCircleOutlineIcon sx={{ fontSize: 18, mr: 1, color: 'error.main' }} />
-          {t('library.removeAction')}
-        </MenuItem>
+        [
+          <Divider key="moderation-divider" sx={{ my: 0.5 }} />,
+          <MenuItem
+            key="remove-public-culture"
+            onClick={() => { onClose(); onRemovePublicCulture?.(); }}
+            sx={{ color: 'error.main' }}
+          >
+            <RemoveCircleOutlineIcon sx={{ fontSize: 18, mr: 1, color: 'error.main' }} />
+            {t('library.removeAction')}
+          </MenuItem>,
+        ]
       ) : null}
-      {canModeratePublicCulture ? (
-        <MenuItem
-          onClick={() => { onClose(); onHardDeletePublicCulture?.(); }}
-          sx={{ color: 'error.main' }}
-        >
-          <DeleteForeverIcon sx={{ fontSize: 18, mr: 1, color: 'error.main' }} />
-          {t('library.hardDeleteAction')}
-        </MenuItem>
-      ) : null}
+      <Divider sx={{ my: 0.5 }} />
       <MenuItem onClick={() => { onClose(); onDelete(); }} sx={{ color: 'error.main' }}>
         <DeleteIcon sx={{ fontSize: 18, mr: 1, color: 'error.main' }} />
-        {t('buttons.delete')}
+        {t('buttons.deleteProjectCulture')}
       </MenuItem>
     </Menu>
   );
