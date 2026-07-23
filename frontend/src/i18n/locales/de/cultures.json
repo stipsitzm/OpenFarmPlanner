@@ -625,6 +625,12 @@
     "emptyState": {
       "noSelectionTitle": "Die Kulturbibliothek wächst mit der Community",
       "noSelectionDescription": "Veröffentliche deine bewährten Kulturen und teile dein Wissen mit anderen. Jede veröffentlichte Kultur erweitert die gemeinsame Kulturbibliothek und kann von anderen Projekten übernommen werden.",
+      "discoverTitle": "Entdecken",
+      "discoverDescription": "Durchsuche vorhandene Einträge und vergleiche Sorten, Lieferanten und Anbaudaten.",
+      "importTitle": "Übernehmen",
+      "importDescription": "Importiere passende Kulturen als eigene Projektkopie, ohne öffentliche Daten zu verändern.",
+      "improveTitle": "Verbessern",
+      "improveDescription": "Diskutiere Inhalte und schlage Änderungen vor, damit die Bibliothek besser wird.",
       "emptyLibraryTitle": "Noch keine öffentlichen Kulturen vorhanden",
       "emptyLibraryDescription": "Die Kulturbibliothek lebt von den Beiträgen der Community. Sobald passende Projektkulturen veröffentlicht werden, können sie hier von allen genutzt und weiterentwickelt werden.",
       "noResultsTitle": "Keine passende öffentliche Kultur gefunden"

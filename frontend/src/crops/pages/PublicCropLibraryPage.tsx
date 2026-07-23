@@ -28,6 +28,7 @@ import {
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import SpaOutlinedIcon from '@mui/icons-material/SpaOutlined';
 import { publicCultureAPI } from '../../api/api';
 import type {
@@ -712,14 +713,62 @@ export default function PublicCropLibraryPage() {
 
             <Card variant="outlined" sx={{ ...libraryCardSx, minHeight: 420 }}>
               {!selectedCulture ? (
-                <Box sx={{ height: '100%', minHeight: 360, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', px: 3, textAlign: 'center' }}>
-                  <SpaOutlinedIcon sx={{ color: 'success.main', fontSize: 44, mb: 1.5 }} />
-                  <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                    {t('library.emptyState.noSelectionTitle')}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1, maxWidth: 520, lineHeight: 1.6 }}>
-                    {t('library.emptyState.noSelectionDescription')}
-                  </Typography>
+                <Box sx={{ height: '100%', minHeight: { xs: 360, md: 520 }, display: 'flex', alignItems: 'center', justifyContent: 'center', p: { xs: 3, sm: 4 } }}>
+                  <Stack spacing={3.25} alignItems="center" sx={{ width: '100%', maxWidth: 720, textAlign: 'center' }}>
+                    <Box>
+                      <Box
+                        sx={{
+                          width: 64,
+                          height: 64,
+                          borderRadius: '50%',
+                          bgcolor: 'success.50',
+                          color: 'success.main',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mb: 2,
+                        }}
+                      >
+                        <SpaOutlinedIcon sx={{ fontSize: 36 }} />
+                      </Box>
+                      <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                        {t('library.emptyState.noSelectionTitle')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25, maxWidth: 560, mx: 'auto', lineHeight: 1.65 }}>
+                        {t('library.emptyState.noSelectionDescription')}
+                      </Typography>
+                    </Box>
+                    <Divider flexItem />
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: { xs: 2, sm: 3 }, width: '100%' }}>
+                      <Stack spacing={0.75} alignItems="center">
+                        <SearchOutlinedIcon sx={{ color: 'success.main', fontSize: 28 }} />
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                          {t('library.emptyState.discoverTitle')}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+                          {t('library.emptyState.discoverDescription')}
+                        </Typography>
+                      </Stack>
+                      <Stack spacing={0.75} alignItems="center">
+                        <DownloadOutlinedIcon sx={{ color: 'success.main', fontSize: 28 }} />
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                          {t('library.emptyState.importTitle')}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+                          {t('library.emptyState.importDescription')}
+                        </Typography>
+                      </Stack>
+                      <Stack spacing={0.75} alignItems="center">
+                        <RateReviewOutlinedIcon sx={{ color: 'success.main', fontSize: 28 }} />
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                          {t('library.emptyState.improveTitle')}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.5 }}>
+                          {t('library.emptyState.improveDescription')}
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  </Stack>
                 </Box>
               ) : (
                 <Stack sx={{ minHeight: '100%' }}>
