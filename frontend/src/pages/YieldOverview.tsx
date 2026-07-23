@@ -8,11 +8,8 @@ import {
   Card,
   CardContent,
   Divider,
-  FormControl,
   MenuItem,
   Stack,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -22,18 +19,14 @@ import {
   type PlantingPlan,
   type YieldCalendarWeek,
 } from "../api/api";
-import {
-  segmentedToggleButtonGroupSx,
-  segmentedToggleButtonSx,
-} from "../components/buttons/segmentedControlStyles";
 import { copyTextToClipboardSilently } from "../components/data-grid";
 import PageContainer from "../components/layout/PageContainer";
 import PageSurface from "../components/layout/PageSurface";
 import EmptyStateCard from "../components/project/EmptyStateCard";
 import ProjectRequiredState from "../components/project/ProjectRequiredState";
 import { useProjectRequirement } from "../hooks/useProjectRequirement";
-import { TypeaheadSelect as Select } from "../components/inputs/TypeaheadSelect";
 import { useTranslation } from "../i18n";
+import { YieldFilterBar } from "./YieldFilterBar";
 import {
   shouldOpenCustomContextMenu,
   suppressNativeContextMenu,
@@ -46,6 +39,7 @@ import { useContextMenuPositionState } from "../components/contextMenu/useContex
 import { useFocusRegion } from "../focus/useFocusManager";
 import { parseDateString } from "./ganttChartUtils";
 import {
+  ALL_CULTURES,
   formatCompactYield,
   formatDateToAPI,
   formatIsoWeek,
@@ -53,13 +47,8 @@ import {
   mergeCultureYields,
   type ChartPeriod,
   type YieldCalendarCulture,
+  type YieldCultureMeta,
 } from "./yieldOverviewUtils";
-
-interface YieldCultureMeta {
-  id: number;
-  name: string;
-  color: string;
-}
 
 interface YieldChartCulture extends YieldCultureMeta {
   totalYield: number;
@@ -81,7 +70,6 @@ interface YieldContextMenuPayload {
   yieldValue: number;
 }
 
-const ALL_CULTURES = "all";
 const DEFAULT_LEGEND_CULTURE_LIMIT = 15;
 
 function useYieldChartData(
@@ -932,123 +920,6 @@ function YieldDistributionChart({
       </MenuItem>
     </CustomContextMenu>
     </>
-  );
-}
-
-interface YieldFilterBarProps {
-  cultures: YieldCultureMeta[];
-  selectedCultureId: string;
-  selectedYear: number;
-  period: ChartPeriod;
-  onCultureChange: (cultureId: string) => void;
-  onYearChange: (year: number) => void;
-  onPeriodChange: (period: ChartPeriod) => void;
-}
-
-function YieldFilterBar({
-  cultures,
-  selectedCultureId,
-  selectedYear,
-  period,
-  onCultureChange,
-  onYearChange,
-  onPeriodChange,
-}: YieldFilterBarProps) {
-  const { t } = useTranslation("yieldOverview");
-  const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from(
-    { length: 6 },
-    (_, index) => currentYear - 2 + index,
-  );
-
-  return (
-    <Stack
-      direction={{ xs: "column", sm: "row" }}
-      spacing={1.5}
-      alignItems={{ xs: "stretch", sm: "flex-start" }}
-      sx={{ width: "100%", flexWrap: "wrap" }}
-    >
-      <Stack spacing={0.5} sx={{ minWidth: { sm: 220 } }}>
-        <Typography
-          id="yield-culture-filter-label"
-          variant="caption"
-          color="text.secondary"
-          sx={{ lineHeight: 1 }}
-        >
-          {t("filters.culture")}
-        </Typography>
-        <FormControl size="small" fullWidth>
-          <Select
-            fullWidth
-            labelId="yield-culture-filter-label"
-            value={selectedCultureId}
-            onChange={(event) => onCultureChange(String(event.target.value))}
-          >
-            <MenuItem value={ALL_CULTURES}>{t("filters.allCultures")}</MenuItem>
-            {cultures.map((culture) => (
-              <MenuItem key={culture.id} value={String(culture.id)}>
-                {culture.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Stack>
-
-      <Stack spacing={0.5} sx={{ minWidth: { sm: 120 } }}>
-        <Typography
-          id="yield-year-filter-label"
-          variant="caption"
-          color="text.secondary"
-          sx={{ lineHeight: 1 }}
-        >
-          {t("filters.year")}
-        </Typography>
-        <FormControl size="small" fullWidth>
-          <Select
-            fullWidth
-            labelId="yield-year-filter-label"
-            value={String(selectedYear)}
-            onChange={(event) => onYearChange(Number(event.target.value))}
-          >
-            {yearOptions.map((year) => (
-              <MenuItem key={year} value={String(year)}>
-                {year}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Stack>
-
-      <Stack spacing={0.5}>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ lineHeight: 1 }}
-        >
-          {t("filters.period")}
-        </Typography>
-        <ToggleButtonGroup
-          value={period}
-          exclusive
-          size="small"
-          color="primary"
-          aria-label={t("filters.period")}
-          sx={{ ...segmentedToggleButtonGroupSx, height: 40 }}
-          onChange={(_, value: ChartPeriod | null) => {
-            if (value !== null) {
-              onPeriodChange(value);
-            }
-          }}
-        >
-          <ToggleButton value="week" sx={segmentedToggleButtonSx}>
-            {t("filters.week")}
-          </ToggleButton>
-          <ToggleButton value="month" sx={segmentedToggleButtonSx}>
-            {t("filters.month")}
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </Stack>
-    </Stack>
   );
 }
 
