@@ -16,6 +16,12 @@
     "restoreSuccess": "Version restored",
     "restoreError": "Version could not be restored"
   },
+  "buttons": {
+    "edit": "Edit",
+    "versions": "Versions",
+    "delete": "Delete",
+    "deleteProjectCulture": "Delete project culture"
+  },
   "history": {
     "currentVersion": "Current version",
     "changedFields": "Changed:",
@@ -33,6 +39,251 @@
       "supplier": "Supplier",
       "image": "Image",
       "selectedSeedDemandSupplier": "Seed demand supplier"
+    }
+  },
+  "library": {
+    "openButton": "Crop library",
+    "dialogTitle": "Crop library",
+    "openFullPage": "Open crop library",
+    "searchLabel": "Search public crops",
+    "importButton": "Import into project",
+    "importing": "Importing…",
+    "importSuccess": "“{{name}}” was imported into this project.",
+    "importError": "The public crop could not be imported.",
+    "versionLabel": "Version",
+    "createdByLabel": "By",
+    "anonymousAuthor": "Anonymous",
+    "page": {
+      "title": "Crop library",
+      "description": "Browse public crops, import useful entries quickly into your project, and help improve the shared reference data step by step.",
+      "tabs": {
+        "details": "Details",
+        "proposals": "Changes",
+        "discussion": "Discussion"
+      },
+      "byAuthor": "By {{author}}",
+      "metaByDate": "{{author}} · {{date}}",
+      "unknownDate": "Unknown date",
+      "notSpecified": "Not specified",
+      "noNotes": "No notes yet.",
+      "collaborationLoadError": "Discussion and change proposals could not be loaded.",
+      "sections": {
+        "general": "General information",
+        "timing": "Timing",
+        "spacing": "Spacing",
+        "seed": "Seed",
+        "harvest": "Harvest",
+        "metadata": "Library data",
+        "notes": "Notes"
+      },
+      "units": {
+        "days": "days"
+      },
+      "boolean": {
+        "yes": "Yes",
+        "no": "No"
+      },
+      "seedUnits": {
+        "g_per_m2": "g / m²",
+        "g_per_lfm": "g / running m",
+        "seeds_per_m2": "seeds / m²",
+        "seeds_per_lfm": "seeds / running m",
+        "seeds_per_plant": "seeds / plant"
+      },
+      "packageUnits": {
+        "g": "g",
+        "seeds": "seeds"
+      },
+      "harvestMethods": {
+        "perPlant": "Per plant",
+        "perSqm": "Per m²"
+      },
+      "seedingRequirementTypes": {
+        "perSqm": "/ m²",
+        "perPlant": "/ plant"
+      },
+      "statusValues": {
+        "draft": "Draft",
+        "published": "Published",
+        "withdrawn": "Withdrawn",
+        "removed": "Removed"
+      },
+      "fields": {
+        "cropSpecies": "Crop species",
+        "variety": "Variety",
+        "growthDurationDays": "Growth duration (days)",
+        "harvestDurationDays": "Harvest duration (days)",
+        "propagationDurationDays": "Propagation duration (days)",
+        "cropFamily": "Crop family",
+        "nutrientDemand": "Nutrient demand",
+        "cultivationType": "Cultivation type",
+        "distanceWithinRow": "Distance within row",
+        "rowSpacing": "Row spacing",
+        "sowingDepth": "Sowing depth",
+        "seedRate": "Seed rate",
+        "seedRateByCultivation": "Seed rate by cultivation type",
+        "seedRateDirect": "Seed rate direct sowing",
+        "seedRatePreCultivation": "Seed rate transplanting",
+        "sowingSafetyPercent": "Seed safety surcharge",
+        "sowingSafetyPercentDirect": "Direct sowing safety surcharge",
+        "sowingSafetyPercentPreCultivation": "Transplanting safety surcharge",
+        "thousandKernelWeight": "Thousand-kernel weight",
+        "seedingRequirement": "Seed requirement",
+        "seedPackages": "Package sizes",
+        "harvestMethod": "Yield unit",
+        "expectedYield": "Expected yield",
+        "allowDeviationDeliveryWeeks": "Allow different delivery weeks",
+        "originalLanguage": "Original language",
+        "createdAt": "Created at",
+        "publishedAt": "Published at",
+        "updatedAt": "Updated at",
+        "status": "Status",
+        "displayColor": "Display color",
+        "notes": "Notes",
+        "nutrientDemandValues": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        },
+        "cultivationTypes": {
+          "directSowing": "Direct sowing",
+          "preCultivation": "Transplanting"
+        }
+      },
+      "discussion": {
+        "commentLabel": "Comment",
+        "comment": "Comment",
+        "commenting": "Commenting…",
+        "commentSuccess": "Comment saved.",
+        "commentError": "Comment could not be saved.",
+        "empty": "No discussion for this crop yet."
+      },
+      "proposals": {
+        "intro": "Public crops are not overwritten directly. Suggest changes so they can be reviewed and adopted transparently.",
+        "summaryLabel": "Short summary",
+        "fieldLabel": "Field",
+        "valueLabel": "Suggested value",
+        "notesLabel": "Proposed notes",
+        "invalidNumber": "Please enter a valid number.",
+        "create": "Suggest change",
+        "creating": "Sending proposal…",
+        "createSuccess": "Change proposal saved.",
+        "createError": "Change proposal could not be saved.",
+        "empty": "No change proposals yet.",
+        "approve": "Apply",
+        "approving": "Applying…",
+        "reject": "Reject",
+        "rejecting": "Rejecting…",
+        "approveSuccess": "Change proposal applied.",
+        "rejectSuccess": "Change proposal rejected.",
+        "reviewError": "Change proposal could not be reviewed.",
+        "fields": {
+          "notes": "Notes",
+          "growth_duration_days": "Growth duration (days)",
+          "harvest_duration_days": "Harvest duration (days)"
+        },
+        "status": {
+          "pending": "Open",
+          "approved": "Applied",
+          "rejected": "Rejected"
+        }
+      }
+    },
+    "publishing": "Publishing…",
+    "publishButton": "Publish",
+    "updateButton": "Update public crop library",
+    "updating": "Updating…",
+    "withdrawAction": "Withdraw publication",
+    "withdrawSuccess": "The publication of “{{name}}” was withdrawn.",
+    "withdrawError": "The publication could not be withdrawn.",
+    "removeAction": "Remove from library",
+    "removeSuccess": "“{{name}}” was removed from the public crop library.",
+    "removeError": "The culture could not be removed from the library.",
+    "hardDeleteAction": "Permanently delete",
+    "hardDeleteSuccess": "“{{name}}” was permanently deleted.",
+    "hardDeleteError": "The culture could not be permanently deleted. There are probably still references or provenance data.",
+    "withdrawDialog": {
+      "title": "Withdraw publication?",
+      "message": "“{{name}}” disappears from the public crop library. Cultures already imported into projects remain fully intact. You can publish the culture again later."
+    },
+    "removeDialog": {
+      "title": "Remove from library?",
+      "message": "“{{name}}” is removed from the public crop library for all users. Already imported project cultures remain unchanged. Please select the moderation reason.",
+      "reasonLabel": "Reason"
+    },
+    "hardDeleteDialog": {
+      "title": "Permanently delete?",
+      "message": "“{{name}}” is deleted only if no imports, provenance data, or dependencies remain. Removing from the library is intended for normal moderation cases."
+    },
+    "removeReasons": {
+      "accidental_publication": "Accidental publication",
+      "test_data": "Test data",
+      "duplicate": "Duplicate",
+      "wrong_mapping": "Wrong mapping",
+      "unlawful_content": "Unlawful content",
+      "other": "Other"
+    },
+    "empty": "No public cultures found.",
+    "emptyState": {
+      "noSelectionTitle": "The crop library grows with the community",
+      "noSelectionDescription": "Publish your proven cultures and share your knowledge with others. Every published culture expands the shared crop library and can be adopted by other projects.",
+      "discoverTitle": "Discover",
+      "discoverDescription": "Browse existing entries and compare crop species, varieties, and cultivation data.",
+      "importTitle": "Adopt",
+      "importDescription": "Import useful crops as your own project copy without changing public data.",
+      "improveTitle": "Improve",
+      "improveDescription": "Discuss content and suggest changes so the library gets better over time.",
+      "emptyLibraryTitle": "No public cultures yet",
+      "emptyLibraryDescription": "The crop library lives from community contributions. Once suitable project cultures are published, everyone can use and improve them here.",
+      "noResultsTitle": "No matching public culture found"
+    },
+    "publishConfirm": {
+      "acceptLicense": "I am allowed to publish this dataset and agree that it becomes a durable part of the public crop library under CC BY-SA 4.0.",
+      "linkPrefix": "Details are available in the ",
+      "privacyLinkLabel": "privacy policy",
+      "linkMiddle": " and the ",
+      "termsLinkLabel": "terms of service",
+      "linkSuffix": "."
+    },
+    "publishWizard": {
+      "title": "Publish culture",
+      "intro": "Choose the official crop species and confirm the original language. Everything else is checked when you publish.",
+      "publishNow": "Publish now",
+      "summaryTitle": "Summary",
+      "speciesLabel": "Official crop species",
+      "speciesMissing": "No official crop species selected",
+      "proposeSpeciesToggle": "Missing a crop species?",
+      "proposeSpeciesLabel": "Suggest new crop species",
+      "proposeSpeciesButton": "Suggest",
+      "proposalSent": "The suggestion was saved and can be reviewed later.",
+      "originalLanguageLabel": "Original language",
+      "translationsOptional": "Missing translations can be added later.",
+      "translationAvailable": "Available",
+      "translationMissingOptional": "Missing, optional",
+      "requiredComplete": "All required fields are complete.",
+      "requiredFieldsBlocking": "Required fields are still missing before publication: {{fields}}. Please complete them in the culture details and try again.",
+      "noDuplicates": "No possible duplicate found.",
+      "duplicateBlocking": "This culture appears to already exist publicly: {{duplicates}}. Please review the existing entry first.",
+      "licenseComplete": "License confirmed",
+      "licenseMissing": "License confirmation missing",
+      "licenseAlreadyAccepted": "The contribution terms for the public crop library have already been accepted.",
+      "steps": {
+        "species": "Crop species",
+        "language": "Original language",
+        "translations": "Translations",
+        "requiredFields": "Required fields",
+        "duplicates": "Duplicate check",
+        "license": "License"
+      },
+      "languages": {
+        "de": "Deutsch",
+        "en": "English"
+      },
+      "fields": {
+        "variety": "Variety",
+        "growth_duration_days": "Growth duration",
+        "harvest_duration_days": "Harvest duration"
+      }
     }
   }
 }

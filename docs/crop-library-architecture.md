@@ -5,9 +5,12 @@ Scope: `backend/`, `frontend/src/`
 
 Goal: prepare and evolve the architecture for a public Crop Library
 (`/crops`) without splitting the repository unnecessarily. The library is
-now treated as a long-lived, community-built knowledge base for crop data,
-not as a personal publishing shelf that users can normally withdraw from
-at will.
+now treated as a long-lived, community-built knowledge base for crop data.
+Users can withdraw their own accidental publications through a non-destructive
+status transition; moderation and cleanup use stronger staff-only states.
+The first collaborative editing slice is now also in place: public entries
+have discussion comments and reviewed change proposals, while the import
+picker stays optimized for quickly copying a crop into the active project.
 
 ## 0. Product and legal model
 
@@ -15,10 +18,18 @@ The public Crop Library follows an open-data model:
 
 - Published crop data becomes part of a shared knowledge base intended to
   persist beyond the contributing user's project or account.
-- Normal user-driven deletion/unpublishing is not part of the product
-  model. Removal should be reserved for exceptional cases such as unlawful
-  content, personal data in a published record, spam, obvious abuse, or a
-  moderation decision.
+- Contributors may withdraw their own publications when a publication was
+  accidental or needs correction. Withdrawal is non-destructive: the entry
+  disappears from discovery, but attribution, license evidence, import
+  lineage, and already-imported project copies remain intact.
+- Moderator removal is reserved for exceptional cases such as test data,
+  duplicates, unlawful content, personal data in a published record, spam,
+  obvious abuse, or another moderation decision. It is also non-destructive.
+- Public entries are not edited directly by ordinary users. Users discuss an
+  entry and submit reviewed change proposals; staff/moderators can approve a
+  proposal, which applies allowlisted fields to the public master row and
+  increments its version. This keeps the workflow collaborative while
+  preserving auditability.
 - Public crop data is intended to be reusable through the app, future
   public APIs, future downloads/exports, and external open-source or
   commercial projects.
@@ -32,10 +43,19 @@ The public Crop Library follows an open-data model:
   separate from the global Terms consent so it can be versioned and audited
   without blocking users who never publish.
 
-Future moderation should prefer non-destructive state transitions
-(`hidden`, `removed`, `needs_review`) over hard deletes, so attribution,
-license evidence, import lineage, and revision history remain auditable
-where legally permissible.
+Moderation uses non-destructive state transitions (`draft`, `published`,
+`withdrawn`, `removed`) over hard deletes, so attribution, license evidence,
+import lineage, and revision history remain auditable where legally
+permissible. Hard delete is intentionally exceptional and only available to
+administrators when no imports, source-project provenance, or other
+dependencies remain.
+
+Discussion comments (`PublicCultureDiscussionComment`) and change proposals
+(`PublicCultureChangeProposal`) are child records of `PublicCulture`. They do
+not touch project-owned `Culture` rows. Approving a proposal changes only the
+shared public-library row; projects that already imported an entry continue
+using their private copied snapshot until a future explicit update/merge flow
+is built.
 
 ## 1. The current situation (before this pass)
 
@@ -75,25 +95,27 @@ scratch.
 
 ### Backend — a new `crops` Django app
 
-`backend/crops/` is a real Django app (`INSTALLED_APPS`), but it
-**defines no models**. `PublicCulture` stays in `farm.models` — moving a
-model to a different app changes its migration state and (without
+`backend/crops/` is a real Django app (`INSTALLED_APPS`). It now owns
+`CropSpecies`, the official language-independent species list used at the
+publishing boundary. `PublicCulture` stays in `farm.models` — moving that
+existing model to a different app changes its migration state and (without
 careful `SeparateDatabaseAndState` migrations) its `app_label`-derived
-`db_table`. That's a real risk to existing data, and the task explicitly
-asks to avoid exactly this kind of unnecessary risk. `crops/models.py`
-documents this and names `PublicCulture` as the thing to move first in a
-future extraction.
+`db_table`. That's a real risk to existing data, and still isn't
+justified until the crop library is actually extracted into its own
+service.
 
 ```
 backend/crops/
   apps.py          CropsConfig
-  models.py        (empty — see above)
+  models.py        CropSpecies, the official species list used by the
+                    Publishing Wizard
   services.py      list_published_crops(), get_published_crop(),
                     find_exact_crop_match() — reads farm.models.PublicCulture,
                     nothing else
   serializers.py   CropSerializer (read-only; deliberately excludes
                     source_project/source_project_culture — see §3)
   views.py         CropViewSet (ReadOnlyModelViewSet, IsAuthenticated)
+                    CropSpeciesViewSet (official list + proposed entries)
   urls.py          router → included at /api/crops/
   tests/
 ```
@@ -129,9 +151,11 @@ frontend/src/crops/
 separate, deliberate future step (see §5), not bundled into this
 architecture pass.
 
-`App.tsx`'s router got one comment, no new route: a reserved spot for a
-future `/crops` branch as a sibling of `/app` (not nested under
-`<ProtectedRoute />`), pointing at `frontend/src/crops/pages/`.
+`App.tsx` now exposes `/app/crop-library` (with `/app/crops` as an alias) as
+an authenticated full-page library workspace. The existing
+`PublicCultureLibraryDialog` remains the quick import picker from the project
+Cultures page and links to the full page for discussion and reviewed
+changes.
 
 ## 3. The domain rule, and where it bites
 
@@ -193,22 +217,79 @@ for no functional benefit right now. German UI text (`"Kultur"`,
 | Moving `PublicCulture` (or `Culture`) into `crops.models` | Changes migration state / `app_label`-derived `db_table`; real risk to existing data for zero current benefit | A dedicated migration using `SeparateDatabaseAndState` to move the model's Django state into `crops` while keeping (or explicitly renaming, in one controlled step) the actual table |
 | Removing/renaming `/api/public-cultures/` | Would break the current frontend (`publicCultureAPI`) — a functional change the task forbids | Once `Cultures.tsx`/`PublicCultureLibraryDialog` are switched to `cropsApi`/`/api/crops`, deprecate and remove the legacy path |
 | Switching the frontend to actually call `/api/crops` | Not required to "prepare" the architecture, and swapping a working data source is exactly the kind of change to do deliberately and separately, with its own testing pass | Point `Cultures.tsx` at `cropsApi` instead of `publicCultureAPI`, delete the old client, delete `/api/public-cultures/` |
-| A real `/crops` route/page | Explicitly "noch NICHT veröffentlichen" | Add route components under `frontend/src/crops/pages/`, wire the reserved router branch in `App.tsx`, flip `CropViewSet.permission_classes` |
+| A public, unauthenticated `/crops` route/page | The current collaboration and import workflow still needs an authenticated user and active project context | Split browsing from importing later: expose read-only public pages under `/crops`, keep project import under `/app` |
 | Splitting `i18n/locales/*/cultures.json` into a `crops` namespace | Namespace holds both library- and farm-planning-flavored strings today; splitting now is pure churn for zero user-visible benefit | Split when `crops/pages/` gets real UI text to hold |
 | Moving `Culture`/`CultureViewSet`/`CultureSupplierData`/`SeedPackage` into `crops` | These are genuinely Farm Planning (project-owned, or only meaningful attached to a project-owned `Culture`) — moving them would be the large, risky refactor the task asks to avoid | Not planned; these belong in Farm Planning long-term too |
 | Fixing `PublicCultureLibraryDialog.tsx`'s cross-import of `stripCitationMarkers` from `components/data-grid/markdown`, or its two pre-existing `react-hooks/set-state-in-effect` lint errors | Both pre-date this move (confirmed by lint-checking the file at its old path before moving it) — fixing them isn't in scope for an architecture-only pass | A future cleanup could move the markdown helper to a shared, domain-neutral location |
 
-## 6. Verifying nothing changed for users
+## 6. Current user-facing surfaces
 
 - Every existing API path (`/api/cultures/...`, `/api/public-cultures/...`)
-  is untouched — same views, same serializers, same URLs.
-- The frontend still imports `PublicCultureLibraryDialog` and calls
-  `publicCultureAPI` exactly as before; only its file location and import
-  path changed.
-- No new frontend route is reachable; the `/crops` reservation is a
-  comment.
-- Backend: 409 existing tests pass (1 pre-existing, unrelated failure —
-  a German-umlaut encoding mismatch in
-  `accounts/tests/test_auth_api.py`, confirmed present on `main` before
-  this branch too), plus 12 new tests for the `crops` app.
-- Frontend: all 956 existing tests pass, plus 3 new tests for `cropsApi`.
+  still works. New collaboration actions are additive child endpoints on
+  `/api/public-cultures/<id>/`.
+- The project Cultures page still uses `PublicCultureLibraryDialog` for quick
+  import into the active project.
+- `/app/crop-library` is the full authenticated library workspace for
+  browsing, importing, discussing entries, and proposing/reviewing changes.
+
+## 7. Publishing Wizard quality gate
+
+Publishing a project-owned `Culture` is no longer a direct copy action from
+the Cultures page. The frontend opens `CulturesPublishingWizardDialog`,
+which keeps the normal path intentionally small: the user selects the
+official `CropSpecies`, confirms the original language, and clicks publish.
+The dialog calls `/api/cultures/<id>/publish-public/preview/` only as a
+background validation step when the user attempts publication, then shows
+only actionable problems:
+
+- official `CropSpecies` selected;
+- exactly one original language selected (defaulted from the UI language);
+- public-library required fields complete; and
+- no published public duplicate for the same `CropSpecies` + normalized
+  variety.
+
+Missing translations remain optional and are not shown as a normal blocking
+step. The existing CC BY-SA public-library contribution consent is also not
+shown permanently; if it has not already been accepted, the dialog reveals it
+immediately before the final publication action.
+
+The backend enforces the same checks in
+`farm.services.public_cultures.publish_culture_to_public_library()`, so the
+wizard is not only a UI affordance. Private project cultures remain
+flexible: `Culture.crop_species` is nullable, and incomplete project
+cultures can still be created and edited. The strictness lives at the
+public-library boundary where durable shared data is created. The official
+species dropdown is seeded from `crops.seed_data.CROP_SPECIES_SEED_DATA`, a
+central starter catalogue for common German and Austrian crop species whose
+entries already carry stable keys and translation maps for the future
+multilingual species library.
+
+## 8. Withdrawal, removal, and hard delete
+
+`PublicCulture.status` models the public-library lifecycle:
+
+- `draft`: reserved for future review workflows;
+- `published`: visible and importable from the public library;
+- `withdrawn`: hidden by the contributor who published it;
+- `removed`: hidden by an administrator or moderator with a required reason.
+
+The status-change API lives on `/api/public-cultures/<id>/`:
+
+- `withdraw/` lets the contributor withdraw their own published entry.
+- `remove/` lets staff remove an entry with a structured reason
+  (`accidental_publication`, `test_data`, `duplicate`, `wrong_mapping`,
+  `unlawful_content`, `other`).
+- `hard-delete/` is staff-only and intentionally narrow. It is blocked when
+  the public entry has imported project copies or source-project provenance;
+  ordinary cleanup and moderation should use `removed` instead.
+  Because it is exceptional, the normal culture overflow menu does not expose
+  hard delete; it should live in a dedicated moderation/admin surface if a
+  human-facing UI is needed later.
+
+Every status transition writes `PublicCultureStatusEvent`, establishing the
+audit trail needed for later moderation queues, review steps, duplicate
+merges, restore actions, or richer status history. Public lists, duplicate
+checks, match endpoints, and imports only expose `published` rows. Project
+imports remain protected because importing creates a private `Culture` copy
+with its own fields; status changes on `PublicCulture` never mutate already
+imported project data.

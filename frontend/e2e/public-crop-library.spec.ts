@@ -1,0 +1,141 @@
+import { expect, test, type Page } from '@playwright/test';
+import { loginWithDeterministicProject } from './utils';
+
+type CropSpecies = {
+  id: number;
+  name: string;
+};
+
+type Culture = {
+  id: number;
+  name: string;
+  variety: string;
+};
+
+type PublishResponse = {
+  public_culture: {
+    id: number;
+    name: string;
+    variety: string;
+  };
+};
+
+async function apiRequest<T>(
+  page: Page,
+  method: 'GET' | 'POST',
+  path: string,
+  data?: Record<string, unknown>,
+): Promise<T> {
+  const activeProjectId = await page.evaluate(() => window.localStorage.getItem('activeProjectId'));
+  const csrfToken = await page.evaluate(() =>
+    document.cookie.split('; ').find((row) => row.startsWith('csrftoken='))?.split('=')[1] ?? '');
+
+  const result = await page.evaluate(async ({ requestMethod, requestPath, requestData, requestProjectId, requestCsrfToken }) => {
+    const response = await fetch(`/api${requestPath}`, {
+      method: requestMethod,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': requestCsrfToken,
+        'X-Project-Id': String(requestProjectId),
+      },
+      body: requestMethod === 'GET' ? undefined : JSON.stringify(requestData ?? {}),
+    });
+    const text = await response.text();
+    return {
+      ok: response.ok,
+      status: response.status,
+      text,
+    };
+  }, {
+    requestMethod: method,
+    requestPath: path,
+    requestData: data,
+    requestProjectId: activeProjectId,
+    requestCsrfToken: csrfToken,
+  });
+
+  expect(result.ok, `${method} ${path} -> ${result.status}: ${result.text}`).toBeTruthy();
+  return JSON.parse(result.text) as T;
+}
+
+async function publishUniquePublicCulture(page: Page): Promise<PublishResponse['public_culture']> {
+  const speciesResponse = await apiRequest<{ results: CropSpecies[] }>(page, 'GET', '/crop-species/');
+  const species = speciesResponse.results[0];
+  expect(species).toBeTruthy();
+  const uniqueSuffix = Date.now();
+  const culture = await apiRequest<Culture>(page, 'POST', '/cultures/', {
+    name: species.name,
+    variety: `E2E Kollaboration ${uniqueSuffix}`,
+    crop_species: species.id,
+    cultivation_type: 'pre_cultivation',
+    cultivation_types: ['pre_cultivation'],
+    growth_duration_days: 42,
+    harvest_duration_days: 14,
+    notes: 'Bestehende öffentliche Notiz.',
+  });
+  const published = await apiRequest<PublishResponse>(page, 'POST', `/cultures/${culture.id}/publish-public/`, {
+    accepted_public_library_terms: true,
+    crop_species_id: species.id,
+    original_language_code: 'de',
+  });
+  return published.public_culture;
+}
+
+test('public crop library supports quick import, discussion, proposal, and mobile layout', async ({ page, request }) => {
+  await loginWithDeterministicProject(page, request, `public-crop-library-${Date.now()}`, { loginAsAdmin: true });
+  const publicCulture = await publishUniquePublicCulture(page);
+
+  await page.goto('/app/crop-library');
+  await expect(page.getByRole('heading', { name: 'Kulturbibliothek' })).toBeVisible();
+  await expect(page.getByText('Die Kulturbibliothek wächst mit der Community')).toBeVisible();
+  await expect(page.getByText(/Veröffentliche deine bewährten Kulturen/)).toBeVisible();
+  await page.getByLabel('Öffentliche Kulturen durchsuchen').fill(publicCulture.variety);
+  await page.keyboard.press('Enter');
+  await expect(page.getByText(publicCulture.variety).first()).toBeVisible();
+  await page.getByText(publicCulture.variety).first().click();
+  await expect(page.getByRole('heading', { name: 'Allgemeine Informationen' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Zeitplanung' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Saatgut' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bibliotheksdaten' })).toBeVisible();
+  await expect(page.getByText('42 Tage')).toBeVisible();
+  await expect(page.getByText('14 Tage')).toBeVisible();
+  await expect(page.getByText('Bestehende öffentliche Notiz.')).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`cultureId=${publicCulture.id}`));
+
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Bibliotheksdaten' })).toBeVisible();
+  await expect(page.getByText(publicCulture.variety).first()).toBeVisible();
+
+  await page.goto('/app/cultures');
+  await page.goto('/app/crop-library');
+  await expect(page.getByRole('heading', { name: 'Allgemeine Informationen' })).toBeVisible();
+  await expect(page.getByText(publicCulture.variety).first()).toBeVisible();
+
+  await expect(page.getByRole('button', { name: 'In Projekt importieren' })).toBeEnabled();
+  await page.getByRole('button', { name: 'In Projekt importieren' }).click();
+  await expect(page.getByText(/wurde in dieses Projekt importiert/i)).toBeVisible();
+
+  await page.getByRole('tab', { name: /Diskussion/ }).click();
+  await page.getByLabel('Kommentar').fill('E2E-Kommentar zur öffentlichen Kultur.');
+  await page.getByRole('button', { name: 'Kommentieren' }).click();
+  await expect(page.getByText('E2E-Kommentar zur öffentlichen Kultur.')).toBeVisible();
+
+  await page.getByRole('tab', { name: /Änderungen/ }).click();
+  await page.getByLabel('Kurze Zusammenfassung').fill('E2E Wachstumszeit verbessern');
+  await page.getByLabel('Feld').click();
+  await page.getByRole('option', { name: 'Wachstumszeit (Tage)' }).click();
+  await page.getByLabel('Vorgeschlagener Wert').fill('48');
+  await page.getByRole('button', { name: 'Änderung vorschlagen' }).click();
+  await expect(page.getByText('E2E Wachstumszeit verbessern')).toBeVisible();
+  await expect(page.getByText('48', { exact: true })).toBeVisible();
+  await expect(page.getByText('Offen')).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Kulturbibliothek' })).toBeVisible();
+  await page.getByLabel('Öffentliche Kulturen durchsuchen').fill(publicCulture.variety);
+  await page.keyboard.press('Enter');
+  await expect(page.getByText(publicCulture.variety).first()).toBeVisible();
+  await expect(page.locator('body')).not.toHaveCSS('overflow-x', 'scroll');
+});

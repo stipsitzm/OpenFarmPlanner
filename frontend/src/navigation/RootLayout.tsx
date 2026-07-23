@@ -389,6 +389,7 @@ function RootLayout() {
       keywords: item.keywords,
       icon: item.to.includes('locations') ? <PlaceOutlinedIcon fontSize="small" />
         : item.to.includes('fields-beds') ? <GridViewOutlinedIcon fontSize="small" />
+          : item.to.includes('crop-library') ? <PublicIcon fontSize="small" />
           : item.to.includes('cultures') ? <LocalFloristOutlinedIcon fontSize="small" />
             : item.to.includes('anbauplaene') ? <EventNoteOutlinedIcon fontSize="small" />
               : item.to.includes('gantt-chart') ? <CalendarMonthOutlinedIcon fontSize="small" />

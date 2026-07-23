@@ -12,6 +12,8 @@ export interface AuthUser {
   display_label: string;
   public_display_name: string;
   is_active: boolean;
+  is_staff?: boolean;
+  is_superuser?: boolean;
   default_project_id: number | null;
   last_project_id: number | null;
   resolved_project_id: number | null;

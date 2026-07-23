@@ -30,6 +30,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import TuneIcon from '@mui/icons-material/Tune';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import SpaOutlinedIcon from '@mui/icons-material/SpaOutlined';
 // Cross-domain import: a markdown helper that today lives under the
 // app-specific data-grid module. Kept as-is rather than duplicated/moved —
 // see docs/crop-library-architecture.md for why this is flagged as a
@@ -60,6 +61,67 @@ const previewBadgeSx = {
 
 const PUBLIC_CULTURE_LIBRARY_HISTORY_KEY = 'openFarmPlannerPublicCultureLibrary';
 
+function LibraryEmptyState({
+  title,
+  description,
+  secondaryDescription,
+  compact = false,
+}: {
+  title: string;
+  description: string;
+  secondaryDescription?: string;
+  compact?: boolean;
+}) {
+  return (
+    <Box
+      sx={{
+        height: '100%',
+        minHeight: compact ? 180 : 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        px: compact ? 2 : 3,
+        py: compact ? 3 : 4,
+      }}
+    >
+      <Box
+        sx={{
+          width: compact ? 40 : 48,
+          height: compact ? 40 : 48,
+          borderRadius: '50%',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          mb: compact ? 1.25 : 1.5,
+          color: 'success.main',
+          bgcolor: 'success.50',
+          border: '1px solid',
+          borderColor: 'success.200',
+        }}
+      >
+        <SpaOutlinedIcon fontSize={compact ? 'small' : 'medium'} />
+      </Box>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.75, color: 'text.primary' }}>
+        {title}
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: compact ? 360 : 420, lineHeight: 1.6 }}>
+        {description}
+      </Typography>
+      {secondaryDescription ? (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ display: 'block', maxWidth: compact ? 360 : 420, mt: 1.25, lineHeight: 1.5 }}
+        >
+          {secondaryDescription}
+        </Typography>
+      ) : null}
+    </Box>
+  );
+}
+
 export function PublicCultureLibraryDialog({
   open,
   loading,
@@ -76,7 +138,6 @@ export function PublicCultureLibraryDialog({
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [varietyFilter, setVarietyFilter] = useState('');
-  const [supplierFilter, setSupplierFilter] = useState('');
   const [nutrientFilter, setNutrientFilter] = useState('');
   const [cropFamilyFilter, setCropFamilyFilter] = useState('');
   const [mobileStep, setMobileStep] = useState<'list' | 'detail'>('list');
@@ -112,7 +173,6 @@ export function PublicCultureLibraryDialog({
         setQuery(initialQuery);
         setSelectedId(initialSelectedId);
         setVarietyFilter('');
-        setSupplierFilter('');
         setNutrientFilter('');
         setCropFamilyFilter('');
         setMobileStep(initialSelectedId && useMobileFilterLayout ? 'detail' : 'list');
@@ -130,7 +190,6 @@ export function PublicCultureLibraryDialog({
         setQuery('');
         setSelectedId(null);
         setVarietyFilter('');
-        setSupplierFilter('');
         setNutrientFilter('');
         setCropFamilyFilter('');
         setMobileStep('list');
@@ -185,10 +244,6 @@ export function PublicCultureLibraryDialog({
     () => Array.from(new Set(cultures.map((entry) => entry.variety?.trim()).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b)),
     [cultures],
   );
-  const supplierOptions = useMemo(
-    () => Array.from(new Set(cultures.map((entry) => (entry.supplier_name || entry.seed_supplier || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
-    [cultures],
-  );
   const nutrientOptions = useMemo(
     () => Array.from(new Set(cultures.map((entry) => entry.nutrient_demand || '').filter(Boolean))).sort((a, b) => a.localeCompare(b)),
     [cultures],
@@ -205,14 +260,13 @@ export function PublicCultureLibraryDialog({
   );
 
   const filteredCultures = useMemo(() => cultures.filter((entry) => {
-    const label = `${entry.name} ${entry.variety || ''} ${entry.supplier_name || entry.seed_supplier || ''} ${entry.crop_family || ''}`.toLowerCase();
+    const label = `${entry.name} ${entry.variety || ''} ${entry.crop_species_name || ''} ${entry.crop_family || ''}`.toLowerCase();
     const matchesQuery = normalizedQuery.length === 0 || label.includes(normalizedQuery);
     const matchesVariety = !varietyFilter || (entry.variety || '') === varietyFilter;
-    const matchesSupplier = !supplierFilter || (entry.supplier_name || entry.seed_supplier || '') === supplierFilter;
     const matchesNutrient = !nutrientFilter || (entry.nutrient_demand || '') === nutrientFilter;
     const matchesCropFamily = !cropFamilyFilter || (entry.crop_family || '') === cropFamilyFilter;
-    return matchesQuery && matchesVariety && matchesSupplier && matchesNutrient && matchesCropFamily;
-  }), [cropFamilyFilter, cultures, normalizedQuery, nutrientFilter, supplierFilter, varietyFilter]);
+    return matchesQuery && matchesVariety && matchesNutrient && matchesCropFamily;
+  }), [cropFamilyFilter, cultures, normalizedQuery, nutrientFilter, varietyFilter]);
 
   useEffect(() => {
     if (loading || (initialSelectedId && selectedId === initialSelectedId && cultures.length === 0)) {
@@ -238,6 +292,11 @@ export function PublicCultureLibraryDialog({
     () => filteredCultures.find((entry) => entry.id === selectedId) ?? null,
     [filteredCultures, selectedId],
   );
+  const hasLibraryEntries = cultures.length > 0;
+  const listEmptyTitle = hasLibraryEntries ? t('library.emptyState.noResultsTitle') : t('library.emptyState.emptyLibraryTitle');
+  const listEmptyDescription = hasLibraryEntries ? t('library.empty') : t('library.emptyState.emptyLibraryDescription');
+  const detailEmptyTitle = hasLibraryEntries ? t('library.emptyState.noSelectionTitle') : t('library.emptyState.emptyLibraryTitle');
+  const detailEmptyDescription = hasLibraryEntries ? t('library.emptyState.noSelectionDescription') : t('library.emptyState.emptyLibraryDescription');
 
   const handleDialogClose = (): void => {
     if (useMobileFilterLayout && mobileStep === 'detail') {
@@ -271,7 +330,7 @@ export function PublicCultureLibraryDialog({
         display: 'grid',
         gridTemplateColumns: isMobileLandscape
           ? 'repeat(2, minmax(0, 1fr))'
-          : { xs: '1fr', md: 'repeat(4, minmax(0, 1fr))' },
+          : { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' },
         gap: 1,
         mb: isMobileLandscape ? 1 : 2,
       }}
@@ -281,15 +340,6 @@ export function PublicCultureLibraryDialog({
         <Select fullWidth value={varietyFilter} label={t('library.filters.variety')} onChange={(event) => setVarietyFilter(event.target.value)}>
           <MenuItem value="">{t('filters.all')}</MenuItem>
           {varietyOptions.map((option) => (
-            <MenuItem key={option} value={option}>{option}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <FormControl size="small">
-        <InputLabel>{t('library.filters.supplier')}</InputLabel>
-        <Select fullWidth value={supplierFilter} label={t('library.filters.supplier')} onChange={(event) => setSupplierFilter(event.target.value)}>
-          <MenuItem value="">{t('filters.all')}</MenuItem>
-          {supplierOptions.map((option) => (
             <MenuItem key={option} value={option}>{option}</MenuItem>
           ))}
         </Select>
@@ -385,7 +435,11 @@ export function PublicCultureLibraryDialog({
           {(!useMobileFilterLayout || mobileStep === 'list') ? (
             <List sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, height: useMobileFilterLayout ? '100%' : 420, minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable' }}>
             {filteredCultures.length === 0 ? (
-              <Typography color="text.secondary" sx={{ p: 2 }}>{t('library.empty')}</Typography>
+              useMobileFilterLayout ? (
+                <LibraryEmptyState title={listEmptyTitle} description={listEmptyDescription} compact />
+              ) : (
+                <Typography color="text.secondary" sx={{ p: 2 }}>{t('library.empty')}</Typography>
+              )
             ) : filteredCultures.map((culture) => (
                 <ListItemButton
                   key={culture.id}
@@ -401,7 +455,7 @@ export function PublicCultureLibraryDialog({
                 >
                   <ListItemText
                     primary={culture.variety ? `${culture.name} (${culture.variety})` : culture.name}
-                    secondary={culture.supplier_name || culture.seed_supplier || t('noData')}
+                    secondary={culture.crop_species_name || culture.name}
                     primaryTypographyProps={{ fontSize: '0.92rem', lineHeight: 1.25 }}
                     secondaryTypographyProps={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.2 }}
                   />
@@ -433,9 +487,6 @@ export function PublicCultureLibraryDialog({
                   />
                 </Box>
                 <Box sx={{ display: 'grid', gap: 0.5, mb: selectedCulture.notes ? 1.5 : 0.75 }}>
-                  <Typography variant="body2" sx={{ lineHeight: 1.35 }}>
-                    <strong>{t('form.supplier')}:</strong> {selectedCulture.supplier_name || selectedCulture.seed_supplier || t('noData')}
-                  </Typography>
                   <Typography variant="body2" sx={{ lineHeight: 1.35 }}>
                     <strong>{t('form.growthDurationDays')}:</strong> {selectedCulture.growth_duration_days ?? t('noData')}
                   </Typography>
@@ -481,13 +532,19 @@ export function PublicCultureLibraryDialog({
                 )}
               </>
             ) : (
-              <Typography color="text.secondary">{t('library.selectPrompt')}</Typography>
+              <LibraryEmptyState
+                title={detailEmptyTitle}
+                description={detailEmptyDescription}
+              />
             )}
             </Box>
           ) : null}
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: isMobileLandscape ? 1.25 : isMobile ? 1.25 : 3, py: isMobileLandscape ? 0.75 : isMobile ? 1 : 1.5, flexShrink: 0, bgcolor: 'background.paper' }}>
+      <DialogActions sx={{ px: isMobileLandscape ? 1.25 : isMobile ? 1.25 : 3, py: isMobileLandscape ? 0.75 : isMobile ? 1 : 1.5, flexShrink: 0, bgcolor: 'background.paper', gap: 1, flexWrap: 'wrap' }}>
+        <Button href="../crop-library" onClick={closeDialog} sx={{ mr: 'auto' }}>
+          {t('library.openFullPage')}
+        </Button>
         <Button onClick={closeDialog}>{t('form.cancel')}</Button>
         <Button
           variant="contained"
