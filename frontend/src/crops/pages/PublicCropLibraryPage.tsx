@@ -3,6 +3,8 @@ import {
   Alert,
   Box,
   Button,
+  Card,
+  CardContent,
   Chip,
   CircularProgress,
   Divider,
@@ -385,6 +387,15 @@ export default function PublicCropLibraryPage() {
     }
   };
 
+  const libraryCardSx = {
+    borderRadius: 1,
+    border: '1px solid',
+    borderColor: 'divider',
+    boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)',
+    overflow: 'hidden',
+    bgcolor: 'background.paper',
+  } as const;
+
   return (
     <PageContainer variant="xwide">
       <PageSurface variant="contentFit" sx={{ width: '100%', maxWidth: 1180 }}>
@@ -423,8 +434,8 @@ export default function PublicCropLibraryPage() {
               minHeight: { md: 560 },
             }}
           >
-            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden', minHeight: 280 }}>
-              <Box component="form" onSubmit={handleSearchSubmit} sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Card variant="outlined" sx={{ ...libraryCardSx, minHeight: 280 }}>
+              <Box component="form" onSubmit={handleSearchSubmit} sx={{ p: 1.5, borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'action.hover' }}>
                 <TextField
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
@@ -453,7 +464,22 @@ export default function PublicCropLibraryPage() {
                       key={culture.id}
                       selected={culture.id === selectedCultureId}
                       onClick={() => setSelectedCultureId(culture.id)}
-                      sx={{ borderBottom: '1px solid', borderColor: 'divider', alignItems: 'flex-start' }}
+                      sx={{
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        alignItems: 'flex-start',
+                        px: 1.5,
+                        py: 1.25,
+                        '&.Mui-selected': {
+                          bgcolor: 'success.50',
+                          borderLeft: '3px solid',
+                          borderLeftColor: 'success.main',
+                          pl: 1.125,
+                        },
+                        '&.Mui-selected:hover': {
+                          bgcolor: 'success.100',
+                        },
+                      }}
                     >
                       <ListItemText
                         primary={getCultureTitle(culture)}
@@ -465,9 +491,9 @@ export default function PublicCropLibraryPage() {
                   ))}
                 </List>
               )}
-            </Box>
+            </Card>
 
-            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, minHeight: 420, overflow: 'hidden' }}>
+            <Card variant="outlined" sx={{ ...libraryCardSx, minHeight: 420 }}>
               {!selectedCulture ? (
                 <Box sx={{ height: '100%', minHeight: 360, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', px: 3, textAlign: 'center' }}>
                   <SpaOutlinedIcon sx={{ color: 'success.main', fontSize: 44, mb: 1.5 }} />
@@ -480,7 +506,7 @@ export default function PublicCropLibraryPage() {
                 </Box>
               ) : (
                 <Stack sx={{ minHeight: '100%' }}>
-                  <Box sx={{ p: { xs: 2, sm: 2.5 } }}>
+                  <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } }, bgcolor: 'action.hover' }}>
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between">
                       <Box>
                         <Typography variant="h5" component="h2" sx={{ fontWeight: 800, overflowWrap: 'anywhere' }}>
@@ -493,7 +519,7 @@ export default function PublicCropLibraryPage() {
                         </Stack>
                       </Box>
                     </Stack>
-                  </Box>
+                  </CardContent>
                   <Divider />
                   <Tabs
                     value={activeTab}
@@ -661,7 +687,7 @@ export default function PublicCropLibraryPage() {
                   ) : null}
                 </Stack>
               )}
-            </Box>
+            </Card>
           </Box>
         </Stack>
       </PageSurface>

@@ -46,6 +46,7 @@ Targeted public crop-library collaboration-page audit based on Git commit
 | Discussion flow | 1440x900 | comment can be created and appears immediately |
 | Change proposal flow | 1440x900 | field-based proposal can be created and appears with status `Offen` |
 | Mobile crop-library layout | 390x844 | result list is capped before details; tabs no longer depend on icon-heavy labels |
+| Crop-library card layout | 1440x900, 390x844 | list and detail areas render as contained cards with clearer selected state |
 
 ## Findings
 
