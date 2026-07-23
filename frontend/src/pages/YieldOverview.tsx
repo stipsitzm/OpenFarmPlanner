@@ -46,11 +46,14 @@ import { useContextMenuPositionState } from "../components/contextMenu/useContex
 import { useFocusRegion } from "../focus/useFocusManager";
 import { parseDateString } from "./ganttChartUtils";
 import {
+  formatCompactYield,
+  formatDateToAPI,
+  formatIsoWeek,
   getYieldAxisLabelStep,
+  mergeCultureYields,
   type ChartPeriod,
+  type YieldCalendarCulture,
 } from "./yieldOverviewUtils";
-
-type YieldCalendarCulture = YieldCalendarWeek["cultures"][number];
 
 interface YieldCultureMeta {
   id: number;
@@ -80,51 +83,6 @@ interface YieldContextMenuPayload {
 
 const ALL_CULTURES = "all";
 const DEFAULT_LEGEND_CULTURE_LIMIT = 15;
-
-function formatCompactYield(value: number, locale: string): string {
-  const formatter = new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: value < 10 ? 1 : 0,
-  });
-
-  return formatter.format(value);
-}
-
-function formatDateToAPI(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function formatIsoWeek(date: Date): string {
-  const utcDate = new Date(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
-  );
-  const day = utcDate.getUTCDay() || 7;
-  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
-  const weekNumber = Math.ceil(
-    ((utcDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7,
-  );
-  return `${utcDate.getUTCFullYear()}-W${String(weekNumber).padStart(2, "0")}`;
-}
-
-function mergeCultureYields(
-  cultures: YieldCalendarCulture[],
-): YieldCalendarCulture[] {
-  const totals = new Map<number, YieldCalendarCulture>();
-
-  cultures.forEach((culture) => {
-    const existing = totals.get(culture.culture_id);
-    totals.set(culture.culture_id, {
-      ...culture,
-      yield: (existing?.yield ?? 0) + culture.yield,
-    });
-  });
-
-  return [...totals.values()];
-}
 
 function useYieldChartData(
   weeklyYield: YieldCalendarWeek[],
