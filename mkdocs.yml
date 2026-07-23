@@ -45,6 +45,7 @@ nav:
       - Seed Demand Calculation: seed-demand-calculation.md
       - Versioning and History: versioning-and-history.md
       - Large-Dataset Rendering: large-dataset-rendering.md
+      - SEO & Indexing: seo-and-indexing.md
   - QA / Process:
       - QA Strategy: qa-strategy.md
       - Excluded Issues: qa-excluded-issues.md
