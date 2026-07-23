@@ -44,6 +44,23 @@ const getDefaultLanguageCode = (): string => {
   return LANGUAGE_CODES.includes(language as (typeof LANGUAGE_CODES)[number]) ? language : 'de';
 };
 
+const normalizeSpeciesName = (value: string | undefined | null): string => (
+  (value || '').split(/\s+/).filter(Boolean).join(' ').toLocaleLowerCase('de')
+);
+
+const findInitialSpecies = (items: CropSpecies[], culture: Culture | undefined): CropSpecies | null => {
+  const cultureSpeciesId = culture?.crop_species ?? null;
+  if (cultureSpeciesId) {
+    return items.find((item) => item.id === cultureSpeciesId) ?? null;
+  }
+
+  const normalizedCultureName = normalizeSpeciesName(culture?.name);
+  if (!normalizedCultureName) {
+    return null;
+  }
+  return items.find((item) => normalizeSpeciesName(item.name) === normalizedCultureName) ?? null;
+};
+
 export function CulturesPublishingWizardDialog({
   open,
   culture,
@@ -90,8 +107,7 @@ export function CulturesPublishingWizardDialog({
       .then((response) => {
         if (cancelled) return;
         setSpecies(response.data.results);
-        const cultureSpeciesId = culture?.crop_species ?? null;
-        setSelectedSpecies(response.data.results.find((item) => item.id === cultureSpeciesId) ?? null);
+        setSelectedSpecies(findInitialSpecies(response.data.results, culture));
       })
       .catch((error) => {
         console.error('Error loading crop species:', error);
@@ -102,7 +118,7 @@ export function CulturesPublishingWizardDialog({
     return () => {
       cancelled = true;
     };
-  }, [culture?.crop_species, open]);
+  }, [culture, open]);
 
   const missingRequiredFields = validationResult?.missing_required_fields ?? EMPTY_REQUIRED_FIELDS;
   const duplicates = validationResult?.duplicates ?? EMPTY_DUPLICATES;

@@ -341,6 +341,53 @@ describe('Cultures action area', () => {
     });
   });
 
+  it('preselects the official crop species when the culture name matches', async () => {
+    authUser.public_library_terms_accepted = true;
+    listMock.mockResolvedValue({
+      data: {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          { id: 32, name: 'Gurke', variety: 'Arola', cultivation_type: 'pre_cultivation', growth_duration_days: 60, harvest_duration_days: 30 },
+        ],
+      },
+    });
+    cropSpeciesListMock.mockResolvedValue({
+      data: {
+        count: 2,
+        next: null,
+        previous: null,
+        results: [
+          { id: 1, name: 'Tomate', status: 'published' },
+          { id: 12, name: 'Gurke', status: 'published' },
+        ],
+      },
+    });
+
+    renderCultures('/cultures?cultureId=32');
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Veröffentlichen' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Veröffentlichen' }));
+
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => {
+      expect(within(dialog).getByRole('combobox', { name: /Offizielle Kulturart/ })).toHaveValue('Gurke');
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Jetzt veröffentlichen' }));
+
+    await waitFor(() => {
+      expect(publishPublicMock).toHaveBeenCalledWith(32, {
+        accepted_public_library_terms: false,
+        crop_species_id: 12,
+        original_language_code: 'de',
+      });
+    });
+  });
+
   it('does not attempt to render public-library entries without a trigger', async () => {
     publicCultureListMock.mockResolvedValue({
       data: {
