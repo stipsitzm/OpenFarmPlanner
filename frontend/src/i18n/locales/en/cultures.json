@@ -42,6 +42,81 @@
     }
   },
   "library": {
+    "openButton": "Crop library",
+    "dialogTitle": "Crop library",
+    "openFullPage": "Open crop library",
+    "searchLabel": "Search public crops",
+    "importButton": "Import into project",
+    "importing": "Importing…",
+    "importSuccess": "“{{name}}” was imported into this project.",
+    "importError": "The public crop could not be imported.",
+    "versionLabel": "Version",
+    "createdByLabel": "By",
+    "anonymousAuthor": "Anonymous",
+    "page": {
+      "title": "Crop library",
+      "description": "Browse public crops, import useful entries quickly into your project, and help improve the shared reference data step by step.",
+      "tabs": {
+        "details": "Details",
+        "proposals": "Changes",
+        "discussion": "Discussion"
+      },
+      "byAuthor": "By {{author}}",
+      "metaByDate": "{{author}} · {{date}}",
+      "unknownDate": "Unknown date",
+      "notSpecified": "Not specified",
+      "noSupplier": "No supplier",
+      "noNotes": "No notes yet.",
+      "collaborationLoadError": "Discussion and change proposals could not be loaded.",
+      "fields": {
+        "supplier": "Seed supplier",
+        "growthDurationDays": "Growth duration (days)",
+        "harvestDurationDays": "Harvest duration (days)",
+        "cropFamily": "Crop family",
+        "nutrientDemand": "Nutrient demand",
+        "cultivationType": "Cultivation type",
+        "notes": "Notes",
+        "nutrientDemandValues": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        },
+        "cultivationTypes": {
+          "directSowing": "Direct sowing",
+          "preCultivation": "Transplanting"
+        }
+      },
+      "discussion": {
+        "commentLabel": "Comment",
+        "comment": "Comment",
+        "commenting": "Commenting…",
+        "commentSuccess": "Comment saved.",
+        "commentError": "Comment could not be saved.",
+        "empty": "No discussion for this crop yet."
+      },
+      "proposals": {
+        "intro": "Public crops are not overwritten directly. Suggest changes so they can be reviewed and adopted transparently.",
+        "summaryLabel": "Short summary",
+        "notesLabel": "Proposed notes",
+        "create": "Suggest change",
+        "creating": "Sending proposal…",
+        "createSuccess": "Change proposal saved.",
+        "createError": "Change proposal could not be saved.",
+        "empty": "No change proposals yet.",
+        "approve": "Apply",
+        "approving": "Applying…",
+        "reject": "Reject",
+        "rejecting": "Rejecting…",
+        "approveSuccess": "Change proposal applied.",
+        "rejectSuccess": "Change proposal rejected.",
+        "reviewError": "Change proposal could not be reviewed.",
+        "status": {
+          "pending": "Open",
+          "approved": "Applied",
+          "rejected": "Rejected"
+        }
+      }
+    },
     "publishing": "Publishing…",
     "publishButton": "Publish",
     "updateButton": "Update public crop library",

@@ -561,7 +561,10 @@ export function PublicCultureLibraryDialog({
           ) : null}
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: isMobileLandscape ? 1.25 : isMobile ? 1.25 : 3, py: isMobileLandscape ? 0.75 : isMobile ? 1 : 1.5, flexShrink: 0, bgcolor: 'background.paper' }}>
+      <DialogActions sx={{ px: isMobileLandscape ? 1.25 : isMobile ? 1.25 : 3, py: isMobileLandscape ? 0.75 : isMobile ? 1 : 1.5, flexShrink: 0, bgcolor: 'background.paper', gap: 1, flexWrap: 'wrap' }}>
+        <Button href="../crop-library" onClick={closeDialog} sx={{ mr: 'auto' }}>
+          {t('library.openFullPage')}
+        </Button>
         <Button onClick={closeDialog}>{t('form.cancel')}</Button>
         <Button
           variant="contained"

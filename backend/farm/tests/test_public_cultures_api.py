@@ -11,6 +11,8 @@ from farm.models import (
     Project,
     ProjectMembership,
     PublicCulture,
+    PublicCultureChangeProposal,
+    PublicCultureDiscussionComment,
     PublicCultureStatusEvent,
     SeedPackage,
 )
@@ -380,6 +382,135 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['results']), 1)
         self.assertEqual(response.data['results'][0]['name'], 'Tomato')
+
+    def test_authenticated_user_can_comment_on_public_culture(self):
+        public_culture = PublicCulture.objects.create(name='Tomato', variety='Roma', status='published', created_by=self.user)
+
+        create_response = self.client.post(
+            f'/openfarmplanner/api/public-cultures/{public_culture.id}/comments/',
+            {'body': 'Works well under cover in spring.'},
+            format='json',
+        )
+        list_response = self.client.get(f'/openfarmplanner/api/public-cultures/{public_culture.id}/comments/')
+
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(PublicCultureDiscussionComment.objects.count(), 1)
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.data[0]['body'], 'Works well under cover in spring.')
+
+    def test_authenticated_user_can_create_change_proposal_for_allowed_fields(self):
+        public_culture = PublicCulture.objects.create(name='Tomato', variety='Roma', status='published', created_by=self.user)
+
+        response = self.client.post(
+            f'/openfarmplanner/api/public-cultures/{public_culture.id}/change-proposals/',
+            {
+                'summary': 'Add clearer cultivation notes',
+                'proposed_data': {'notes': 'Prefers warm protected conditions.'},
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        proposal = PublicCultureChangeProposal.objects.get()
+        self.assertEqual(proposal.status, PublicCultureChangeProposal.STATUS_PENDING)
+        self.assertEqual(proposal.proposed_by, self.user)
+        self.assertEqual(proposal.proposed_data['notes'], 'Prefers warm protected conditions.')
+
+    def test_change_proposal_rejects_unsupported_fields(self):
+        public_culture = PublicCulture.objects.create(name='Tomato', variety='Roma', status='published', created_by=self.user)
+
+        response = self.client.post(
+            f'/openfarmplanner/api/public-cultures/{public_culture.id}/change-proposals/',
+            {
+                'summary': 'Rename entry',
+                'proposed_data': {'name': 'Cherry tomato'},
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(PublicCultureChangeProposal.objects.count(), 0)
+
+    def test_only_moderator_can_approve_change_proposal_and_public_culture_version_increments(self):
+        moderator = User.objects.create_user(
+            username='proposal-moderator',
+            email='proposal-moderator@example.com',
+            password='testpass',
+            is_active=True,
+            is_staff=True,
+        )
+        public_culture = PublicCulture.objects.create(
+            name='Tomato',
+            variety='Roma',
+            status='published',
+            created_by=self.user,
+            notes='Old notes',
+            version=1,
+        )
+        proposal = PublicCultureChangeProposal.objects.create(
+            public_culture=public_culture,
+            proposed_by=self.user,
+            summary='Improve notes',
+            proposed_data={'notes': 'Improved notes', 'growth_duration_days': 65},
+        )
+
+        forbidden_response = self.client.post(
+            f'/openfarmplanner/api/public-cultures/{public_culture.id}/change-proposals/{proposal.id}/approve/',
+            {},
+            format='json',
+        )
+        self.client.force_authenticate(user=moderator)
+        approved_response = self.client.post(
+            f'/openfarmplanner/api/public-cultures/{public_culture.id}/change-proposals/{proposal.id}/approve/',
+            {'review_note': 'Looks plausible.'},
+            format='json',
+        )
+
+        self.assertEqual(forbidden_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(approved_response.status_code, status.HTTP_200_OK)
+        public_culture.refresh_from_db()
+        proposal.refresh_from_db()
+        self.assertEqual(public_culture.notes, 'Improved notes')
+        self.assertEqual(public_culture.growth_duration_days, 65)
+        self.assertEqual(public_culture.version, 2)
+        self.assertEqual(proposal.status, PublicCultureChangeProposal.STATUS_APPROVED)
+        self.assertEqual(proposal.reviewed_by, moderator)
+
+    def test_moderator_can_reject_change_proposal_without_changing_public_culture(self):
+        moderator = User.objects.create_user(
+            username='proposal-reject-moderator',
+            email='proposal-reject-moderator@example.com',
+            password='testpass',
+            is_active=True,
+            is_staff=True,
+        )
+        public_culture = PublicCulture.objects.create(
+            name='Tomato',
+            variety='Roma',
+            status='published',
+            created_by=self.user,
+            notes='Original notes',
+        )
+        proposal = PublicCultureChangeProposal.objects.create(
+            public_culture=public_culture,
+            proposed_by=self.user,
+            summary='Change notes',
+            proposed_data={'notes': 'Rejected notes'},
+        )
+        self.client.force_authenticate(user=moderator)
+
+        response = self.client.post(
+            f'/openfarmplanner/api/public-cultures/{public_culture.id}/change-proposals/{proposal.id}/reject/',
+            {'review_note': 'Needs sources.'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        public_culture.refresh_from_db()
+        proposal.refresh_from_db()
+        self.assertEqual(public_culture.notes, 'Original notes')
+        self.assertEqual(proposal.status, PublicCultureChangeProposal.STATUS_REJECTED)
+        self.assertEqual(proposal.review_note, 'Needs sources.')
 
     def test_import_requires_project_membership_header(self):
         public_culture = PublicCulture.objects.create(name='Kale', variety='Nero', status='published', created_by=self.user)

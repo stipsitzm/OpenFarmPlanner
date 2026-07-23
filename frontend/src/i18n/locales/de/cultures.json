@@ -479,6 +479,71 @@
   "library": {
     "openButton": "Kulturbibliothek",
     "dialogTitle": "Kulturbibliothek",
+    "openFullPage": "Kulturbibliothek öffnen",
+    "page": {
+      "title": "Kulturbibliothek",
+      "description": "Durchsuche öffentliche Kulturen, importiere passende Einträge schnell in dein Projekt und hilf dabei, die gemeinsamen Stammdaten Schritt für Schritt zu verbessern.",
+      "tabs": {
+        "details": "Details",
+        "proposals": "Änderungen",
+        "discussion": "Diskussion"
+      },
+      "byAuthor": "Von {{author}}",
+      "metaByDate": "{{author}} · {{date}}",
+      "unknownDate": "Datum unbekannt",
+      "notSpecified": "Keine Angabe",
+      "noSupplier": "Kein Lieferant",
+      "noNotes": "Keine Notizen vorhanden.",
+      "collaborationLoadError": "Diskussion und Änderungsvorschläge konnten nicht geladen werden.",
+      "fields": {
+        "supplier": "Saatgutlieferant",
+        "growthDurationDays": "Wachstumszeit (Tage)",
+        "harvestDurationDays": "Erntezeit (Tage)",
+        "cropFamily": "Pflanzenfamilie",
+        "nutrientDemand": "Nährstoffbedarf",
+        "cultivationType": "Anbauart",
+        "notes": "Notizen",
+        "nutrientDemandValues": {
+          "low": "Niedrig",
+          "medium": "Mittel",
+          "high": "Hoch"
+        },
+        "cultivationTypes": {
+          "directSowing": "Direktsaat",
+          "preCultivation": "Pflanzung"
+        }
+      },
+      "discussion": {
+        "commentLabel": "Kommentar",
+        "comment": "Kommentieren",
+        "commenting": "Kommentiere…",
+        "commentSuccess": "Kommentar wurde gespeichert.",
+        "commentError": "Kommentar konnte nicht gespeichert werden.",
+        "empty": "Noch keine Diskussion zu dieser Kultur."
+      },
+      "proposals": {
+        "intro": "Öffentliche Kulturen werden nicht direkt überschrieben. Schlage Änderungen vor, damit sie geprüft und nachvollziehbar übernommen werden können.",
+        "summaryLabel": "Kurze Zusammenfassung",
+        "notesLabel": "Vorgeschlagene Notizen",
+        "create": "Änderung vorschlagen",
+        "creating": "Sende Vorschlag…",
+        "createSuccess": "Änderungsvorschlag wurde gespeichert.",
+        "createError": "Änderungsvorschlag konnte nicht gespeichert werden.",
+        "empty": "Noch keine Änderungsvorschläge vorhanden.",
+        "approve": "Übernehmen",
+        "approving": "Übernehme…",
+        "reject": "Ablehnen",
+        "rejecting": "Lehne ab…",
+        "approveSuccess": "Änderungsvorschlag wurde übernommen.",
+        "rejectSuccess": "Änderungsvorschlag wurde abgelehnt.",
+        "reviewError": "Änderungsvorschlag konnte nicht geprüft werden.",
+        "status": {
+          "pending": "Offen",
+          "approved": "Übernommen",
+          "rejected": "Abgelehnt"
+        }
+      }
+    },
     "searchLabel": "Öffentliche Kulturen durchsuchen",
     "selectPrompt": "Wählen Sie eine öffentliche Kultur aus, um Details und Import anzuzeigen.",
     "empty": "Keine öffentlichen Kulturen gefunden.",

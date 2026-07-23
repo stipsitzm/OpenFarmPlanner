@@ -222,6 +222,31 @@ export interface PublicCulture {
   source_project?: number | null;
 }
 
+export type PublicCultureChangeProposalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface PublicCultureChangeProposal {
+  id: number;
+  public_culture: number;
+  summary: string;
+  proposed_data: Partial<PublicCulture>;
+  status: PublicCultureChangeProposalStatus;
+  proposed_by_label?: string;
+  reviewed_by_label?: string;
+  review_note?: string;
+  reviewed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PublicCultureDiscussionComment {
+  id: number;
+  public_culture: number;
+  body: string;
+  created_by_label?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export type PublicCultureRemovalReason =
   | 'accidental_publication'
   | 'test_data'

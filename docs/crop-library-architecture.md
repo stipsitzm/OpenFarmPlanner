@@ -8,6 +8,9 @@ Goal: prepare and evolve the architecture for a public Crop Library
 now treated as a long-lived, community-built knowledge base for crop data.
 Users can withdraw their own accidental publications through a non-destructive
 status transition; moderation and cleanup use stronger staff-only states.
+The first collaborative editing slice is now also in place: public entries
+have discussion comments and reviewed change proposals, while the import
+picker stays optimized for quickly copying a crop into the active project.
 
 ## 0. Product and legal model
 
@@ -22,6 +25,11 @@ The public Crop Library follows an open-data model:
 - Moderator removal is reserved for exceptional cases such as test data,
   duplicates, unlawful content, personal data in a published record, spam,
   obvious abuse, or another moderation decision. It is also non-destructive.
+- Public entries are not edited directly by ordinary users. Users discuss an
+  entry and submit reviewed change proposals; staff/moderators can approve a
+  proposal, which applies allowlisted fields to the public master row and
+  increments its version. This keeps the workflow collaborative while
+  preserving auditability.
 - Public crop data is intended to be reusable through the app, future
   public APIs, future downloads/exports, and external open-source or
   commercial projects.
@@ -41,6 +49,13 @@ import lineage, and revision history remain auditable where legally
 permissible. Hard delete is intentionally exceptional and only available to
 administrators when no imports, source-project provenance, or other
 dependencies remain.
+
+Discussion comments (`PublicCultureDiscussionComment`) and change proposals
+(`PublicCultureChangeProposal`) are child records of `PublicCulture`. They do
+not touch project-owned `Culture` rows. Approving a proposal changes only the
+shared public-library row; projects that already imported an entry continue
+using their private copied snapshot until a future explicit update/merge flow
+is built.
 
 ## 1. The current situation (before this pass)
 
@@ -136,9 +151,11 @@ frontend/src/crops/
 separate, deliberate future step (see §5), not bundled into this
 architecture pass.
 
-`App.tsx`'s router got one comment, no new route: a reserved spot for a
-future `/crops` branch as a sibling of `/app` (not nested under
-`<ProtectedRoute />`), pointing at `frontend/src/crops/pages/`.
+`App.tsx` now exposes `/app/crop-library` (with `/app/crops` as an alias) as
+an authenticated full-page library workspace. The existing
+`PublicCultureLibraryDialog` remains the quick import picker from the project
+Cultures page and links to the full page for discussion and reviewed
+changes.
 
 ## 3. The domain rule, and where it bites
 
@@ -200,20 +217,20 @@ for no functional benefit right now. German UI text (`"Kultur"`,
 | Moving `PublicCulture` (or `Culture`) into `crops.models` | Changes migration state / `app_label`-derived `db_table`; real risk to existing data for zero current benefit | A dedicated migration using `SeparateDatabaseAndState` to move the model's Django state into `crops` while keeping (or explicitly renaming, in one controlled step) the actual table |
 | Removing/renaming `/api/public-cultures/` | Would break the current frontend (`publicCultureAPI`) — a functional change the task forbids | Once `Cultures.tsx`/`PublicCultureLibraryDialog` are switched to `cropsApi`/`/api/crops`, deprecate and remove the legacy path |
 | Switching the frontend to actually call `/api/crops` | Not required to "prepare" the architecture, and swapping a working data source is exactly the kind of change to do deliberately and separately, with its own testing pass | Point `Cultures.tsx` at `cropsApi` instead of `publicCultureAPI`, delete the old client, delete `/api/public-cultures/` |
-| A real `/crops` route/page | Explicitly "noch NICHT veröffentlichen" | Add route components under `frontend/src/crops/pages/`, wire the reserved router branch in `App.tsx`, flip `CropViewSet.permission_classes` |
+| A public, unauthenticated `/crops` route/page | The current collaboration and import workflow still needs an authenticated user and active project context | Split browsing from importing later: expose read-only public pages under `/crops`, keep project import under `/app` |
 | Splitting `i18n/locales/*/cultures.json` into a `crops` namespace | Namespace holds both library- and farm-planning-flavored strings today; splitting now is pure churn for zero user-visible benefit | Split when `crops/pages/` gets real UI text to hold |
 | Moving `Culture`/`CultureViewSet`/`CultureSupplierData`/`SeedPackage` into `crops` | These are genuinely Farm Planning (project-owned, or only meaningful attached to a project-owned `Culture`) — moving them would be the large, risky refactor the task asks to avoid | Not planned; these belong in Farm Planning long-term too |
 | Fixing `PublicCultureLibraryDialog.tsx`'s cross-import of `stripCitationMarkers` from `components/data-grid/markdown`, or its two pre-existing `react-hooks/set-state-in-effect` lint errors | Both pre-date this move (confirmed by lint-checking the file at its old path before moving it) — fixing them isn't in scope for an architecture-only pass | A future cleanup could move the markdown helper to a shared, domain-neutral location |
 
-## 6. Verifying nothing changed for users
+## 6. Current user-facing surfaces
 
 - Every existing API path (`/api/cultures/...`, `/api/public-cultures/...`)
-  is untouched — same views, same serializers, same URLs.
-- The frontend still imports `PublicCultureLibraryDialog` and calls
-  `publicCultureAPI` exactly as before; only its file location and import
-  path changed.
-- No new frontend route is reachable; the `/crops` reservation is a
-  comment.
+  still works. New collaboration actions are additive child endpoints on
+  `/api/public-cultures/<id>/`.
+- The project Cultures page still uses `PublicCultureLibraryDialog` for quick
+  import into the active project.
+- `/app/crop-library` is the full authenticated library workspace for
+  browsing, importing, discussing entries, and proposing/reviewing changes.
 
 ## 7. Publishing Wizard quality gate
 

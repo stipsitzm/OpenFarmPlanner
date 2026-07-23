@@ -955,6 +955,64 @@ class PublicCultureStatusEvent(models.Model):
         ordering = ['-created_at', '-id']
 
 
+class PublicCultureDiscussionComment(models.Model):
+    """Public discussion attached to a shared crop-library entry."""
+
+    public_culture = models.ForeignKey(PublicCulture, on_delete=models.CASCADE, related_name='discussion_comments')
+    body = models.TextField()
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='public_culture_discussion_comments',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+
+
+class PublicCultureChangeProposal(models.Model):
+    """Reviewed edit proposal for a shared crop-library entry."""
+
+    STATUS_PENDING = 'pending'
+    STATUS_APPROVED = 'approved'
+    STATUS_REJECTED = 'rejected'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_APPROVED, 'Approved'),
+        (STATUS_REJECTED, 'Rejected'),
+    ]
+
+    public_culture = models.ForeignKey(PublicCulture, on_delete=models.CASCADE, related_name='change_proposals')
+    summary = models.CharField(max_length=240)
+    proposed_data = models.JSONField(default=dict, blank=True, encoder=DjangoJSONEncoder)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    proposed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='public_culture_change_proposals',
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='reviewed_public_culture_change_proposals',
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+
+
 class SeedPackage(TimestampedModel):
     """Sold package option for a culture."""
 

@@ -1,14 +1,20 @@
 """Read-only public culture library endpoints."""
 
 
+from typing import Any
+
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.request import Request
 from rest_framework.response import Response
 
 from farm.models import (
     PublicCulture,
+    PublicCultureChangeProposal,
 )
 from farm.project_context import get_active_project_or_400
 from farm.services.public_cultures import (
@@ -23,6 +29,10 @@ from farm.services.public_cultures import (
 from ..serializers import (
     CultureSerializer,
     PublicCultureSerializer,
+)
+from ..serializers.public import (
+    PublicCultureChangeProposalSerializer,
+    PublicCultureDiscussionCommentSerializer,
 )
 
 
@@ -63,6 +73,17 @@ class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
         code = getattr(error, 'code', 'invalid_status_transition')
         return Response({'detail': str(error), 'code': code}, status=response_status)
 
+    @staticmethod
+    def _is_moderator(user: Any) -> bool:
+        return bool(getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False))
+
+    @staticmethod
+    def _proposal_status_error() -> Response:
+        return Response(
+            {'detail': 'Only pending change proposals can be reviewed.', 'code': 'proposal_not_pending'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     @action(detail=False, methods=['get'], url_path='match')
     def match(self, request):
         """Check whether an exact normalized public culture match exists."""
@@ -96,6 +117,82 @@ class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
         imported = import_public_culture_into_project(public_culture=public_culture, project=request.active_project)
         serializer = CultureSerializer(imported)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get', 'post'], url_path='comments')
+    def comments(self, request: Request, pk: int | None = None) -> Response:
+        public_culture = self.get_object()
+        if request.method == 'GET':
+            comments = public_culture.discussion_comments.select_related('created_by__public_profile')
+            serializer = PublicCultureDiscussionCommentSerializer(comments, many=True)
+            return Response(serializer.data)
+
+        serializer = PublicCultureDiscussionCommentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        comment = serializer.save(public_culture=public_culture, created_by=request.user)
+        return Response(PublicCultureDiscussionCommentSerializer(comment).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get', 'post'], url_path='change-proposals')
+    def change_proposals(self, request: Request, pk: int | None = None) -> Response:
+        public_culture = self.get_object()
+        if request.method == 'GET':
+            proposals = public_culture.change_proposals.select_related('proposed_by__public_profile', 'reviewed_by__public_profile')
+            serializer = PublicCultureChangeProposalSerializer(proposals, many=True)
+            return Response(serializer.data)
+
+        serializer = PublicCultureChangeProposalSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        proposal = serializer.save(public_culture=public_culture, proposed_by=request.user)
+        return Response(PublicCultureChangeProposalSerializer(proposal).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path=r'change-proposals/(?P<proposal_id>[^/.]+)/approve')
+    def approve_change_proposal(self, request: Request, pk: int | None = None, proposal_id: str | None = None) -> Response:
+        if not self._is_moderator(request.user):
+            return Response({'detail': 'Moderator privileges are required.', 'code': 'moderator_required'}, status=status.HTTP_403_FORBIDDEN)
+
+        public_culture = self.get_object()
+        proposal = get_object_or_404(
+            public_culture.change_proposals.select_related('proposed_by__public_profile', 'reviewed_by__public_profile'),
+            pk=proposal_id,
+        )
+        if proposal.status != PublicCultureChangeProposal.STATUS_PENDING:
+            return self._proposal_status_error()
+
+        review_note = (request.data.get('review_note') or '').strip()
+        with transaction.atomic():
+            updated_fields = []
+            for field, value in proposal.proposed_data.items():
+                setattr(public_culture, field, value)
+                updated_fields.append(field)
+            public_culture.version += 1
+            updated_fields.extend(['version', 'updated_at'])
+            public_culture.save(update_fields=updated_fields)
+            proposal.status = PublicCultureChangeProposal.STATUS_APPROVED
+            proposal.reviewed_by = request.user
+            proposal.reviewed_at = timezone.now()
+            proposal.review_note = review_note
+            proposal.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_note', 'updated_at'])
+
+        return Response(PublicCultureChangeProposalSerializer(proposal).data)
+
+    @action(detail=True, methods=['post'], url_path=r'change-proposals/(?P<proposal_id>[^/.]+)/reject')
+    def reject_change_proposal(self, request: Request, pk: int | None = None, proposal_id: str | None = None) -> Response:
+        if not self._is_moderator(request.user):
+            return Response({'detail': 'Moderator privileges are required.', 'code': 'moderator_required'}, status=status.HTTP_403_FORBIDDEN)
+
+        public_culture = self.get_object()
+        proposal = get_object_or_404(
+            public_culture.change_proposals.select_related('proposed_by__public_profile', 'reviewed_by__public_profile'),
+            pk=proposal_id,
+        )
+        if proposal.status != PublicCultureChangeProposal.STATUS_PENDING:
+            return self._proposal_status_error()
+
+        proposal.status = PublicCultureChangeProposal.STATUS_REJECTED
+        proposal.reviewed_by = request.user
+        proposal.reviewed_at = timezone.now()
+        proposal.review_note = (request.data.get('review_note') or '').strip()
+        proposal.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_note', 'updated_at'])
+        return Response(PublicCultureChangeProposalSerializer(proposal).data)
 
     @action(detail=True, methods=['post'], url_path='withdraw')
     def withdraw(self, request, pk=None):

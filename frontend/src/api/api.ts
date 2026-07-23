@@ -14,6 +14,8 @@ import type {
   CultureDuplicateCheckResponse,
   MediaFileRef,
   PublicCulture,
+  PublicCultureChangeProposal,
+  PublicCultureDiscussionComment,
   PublicCultureMatchResponse,
   PublicCultureRemovalReason,
   PublicCultureDuplicateCandidate,
@@ -144,6 +146,16 @@ export const publicCultureAPI = {
   remove: (id: number, reason: PublicCultureRemovalReason) =>
     http.post<PublicCulture>(`/public-cultures/${id}/remove/`, { reason }),
   hardDelete: (id: number) => http.post<void>(`/public-cultures/${id}/hard-delete/`, {}),
+  comments: (id: number) => http.get<PublicCultureDiscussionComment[]>(`/public-cultures/${id}/comments/`),
+  createComment: (id: number, body: string) =>
+    http.post<PublicCultureDiscussionComment>(`/public-cultures/${id}/comments/`, { body }),
+  changeProposals: (id: number) => http.get<PublicCultureChangeProposal[]>(`/public-cultures/${id}/change-proposals/`),
+  createChangeProposal: (id: number, data: { summary: string; proposed_data: Partial<PublicCulture> }) =>
+    http.post<PublicCultureChangeProposal>(`/public-cultures/${id}/change-proposals/`, data),
+  approveChangeProposal: (id: number, proposalId: number, reviewNote = '') =>
+    http.post<PublicCultureChangeProposal>(`/public-cultures/${id}/change-proposals/${proposalId}/approve/`, { review_note: reviewNote }),
+  rejectChangeProposal: (id: number, proposalId: number, reviewNote = '') =>
+    http.post<PublicCultureChangeProposal>(`/public-cultures/${id}/change-proposals/${proposalId}/reject/`, { review_note: reviewNote }),
 };
 
 export const supplierAPI = {
@@ -372,6 +384,8 @@ export type {
   CultureHistoryEntry,
   MediaFileRef,
   PublicCulture,
+  PublicCultureChangeProposal,
+  PublicCultureDiscussionComment,
   PublicCultureRemovalReason,
   PublicCultureDuplicateCandidate,
   CropSpecies,
