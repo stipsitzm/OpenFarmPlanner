@@ -138,7 +138,6 @@ export function PublicCultureLibraryDialog({
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [varietyFilter, setVarietyFilter] = useState('');
-  const [supplierFilter, setSupplierFilter] = useState('');
   const [nutrientFilter, setNutrientFilter] = useState('');
   const [cropFamilyFilter, setCropFamilyFilter] = useState('');
   const [mobileStep, setMobileStep] = useState<'list' | 'detail'>('list');
@@ -174,7 +173,6 @@ export function PublicCultureLibraryDialog({
         setQuery(initialQuery);
         setSelectedId(initialSelectedId);
         setVarietyFilter('');
-        setSupplierFilter('');
         setNutrientFilter('');
         setCropFamilyFilter('');
         setMobileStep(initialSelectedId && useMobileFilterLayout ? 'detail' : 'list');
@@ -192,7 +190,6 @@ export function PublicCultureLibraryDialog({
         setQuery('');
         setSelectedId(null);
         setVarietyFilter('');
-        setSupplierFilter('');
         setNutrientFilter('');
         setCropFamilyFilter('');
         setMobileStep('list');
@@ -247,10 +244,6 @@ export function PublicCultureLibraryDialog({
     () => Array.from(new Set(cultures.map((entry) => entry.variety?.trim()).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b)),
     [cultures],
   );
-  const supplierOptions = useMemo(
-    () => Array.from(new Set(cultures.map((entry) => (entry.supplier_name || entry.seed_supplier || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b)),
-    [cultures],
-  );
   const nutrientOptions = useMemo(
     () => Array.from(new Set(cultures.map((entry) => entry.nutrient_demand || '').filter(Boolean))).sort((a, b) => a.localeCompare(b)),
     [cultures],
@@ -267,14 +260,13 @@ export function PublicCultureLibraryDialog({
   );
 
   const filteredCultures = useMemo(() => cultures.filter((entry) => {
-    const label = `${entry.name} ${entry.variety || ''} ${entry.supplier_name || entry.seed_supplier || ''} ${entry.crop_family || ''}`.toLowerCase();
+    const label = `${entry.name} ${entry.variety || ''} ${entry.crop_species_name || ''} ${entry.crop_family || ''}`.toLowerCase();
     const matchesQuery = normalizedQuery.length === 0 || label.includes(normalizedQuery);
     const matchesVariety = !varietyFilter || (entry.variety || '') === varietyFilter;
-    const matchesSupplier = !supplierFilter || (entry.supplier_name || entry.seed_supplier || '') === supplierFilter;
     const matchesNutrient = !nutrientFilter || (entry.nutrient_demand || '') === nutrientFilter;
     const matchesCropFamily = !cropFamilyFilter || (entry.crop_family || '') === cropFamilyFilter;
-    return matchesQuery && matchesVariety && matchesSupplier && matchesNutrient && matchesCropFamily;
-  }), [cropFamilyFilter, cultures, normalizedQuery, nutrientFilter, supplierFilter, varietyFilter]);
+    return matchesQuery && matchesVariety && matchesNutrient && matchesCropFamily;
+  }), [cropFamilyFilter, cultures, normalizedQuery, nutrientFilter, varietyFilter]);
 
   useEffect(() => {
     if (loading || (initialSelectedId && selectedId === initialSelectedId && cultures.length === 0)) {
@@ -338,7 +330,7 @@ export function PublicCultureLibraryDialog({
         display: 'grid',
         gridTemplateColumns: isMobileLandscape
           ? 'repeat(2, minmax(0, 1fr))'
-          : { xs: '1fr', md: 'repeat(4, minmax(0, 1fr))' },
+          : { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' },
         gap: 1,
         mb: isMobileLandscape ? 1 : 2,
       }}
@@ -348,15 +340,6 @@ export function PublicCultureLibraryDialog({
         <Select fullWidth value={varietyFilter} label={t('library.filters.variety')} onChange={(event) => setVarietyFilter(event.target.value)}>
           <MenuItem value="">{t('filters.all')}</MenuItem>
           {varietyOptions.map((option) => (
-            <MenuItem key={option} value={option}>{option}</MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <FormControl size="small">
-        <InputLabel>{t('library.filters.supplier')}</InputLabel>
-        <Select fullWidth value={supplierFilter} label={t('library.filters.supplier')} onChange={(event) => setSupplierFilter(event.target.value)}>
-          <MenuItem value="">{t('filters.all')}</MenuItem>
-          {supplierOptions.map((option) => (
             <MenuItem key={option} value={option}>{option}</MenuItem>
           ))}
         </Select>
@@ -472,7 +455,7 @@ export function PublicCultureLibraryDialog({
                 >
                   <ListItemText
                     primary={culture.variety ? `${culture.name} (${culture.variety})` : culture.name}
-                    secondary={culture.supplier_name || culture.seed_supplier || t('noData')}
+                    secondary={culture.crop_species_name || culture.name}
                     primaryTypographyProps={{ fontSize: '0.92rem', lineHeight: 1.25 }}
                     secondaryTypographyProps={{ fontSize: '0.78rem', color: 'text.secondary', lineHeight: 1.2 }}
                   />
@@ -504,9 +487,6 @@ export function PublicCultureLibraryDialog({
                   />
                 </Box>
                 <Box sx={{ display: 'grid', gap: 0.5, mb: selectedCulture.notes ? 1.5 : 0.75 }}>
-                  <Typography variant="body2" sx={{ lineHeight: 1.35 }}>
-                    <strong>{t('form.supplier')}:</strong> {selectedCulture.supplier_name || selectedCulture.seed_supplier || t('noData')}
-                  </Typography>
                   <Typography variant="body2" sx={{ lineHeight: 1.35 }}>
                     <strong>{t('form.growthDurationDays')}:</strong> {selectedCulture.growth_duration_days ?? t('noData')}
                   </Typography>

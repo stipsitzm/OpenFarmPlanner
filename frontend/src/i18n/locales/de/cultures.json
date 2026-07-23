@@ -492,7 +492,6 @@
       "metaByDate": "{{author}} · {{date}}",
       "unknownDate": "Datum unbekannt",
       "notSpecified": "Keine Angabe",
-      "noSupplier": "Kein Lieferant",
       "noNotes": "Keine Notizen vorhanden.",
       "collaborationLoadError": "Diskussion und Änderungsvorschläge konnten nicht geladen werden.",
       "sections": {
@@ -539,7 +538,6 @@
       "fields": {
         "cropSpecies": "Kulturart",
         "variety": "Sorte",
-        "supplier": "Saatgutlieferant",
         "growthDurationDays": "Wachstumszeit (Tage)",
         "harvestDurationDays": "Erntezeit (Tage)",
         "propagationDurationDays": "Anzuchtdauer (Tage)",
@@ -608,7 +606,6 @@
         "reviewError": "Änderungsvorschlag konnte nicht geprüft werden.",
         "fields": {
           "notes": "Notizen",
-          "supplier_name": "Saatgutlieferant",
           "growth_duration_days": "Wachstumszeit (Tage)",
           "harvest_duration_days": "Erntezeit (Tage)"
         },
@@ -626,7 +623,7 @@
       "noSelectionTitle": "Die Kulturbibliothek wächst mit der Community",
       "noSelectionDescription": "Veröffentliche deine bewährten Kulturen und teile dein Wissen mit anderen. Jede veröffentlichte Kultur erweitert die gemeinsame Kulturbibliothek und kann von anderen Projekten übernommen werden.",
       "discoverTitle": "Entdecken",
-      "discoverDescription": "Durchsuche vorhandene Einträge und vergleiche Sorten, Lieferanten und Anbaudaten.",
+      "discoverDescription": "Durchsuche vorhandene Einträge und vergleiche Kulturarten, Sorten und Anbaudaten.",
       "importTitle": "Übernehmen",
       "importDescription": "Importiere passende Kulturen als eigene Projektkopie, ohne öffentliche Daten zu verändern.",
       "improveTitle": "Verbessern",
@@ -742,7 +739,6 @@
     },
     "filters": {
       "variety": "Sorte",
-      "supplier": "Saatgutlieferant",
       "nutrientDemand": "Nährstoffbedarf",
       "cropFamily": "Pflanzenfamilie"
     },

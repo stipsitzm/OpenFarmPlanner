@@ -65,7 +65,6 @@
       "metaByDate": "{{author}} · {{date}}",
       "unknownDate": "Unknown date",
       "notSpecified": "Not specified",
-      "noSupplier": "No supplier",
       "noNotes": "No notes yet.",
       "collaborationLoadError": "Discussion and change proposals could not be loaded.",
       "sections": {
@@ -112,7 +111,6 @@
       "fields": {
         "cropSpecies": "Crop species",
         "variety": "Variety",
-        "supplier": "Seed supplier",
         "growthDurationDays": "Growth duration (days)",
         "harvestDurationDays": "Harvest duration (days)",
         "propagationDurationDays": "Propagation duration (days)",
@@ -181,7 +179,6 @@
         "reviewError": "Change proposal could not be reviewed.",
         "fields": {
           "notes": "Notes",
-          "supplier_name": "Seed supplier",
           "growth_duration_days": "Growth duration (days)",
           "harvest_duration_days": "Harvest duration (days)"
         },
@@ -231,7 +228,7 @@
       "noSelectionTitle": "The crop library grows with the community",
       "noSelectionDescription": "Publish your proven cultures and share your knowledge with others. Every published culture expands the shared crop library and can be adopted by other projects.",
       "discoverTitle": "Discover",
-      "discoverDescription": "Browse existing entries and compare varieties, suppliers, and cultivation data.",
+      "discoverDescription": "Browse existing entries and compare crop species, varieties, and cultivation data.",
       "importTitle": "Adopt",
       "importDescription": "Import useful crops as your own project copy without changing public data.",
       "improveTitle": "Improve",

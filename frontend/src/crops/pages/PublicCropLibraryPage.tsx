@@ -43,9 +43,9 @@ import { useTranslation } from '../../i18n';
 import { showGlobalSnackbar } from '../../utils/globalSnackbar';
 
 type CollaborationLoadStatus = 'idle' | 'loading' | 'success' | 'error';
-type ProposalField = 'notes' | 'supplier_name' | 'growth_duration_days' | 'harvest_duration_days';
+type ProposalField = 'notes' | 'growth_duration_days' | 'harvest_duration_days';
 
-const PROPOSAL_FIELDS: ProposalField[] = ['notes', 'supplier_name', 'growth_duration_days', 'harvest_duration_days'];
+const PROPOSAL_FIELDS: ProposalField[] = ['notes', 'growth_duration_days', 'harvest_duration_days'];
 const SELECTED_PUBLIC_CULTURE_STORAGE_KEY = 'selectedPublicCultureId';
 
 function parsePublicCultureId(value: string | null): number | null {
@@ -62,10 +62,6 @@ function getStoredPublicCultureId(): number | null {
 
 const getCultureTitle = (culture: PublicCulture): string => (
   culture.variety ? `${culture.name} (${culture.variety})` : culture.name
-);
-
-const getSupplierLabel = (culture: PublicCulture): string => (
-  culture.supplier_name || culture.seed_supplier || ''
 );
 
 function formatLocalizedNumber(value: number | string | null | undefined, locale: string, fallback: string, options?: Intl.NumberFormatOptions): string {
@@ -701,7 +697,7 @@ export default function PublicCropLibraryPage() {
                     >
                       <ListItemText
                         primary={getCultureTitle(culture)}
-                        secondary={getSupplierLabel(culture) || culture.crop_species_name || t('library.page.noSupplier')}
+                        secondary={culture.crop_species_name || culture.name}
                         primaryTypographyProps={{ fontWeight: 700, noWrap: true }}
                         secondaryTypographyProps={{ noWrap: true }}
                       />
@@ -713,12 +709,13 @@ export default function PublicCropLibraryPage() {
 
             <Card variant="outlined" sx={{ ...libraryCardSx, minHeight: 420 }}>
               {!selectedCulture ? (
-                <Box sx={{ height: '100%', minHeight: { xs: 360, md: 520 }, display: 'flex', alignItems: 'center', justifyContent: 'center', p: { xs: 3, sm: 4 } }}>
-                  <Stack spacing={3.25} alignItems="center" sx={{ width: '100%', maxWidth: 720, textAlign: 'center' }}>
-                    <Box>
+                <Box sx={{ height: '100%', minHeight: { xs: 360, md: 520 }, display: 'flex', flexDirection: 'column' }}>
+                  <Box sx={{ p: { xs: 3, sm: 4 }, bgcolor: 'action.hover', borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'center', sm: 'flex-start' }} sx={{ maxWidth: 780 }}>
                       <Box
                         sx={{
                           width: 64,
+                          minWidth: 64,
                           height: 64,
                           borderRadius: '50%',
                           bgcolor: 'success.50',
@@ -726,20 +723,22 @@ export default function PublicCropLibraryPage() {
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          mb: 2,
                         }}
                       >
                         <SpaOutlinedIcon sx={{ fontSize: 36 }} />
                       </Box>
-                      <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                        {t('library.emptyState.noSelectionTitle')}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25, maxWidth: 560, mx: 'auto', lineHeight: 1.65 }}>
-                        {t('library.emptyState.noSelectionDescription')}
-                      </Typography>
-                    </Box>
-                    <Divider flexItem />
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: { xs: 2, sm: 3 }, width: '100%' }}>
+                      <Box sx={{ textAlign: { xs: 'center', sm: 'left' } }}>
+                        <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                          {t('library.emptyState.noSelectionTitle')}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25, maxWidth: 560, lineHeight: 1.65 }}>
+                          {t('library.emptyState.noSelectionDescription')}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
+                  <Box sx={{ flex: 1, display: 'flex', alignItems: { xs: 'flex-start', md: 'center' }, p: { xs: 3, sm: 4 } }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: { xs: 2.5, sm: 3 }, width: '100%', maxWidth: 780 }}>
                       <Stack spacing={0.75} alignItems="center">
                         <SearchOutlinedIcon sx={{ color: 'success.main', fontSize: 28 }} />
                         <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
@@ -768,7 +767,7 @@ export default function PublicCropLibraryPage() {
                         </Typography>
                       </Stack>
                     </Box>
-                  </Stack>
+                  </Box>
                 </Box>
               ) : (
                 <Stack sx={{ minHeight: '100%' }}>
@@ -832,7 +831,6 @@ export default function PublicCropLibraryPage() {
                         <DetailGrid>
                           <DetailRow label={t('library.page.fields.cropSpecies')} value={selectedCulture.crop_species_name || selectedCulture.name || t('library.page.notSpecified')} />
                           <DetailRow label={t('library.page.fields.variety')} value={selectedCulture.variety || t('library.page.notSpecified')} />
-                          <DetailRow label={t('library.page.fields.supplier')} value={getSupplierLabel(selectedCulture) || t('library.page.notSpecified')} />
                           <DetailRow label={t('library.page.fields.cropFamily')} value={selectedCulture.crop_family || t('library.page.notSpecified')} />
                           <DetailRow
                             label={t('library.page.fields.nutrientDemand')}
