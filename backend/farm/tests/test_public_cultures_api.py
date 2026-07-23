@@ -65,6 +65,26 @@ class PublicCultureLibraryApiTest(DRFAPITestCase):
         self.assertEqual(response.data['code'], 'public_library_terms_required')
         self.assertEqual(PublicCulture.objects.count(), 0)
 
+    def test_guest_demo_session_cannot_publish_to_public_library(self):
+        """Throwaway guest-demo accounts must not contribute to the shared library."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from accounts.models import GuestDemoSession
+
+        GuestDemoSession.objects.create(
+            user=self.user,
+            project=self.project,
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+
+        response = self.publish_current_culture()
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['code'], 'guest_demo_forbidden')
+        self.assertEqual(PublicCulture.objects.count(), 0)
+
     def test_publish_rejects_duplicates_with_conflict_response(self):
         other_culture = Culture.objects.create(
             name='Lettuce',

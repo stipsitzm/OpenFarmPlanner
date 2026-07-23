@@ -493,6 +493,22 @@ class CultureViewSet(ProjectScopedMixin, viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='publish-public')
     def publish_public(self, request, pk=None):
+        # Guest demo sessions are throwaway, near-anonymous accounts (created
+        # without email verification via the public guest-demo endpoint). They
+        # must not be able to contribute to the shared, persistent public
+        # library — PublicCulture.created_by is SET_NULL, so anything they
+        # publish would outlive their auto-deleted session. Imported locally to
+        # avoid an import-time cycle (accounts.guest_demo imports farm.models).
+        from accounts.guest_demo import is_active_guest_demo_user
+
+        if is_active_guest_demo_user(request.user):
+            return Response(
+                {
+                    'code': 'guest_demo_forbidden',
+                    'detail': 'Guest demo sessions cannot publish to the public library.',
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
         culture = self.get_object()
         if not culture.name.strip():
             return Response({'detail': 'Name is required for publishing.'}, status=status.HTTP_400_BAD_REQUEST)
