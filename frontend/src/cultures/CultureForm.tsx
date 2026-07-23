@@ -37,6 +37,7 @@ import { useActiveSaveShortcut } from '../hooks/useActiveSaveShortcut';
 import { useDialogKeyboardScroll } from '../hooks/useDialogKeyboardScroll';
 import { ConfirmationDialog } from '../components/feedback/ConfirmationDialog';
 import { hasEffectiveCultureFormChanges } from './cultureFormChangeDetection';
+import { buildCultureIdentityKey } from './cultureIdentity';
 import { validateCulture } from './validation';
 import { normalizeSeedRateUnit } from './enumNormalization';
 import { TypeaheadSelect as Select } from '../components/inputs/TypeaheadSelect';
@@ -130,26 +131,6 @@ const EMPTY_CULTURE: Partial<Culture> = {
 };
 
 const DUPLICATE_CHECK_DEBOUNCE_MS = 400;
-
-const normalizeCultureIdentityValue = (value: string | undefined | null): string | null => {
-  if (!value) {
-    return null;
-  }
-  const normalized = value.split(/\s+/).filter(Boolean).join(' ').toLowerCase();
-  return normalized || null;
-};
-
-const buildCultureIdentityKey = (
-  name: string | undefined | null,
-  variety: string | undefined | null,
-): string | null => {
-  const normalizedName = normalizeCultureIdentityValue(name);
-  const normalizedVariety = normalizeCultureIdentityValue(variety);
-  if (!normalizedName || !normalizedVariety) {
-    return null;
-  }
-  return `${normalizedName}\u0000${normalizedVariety}`;
-};
 
 const buildInitialFormData = (culture?: Culture): Partial<Culture> => {
   if (!culture) {
