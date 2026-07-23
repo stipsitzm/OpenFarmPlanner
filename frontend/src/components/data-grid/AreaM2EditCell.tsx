@@ -8,37 +8,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { TextField } from '@mui/material';
 import { useGridApiContext } from '@mui/x-data-grid';
 import type { GridRenderEditCellParams } from '@mui/x-data-grid';
-import { formatLocalizedNumber } from '../../utils/numberLocalization';
-
-function getInitialInputValue(
-  value: unknown,
-  fallbackValue: number | null | undefined,
-  locale: string,
-): string {
-  if (typeof value === 'string' && value.trim() !== '' && Number.isNaN(Number(value))) {
-    return value;
-  }
-  const normalizedValue =
-    typeof value === 'number'
-      ? value
-      : typeof value === 'string' && value.trim() !== ''
-        ? Number(value)
-        : null;
-  if (typeof normalizedValue === 'number' && !Number.isNaN(normalizedValue)) {
-    return formatLocalizedNumber(normalizedValue, locale, {
-      useGrouping: false,
-      maximumFractionDigits: 2,
-    });
-  }
-  if (typeof fallbackValue === 'number' && !Number.isNaN(fallbackValue)) {
-    return formatLocalizedNumber(fallbackValue, locale, {
-      useGrouping: false,
-      maximumFractionDigits: 2,
-    });
-  }
-  return '';
-}
-
+import { getInitialInputValue } from './areaM2EditCellValue';
 
 export interface AreaM2EditCellProps extends GridRenderEditCellParams {
   onLastEditedFieldChange: (field: 'area_m2') => void;
