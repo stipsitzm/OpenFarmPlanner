@@ -18,6 +18,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import type { HierarchyRow } from './utils/types';
+import {
+  calculateAreaValue,
+  getDimensionRowState,
+  isDimensionCellIncomplete,
+  type DimensionCellType,
+} from './utils/dimensionCellState';
 import { NotesCell } from '../data-grid/NotesCell';
 import { HierarchyAddIcon } from './HierarchyAddIcon';
 import { getPlainExcerpt } from '../data-grid/markdown';
@@ -382,28 +388,6 @@ function renderNameCell(
   );
 }
 
-const calculateAreaValue = (row: HierarchyRow): number | string | undefined => {
-  if (row.type === 'location') {
-    return undefined;
-  }
-
-  const length = typeof row.length_m === 'number' ? row.length_m : null;
-  const width = typeof row.width_m === 'number' ? row.width_m : null;
-  if (length !== null && width !== null) {
-    return Math.round(length * width * 10) / 10;
-  }
-
-  return row.area_sqm;
-};
-
-type DimensionCellType = 'length' | 'width' | 'area';
-
-interface DimensionRowState {
-  hasLength: boolean;
-  hasWidth: boolean;
-  hasAreaValue: boolean;
-}
-
 /** Returns true when a dimension edit cell value is non-empty but invalid (non-numeric or negative). */
 export const isDimensionEditValueInvalid = (value: unknown): boolean => {
   if (value === null || value === undefined) return false;
@@ -411,45 +395,6 @@ export const isDimensionEditValueInvalid = (value: unknown): boolean => {
   if (str === '') return false;
   const parsed = Number.parseFloat(str.replace(',', '.'));
   return !Number.isFinite(parsed) || parsed < 0;
-};
-
-const parseNumericValue = (value: unknown): number | undefined => {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : undefined;
-  }
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return undefined;
-    }
-    const parsed = Number.parseFloat(trimmed.replace(',', '.'));
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }
-  return undefined;
-};
-
-const getDimensionRowState = (row: HierarchyRow): DimensionRowState | null => {
-  if (row.type !== 'field' && row.type !== 'bed') {
-    return null;
-  }
-  const lengthValue = parseNumericValue(row.length_m);
-  const widthValue = parseNumericValue(row.width_m);
-  const areaValue = parseNumericValue(row.area_sqm);
-  return {
-    hasLength: Number.isFinite(lengthValue ?? NaN),
-    hasWidth: Number.isFinite(widthValue ?? NaN),
-    hasAreaValue: Number.isFinite(areaValue ?? NaN),
-  };
-};
-
-const isDimensionCellIncomplete = (type: DimensionCellType, rowState: DimensionRowState): boolean => {
-  if (type === 'length') {
-    return !rowState.hasLength;
-  }
-  if (type === 'width') {
-    return !rowState.hasWidth;
-  }
-  return !(rowState.hasAreaValue || (rowState.hasLength && rowState.hasWidth));
 };
 
 const getDimensionCellClassName = (row: HierarchyRow, type: DimensionCellType): string => {
