@@ -495,13 +495,79 @@
       "noSupplier": "Kein Lieferant",
       "noNotes": "Keine Notizen vorhanden.",
       "collaborationLoadError": "Diskussion und Änderungsvorschläge konnten nicht geladen werden.",
+      "sections": {
+        "general": "Allgemeine Informationen",
+        "timing": "Zeitplanung",
+        "spacing": "Abstände",
+        "seed": "Saatgut",
+        "harvest": "Ernte",
+        "metadata": "Bibliotheksdaten",
+        "notes": "Notizen"
+      },
+      "units": {
+        "days": "Tage"
+      },
+      "boolean": {
+        "yes": "Ja",
+        "no": "Nein"
+      },
+      "seedUnits": {
+        "g_per_m2": "g / m²",
+        "g_per_lfm": "g / lfm",
+        "seeds_per_m2": "Korn / m²",
+        "seeds_per_lfm": "Korn / lfm",
+        "seeds_per_plant": "Korn / Pflanze"
+      },
+      "packageUnits": {
+        "g": "g",
+        "seeds": "Korn"
+      },
+      "harvestMethods": {
+        "perPlant": "Pro Pflanze",
+        "perSqm": "Pro m²"
+      },
+      "seedingRequirementTypes": {
+        "perSqm": "/ m²",
+        "perPlant": "/ Pflanze"
+      },
+      "statusValues": {
+        "draft": "Entwurf",
+        "published": "Veröffentlicht",
+        "withdrawn": "Zurückgezogen",
+        "removed": "Entfernt"
+      },
       "fields": {
+        "cropSpecies": "Kulturart",
+        "variety": "Sorte",
         "supplier": "Saatgutlieferant",
         "growthDurationDays": "Wachstumszeit (Tage)",
         "harvestDurationDays": "Erntezeit (Tage)",
+        "propagationDurationDays": "Anzuchtdauer (Tage)",
         "cropFamily": "Pflanzenfamilie",
         "nutrientDemand": "Nährstoffbedarf",
         "cultivationType": "Anbauart",
+        "distanceWithinRow": "Abstand in der Reihe",
+        "rowSpacing": "Reihenabstand",
+        "sowingDepth": "Saattiefe",
+        "seedRate": "Saatgutmenge",
+        "seedRateByCultivation": "Saatgutmenge nach Anbauart",
+        "seedRateDirect": "Saatgutmenge Direktsaat",
+        "seedRatePreCultivation": "Saatgutmenge Pflanzung",
+        "sowingSafetyPercent": "Sicherheitszuschlag Saatgut",
+        "sowingSafetyPercentDirect": "Sicherheitszuschlag Direktsaat",
+        "sowingSafetyPercentPreCultivation": "Sicherheitszuschlag Pflanzung",
+        "thousandKernelWeight": "1000-Korn-Gewicht",
+        "seedingRequirement": "Saatgutbedarf",
+        "seedPackages": "Packungsgrößen",
+        "harvestMethod": "Ertragseinheit",
+        "expectedYield": "Erwarteter Ertrag",
+        "allowDeviationDeliveryWeeks": "Abweichende Lieferwochen",
+        "originalLanguage": "Originalsprache",
+        "createdAt": "Angelegt am",
+        "publishedAt": "Veröffentlicht am",
+        "updatedAt": "Aktualisiert am",
+        "status": "Status",
+        "displayColor": "Anzeigefarbe",
         "notes": "Notizen",
         "nutrientDemandValues": {
           "low": "Niedrig",

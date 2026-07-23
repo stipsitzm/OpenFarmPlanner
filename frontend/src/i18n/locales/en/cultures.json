@@ -68,13 +68,79 @@
       "noSupplier": "No supplier",
       "noNotes": "No notes yet.",
       "collaborationLoadError": "Discussion and change proposals could not be loaded.",
+      "sections": {
+        "general": "General information",
+        "timing": "Timing",
+        "spacing": "Spacing",
+        "seed": "Seed",
+        "harvest": "Harvest",
+        "metadata": "Library data",
+        "notes": "Notes"
+      },
+      "units": {
+        "days": "days"
+      },
+      "boolean": {
+        "yes": "Yes",
+        "no": "No"
+      },
+      "seedUnits": {
+        "g_per_m2": "g / m²",
+        "g_per_lfm": "g / running m",
+        "seeds_per_m2": "seeds / m²",
+        "seeds_per_lfm": "seeds / running m",
+        "seeds_per_plant": "seeds / plant"
+      },
+      "packageUnits": {
+        "g": "g",
+        "seeds": "seeds"
+      },
+      "harvestMethods": {
+        "perPlant": "Per plant",
+        "perSqm": "Per m²"
+      },
+      "seedingRequirementTypes": {
+        "perSqm": "/ m²",
+        "perPlant": "/ plant"
+      },
+      "statusValues": {
+        "draft": "Draft",
+        "published": "Published",
+        "withdrawn": "Withdrawn",
+        "removed": "Removed"
+      },
       "fields": {
+        "cropSpecies": "Crop species",
+        "variety": "Variety",
         "supplier": "Seed supplier",
         "growthDurationDays": "Growth duration (days)",
         "harvestDurationDays": "Harvest duration (days)",
+        "propagationDurationDays": "Propagation duration (days)",
         "cropFamily": "Crop family",
         "nutrientDemand": "Nutrient demand",
         "cultivationType": "Cultivation type",
+        "distanceWithinRow": "Distance within row",
+        "rowSpacing": "Row spacing",
+        "sowingDepth": "Sowing depth",
+        "seedRate": "Seed rate",
+        "seedRateByCultivation": "Seed rate by cultivation type",
+        "seedRateDirect": "Seed rate direct sowing",
+        "seedRatePreCultivation": "Seed rate transplanting",
+        "sowingSafetyPercent": "Seed safety surcharge",
+        "sowingSafetyPercentDirect": "Direct sowing safety surcharge",
+        "sowingSafetyPercentPreCultivation": "Transplanting safety surcharge",
+        "thousandKernelWeight": "Thousand-kernel weight",
+        "seedingRequirement": "Seed requirement",
+        "seedPackages": "Package sizes",
+        "harvestMethod": "Yield unit",
+        "expectedYield": "Expected yield",
+        "allowDeviationDeliveryWeeks": "Allow different delivery weeks",
+        "originalLanguage": "Original language",
+        "createdAt": "Created at",
+        "publishedAt": "Published at",
+        "updatedAt": "Updated at",
+        "status": "Status",
+        "displayColor": "Display color",
         "notes": "Notes",
         "nutrientDemandValues": {
           "low": "Low",

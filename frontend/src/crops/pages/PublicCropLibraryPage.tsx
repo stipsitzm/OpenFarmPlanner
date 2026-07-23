@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import {
   Alert,
   Box,
@@ -53,8 +53,53 @@ const getSupplierLabel = (culture: PublicCulture): string => (
   culture.supplier_name || culture.seed_supplier || ''
 );
 
-function formatOptionalNumber(value: number | null | undefined, fallback: string): string {
-  return value === null || value === undefined ? fallback : String(value);
+function formatLocalizedNumber(value: number | string | null | undefined, locale: string, fallback: string, options?: Intl.NumberFormatOptions): string {
+  if (value === null || value === undefined || value === '') {
+    return fallback;
+  }
+  const numericValue = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return fallback;
+  }
+  return new Intl.NumberFormat(locale, options).format(numericValue);
+}
+
+function formatDays(value: number | null | undefined, locale: string, fallback: string, dayLabel: string): string {
+  return value === null || value === undefined
+    ? fallback
+    : `${formatLocalizedNumber(value, locale, fallback)} ${dayLabel}`;
+}
+
+function formatMetersAsCentimeters(value: number | null | undefined, locale: string, fallback: string): string {
+  return value === null || value === undefined
+    ? fallback
+    : `${formatLocalizedNumber(value * 100, locale, fallback, { maximumFractionDigits: 1 })} cm`;
+}
+
+function formatPercent(value: number | null | undefined, locale: string, fallback: string): string {
+  return value === null || value === undefined
+    ? fallback
+    : `${formatLocalizedNumber(value, locale, fallback, { maximumFractionDigits: 1 })} %`;
+}
+
+function formatSeedUnit(unit: string | null | undefined, t: (key: string, options?: Record<string, unknown>) => string): string {
+  if (!unit) {
+    return '';
+  }
+  return t(`library.page.seedUnits.${unit}`, { defaultValue: unit });
+}
+
+function formatSeedRate(
+  value: number | null | undefined,
+  unit: string | null | undefined,
+  locale: string,
+  fallback: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  if (value === null || value === undefined || !unit) {
+    return fallback;
+  }
+  return `${formatLocalizedNumber(value, locale, fallback, { maximumFractionDigits: 2 })} ${formatSeedUnit(unit, t)}`;
 }
 
 function getCultivationTypeLabel(
@@ -80,6 +125,94 @@ function getNutrientDemandLabel(
     return t(`library.page.fields.nutrientDemandValues.${value}`);
   }
   return fallback;
+}
+
+function getCultivationTypesLabel(
+  culture: PublicCulture,
+  t: (key: string, options?: Record<string, unknown>) => string,
+  fallback: string,
+): string {
+  const values = culture.cultivation_types?.length
+    ? culture.cultivation_types
+    : culture.cultivation_type ? [culture.cultivation_type] : [];
+  const labels = values
+    .map((value) => getCultivationTypeLabel(value, t, ''))
+    .filter(Boolean);
+  return labels.length > 0 ? labels.join(', ') : fallback;
+}
+
+function getHarvestMethodLabel(
+  value: PublicCulture['harvest_method'],
+  t: (key: string, options?: Record<string, unknown>) => string,
+  fallback: string,
+): string {
+  if (value === 'per_plant') {
+    return t('library.page.harvestMethods.perPlant');
+  }
+  if (value === 'per_sqm') {
+    return t('library.page.harvestMethods.perSqm');
+  }
+  return fallback;
+}
+
+function getSeedingRequirementTypeLabel(value: PublicCulture['seeding_requirement_type'], t: (key: string, options?: Record<string, unknown>) => string): string {
+  if (value === 'per_sqm') {
+    return t('library.page.seedingRequirementTypes.perSqm');
+  }
+  if (value === 'per_plant') {
+    return t('library.page.seedingRequirementTypes.perPlant');
+  }
+  return '';
+}
+
+function getPublicCultureStatusLabel(status: PublicCulture['status'], t: (key: string, options?: Record<string, unknown>) => string): string {
+  return t(`library.page.statusValues.${status}`);
+}
+
+function getLanguageLabel(code: string | null | undefined, t: (key: string, options?: Record<string, unknown>) => string, fallback: string): string {
+  if (!code) {
+    return fallback;
+  }
+  return t(`library.publishWizard.languages.${code}`, { defaultValue: code });
+}
+
+function formatSeedPackages(
+  culture: PublicCulture,
+  locale: string,
+  fallback: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const packages = culture.seed_packages ?? [];
+  if (packages.length === 0) {
+    return fallback;
+  }
+  return packages
+    .map((entry) => `${formatLocalizedNumber(entry.size_value, locale, fallback, { maximumFractionDigits: 1 })} ${t(`library.page.packageUnits.${entry.size_unit}`, { defaultValue: entry.size_unit })}`)
+    .join(', ');
+}
+
+function formatSeedRateByCultivation(
+  culture: PublicCulture,
+  locale: string,
+  fallback: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  const entries = Object.entries(culture.seed_rate_by_cultivation ?? {});
+  if (entries.length === 0) {
+    return fallback;
+  }
+  return entries
+    .map(([type, rate]) => {
+      const methodLabel = type === 'pre_cultivation'
+        ? t('library.page.fields.cultivationTypes.preCultivation')
+        : t('library.page.fields.cultivationTypes.directSowing');
+      return `${methodLabel}: ${formatSeedRate(rate?.value, rate?.unit, locale, fallback, t)}`;
+    })
+    .join(', ');
+}
+
+function getValueOrFallback(value: string | null | undefined, fallback: string): string {
+  return value?.trim() ? value : fallback;
 }
 
 function getProposalFieldLabel(field: string, t: (key: string, options?: Record<string, unknown>) => string): string {
@@ -116,6 +249,30 @@ function DetailRow({ label, value }: DetailRowProps) {
       <Typography variant="body2" sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>
         {value}
       </Typography>
+    </Box>
+  );
+}
+
+interface DetailSectionProps {
+  title: string;
+  children: ReactNode;
+}
+
+function DetailSection({ title, children }: DetailSectionProps) {
+  return (
+    <Box sx={{ pb: 2.25, borderBottom: '1px solid', borderColor: 'divider', '&:last-of-type': { borderBottom: 0, pb: 0 } }}>
+      <Typography variant="h6" sx={{ fontWeight: 800, mb: 1.5 }}>
+        {title}
+      </Typography>
+      {children}
+    </Box>
+  );
+}
+
+function DetailGrid({ children }: { children: ReactNode }) {
+  return (
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 2 }}>
+      {children}
     </Box>
   );
 }
@@ -540,29 +697,97 @@ export default function PublicCropLibraryPage() {
                   <Divider />
 
                   {activeTab === 0 ? (
-                    <Stack spacing={2} sx={{ p: { xs: 2, sm: 2.5 } }}>
-                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 2 }}>
-                        <DetailRow label={t('library.page.fields.supplier')} value={getSupplierLabel(selectedCulture) || t('library.page.notSpecified')} />
-                        <DetailRow label={t('library.page.fields.growthDurationDays')} value={formatOptionalNumber(selectedCulture.growth_duration_days, t('library.page.notSpecified'))} />
-                        <DetailRow label={t('library.page.fields.harvestDurationDays')} value={formatOptionalNumber(selectedCulture.harvest_duration_days, t('library.page.notSpecified'))} />
-                        <DetailRow label={t('library.page.fields.cropFamily')} value={selectedCulture.crop_family || t('library.page.notSpecified')} />
-                        <DetailRow
-                          label={t('library.page.fields.nutrientDemand')}
-                          value={getNutrientDemandLabel(selectedCulture.nutrient_demand, t, t('library.page.notSpecified'))}
-                        />
-                        <DetailRow
-                          label={t('library.page.fields.cultivationType')}
-                          value={getCultivationTypeLabel(selectedCulture.cultivation_type, t, t('library.page.notSpecified'))}
-                        />
-                      </Box>
-                      <Box>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.75 }}>
-                          {t('library.page.fields.notes')}
-                        </Typography>
+                    <Stack spacing={2.25} sx={{ p: { xs: 2, sm: 2.5 } }}>
+                      <DetailSection title={t('library.page.sections.general')}>
+                        <DetailGrid>
+                          <DetailRow label={t('library.page.fields.cropSpecies')} value={selectedCulture.crop_species_name || selectedCulture.name || t('library.page.notSpecified')} />
+                          <DetailRow label={t('library.page.fields.variety')} value={selectedCulture.variety || t('library.page.notSpecified')} />
+                          <DetailRow label={t('library.page.fields.supplier')} value={getSupplierLabel(selectedCulture) || t('library.page.notSpecified')} />
+                          <DetailRow label={t('library.page.fields.cropFamily')} value={selectedCulture.crop_family || t('library.page.notSpecified')} />
+                          <DetailRow
+                            label={t('library.page.fields.nutrientDemand')}
+                            value={getNutrientDemandLabel(selectedCulture.nutrient_demand, t, t('library.page.notSpecified'))}
+                          />
+                          <DetailRow
+                            label={t('library.page.fields.cultivationType')}
+                            value={getCultivationTypesLabel(selectedCulture, t, t('library.page.notSpecified'))}
+                          />
+                        </DetailGrid>
+                      </DetailSection>
+
+                      <DetailSection title={t('library.page.sections.timing')}>
+                        <DetailGrid>
+                          <DetailRow label={t('library.page.fields.growthDurationDays')} value={formatDays(selectedCulture.growth_duration_days, locale, t('library.page.notSpecified'), t('library.page.units.days'))} />
+                          <DetailRow label={t('library.page.fields.harvestDurationDays')} value={formatDays(selectedCulture.harvest_duration_days, locale, t('library.page.notSpecified'), t('library.page.units.days'))} />
+                          <DetailRow label={t('library.page.fields.propagationDurationDays')} value={formatDays(selectedCulture.propagation_duration_days, locale, t('library.page.notSpecified'), t('library.page.units.days'))} />
+                        </DetailGrid>
+                      </DetailSection>
+
+                      <DetailSection title={t('library.page.sections.spacing')}>
+                        <DetailGrid>
+                          <DetailRow label={t('library.page.fields.distanceWithinRow')} value={formatMetersAsCentimeters(selectedCulture.distance_within_row_m, locale, t('library.page.notSpecified'))} />
+                          <DetailRow label={t('library.page.fields.rowSpacing')} value={formatMetersAsCentimeters(selectedCulture.row_spacing_m, locale, t('library.page.notSpecified'))} />
+                          <DetailRow label={t('library.page.fields.sowingDepth')} value={formatMetersAsCentimeters(selectedCulture.sowing_depth_m, locale, t('library.page.notSpecified'))} />
+                        </DetailGrid>
+                      </DetailSection>
+
+                      <DetailSection title={t('library.page.sections.seed')}>
+                        <DetailGrid>
+                          <DetailRow
+                            label={t('library.page.fields.seedRate')}
+                            value={formatSeedRate(selectedCulture.seed_rate_value, selectedCulture.seed_rate_unit, locale, t('library.page.notSpecified'), t)}
+                          />
+                          <DetailRow
+                            label={t('library.page.fields.seedRateByCultivation')}
+                            value={formatSeedRateByCultivation(selectedCulture, locale, t('library.page.notSpecified'), t)}
+                          />
+                          <DetailRow
+                            label={t('library.page.fields.seedRateDirect')}
+                            value={formatSeedRate(selectedCulture.seed_rate_direct_value, selectedCulture.seed_rate_direct_unit, locale, t('library.page.notSpecified'), t)}
+                          />
+                          <DetailRow
+                            label={t('library.page.fields.seedRatePreCultivation')}
+                            value={formatSeedRate(selectedCulture.seed_rate_pre_cultivation_value, selectedCulture.seed_rate_pre_cultivation_unit, locale, t('library.page.notSpecified'), t)}
+                          />
+                          <DetailRow label={t('library.page.fields.sowingSafetyPercent')} value={formatPercent(selectedCulture.sowing_calculation_safety_percent, locale, t('library.page.notSpecified'))} />
+                          <DetailRow label={t('library.page.fields.sowingSafetyPercentDirect')} value={formatPercent(selectedCulture.sowing_calculation_safety_percent_direct, locale, t('library.page.notSpecified'))} />
+                          <DetailRow label={t('library.page.fields.sowingSafetyPercentPreCultivation')} value={formatPercent(selectedCulture.sowing_calculation_safety_percent_pre_cultivation, locale, t('library.page.notSpecified'))} />
+                          <DetailRow label={t('library.page.fields.thousandKernelWeight')} value={selectedCulture.thousand_kernel_weight_g === null || selectedCulture.thousand_kernel_weight_g === undefined ? t('library.page.notSpecified') : `${formatLocalizedNumber(selectedCulture.thousand_kernel_weight_g, locale, t('library.page.notSpecified'), { maximumFractionDigits: 2 })} g`} />
+                          <DetailRow
+                            label={t('library.page.fields.seedingRequirement')}
+                            value={selectedCulture.seeding_requirement === null || selectedCulture.seeding_requirement === undefined
+                              ? t('library.page.notSpecified')
+                              : `${formatLocalizedNumber(selectedCulture.seeding_requirement, locale, t('library.page.notSpecified'), { maximumFractionDigits: 2 })}${getSeedingRequirementTypeLabel(selectedCulture.seeding_requirement_type, t) ? ` ${getSeedingRequirementTypeLabel(selectedCulture.seeding_requirement_type, t)}` : ''}`}
+                          />
+                          <DetailRow label={t('library.page.fields.seedPackages')} value={formatSeedPackages(selectedCulture, locale, t('library.page.notSpecified'), t)} />
+                        </DetailGrid>
+                      </DetailSection>
+
+                      <DetailSection title={t('library.page.sections.harvest')}>
+                        <DetailGrid>
+                          <DetailRow label={t('library.page.fields.harvestMethod')} value={getHarvestMethodLabel(selectedCulture.harvest_method, t, t('library.page.notSpecified'))} />
+                          <DetailRow label={t('library.page.fields.expectedYield')} value={selectedCulture.expected_yield === null || selectedCulture.expected_yield === undefined ? t('library.page.notSpecified') : `${formatLocalizedNumber(selectedCulture.expected_yield, locale, t('library.page.notSpecified'), { maximumFractionDigits: 2 })} kg`} />
+                          <DetailRow label={t('library.page.fields.allowDeviationDeliveryWeeks')} value={selectedCulture.allow_deviation_delivery_weeks ? t('library.page.boolean.yes') : t('library.page.boolean.no')} />
+                        </DetailGrid>
+                      </DetailSection>
+
+                      <DetailSection title={t('library.page.sections.metadata')}>
+                        <DetailGrid>
+                          <DetailRow label={t('library.versionLabel')} value={String(selectedCulture.version)} />
+                          <DetailRow label={t('library.page.fields.originalLanguage')} value={getLanguageLabel(selectedCulture.original_language_code, t, t('library.page.notSpecified'))} />
+                          <DetailRow label={t('library.page.fields.createdAt')} value={formatDate(selectedCulture.created_at)} />
+                          <DetailRow label={t('library.page.fields.publishedAt')} value={formatDate(selectedCulture.published_at)} />
+                          <DetailRow label={t('library.page.fields.updatedAt')} value={formatDate(selectedCulture.updated_at)} />
+                          <DetailRow label={t('library.page.fields.status')} value={getPublicCultureStatusLabel(selectedCulture.status, t)} />
+                          <DetailRow label={t('library.page.fields.displayColor')} value={getValueOrFallback(selectedCulture.display_color, t('library.page.notSpecified'))} />
+                        </DetailGrid>
+                      </DetailSection>
+
+                      <DetailSection title={t('library.page.sections.notes')}>
                         <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.65 }}>
                           {selectedCulture.notes || t('library.page.noNotes')}
                         </Typography>
-                      </Box>
+                      </DetailSection>
                     </Stack>
                   ) : null}
 
