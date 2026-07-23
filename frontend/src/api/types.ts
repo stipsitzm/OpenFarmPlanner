@@ -222,21 +222,51 @@ export interface PublicCulture {
   source_project?: number | null;
 }
 
-export type PublicCultureChangeProposalStatus = 'pending' | 'approved' | 'rejected';
+export interface PublicCultureVersionChange {
+  field: string;
+  old_value: unknown;
+  new_value: unknown;
+}
 
-export interface PublicCultureChangeProposal {
+export interface PublicCultureVersion {
   id: number;
   public_culture: number;
-  summary: string;
-  proposed_data: Partial<PublicCulture>;
-  status: PublicCultureChangeProposalStatus;
-  proposed_by_label?: string;
-  reviewed_by_label?: string;
-  review_note?: string;
-  reviewed_at?: string | null;
+  version_number: number;
+  snapshot: Partial<PublicCulture>;
+  change_summary: PublicCultureVersionChange[];
+  change_comment?: string;
+  created_by_label?: string;
   created_at?: string;
-  updated_at?: string;
 }
+
+export interface PublicCultureVersionCompare {
+  from_version: PublicCultureVersion;
+  to_version: PublicCultureVersion;
+  changes: PublicCultureVersionChange[];
+}
+
+export type PublicCultureUpdatePayload = Partial<Pick<
+  PublicCulture,
+  | 'name'
+  | 'variety'
+  | 'notes'
+  | 'crop_family'
+  | 'nutrient_demand'
+  | 'cultivation_type'
+  | 'cultivation_types'
+  | 'growth_duration_days'
+  | 'harvest_duration_days'
+  | 'propagation_duration_days'
+  | 'distance_within_row_m'
+  | 'row_spacing_m'
+  | 'sowing_depth_m'
+  | 'seed_rate_value'
+  | 'seed_rate_unit'
+  | 'sowing_calculation_safety_percent'
+  | 'thousand_kernel_weight_g'
+  | 'expected_yield'
+  | 'display_color'
+>> & { change_comment?: string };
 
 export interface PublicCultureDiscussionComment {
   id: number;

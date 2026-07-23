@@ -11,6 +11,10 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   IconButton,
   InputLabel,
@@ -28,26 +32,27 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
-import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import SpaOutlinedIcon from '@mui/icons-material/SpaOutlined';
 import { publicCultureAPI } from '../../api/api';
 import type {
   PublicCulture,
-  PublicCultureChangeProposal,
   PublicCultureDiscussionComment,
+  PublicCultureUpdatePayload,
+  PublicCultureVersion,
+  PublicCultureVersionCompare,
 } from '../../api/types';
 import PageContainer from '../../components/layout/PageContainer';
-import { useAuth } from '../../auth/useAuth';
 import { useTranslation } from '../../i18n';
 import { showGlobalSnackbar } from '../../utils/globalSnackbar';
 import { stripCitationMarkers } from '../../components/data-grid/markdown';
 
 type CollaborationLoadStatus = 'idle' | 'loading' | 'success' | 'error';
-type ProposalField = 'notes' | 'growth_duration_days' | 'harvest_duration_days';
+type VersionLoadStatus = 'idle' | 'loading' | 'success' | 'error';
 
-const PROPOSAL_FIELDS: ProposalField[] = ['notes', 'growth_duration_days', 'harvest_duration_days'];
 const SELECTED_PUBLIC_CULTURE_STORAGE_KEY = 'selectedPublicCultureId';
 
 function parsePublicCultureId(value: string | null): number | null {
@@ -224,14 +229,35 @@ function formatSeedRateByCultivation(
     .join(', ');
 }
 
-function getProposalFieldLabel(field: string, t: (key: string, options?: Record<string, unknown>) => string): string {
-  if (PROPOSAL_FIELDS.includes(field as ProposalField)) {
-    return t(`library.page.proposals.fields.${field}`);
-  }
-  return field;
+function getPublicCultureFieldLabel(field: string, t: (key: string, options?: Record<string, unknown>) => string): string {
+  const fieldLabelKeyByName: Record<string, string> = {
+    name: 'library.page.fields.name',
+    variety: 'library.page.fields.variety',
+    notes: 'library.page.fields.notes',
+    crop_species: 'library.page.fields.cropSpecies',
+    original_language_code: 'library.page.fields.originalLanguage',
+    crop_family: 'library.page.fields.cropFamily',
+    nutrient_demand: 'library.page.fields.nutrientDemand',
+    cultivation_type: 'library.page.fields.cultivationType',
+    cultivation_types: 'library.page.fields.cultivationType',
+    growth_duration_days: 'library.page.fields.growthDurationDays',
+    harvest_duration_days: 'library.page.fields.harvestDurationDays',
+    propagation_duration_days: 'library.page.fields.propagationDurationDays',
+    distance_within_row_m: 'library.page.fields.distanceWithinRow',
+    row_spacing_m: 'library.page.fields.rowSpacing',
+    sowing_depth_m: 'library.page.fields.sowingDepth',
+    seed_rate_value: 'library.page.fields.seedRate',
+    seed_rate_unit: 'library.page.fields.seedRate',
+    sowing_calculation_safety_percent: 'library.page.fields.sowingSafetyPercent',
+    thousand_kernel_weight_g: 'library.page.fields.thousandKernelWeight',
+    expected_yield: 'library.page.fields.expectedYield',
+    display_color: 'library.page.fields.displayColor',
+    seed_packages: 'library.page.fields.seedPackages',
+  };
+  return fieldLabelKeyByName[field] ? t(fieldLabelKeyByName[field]) : field;
 }
 
-function getProposalValueLabel(value: unknown, fallback: string): string {
+function getVersionValueLabel(value: unknown, fallback: string): string {
   if (value === null || value === undefined || value === '') {
     return fallback;
   }
@@ -287,117 +313,66 @@ function DetailGrid({ children }: { children: ReactNode }) {
   );
 }
 
-interface ProposalCardProps {
-  cultureId: number;
-  proposal: PublicCultureChangeProposal;
-  canModerate: boolean;
-  statusLabel: string;
-  anonymousLabel: string;
-  formatDate: (value?: string | null) => string;
-  onReviewed: () => Promise<void>;
-  t: (key: string, options?: Record<string, unknown>) => string;
+interface PublicCultureEditDraft {
+  name: string;
+  variety: string;
+  crop_family: string;
+  nutrient_demand: PublicCulture['nutrient_demand'];
+  cultivation_type: PublicCulture['cultivation_type'];
+  growth_duration_days: string;
+  harvest_duration_days: string;
+  propagation_duration_days: string;
+  distance_within_row_m: string;
+  row_spacing_m: string;
+  sowing_depth_m: string;
+  seed_rate_value: string;
+  seed_rate_unit: PublicCulture['seed_rate_unit'] | '';
+  sowing_calculation_safety_percent: string;
+  thousand_kernel_weight_g: string;
+  expected_yield: string;
+  notes: string;
+  change_comment: string;
 }
 
-function ProposalCard({
-  cultureId,
-  proposal,
-  canModerate,
-  statusLabel,
-  anonymousLabel,
-  formatDate,
-  onReviewed,
-  t,
-}: ProposalCardProps) {
-  const [reviewing, setReviewing] = useState<'approve' | 'reject' | null>(null);
-  const changedFields = Object.entries(proposal.proposed_data);
-
-  const reviewProposal = async (decision: 'approve' | 'reject'): Promise<void> => {
-    setReviewing(decision);
-    try {
-      if (decision === 'approve') {
-        await publicCultureAPI.approveChangeProposal(cultureId, proposal.id);
-        showGlobalSnackbar({ message: t('library.page.proposals.approveSuccess'), severity: 'success' });
-      } else {
-        await publicCultureAPI.rejectChangeProposal(cultureId, proposal.id);
-        showGlobalSnackbar({ message: t('library.page.proposals.rejectSuccess'), severity: 'success' });
-      }
-      await onReviewed();
-    } catch {
-      showGlobalSnackbar({ message: t('library.page.proposals.reviewError'), severity: 'error' });
-    } finally {
-      setReviewing(null);
-    }
+function createEditDraft(culture: PublicCulture): PublicCultureEditDraft {
+  return {
+    name: culture.name,
+    variety: culture.variety ?? '',
+    crop_family: culture.crop_family ?? '',
+    nutrient_demand: culture.nutrient_demand ?? '',
+    cultivation_type: culture.cultivation_type ?? '',
+    growth_duration_days: culture.growth_duration_days === null || culture.growth_duration_days === undefined ? '' : String(culture.growth_duration_days),
+    harvest_duration_days: culture.harvest_duration_days === null || culture.harvest_duration_days === undefined ? '' : String(culture.harvest_duration_days),
+    propagation_duration_days: culture.propagation_duration_days === null || culture.propagation_duration_days === undefined ? '' : String(culture.propagation_duration_days),
+    distance_within_row_m: culture.distance_within_row_m === null || culture.distance_within_row_m === undefined ? '' : String(culture.distance_within_row_m),
+    row_spacing_m: culture.row_spacing_m === null || culture.row_spacing_m === undefined ? '' : String(culture.row_spacing_m),
+    sowing_depth_m: culture.sowing_depth_m === null || culture.sowing_depth_m === undefined ? '' : String(culture.sowing_depth_m),
+    seed_rate_value: culture.seed_rate_value === null || culture.seed_rate_value === undefined ? '' : String(culture.seed_rate_value),
+    seed_rate_unit: culture.seed_rate_unit ?? '',
+    sowing_calculation_safety_percent: culture.sowing_calculation_safety_percent === null || culture.sowing_calculation_safety_percent === undefined ? '' : String(culture.sowing_calculation_safety_percent),
+    thousand_kernel_weight_g: culture.thousand_kernel_weight_g === null || culture.thousand_kernel_weight_g === undefined ? '' : String(culture.thousand_kernel_weight_g),
+    expected_yield: culture.expected_yield === null || culture.expected_yield === undefined ? '' : String(culture.expected_yield),
+    notes: culture.notes ?? '',
+    change_comment: '',
   };
+}
 
-  return (
-    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between">
-        <Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-            {proposal.summary}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {t('library.page.metaByDate', {
-              author: proposal.proposed_by_label || anonymousLabel,
-              date: formatDate(proposal.created_at),
-            })}
-          </Typography>
-        </Box>
-        <Chip size="small" label={statusLabel} color={proposal.status === 'pending' ? 'warning' : proposal.status === 'approved' ? 'success' : 'default'} />
-      </Stack>
-      {changedFields.length > 0 ? (
-        <Stack spacing={0.75} sx={{ mt: 1.25 }}>
-          {changedFields.map(([field, value]) => (
-            <Box key={field}>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                {getProposalFieldLabel(field, t)}
-              </Typography>
-              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                {getProposalValueLabel(value, t('library.page.notSpecified'))}
-              </Typography>
-            </Box>
-          ))}
-        </Stack>
-      ) : null}
-      {proposal.review_note ? (
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-          {proposal.review_note}
-        </Typography>
-      ) : null}
-      {canModerate && proposal.status === 'pending' ? (
-        <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
-          <Button
-            size="small"
-            variant="contained"
-            disabled={reviewing !== null}
-            onClick={() => void reviewProposal('approve')}
-          >
-            {reviewing === 'approve' ? t('library.page.proposals.approving') : t('library.page.proposals.approve')}
-          </Button>
-          <Button
-            size="small"
-            color="inherit"
-            variant="outlined"
-            disabled={reviewing !== null}
-            onClick={() => void reviewProposal('reject')}
-          >
-            {reviewing === 'reject' ? t('library.page.proposals.rejecting') : t('library.page.proposals.reject')}
-          </Button>
-        </Stack>
-      ) : null}
-    </Box>
-  );
+function parseOptionalNumber(value: string): number | null {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+  const parsedValue = Number(trimmedValue.replace(',', '.'));
+  return Number.isFinite(parsedValue) ? parsedValue : null;
 }
 
 export default function PublicCropLibraryPage() {
   const { t, i18n } = useTranslation('cultures');
-  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
   const selectedCultureParam = searchParams.get('cultureId');
   const selectedCultureIdFromUrl = parsePublicCultureId(selectedCultureParam);
-  const canModerate = Boolean(user?.is_staff || user?.is_superuser);
   const [query, setQuery] = useState('');
   const [cultures, setCultures] = useState<PublicCulture[]>([]);
   const [selectedCultureId, setSelectedCultureId] = useState<number | null>(() => selectedCultureIdFromUrl ?? getStoredPublicCultureId());
@@ -406,15 +381,19 @@ export default function PublicCropLibraryPage() {
   const [loadError, setLoadError] = useState('');
   const [activeTab, setActiveTab] = useState(0);
   const [comments, setComments] = useState<PublicCultureDiscussionComment[]>([]);
-  const [proposals, setProposals] = useState<PublicCultureChangeProposal[]>([]);
   const [collaborationStatus, setCollaborationStatus] = useState<CollaborationLoadStatus>('idle');
+  const [versions, setVersions] = useState<PublicCultureVersion[]>([]);
+  const [versionsStatus, setVersionsStatus] = useState<VersionLoadStatus>('idle');
+  const [compareFromVersion, setCompareFromVersion] = useState<number | ''>('');
+  const [compareToVersion, setCompareToVersion] = useState<number | ''>('');
+  const [versionCompare, setVersionCompare] = useState<PublicCultureVersionCompare | null>(null);
   const [commentBody, setCommentBody] = useState('');
-  const [proposalSummary, setProposalSummary] = useState('');
-  const [proposalField, setProposalField] = useState<ProposalField>('notes');
-  const [proposalValue, setProposalValue] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
-  const [submittingProposal, setSubmittingProposal] = useState(false);
   const [importingId, setImportingId] = useState<number | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editDraft, setEditDraft] = useState<PublicCultureEditDraft | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
   const isMobile = useMediaQuery('(max-width:600px)');
 
   const locale = i18n.resolvedLanguage === 'de' ? 'de-DE' : 'en-US';
@@ -517,17 +496,35 @@ export default function PublicCropLibraryPage() {
   const loadCollaboration = useCallback(async (cultureId: number): Promise<void> => {
     setCollaborationStatus('loading');
     try {
-      const [commentsResponse, proposalsResponse] = await Promise.all([
-        publicCultureAPI.comments(cultureId),
-        publicCultureAPI.changeProposals(cultureId),
-      ]);
+      const commentsResponse = await publicCultureAPI.comments(cultureId);
       setComments(commentsResponse.data);
-      setProposals(proposalsResponse.data);
       setCollaborationStatus('success');
     } catch {
       setComments([]);
-      setProposals([]);
       setCollaborationStatus('error');
+    }
+  }, []);
+
+  const loadVersions = useCallback(async (cultureId: number): Promise<void> => {
+    setVersionsStatus('loading');
+    try {
+      const response = await publicCultureAPI.versions(cultureId);
+      setVersions(response.data);
+      setVersionsStatus('success');
+      if (response.data.length >= 2) {
+        setCompareToVersion((current) => current || response.data[0].version_number);
+        setCompareFromVersion((current) => current || response.data[1].version_number);
+      } else if (response.data.length === 1) {
+        setCompareFromVersion(response.data[0].version_number);
+        setCompareToVersion(response.data[0].version_number);
+      } else {
+        setCompareFromVersion('');
+        setCompareToVersion('');
+      }
+    } catch {
+      setVersions([]);
+      setVersionCompare(null);
+      setVersionsStatus('error');
     }
   }, []);
 
@@ -541,8 +538,10 @@ export default function PublicCropLibraryPage() {
   useEffect(() => {
     if (selectedCultureId === null) {
       setComments([]);
-      setProposals([]);
       setCollaborationStatus('idle');
+      setVersions([]);
+      setVersionsStatus('idle');
+      setVersionCompare(null);
       return;
     }
     void loadCollaboration(selectedCultureId);
@@ -550,10 +549,41 @@ export default function PublicCropLibraryPage() {
 
   useEffect(() => {
     setCommentBody('');
-    setProposalSummary('');
-    setProposalField('notes');
-    setProposalValue('');
+    setVersionCompare(null);
+    setCompareFromVersion('');
+    setCompareToVersion('');
+    setActiveTab(0);
   }, [selectedCultureId]);
+
+  useEffect(() => {
+    if (!selectedCulture || activeTab !== 1) {
+      return;
+    }
+    void loadVersions(selectedCulture.id);
+  }, [activeTab, loadVersions, selectedCulture]);
+
+  useEffect(() => {
+    if (!selectedCulture || compareFromVersion === '' || compareToVersion === '' || compareFromVersion === compareToVersion) {
+      setVersionCompare(null);
+      return;
+    }
+    let ignore = false;
+    void publicCultureAPI.compareVersions(selectedCulture.id, Number(compareFromVersion), Number(compareToVersion))
+      .then((response) => {
+        if (!ignore) {
+          setVersionCompare(response.data);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setVersionCompare(null);
+          showGlobalSnackbar({ message: t('library.page.versions.compareError'), severity: 'error' });
+        }
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [compareFromVersion, compareToVersion, selectedCulture, t]);
 
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -593,33 +623,78 @@ export default function PublicCropLibraryPage() {
     }
   };
 
-  const handleProposalSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-    if (!selectedCulture || !proposalSummary.trim() || !proposalValue.trim()) {
+  const openEditDialog = (): void => {
+    if (!selectedCulture) {
       return;
     }
-    const proposedValue = proposalField === 'growth_duration_days' || proposalField === 'harvest_duration_days'
-      ? Number(proposalValue)
-      : proposalValue.trim();
-    if (typeof proposedValue === 'number' && (!Number.isFinite(proposedValue) || proposedValue < 0)) {
-      showGlobalSnackbar({ message: t('library.page.proposals.invalidNumber'), severity: 'error' });
+    setEditDraft(createEditDraft(selectedCulture));
+    setEditDialogOpen(true);
+  };
+
+  const updateEditDraft = (field: keyof PublicCultureEditDraft, value: string): void => {
+    setEditDraft((current) => current ? { ...current, [field]: value } : current);
+  };
+
+  const handleEditSave = async (): Promise<void> => {
+    if (!selectedCulture || !editDraft || !editDraft.name.trim()) {
       return;
     }
-    setSubmittingProposal(true);
+    const payload: PublicCultureUpdatePayload = {
+      name: editDraft.name.trim(),
+      variety: editDraft.variety.trim(),
+      crop_family: editDraft.crop_family.trim(),
+      nutrient_demand: editDraft.nutrient_demand,
+      cultivation_type: editDraft.cultivation_type,
+      cultivation_types: editDraft.cultivation_type ? [editDraft.cultivation_type] : [],
+      growth_duration_days: parseOptionalNumber(editDraft.growth_duration_days),
+      harvest_duration_days: parseOptionalNumber(editDraft.harvest_duration_days),
+      propagation_duration_days: parseOptionalNumber(editDraft.propagation_duration_days),
+      distance_within_row_m: parseOptionalNumber(editDraft.distance_within_row_m),
+      row_spacing_m: parseOptionalNumber(editDraft.row_spacing_m),
+      sowing_depth_m: parseOptionalNumber(editDraft.sowing_depth_m),
+      seed_rate_value: parseOptionalNumber(editDraft.seed_rate_value),
+      seed_rate_unit: editDraft.seed_rate_unit || null,
+      sowing_calculation_safety_percent: parseOptionalNumber(editDraft.sowing_calculation_safety_percent),
+      thousand_kernel_weight_g: parseOptionalNumber(editDraft.thousand_kernel_weight_g),
+      expected_yield: parseOptionalNumber(editDraft.expected_yield),
+      notes: editDraft.notes,
+      change_comment: editDraft.change_comment.trim(),
+    };
+    setSavingEdit(true);
     try {
-      await publicCultureAPI.createChangeProposal(selectedCulture.id, {
-        summary: proposalSummary.trim(),
-        proposed_data: { [proposalField]: proposedValue },
-      });
-      setProposalSummary('');
-      setProposalField('notes');
-      setProposalValue('');
-      await loadCollaboration(selectedCulture.id);
-      showGlobalSnackbar({ message: t('library.page.proposals.createSuccess'), severity: 'success' });
+      const response = await publicCultureAPI.update(selectedCulture.id, payload);
+      setCultures((currentCultures) => currentCultures.map((culture) => (culture.id === response.data.id ? response.data : culture)));
+      setEditDialogOpen(false);
+      setEditDraft(null);
+      if (activeTab === 1) {
+        await loadVersions(response.data.id);
+      }
+      showGlobalSnackbar({ message: t('library.page.edit.success'), severity: 'success' });
     } catch {
-      showGlobalSnackbar({ message: t('library.page.proposals.createError'), severity: 'error' });
+      showGlobalSnackbar({ message: t('library.page.edit.error'), severity: 'error' });
     } finally {
-      setSubmittingProposal(false);
+      setSavingEdit(false);
+    }
+  };
+
+  const handleRestoreVersion = async (versionNumber: number): Promise<void> => {
+    if (!selectedCulture) {
+      return;
+    }
+    setRestoringVersion(versionNumber);
+    try {
+      const response = await publicCultureAPI.restoreVersion(
+        selectedCulture.id,
+        versionNumber,
+        t('library.page.versions.restoreComment', { version: versionNumber }),
+      );
+      setCultures((currentCultures) => currentCultures.map((culture) => (culture.id === response.data.id ? response.data : culture)));
+      await loadVersions(response.data.id);
+      showGlobalSnackbar({ message: t('library.page.versions.restoreSuccess'), severity: 'success' });
+    } catch {
+      showGlobalSnackbar({ message: t('library.page.versions.restoreError'), severity: 'error' });
+    } finally {
+      setRestoringVersion(null);
     }
   };
 
@@ -764,7 +839,7 @@ export default function PublicCropLibraryPage() {
                         </Typography>
                       </Stack>
                       <Stack spacing={0.75} alignItems="center">
-                        <RateReviewOutlinedIcon sx={{ color: 'success.main', fontSize: 28 }} />
+                        <EditOutlinedIcon sx={{ color: 'success.main', fontSize: 28 }} />
                         <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
                           {t('library.emptyState.improveTitle')}
                         </Typography>
@@ -812,30 +887,51 @@ export default function PublicCropLibraryPage() {
                         </Box>
                       </Box>
                       {isMobile ? (
-                        <Tooltip title={t('library.importButton')}>
-                          <span>
-                            <IconButton
-                              color="primary"
-                              aria-label={t('library.importButton')}
-                              disabled={importingId !== null}
-                              onClick={() => void handleImport()}
-                              sx={{ mt: -0.5 }}
-                            >
-                              <DownloadOutlinedIcon />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
+                        <Stack direction="row" spacing={0.5} sx={{ mt: -0.5 }}>
+                          <Tooltip title={t('library.page.edit.open')}>
+                            <span>
+                              <IconButton
+                                color="primary"
+                                aria-label={t('library.page.edit.open')}
+                                onClick={openEditDialog}
+                              >
+                                <EditOutlinedIcon />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title={t('library.importButton')}>
+                            <span>
+                              <IconButton
+                                color="primary"
+                                aria-label={t('library.importButton')}
+                                disabled={importingId !== null}
+                                onClick={() => void handleImport()}
+                              >
+                                <DownloadOutlinedIcon />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </Stack>
                       ) : (
-                        <Button
-                          variant="contained"
-                          size="small"
-                          startIcon={<DownloadOutlinedIcon />}
-                          disabled={importingId !== null}
-                          onClick={() => void handleImport()}
-                          sx={{ flexShrink: 0 }}
-                        >
-                          {importingId ? t('library.importing') : t('library.importButton')}
-                        </Button>
+                        <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<EditOutlinedIcon />}
+                            onClick={openEditDialog}
+                          >
+                            {t('library.page.edit.open')}
+                          </Button>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<DownloadOutlinedIcon />}
+                            disabled={importingId !== null}
+                            onClick={() => void handleImport()}
+                          >
+                            {importingId ? t('library.importing') : t('library.importButton')}
+                          </Button>
+                        </Stack>
                       )}
                     </Stack>
                   </CardContent>
@@ -848,7 +944,7 @@ export default function PublicCropLibraryPage() {
                     sx={{ px: { xs: 1, sm: 2 } }}
                   >
                     <Tab icon={isMobile ? undefined : <SpaOutlinedIcon />} iconPosition="start" label={t('library.page.tabs.details')} />
-                    <Tab icon={isMobile ? undefined : <RateReviewOutlinedIcon />} iconPosition="start" label={t('library.page.tabs.proposals')} />
+                    <Tab icon={isMobile ? undefined : <HistoryOutlinedIcon />} iconPosition="start" label={t('library.page.tabs.versions')} />
                     <Tab icon={isMobile ? undefined : <ForumOutlinedIcon />} iconPosition="start" label={t('library.page.tabs.discussion')} />
                   </Tabs>
                   <Divider />
@@ -978,77 +1074,125 @@ export default function PublicCropLibraryPage() {
 
                   {activeTab === 1 ? (
                     <Stack spacing={2} sx={{ p: { xs: 2, sm: 2.5 } }}>
-                      <Alert severity="info" icon={<RateReviewOutlinedIcon />}>
-                        {t('library.page.proposals.intro')}
-                      </Alert>
-                      <Box component="form" onSubmit={(event) => void handleProposalSubmit(event)} sx={{ display: 'grid', gap: 1.25 }}>
-                        <TextField
-                          value={proposalSummary}
-                          onChange={(event) => setProposalSummary(event.target.value)}
-                          label={t('library.page.proposals.summaryLabel')}
-                          size="small"
-                          fullWidth
-                        />
-                        <FormControl size="small" fullWidth>
-                          <InputLabel>{t('library.page.proposals.fieldLabel')}</InputLabel>
-                          <Select
-                            value={proposalField}
-                            label={t('library.page.proposals.fieldLabel')}
-                            inputProps={{ 'aria-label': t('library.page.proposals.fieldLabel') }}
-                            onChange={(event) => {
-                              setProposalField(event.target.value as ProposalField);
-                              setProposalValue('');
-                            }}
-                          >
-                            {PROPOSAL_FIELDS.map((field) => (
-                              <MenuItem key={field} value={field}>
-                                {t(`library.page.proposals.fields.${field}`)}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        <TextField
-                          value={proposalValue}
-                          onChange={(event) => setProposalValue(event.target.value)}
-                          label={t('library.page.proposals.valueLabel')}
-                          type={proposalField === 'growth_duration_days' || proposalField === 'harvest_duration_days' ? 'number' : 'text'}
-                          multiline={proposalField === 'notes'}
-                          minRows={proposalField === 'notes' ? 4 : undefined}
-                          fullWidth
-                        />
-                        <Button
-                          type="submit"
-                          variant="contained"
-                          disabled={submittingProposal || !proposalSummary.trim() || !proposalValue.trim()}
-                          sx={{ justifySelf: { xs: 'stretch', sm: 'start' } }}
-                        >
-                          {submittingProposal ? t('library.page.proposals.creating') : t('library.page.proposals.create')}
-                        </Button>
-                      </Box>
-                      <Divider />
-                      {collaborationStatus === 'loading' ? <CircularProgress size={24} /> : null}
-                      {collaborationStatus === 'error' ? <Alert severity="error">{t('library.page.collaborationLoadError')}</Alert> : null}
-                      {proposals.length === 0 ? (
+                      {versionsStatus === 'loading' ? <CircularProgress size={24} /> : null}
+                      {versionsStatus === 'error' ? <Alert severity="error">{t('library.page.versions.loadError')}</Alert> : null}
+                      {versions.length === 0 && versionsStatus !== 'loading' ? (
                         <Typography variant="body2" color="text.secondary">
-                          {t('library.page.proposals.empty')}
+                          {t('library.page.versions.empty')}
                         </Typography>
                       ) : (
-                        <Stack spacing={1.25}>
-                          {proposals.map((proposal) => (
-                            <ProposalCard
-                              key={proposal.id}
-                              cultureId={selectedCulture.id}
-                              proposal={proposal}
-                              canModerate={canModerate}
-                              statusLabel={t(`library.page.proposals.status.${proposal.status}`)}
-                              anonymousLabel={anonymousLabel}
-                              formatDate={formatDate}
-                              onReviewed={async () => {
-                                await Promise.all([loadCultures(query), loadCollaboration(selectedCulture.id)]);
-                              }}
-                              t={t}
-                            />
-                          ))}
+                        <Stack spacing={2}>
+                          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 180px)) minmax(0, 1fr)' }, gap: 1.25, alignItems: 'center' }}>
+                            <FormControl size="small" fullWidth>
+                              <InputLabel>{t('library.page.versions.compareFrom')}</InputLabel>
+                              <Select
+                                value={compareFromVersion}
+                                label={t('library.page.versions.compareFrom')}
+                                onChange={(event) => setCompareFromVersion(Number(event.target.value))}
+                              >
+                                {versions.map((version) => (
+                                  <MenuItem key={version.version_number} value={version.version_number}>
+                                    {t('library.page.versions.versionNumber', { version: version.version_number })}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                            <FormControl size="small" fullWidth>
+                              <InputLabel>{t('library.page.versions.compareTo')}</InputLabel>
+                              <Select
+                                value={compareToVersion}
+                                label={t('library.page.versions.compareTo')}
+                                onChange={(event) => setCompareToVersion(Number(event.target.value))}
+                              >
+                                {versions.map((version) => (
+                                  <MenuItem key={version.version_number} value={version.version_number}>
+                                    {t('library.page.versions.versionNumber', { version: version.version_number })}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                            {versionCompare ? (
+                              <Typography variant="body2" color="text.secondary">
+                                {t('library.page.versions.compareCount', { count: versionCompare.changes.length })}
+                              </Typography>
+                            ) : null}
+                          </Box>
+
+                          {versionCompare ? (
+                            <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>
+                                {t('library.page.versions.compareTitle')}
+                              </Typography>
+                              {versionCompare.changes.length === 0 ? (
+                                <Typography variant="body2" color="text.secondary">
+                                  {t('library.page.versions.noChanges')}
+                                </Typography>
+                              ) : (
+                                <Stack spacing={1}>
+                                  {versionCompare.changes.map((change) => (
+                                    <Box key={change.field} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '180px minmax(0, 1fr)' }, gap: 1 }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                                        {getPublicCultureFieldLabel(change.field, t)}
+                                      </Typography>
+                                      <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
+                                        <Box component="span" color="text.secondary">{getVersionValueLabel(change.old_value, t('library.page.notSpecified'))}</Box>
+                                        {' '}
+                                        →
+                                        {' '}
+                                        <Box component="span" sx={{ fontWeight: 700 }}>{getVersionValueLabel(change.new_value, t('library.page.notSpecified'))}</Box>
+                                      </Typography>
+                                    </Box>
+                                  ))}
+                                </Stack>
+                              )}
+                            </Box>
+                          ) : null}
+
+                          <Stack spacing={1.25}>
+                            {versions.map((version) => (
+                              <Box key={version.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between">
+                                  <Box>
+                                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                                      {t('library.page.versions.versionNumber', { version: version.version_number })}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {t('library.page.metaByDate', {
+                                        author: version.created_by_label || anonymousLabel,
+                                        date: formatDate(version.created_at),
+                                      })}
+                                    </Typography>
+                                  </Box>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    disabled={restoringVersion !== null || version.version_number === selectedCulture.version}
+                                    onClick={() => void handleRestoreVersion(version.version_number)}
+                                  >
+                                    {restoringVersion === version.version_number ? t('library.page.versions.restoring') : t('library.page.versions.restore')}
+                                  </Button>
+                                </Stack>
+                                {version.change_comment ? (
+                                  <Typography variant="body2" sx={{ mt: 1, fontWeight: 600 }}>
+                                    {version.change_comment}
+                                  </Typography>
+                                ) : null}
+                                {version.change_summary.length > 0 ? (
+                                  <Stack spacing={0.5} sx={{ mt: 1 }}>
+                                    {version.change_summary.slice(0, 4).map((change) => (
+                                      <Typography key={change.field} variant="caption" color="text.secondary" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
+                                        {getPublicCultureFieldLabel(change.field, t)}: {getVersionValueLabel(change.old_value, t('library.page.notSpecified'))} → {getVersionValueLabel(change.new_value, t('library.page.notSpecified'))}
+                                      </Typography>
+                                    ))}
+                                  </Stack>
+                                ) : (
+                                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                                    {t('library.page.versions.initialVersion')}
+                                  </Typography>
+                                )}
+                              </Box>
+                            ))}
+                          </Stack>
                         </Stack>
                       )}
                     </Stack>
@@ -1107,6 +1251,136 @@ export default function PublicCropLibraryPage() {
           </Box>
         </Stack>
       </Box>
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => {
+          if (!savingEdit) {
+            setEditDialogOpen(false);
+          }
+        }}
+        fullWidth
+        maxWidth="md"
+        fullScreen={isMobile}
+      >
+        <DialogTitle>{t('library.page.edit.title')}</DialogTitle>
+        <DialogContent dividers>
+          {editDraft ? (
+            <Stack spacing={2}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
+                <TextField
+                  value={editDraft.name}
+                  onChange={(event) => updateEditDraft('name', event.target.value)}
+                  label={t('library.page.fields.name')}
+                  size="small"
+                  fullWidth
+                  required
+                />
+                <TextField
+                  value={editDraft.variety}
+                  onChange={(event) => updateEditDraft('variety', event.target.value)}
+                  label={t('library.page.fields.variety')}
+                  size="small"
+                  fullWidth
+                />
+                <TextField
+                  value={editDraft.crop_family}
+                  onChange={(event) => updateEditDraft('crop_family', event.target.value)}
+                  label={t('library.page.fields.cropFamily')}
+                  size="small"
+                  fullWidth
+                />
+                <FormControl size="small" fullWidth>
+                  <InputLabel>{t('library.page.fields.nutrientDemand')}</InputLabel>
+                  <Select
+                    value={editDraft.nutrient_demand}
+                    label={t('library.page.fields.nutrientDemand')}
+                    onChange={(event) => updateEditDraft('nutrient_demand', event.target.value)}
+                  >
+                    <MenuItem value="">{t('library.page.notSpecified')}</MenuItem>
+                    <MenuItem value="low">{t('library.page.fields.nutrientDemandValues.low')}</MenuItem>
+                    <MenuItem value="medium">{t('library.page.fields.nutrientDemandValues.medium')}</MenuItem>
+                    <MenuItem value="high">{t('library.page.fields.nutrientDemandValues.high')}</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>{t('library.page.fields.cultivationType')}</InputLabel>
+                  <Select
+                    value={editDraft.cultivation_type}
+                    label={t('library.page.fields.cultivationType')}
+                    onChange={(event) => updateEditDraft('cultivation_type', event.target.value)}
+                  >
+                    <MenuItem value="">{t('library.page.notSpecified')}</MenuItem>
+                    <MenuItem value="direct_sowing">{t('library.page.fields.cultivationTypes.directSowing')}</MenuItem>
+                    <MenuItem value="pre_cultivation">{t('library.page.fields.cultivationTypes.preCultivation')}</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+
+              <Divider />
+
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
+                <TextField value={editDraft.growth_duration_days} onChange={(event) => updateEditDraft('growth_duration_days', event.target.value)} label={t('library.page.fields.growthDurationDays')} type="number" size="small" fullWidth />
+                <TextField value={editDraft.harvest_duration_days} onChange={(event) => updateEditDraft('harvest_duration_days', event.target.value)} label={t('library.page.fields.harvestDurationDays')} type="number" size="small" fullWidth />
+                <TextField value={editDraft.propagation_duration_days} onChange={(event) => updateEditDraft('propagation_duration_days', event.target.value)} label={t('library.page.fields.propagationDurationDays')} type="number" size="small" fullWidth />
+                <TextField value={editDraft.distance_within_row_m} onChange={(event) => updateEditDraft('distance_within_row_m', event.target.value)} label={t('library.page.fields.distanceWithinRow')} type="number" size="small" fullWidth />
+                <TextField value={editDraft.row_spacing_m} onChange={(event) => updateEditDraft('row_spacing_m', event.target.value)} label={t('library.page.fields.rowSpacing')} type="number" size="small" fullWidth />
+                <TextField value={editDraft.sowing_depth_m} onChange={(event) => updateEditDraft('sowing_depth_m', event.target.value)} label={t('library.page.fields.sowingDepth')} type="number" size="small" fullWidth />
+                <TextField value={editDraft.seed_rate_value} onChange={(event) => updateEditDraft('seed_rate_value', event.target.value)} label={t('library.page.fields.seedRate')} type="number" size="small" fullWidth />
+                <FormControl size="small" fullWidth>
+                  <InputLabel>{t('library.page.edit.seedRateUnit')}</InputLabel>
+                  <Select
+                    value={editDraft.seed_rate_unit ?? ''}
+                    label={t('library.page.edit.seedRateUnit')}
+                    onChange={(event) => updateEditDraft('seed_rate_unit', event.target.value)}
+                  >
+                    <MenuItem value="">{t('library.page.notSpecified')}</MenuItem>
+                    <MenuItem value="g_per_m2">{t('library.page.seedUnits.g_per_m2')}</MenuItem>
+                    <MenuItem value="g_per_lfm">{t('library.page.seedUnits.g_per_lfm')}</MenuItem>
+                    <MenuItem value="seeds_per_m2">{t('library.page.seedUnits.seeds_per_m2')}</MenuItem>
+                    <MenuItem value="seeds_per_lfm">{t('library.page.seedUnits.seeds_per_lfm')}</MenuItem>
+                    <MenuItem value="seeds_per_plant">{t('library.page.seedUnits.seeds_per_plant')}</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField value={editDraft.sowing_calculation_safety_percent} onChange={(event) => updateEditDraft('sowing_calculation_safety_percent', event.target.value)} label={t('library.page.fields.sowingSafetyPercent')} type="number" size="small" fullWidth />
+                <TextField value={editDraft.thousand_kernel_weight_g} onChange={(event) => updateEditDraft('thousand_kernel_weight_g', event.target.value)} label={t('library.page.fields.thousandKernelWeight')} type="number" size="small" fullWidth />
+                <TextField value={editDraft.expected_yield} onChange={(event) => updateEditDraft('expected_yield', event.target.value)} label={t('library.page.fields.expectedYield')} type="number" size="small" fullWidth />
+              </Box>
+
+              <TextField
+                value={editDraft.notes}
+                onChange={(event) => updateEditDraft('notes', event.target.value)}
+                label={t('library.page.fields.notes')}
+                multiline
+                minRows={5}
+                fullWidth
+              />
+              <TextField
+                value={editDraft.change_comment}
+                onChange={(event) => updateEditDraft('change_comment', event.target.value)}
+                label={t('library.page.edit.changeComment')}
+                placeholder={t('library.page.edit.changeCommentPlaceholder')}
+                size="small"
+                fullWidth
+              />
+            </Stack>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setEditDialogOpen(false)}
+            disabled={savingEdit}
+          >
+            {t('common:actions.cancel')}
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => void handleEditSave()}
+            disabled={savingEdit || !editDraft?.name.trim()}
+          >
+            {savingEdit ? t('library.page.edit.saving') : t('library.page.edit.save')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </PageContainer>
   );
 }

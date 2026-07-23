@@ -7,14 +7,17 @@ from __future__ import annotations
 # project-history/EntityRevision or other farm-app-internal concerns here.
 
 from dataclasses import dataclass
+import json
 import re
 from typing import Any
 
 from django.contrib.auth import get_user_model
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db import transaction
 from django.utils import timezone
 
 from crops.models import CropSpecies
-from farm.models import Culture, Project, PublicCulture, PublicCultureStatusEvent
+from farm.models import Culture, Project, PublicCulture, PublicCultureStatusEvent, PublicCultureVersion
 
 User = get_user_model()
 
@@ -44,6 +47,36 @@ CULTURE_COPY_FIELDS = [
     'seeding_requirement',
     'seeding_requirement_type',
     'display_color',
+]
+
+PUBLIC_CULTURE_EDITABLE_FIELDS = [
+    'name',
+    'variety',
+    'notes',
+    'crop_species',
+    'original_language_code',
+    'crop_family',
+    'nutrient_demand',
+    'cultivation_types',
+    'cultivation_type',
+    'growth_duration_days',
+    'harvest_duration_days',
+    'propagation_duration_days',
+    'harvest_method',
+    'expected_yield',
+    'allow_deviation_delivery_weeks',
+    'distance_within_row_m',
+    'row_spacing_m',
+    'sowing_depth_m',
+    'seed_rate_value',
+    'seed_rate_unit',
+    'seed_rate_by_cultivation',
+    'sowing_calculation_safety_percent',
+    'thousand_kernel_weight_g',
+    'seeding_requirement',
+    'seeding_requirement_type',
+    'display_color',
+    'seed_packages',
 ]
 
 PUBLIC_ORIGINAL_LANGUAGE_CODES = {'de', 'en'}
@@ -116,6 +149,11 @@ class PublicCulturePermissionError(Exception):
         self.code = code
 
 
+def _json_normalized(value: Any) -> Any:
+    """Return a JSON-compatible value using Django's encoder for decimals and dates."""
+    return json.loads(json.dumps(value, cls=DjangoJSONEncoder))
+
+
 def _copy_fields(instance: Any) -> dict[str, Any]:
     payload = {field: getattr(instance, field) for field in CULTURE_COPY_FIELDS}
     payload['cultivation_types'] = list(payload.get('cultivation_types') or [])
@@ -159,6 +197,123 @@ def build_public_culture_payload(culture: Culture) -> dict[str, Any]:
     payload['source_project'] = culture.project
     payload['published_at'] = timezone.now()
     return payload
+
+
+def build_public_culture_snapshot(public_culture: PublicCulture) -> dict[str, Any]:
+    """Build an immutable snapshot payload for version history."""
+    snapshot: dict[str, Any] = {}
+    for field in PUBLIC_CULTURE_EDITABLE_FIELDS:
+        value = getattr(public_culture, field)
+        if field == 'crop_species':
+            snapshot[field] = public_culture.crop_species_id
+        else:
+            snapshot[field] = _json_normalized(value)
+    return snapshot
+
+
+def get_public_culture_version_changes(old_snapshot: dict[str, Any], new_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return structured field-level changes between two public culture snapshots."""
+    changes: list[dict[str, Any]] = []
+    for field in PUBLIC_CULTURE_EDITABLE_FIELDS:
+        old_value = _json_normalized(old_snapshot.get(field))
+        new_value = _json_normalized(new_snapshot.get(field))
+        if old_value != new_value:
+            changes.append({
+                'field': field,
+                'old_value': old_value,
+                'new_value': new_value,
+            })
+    return changes
+
+
+def ensure_public_culture_initial_version(public_culture: PublicCulture) -> PublicCultureVersion:
+    """Ensure legacy public cultures have at least one immutable version."""
+    existing = public_culture.versions.order_by('version_number').first()
+    if existing:
+        return existing
+    return PublicCultureVersion.objects.create(
+        public_culture=public_culture,
+        version_number=max(public_culture.version, 1),
+        snapshot=build_public_culture_snapshot(public_culture),
+        change_summary=[],
+        change_comment='',
+        created_by=public_culture.created_by,
+        created_at=public_culture.published_at or public_culture.created_at,
+    )
+
+
+def _next_public_culture_version_number(public_culture: PublicCulture) -> int:
+    latest_version = public_culture.versions.order_by('-version_number').first()
+    latest_number = latest_version.version_number if latest_version else public_culture.version
+    return max(public_culture.version, latest_number, 0) + 1
+
+
+def _apply_public_culture_data(public_culture: PublicCulture, data: dict[str, Any]) -> None:
+    for field, value in data.items():
+        setattr(public_culture, field, value)
+
+
+def edit_public_culture(
+    *,
+    public_culture: PublicCulture,
+    user: User | None,
+    data: dict[str, Any],
+    change_comment: str = '',
+) -> PublicCulture:
+    """Apply a direct public-library edit and record a new immutable version."""
+    if not user or not user.is_authenticated:
+        raise PublicCulturePermissionError('Authentication is required to edit public cultures.')
+    if public_culture.status != PublicCulture.STATUS_PUBLISHED:
+        raise PublicCultureStatusTransitionError('Only published public cultures can be edited.')
+
+    editable_data = {field: value for field, value in data.items() if field in PUBLIC_CULTURE_EDITABLE_FIELDS}
+    if not editable_data:
+        raise PublicCultureStatusTransitionError('At least one changed field is required.', code='no_public_culture_changes')
+
+    with transaction.atomic():
+        locked_culture = PublicCulture.objects.select_for_update().get(pk=public_culture.pk)
+        ensure_public_culture_initial_version(locked_culture)
+        previous_snapshot = build_public_culture_snapshot(locked_culture)
+        _apply_public_culture_data(locked_culture, editable_data)
+        new_snapshot = build_public_culture_snapshot(locked_culture)
+        changes = get_public_culture_version_changes(previous_snapshot, new_snapshot)
+        if not changes:
+            raise PublicCultureStatusTransitionError('At least one changed field is required.', code='no_public_culture_changes')
+
+        locked_culture.version = _next_public_culture_version_number(locked_culture)
+        locked_culture.save()
+        PublicCultureVersion.objects.create(
+            public_culture=locked_culture,
+            version_number=locked_culture.version,
+            snapshot=new_snapshot,
+            change_summary=changes,
+            change_comment=change_comment[:240],
+            created_by=user,
+        )
+        return locked_culture
+
+
+def restore_public_culture_version(
+    *,
+    public_culture: PublicCulture,
+    version_number: int,
+    user: User | None,
+    change_comment: str = '',
+) -> PublicCulture:
+    """Restore an older version by creating a new current version."""
+    version = get_public_culture_version(public_culture=public_culture, version_number=version_number)
+    comment = change_comment.strip() or f'Restored version {version.version_number}'
+    return edit_public_culture(
+        public_culture=public_culture,
+        user=user,
+        data=version.snapshot,
+        change_comment=comment,
+    )
+
+
+def get_public_culture_version(*, public_culture: PublicCulture, version_number: int) -> PublicCultureVersion:
+    ensure_public_culture_initial_version(public_culture)
+    return public_culture.versions.get(version_number=version_number)
 
 
 def normalize_language_code(value: str | None) -> str:
@@ -335,17 +490,37 @@ def _is_public_library_moderator(user: User | None) -> bool:
     return bool(user and user.is_authenticated and (user.is_staff or user.is_superuser))
 
 
-def _update_public_culture_from_project_culture(*, public_culture: PublicCulture, culture: Culture) -> PublicCulture:
+def _update_public_culture_from_project_culture(
+    *,
+    public_culture: PublicCulture,
+    culture: Culture,
+    crop_species: CropSpecies,
+    original_language_code: str,
+    user: User | None,
+) -> PublicCulture:
     payload = build_public_culture_payload(culture)
     payload.pop('published_at', None)
+    payload['crop_species'] = crop_species
+    payload['original_language_code'] = original_language_code
+    previous_snapshot = build_public_culture_snapshot(public_culture)
+    ensure_public_culture_initial_version(public_culture)
     for field, value in payload.items():
         setattr(public_culture, field, value)
-    public_culture.version = max(public_culture.version, 1) + 1
+    public_culture.version = _next_public_culture_version_number(public_culture)
     if public_culture.status == PublicCulture.STATUS_WITHDRAWN:
         public_culture.status = PublicCulture.STATUS_PUBLISHED
         public_culture.published_at = timezone.now()
         public_culture.status_changed_at = timezone.now()
     public_culture.save()
+    new_snapshot = build_public_culture_snapshot(public_culture)
+    PublicCultureVersion.objects.create(
+        public_culture=public_culture,
+        version_number=public_culture.version,
+        snapshot=new_snapshot,
+        change_summary=get_public_culture_version_changes(previous_snapshot, new_snapshot),
+        change_comment='',
+        created_by=user,
+    )
     return public_culture
 
 
@@ -370,11 +545,15 @@ def publish_culture_to_public_library(
         previous_status = update_target.status
         culture.crop_species = check_result.crop_species
         culture.save(update_fields=['crop_species', 'updated_at'])
-        updated_public_culture = _update_public_culture_from_project_culture(public_culture=update_target, culture=culture)
-        updated_public_culture.crop_species = check_result.crop_species
-        updated_public_culture.original_language_code = check_result.original_language_code
+        updated_public_culture = _update_public_culture_from_project_culture(
+            public_culture=update_target,
+            culture=culture,
+            crop_species=check_result.crop_species,
+            original_language_code=check_result.original_language_code,
+            user=user,
+        )
         updated_public_culture.status_changed_by = user if previous_status != PublicCulture.STATUS_PUBLISHED else updated_public_culture.status_changed_by
-        updated_public_culture.save(update_fields=['crop_species', 'original_language_code', 'status_changed_by', 'updated_at'])
+        updated_public_culture.save(update_fields=['status_changed_by', 'updated_at'])
         if previous_status != PublicCulture.STATUS_PUBLISHED and updated_public_culture.status == PublicCulture.STATUS_PUBLISHED:
             _record_public_culture_status_event(
                 public_culture=updated_public_culture,
@@ -404,6 +583,14 @@ def publish_culture_to_public_library(
         crop_species=check_result.crop_species,
         original_language_code=check_result.original_language_code,
         **build_public_culture_payload(culture),
+    )
+    PublicCultureVersion.objects.create(
+        public_culture=public_culture,
+        version_number=public_culture.version,
+        snapshot=build_public_culture_snapshot(public_culture),
+        change_summary=[],
+        change_comment='',
+        created_by=user,
     )
     _record_public_culture_status_event(
         public_culture=public_culture,

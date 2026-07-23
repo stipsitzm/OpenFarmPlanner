@@ -1,43 +1,43 @@
-"""Read-only public culture library endpoints."""
+"""Public culture library endpoints."""
 
 
 from typing import Any
 
 from django.shortcuts import get_object_or_404
-from django.db import transaction
 from django.db.models import Q
-from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from farm.models import (
-    PublicCulture,
-    PublicCultureChangeProposal,
-)
+from farm.models import PublicCulture, PublicCultureVersion
 from farm.project_context import get_active_project_or_400
 from farm.services.public_cultures import (
     PublicCulturePermissionError,
     PublicCultureStatusTransitionError,
+    edit_public_culture,
+    ensure_public_culture_initial_version,
+    get_public_culture_version_changes,
     hard_delete_public_culture,
     import_public_culture_into_project,
     remove_public_culture,
+    restore_public_culture_version,
     withdraw_public_culture,
 )
 
 from ..serializers import (
     CultureSerializer,
+    PublicCultureEditSerializer,
     PublicCultureSerializer,
+    PublicCultureVersionSerializer,
 )
 from ..serializers.public import (
-    PublicCultureChangeProposalSerializer,
     PublicCultureDiscussionCommentSerializer,
 )
 
 
-class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
-    """Read-only public library for published cultures with project import action.
+class PublicCultureViewSet(viewsets.ModelViewSet):
+    """Public library for published cultures with direct versioned editing.
 
     Candidate for extraction into a separate service consumed by OFP over an
     API (under discussion as of 2026-07) — avoid deepening its coupling to
@@ -47,6 +47,12 @@ class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = PublicCulture.objects.filter(status=PublicCulture.STATUS_PUBLISHED).order_by('name', 'variety')
     serializer_class = PublicCultureSerializer
     permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'patch', 'put', 'post', 'head', 'options']
+
+    def get_serializer_class(self):
+        if self.action in {'partial_update', 'update'}:
+            return PublicCultureEditSerializer
+        return PublicCultureSerializer
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related('created_by__public_profile')
@@ -77,13 +83,6 @@ class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
     def _is_moderator(user: Any) -> bool:
         return bool(getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False))
 
-    @staticmethod
-    def _proposal_status_error() -> Response:
-        return Response(
-            {'detail': 'Only pending change proposals can be reviewed.', 'code': 'proposal_not_pending'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
     @action(detail=False, methods=['get'], url_path='match')
     def match(self, request):
         """Check whether an exact normalized public culture match exists."""
@@ -110,6 +109,28 @@ class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
             },
         })
 
+    def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        kwargs['partial'] = True
+        return self.partial_update(request, *args, **kwargs)
+
+    def partial_update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        public_culture = self.get_object()
+        serializer = PublicCultureEditSerializer(public_culture, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        change_comment = (serializer.validated_data.pop('change_comment', '') or '').strip()
+        try:
+            updated = edit_public_culture(
+                public_culture=public_culture,
+                user=request.user,
+                data=serializer.validated_data,
+                change_comment=change_comment,
+            )
+        except PublicCulturePermissionError as error:
+            return self._transition_error_response(error, status.HTTP_403_FORBIDDEN)
+        except PublicCultureStatusTransitionError as error:
+            return self._transition_error_response(error, status.HTTP_400_BAD_REQUEST)
+        return Response(PublicCultureSerializer(updated).data)
+
     @action(detail=True, methods=['post'], url_path='import')
     def import_to_project(self, request, pk=None):
         public_culture = self.get_object()
@@ -131,68 +152,54 @@ class PublicCultureViewSet(viewsets.ReadOnlyModelViewSet):
         comment = serializer.save(public_culture=public_culture, created_by=request.user)
         return Response(PublicCultureDiscussionCommentSerializer(comment).data, status=status.HTTP_201_CREATED)
 
-    @action(detail=True, methods=['get', 'post'], url_path='change-proposals')
-    def change_proposals(self, request: Request, pk: int | None = None) -> Response:
+    @action(detail=True, methods=['get'], url_path='versions')
+    def versions(self, request: Request, pk: int | None = None) -> Response:
         public_culture = self.get_object()
-        if request.method == 'GET':
-            proposals = public_culture.change_proposals.select_related('proposed_by__public_profile', 'reviewed_by__public_profile')
-            serializer = PublicCultureChangeProposalSerializer(proposals, many=True)
-            return Response(serializer.data)
+        ensure_public_culture_initial_version(public_culture)
+        versions = public_culture.versions.select_related('created_by__public_profile')
+        return Response(PublicCultureVersionSerializer(versions, many=True).data)
 
-        serializer = PublicCultureChangeProposalSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        proposal = serializer.save(public_culture=public_culture, proposed_by=request.user)
-        return Response(PublicCultureChangeProposalSerializer(proposal).data, status=status.HTTP_201_CREATED)
-
-    @action(detail=True, methods=['post'], url_path=r'change-proposals/(?P<proposal_id>[^/.]+)/approve')
-    def approve_change_proposal(self, request: Request, pk: int | None = None, proposal_id: str | None = None) -> Response:
-        if not self._is_moderator(request.user):
-            return Response({'detail': 'Moderator privileges are required.', 'code': 'moderator_required'}, status=status.HTTP_403_FORBIDDEN)
-
+    @action(detail=True, methods=['get'], url_path='versions/compare')
+    def compare_versions(self, request: Request, pk: int | None = None) -> Response:
         public_culture = self.get_object()
-        proposal = get_object_or_404(
-            public_culture.change_proposals.select_related('proposed_by__public_profile', 'reviewed_by__public_profile'),
-            pk=proposal_id,
-        )
-        if proposal.status != PublicCultureChangeProposal.STATUS_PENDING:
-            return self._proposal_status_error()
+        ensure_public_culture_initial_version(public_culture)
+        try:
+            from_version_number = int(request.query_params.get('from', ''))
+            to_version_number = int(request.query_params.get('to', ''))
+        except (TypeError, ValueError):
+            return Response({'detail': 'Valid from and to version numbers are required.', 'code': 'invalid_version_compare'}, status=status.HTTP_400_BAD_REQUEST)
 
-        review_note = (request.data.get('review_note') or '').strip()
-        with transaction.atomic():
-            updated_fields = []
-            for field, value in proposal.proposed_data.items():
-                setattr(public_culture, field, value)
-                updated_fields.append(field)
-            public_culture.version += 1
-            updated_fields.extend(['version', 'updated_at'])
-            public_culture.save(update_fields=updated_fields)
-            proposal.status = PublicCultureChangeProposal.STATUS_APPROVED
-            proposal.reviewed_by = request.user
-            proposal.reviewed_at = timezone.now()
-            proposal.review_note = review_note
-            proposal.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_note', 'updated_at'])
+        try:
+            from_version = public_culture.versions.select_related('created_by__public_profile').get(version_number=from_version_number)
+            to_version = public_culture.versions.select_related('created_by__public_profile').get(version_number=to_version_number)
+        except PublicCultureVersion.DoesNotExist:
+            return Response({'detail': 'One of the requested versions does not exist.', 'code': 'public_culture_version_not_found'}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response(PublicCultureChangeProposalSerializer(proposal).data)
+        return Response({
+            'from_version': PublicCultureVersionSerializer(from_version).data,
+            'to_version': PublicCultureVersionSerializer(to_version).data,
+            'changes': get_public_culture_version_changes(from_version.snapshot, to_version.snapshot),
+        })
 
-    @action(detail=True, methods=['post'], url_path=r'change-proposals/(?P<proposal_id>[^/.]+)/reject')
-    def reject_change_proposal(self, request: Request, pk: int | None = None, proposal_id: str | None = None) -> Response:
-        if not self._is_moderator(request.user):
-            return Response({'detail': 'Moderator privileges are required.', 'code': 'moderator_required'}, status=status.HTTP_403_FORBIDDEN)
-
+    @action(detail=True, methods=['post'], url_path=r'versions/(?P<version_number>[^/.]+)/restore')
+    def restore_version(self, request: Request, pk: int | None = None, version_number: str | None = None) -> Response:
         public_culture = self.get_object()
-        proposal = get_object_or_404(
-            public_culture.change_proposals.select_related('proposed_by__public_profile', 'reviewed_by__public_profile'),
-            pk=proposal_id,
-        )
-        if proposal.status != PublicCultureChangeProposal.STATUS_PENDING:
-            return self._proposal_status_error()
-
-        proposal.status = PublicCultureChangeProposal.STATUS_REJECTED
-        proposal.reviewed_by = request.user
-        proposal.reviewed_at = timezone.now()
-        proposal.review_note = (request.data.get('review_note') or '').strip()
-        proposal.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_note', 'updated_at'])
-        return Response(PublicCultureChangeProposalSerializer(proposal).data)
+        try:
+            restored = restore_public_culture_version(
+                public_culture=public_culture,
+                version_number=int(version_number or ''),
+                user=request.user,
+                change_comment=(request.data.get('change_comment') or '').strip(),
+            )
+        except ValueError:
+            return Response({'detail': 'A valid version number is required.', 'code': 'invalid_version_number'}, status=status.HTTP_400_BAD_REQUEST)
+        except PublicCultureVersion.DoesNotExist:
+            return Response({'detail': 'The requested version does not exist.', 'code': 'public_culture_version_not_found'}, status=status.HTTP_404_NOT_FOUND)
+        except PublicCulturePermissionError as error:
+            return self._transition_error_response(error, status.HTTP_403_FORBIDDEN)
+        except PublicCultureStatusTransitionError as error:
+            return self._transition_error_response(error, status.HTTP_400_BAD_REQUEST)
+        return Response(PublicCultureSerializer(restored).data)
 
     @action(detail=True, methods=['post'], url_path='withdraw')
     def withdraw(self, request, pk=None):

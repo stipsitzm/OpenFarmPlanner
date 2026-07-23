@@ -934,6 +934,44 @@ class PublicCulture(TimestampedModel):
         return f"{self.name} ({self.variety})" if self.variety else self.name
 
 
+class PublicCultureVersion(models.Model):
+    """Immutable snapshot of one public culture revision."""
+
+    public_culture = models.ForeignKey(PublicCulture, on_delete=models.CASCADE, related_name='versions')
+    version_number = models.PositiveIntegerField()
+    snapshot = models.JSONField(default=dict, encoder=DjangoJSONEncoder)
+    change_summary = models.JSONField(default=list, blank=True, encoder=DjangoJSONEncoder)
+    change_comment = models.CharField(max_length=240, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='public_culture_versions',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def created_by_label(self) -> str:
+        """Return the public display name of the user who created this version."""
+        if not self.created_by:
+            return ''
+        public_profile = getattr(self.created_by, 'public_profile', None)
+        return public_profile.public_display_name if public_profile else ''
+
+    def __str__(self) -> str:
+        return f"{self.public_culture_id} v{self.version_number}"
+
+    class Meta:
+        ordering = ['-version_number']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['public_culture', 'version_number'],
+                name='unique_public_culture_version_number',
+            ),
+        ]
+
+
 class PublicCultureStatusEvent(models.Model):
     """Audit trail for public culture publication and moderation status changes."""
 

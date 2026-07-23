@@ -6,36 +6,10 @@ from rest_framework import serializers
 
 from farm.models import (
     PublicCulture,
-    PublicCultureChangeProposal,
     PublicCultureDiscussionComment,
+    PublicCultureVersion,
 )
-
-PUBLIC_CULTURE_PROPOSABLE_FIELDS = {
-    'notes',
-    'seed_supplier',
-    'supplier_name',
-    'crop_family',
-    'nutrient_demand',
-    'cultivation_type',
-    'cultivation_types',
-    'growth_duration_days',
-    'harvest_duration_days',
-    'propagation_duration_days',
-    'harvest_method',
-    'expected_yield',
-    'allow_deviation_delivery_weeks',
-    'distance_within_row_m',
-    'row_spacing_m',
-    'sowing_depth_m',
-    'seed_rate_value',
-    'seed_rate_unit',
-    'seed_rate_by_cultivation',
-    'sowing_calculation_safety_percent',
-    'thousand_kernel_weight_g',
-    'seeding_requirement',
-    'seeding_requirement_type',
-    'seed_packages',
-}
+from farm.services.public_cultures import PUBLIC_CULTURE_EDITABLE_FIELDS
 
 
 class PublicCultureSerializer(serializers.ModelSerializer):
@@ -123,58 +97,41 @@ class PublicCultureDiscussionCommentSerializer(serializers.ModelSerializer):
         return ''
 
 
-class PublicCultureChangeProposalSerializer(serializers.ModelSerializer):
-    proposed_by_label = serializers.SerializerMethodField()
-    reviewed_by_label = serializers.SerializerMethodField()
+class PublicCultureEditSerializer(serializers.ModelSerializer):
+    change_comment = serializers.CharField(max_length=240, required=False, allow_blank=True, write_only=True)
 
     class Meta:
-        model = PublicCultureChangeProposal
+        model = PublicCulture
+        fields = [*PUBLIC_CULTURE_EDITABLE_FIELDS, 'change_comment']
+        extra_kwargs = {
+            field: {'required': False, 'allow_null': True}
+            for field in PUBLIC_CULTURE_EDITABLE_FIELDS
+            if field not in {'name', 'variety', 'notes', 'crop_family', 'nutrient_demand', 'cultivation_type', 'harvest_method', 'seed_rate_unit', 'seeding_requirement_type', 'display_color', 'original_language_code'}
+        }
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        editable_attrs = {field: value for field, value in attrs.items() if field in PUBLIC_CULTURE_EDITABLE_FIELDS}
+        if not editable_attrs:
+            raise serializers.ValidationError('At least one changed field is required.')
+        return attrs
+
+
+class PublicCultureVersionSerializer(serializers.ModelSerializer):
+    created_by_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PublicCultureVersion
         fields = [
             'id',
             'public_culture',
-            'summary',
-            'proposed_data',
-            'status',
-            'proposed_by_label',
-            'reviewed_by_label',
-            'review_note',
-            'reviewed_at',
+            'version_number',
+            'snapshot',
+            'change_summary',
+            'change_comment',
+            'created_by_label',
             'created_at',
-            'updated_at',
         ]
-        read_only_fields = [
-            'id',
-            'public_culture',
-            'status',
-            'proposed_by_label',
-            'reviewed_by_label',
-            'review_note',
-            'reviewed_at',
-            'created_at',
-            'updated_at',
-        ]
+        read_only_fields = fields
 
-    def validate_proposed_data(self, value: Any) -> dict[str, Any]:
-        if not isinstance(value, dict):
-            raise serializers.ValidationError('Proposed data must be an object.')
-        unknown_fields = sorted(set(value) - PUBLIC_CULTURE_PROPOSABLE_FIELDS)
-        if unknown_fields:
-            raise serializers.ValidationError(f"Unsupported proposal fields: {', '.join(unknown_fields)}")
-        if not value:
-            raise serializers.ValidationError('At least one changed field is required.')
-        return value
-
-    def get_proposed_by_label(self, obj: PublicCultureChangeProposal) -> str:
-        return self._get_user_label(obj.proposed_by)
-
-    def get_reviewed_by_label(self, obj: PublicCultureChangeProposal) -> str:
-        return self._get_user_label(obj.reviewed_by)
-
-    @staticmethod
-    def _get_user_label(user: Any) -> str:
-        if user is None:
-            return ''
-        public_profile = getattr(user, 'public_profile', None)
-        if public_profile and public_profile.public_display_name:
-            return public_profile.public_display_name
-        return ''
+    def get_created_by_label(self, obj: PublicCultureVersion) -> str:
+        return obj.created_by_label

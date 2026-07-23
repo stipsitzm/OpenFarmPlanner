@@ -14,11 +14,13 @@ import type {
   CultureDuplicateCheckResponse,
   MediaFileRef,
   PublicCulture,
-  PublicCultureChangeProposal,
   PublicCultureDiscussionComment,
   PublicCultureMatchResponse,
   PublicCultureRemovalReason,
   PublicCultureDuplicateCandidate,
+  PublicCultureUpdatePayload,
+  PublicCultureVersion,
+  PublicCultureVersionCompare,
   CropSpecies,
   PublishPublicCulturePreview,
   PublishPublicCultureResponse,
@@ -139,6 +141,7 @@ export const cropSpeciesAPI = {
 export const publicCultureAPI = {
   list: (params?: { q?: string; name?: string; variety?: string }) => http.get<PaginatedResponse<PublicCulture>>('/public-cultures/', { params }),
   get: (id: number) => http.get<PublicCulture>(`/public-cultures/${id}/`),
+  update: (id: number, data: PublicCultureUpdatePayload) => http.patch<PublicCulture>(`/public-cultures/${id}/`, data),
   match: (params: { name: string; variety: string }, signal?: AbortSignal) =>
     http.get<PublicCultureMatchResponse>('/public-cultures/match/', { params, signal }),
   importToProject: (id: number) => http.post<Culture>(`/public-cultures/${id}/import/`, {}),
@@ -149,13 +152,11 @@ export const publicCultureAPI = {
   comments: (id: number) => http.get<PublicCultureDiscussionComment[]>(`/public-cultures/${id}/comments/`),
   createComment: (id: number, body: string) =>
     http.post<PublicCultureDiscussionComment>(`/public-cultures/${id}/comments/`, { body }),
-  changeProposals: (id: number) => http.get<PublicCultureChangeProposal[]>(`/public-cultures/${id}/change-proposals/`),
-  createChangeProposal: (id: number, data: { summary: string; proposed_data: Partial<PublicCulture> }) =>
-    http.post<PublicCultureChangeProposal>(`/public-cultures/${id}/change-proposals/`, data),
-  approveChangeProposal: (id: number, proposalId: number, reviewNote = '') =>
-    http.post<PublicCultureChangeProposal>(`/public-cultures/${id}/change-proposals/${proposalId}/approve/`, { review_note: reviewNote }),
-  rejectChangeProposal: (id: number, proposalId: number, reviewNote = '') =>
-    http.post<PublicCultureChangeProposal>(`/public-cultures/${id}/change-proposals/${proposalId}/reject/`, { review_note: reviewNote }),
+  versions: (id: number) => http.get<PublicCultureVersion[]>(`/public-cultures/${id}/versions/`),
+  compareVersions: (id: number, fromVersion: number, toVersion: number) =>
+    http.get<PublicCultureVersionCompare>(`/public-cultures/${id}/versions/compare/`, { params: { from: fromVersion, to: toVersion } }),
+  restoreVersion: (id: number, versionNumber: number, changeComment = '') =>
+    http.post<PublicCulture>(`/public-cultures/${id}/versions/${versionNumber}/restore/`, { change_comment: changeComment }),
 };
 
 export const supplierAPI = {
@@ -384,10 +385,12 @@ export type {
   CultureHistoryEntry,
   MediaFileRef,
   PublicCulture,
-  PublicCultureChangeProposal,
   PublicCultureDiscussionComment,
   PublicCultureRemovalReason,
   PublicCultureDuplicateCandidate,
+  PublicCultureUpdatePayload,
+  PublicCultureVersion,
+  PublicCultureVersionCompare,
   CropSpecies,
   PublishPublicCulturePreview,
   RemainingAreaResponse,

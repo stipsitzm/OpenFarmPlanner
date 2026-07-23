@@ -82,7 +82,7 @@ async function publishUniquePublicCulture(page: Page): Promise<PublishResponse['
   return published.public_culture;
 }
 
-test('public crop library supports quick import, discussion, proposal, and mobile layout', async ({ page, request }) => {
+test('public crop library supports quick import, discussion, direct editing, versions, and mobile layout', async ({ page, request }) => {
   await loginWithDeterministicProject(page, request, `public-crop-library-${Date.now()}`, { loginAsAdmin: true });
   const publicCulture = await publishUniquePublicCulture(page);
 
@@ -121,15 +121,17 @@ test('public crop library supports quick import, discussion, proposal, and mobil
   await page.getByRole('button', { name: 'Kommentieren' }).click();
   await expect(page.getByText('E2E-Kommentar zur öffentlichen Kultur.')).toBeVisible();
 
-  await page.getByRole('tab', { name: /Änderungen/ }).click();
-  await page.getByLabel('Kurze Zusammenfassung').fill('E2E Wachstumszeit verbessern');
-  await page.getByLabel('Feld').click();
-  await page.getByRole('option', { name: 'Wachstumszeit (Tage)' }).click();
-  await page.getByLabel('Vorgeschlagener Wert').fill('48');
-  await page.getByRole('button', { name: 'Änderung vorschlagen' }).click();
-  await expect(page.getByText('E2E Wachstumszeit verbessern')).toBeVisible();
-  await expect(page.getByText('48', { exact: true })).toBeVisible();
-  await expect(page.getByText('Offen')).toBeVisible();
+  await page.getByRole('button', { name: 'Bearbeiten' }).click();
+  await page.getByRole('dialog', { name: 'Öffentliche Kultur bearbeiten' }).getByLabel('Wachstumszeit (Tage)').fill('48');
+  await page.getByLabel('Änderungskommentar').fill('E2E Wachstumszeit direkt angepasst');
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  await page.getByRole('tab', { name: /Details/ }).click();
+  await expect(page.getByText('48 Tage')).toBeVisible();
+
+  await page.getByRole('tab', { name: /Versionen/ }).click();
+  await expect(page.getByText('E2E Wachstumszeit direkt angepasst')).toBeVisible();
+  await expect(page.getByText('Version 2').first()).toBeVisible();
+  await expect(page.getByText(/Wachstumszeit \(Tage\): 42 → 48/)).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();

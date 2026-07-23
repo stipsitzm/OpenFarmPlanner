@@ -6,11 +6,11 @@ publishing-boundary slice now exists: `CropSpecies`, optional private
 `Culture.crop_species`, `PublicCulture.crop_species`,
 `PublicCulture.original_language_code`, the Publishing Wizard, and the first
 non-destructive public-library lifecycle statuses (`draft`, `published`,
-`withdrawn`, `removed`) with status events. The first collaborative layer
-also exists: users can discuss public entries and submit reviewed
-`PublicCultureChangeProposal` rows before moderators apply changes to the
-public master data. The larger variety/translation migration remains future
-work.
+`withdrawn`, `removed`) with status events. The collaborative layer now uses
+a Wikipedia-style edit model: users can discuss public entries, edit
+published public rows directly, and every edit creates an immutable
+`PublicCultureVersion` snapshot. The larger variety/translation migration
+remains future work.
 
 ## 1. Scope and current-state analysis
 
@@ -41,9 +41,10 @@ species identity table:
 - `CropSpecies` is the official species list. It is nullable on private
   cultures so project work stays flexible, but it is required by the
   publishing quality gate.
-- `PublicCultureDiscussionComment` and `PublicCultureChangeProposal` are
-  additive collaboration records on `PublicCulture`. They support discussion
-  and reviewed edits without mutating imported project copies.
+- `PublicCultureDiscussionComment` and `PublicCultureVersion` are additive
+  collaboration records on `PublicCulture`. They support discussion, direct
+  editing, structured version comparison, and non-destructive restoration
+  without mutating imported project copies.
 
 `CultureSupplierData` and `SeedPackage` are project-owned child records.
 `PlantingPlan` intentionally points to the private `Culture` snapshot, not to

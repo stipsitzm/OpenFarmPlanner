@@ -485,7 +485,7 @@
       "description": "Durchsuche öffentliche Kulturen, importiere passende Einträge schnell in dein Projekt und hilf dabei, die gemeinsamen Stammdaten Schritt für Schritt zu verbessern.",
       "tabs": {
         "details": "Details",
-        "proposals": "Änderungen",
+        "versions": "Versionen",
         "discussion": "Diskussion"
       },
       "byAuthor": "Von {{author}}",
@@ -493,7 +493,7 @@
       "unknownDate": "Datum unbekannt",
       "notSpecified": "Keine Angabe",
       "noNotes": "Keine Notizen vorhanden.",
-      "collaborationLoadError": "Diskussion und Änderungsvorschläge konnten nicht geladen werden.",
+      "collaborationLoadError": "Die Diskussion konnte nicht geladen werden.",
       "sections": {
         "general": "Allgemeine Informationen",
         "timing": "Zeitplanung",
@@ -536,6 +536,7 @@
         "removed": "Entfernt"
       },
       "fields": {
+        "name": "Name",
         "cropSpecies": "Kulturart",
         "variety": "Sorte",
         "growthDurationDays": "Wachstumszeit (Tage)",
@@ -585,35 +586,33 @@
         "commentError": "Kommentar konnte nicht gespeichert werden.",
         "empty": "Noch keine Diskussion zu dieser Kultur."
       },
-      "proposals": {
-        "intro": "Öffentliche Kulturen werden nicht direkt überschrieben. Schlage Änderungen vor, damit sie geprüft und nachvollziehbar übernommen werden können.",
-        "summaryLabel": "Kurze Zusammenfassung",
-        "fieldLabel": "Feld",
-        "valueLabel": "Vorgeschlagener Wert",
-        "notesLabel": "Vorgeschlagene Notizen",
-        "invalidNumber": "Bitte gib eine gültige Zahl ein.",
-        "create": "Änderung vorschlagen",
-        "creating": "Sende Vorschlag…",
-        "createSuccess": "Änderungsvorschlag wurde gespeichert.",
-        "createError": "Änderungsvorschlag konnte nicht gespeichert werden.",
-        "empty": "Noch keine Änderungsvorschläge vorhanden.",
-        "approve": "Übernehmen",
-        "approving": "Übernehme…",
-        "reject": "Ablehnen",
-        "rejecting": "Lehne ab…",
-        "approveSuccess": "Änderungsvorschlag wurde übernommen.",
-        "rejectSuccess": "Änderungsvorschlag wurde abgelehnt.",
-        "reviewError": "Änderungsvorschlag konnte nicht geprüft werden.",
-        "fields": {
-          "notes": "Notizen",
-          "growth_duration_days": "Wachstumszeit (Tage)",
-          "harvest_duration_days": "Erntezeit (Tage)"
-        },
-        "status": {
-          "pending": "Offen",
-          "approved": "Übernommen",
-          "rejected": "Abgelehnt"
-        }
+      "edit": {
+        "open": "Bearbeiten",
+        "title": "Öffentliche Kultur bearbeiten",
+        "save": "Speichern",
+        "saving": "Speichere…",
+        "success": "Die öffentliche Kultur wurde aktualisiert.",
+        "error": "Die Änderung konnte nicht gespeichert werden.",
+        "changeComment": "Änderungskommentar",
+        "changeCommentPlaceholder": "z. B. Saatgutmenge angepasst",
+        "seedRateUnit": "Einheit Saatgutmenge"
+      },
+      "versions": {
+        "loadError": "Die Versionshistorie konnte nicht geladen werden.",
+        "empty": "Noch keine Versionshistorie vorhanden.",
+        "versionNumber": "Version {{version}}",
+        "compareFrom": "Von Version",
+        "compareTo": "Zu Version",
+        "compareTitle": "Strukturierter Vergleich",
+        "compareCount": "{{count}} Änderungen",
+        "compareError": "Der Versionsvergleich konnte nicht geladen werden.",
+        "noChanges": "Zwischen diesen Versionen gibt es keine Feldänderungen.",
+        "initialVersion": "Erste veröffentlichte Version.",
+        "restore": "Wiederherstellen",
+        "restoring": "Stelle wieder her…",
+        "restoreSuccess": "Die Version wurde als neue aktuelle Version wiederhergestellt.",
+        "restoreError": "Die Version konnte nicht wiederhergestellt werden.",
+        "restoreComment": "Version {{version}} wiederhergestellt"
       }
     },
     "searchLabel": "Öffentliche Kulturen durchsuchen",
@@ -627,7 +626,7 @@
       "importTitle": "Übernehmen",
       "importDescription": "Importiere passende Kulturen als eigene Projektkopie, ohne öffentliche Daten zu verändern.",
       "improveTitle": "Verbessern",
-      "improveDescription": "Diskutiere Inhalte und schlage Änderungen vor, damit die Bibliothek besser wird.",
+      "improveDescription": "Bearbeite öffentliche Kulturen direkt und halte Verbesserungen über die Versionshistorie nachvollziehbar.",
       "emptyLibraryTitle": "Noch keine öffentlichen Kulturen vorhanden",
       "emptyLibraryDescription": "Die Kulturbibliothek lebt von den Beiträgen der Community. Sobald passende Projektkulturen veröffentlicht werden, können sie hier von allen genutzt und weiterentwickelt werden.",
       "noResultsTitle": "Keine passende öffentliche Kultur gefunden"
