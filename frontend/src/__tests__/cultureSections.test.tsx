@@ -36,6 +36,7 @@ describe('culture form UI sections', () => {
 
     const colorInput = screen.getByLabelText('form.displayColor');
     expect(colorInput).toHaveValue('#00ff00');
+    expect(screen.getByLabelText('form.displayColorValue')).toHaveValue('#00ff00');
 
     fireEvent.change(colorInput, { target: { value: '#123456' } });
 
