@@ -291,21 +291,11 @@ interface FocusStateApi {
 }
 
 /**
- * Resolves the currently focused cell for a keyboard event: it prefers the
- * grid's tracked focus state and falls back to walking up from the event
- * target's DOM when the grid has not recorded a focused cell. Pure read; it
- * never mutates the grid or the DOM.
+ * Walks up from a DOM event target to the enclosing grid cell and resolves its
+ * row id and field. Row ids are returned as numbers when they parse cleanly and
+ * kept as strings otherwise. Pure read; it never mutates the grid or the DOM.
  */
-export function resolveFocusedCellFromEvent(
-  api: FocusStateApi | null | undefined,
-  event: { target: EventTarget | null },
-): CellLocation | null {
-  const focusedCell = api?.state?.focus?.cell;
-  if (focusedCell) {
-    return focusedCell;
-  }
-
-  const target = event.target;
+export function getCellLocationFromDomTarget(target: EventTarget | null): CellLocation | null {
   if (!(target instanceof HTMLElement)) {
     return null;
   }
@@ -323,4 +313,22 @@ export function resolveFocusedCellFromEvent(
     id: Number.isNaN(numericId) ? id : numericId,
     field,
   };
+}
+
+/**
+ * Resolves the currently focused cell for a keyboard event: it prefers the
+ * grid's tracked focus state and falls back to walking up from the event
+ * target's DOM when the grid has not recorded a focused cell. Pure read; it
+ * never mutates the grid or the DOM.
+ */
+export function resolveFocusedCellFromEvent(
+  api: FocusStateApi | null | undefined,
+  event: { target: EventTarget | null },
+): CellLocation | null {
+  const focusedCell = api?.state?.focus?.cell;
+  if (focusedCell) {
+    return focusedCell;
+  }
+
+  return getCellLocationFromDomTarget(event.target);
 }

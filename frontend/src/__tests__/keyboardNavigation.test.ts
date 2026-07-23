@@ -1,8 +1,20 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   focusKeyboardNavigableCell,
+  getCellLocationFromDomTarget,
   resolveFocusedCellFromEvent,
 } from '../components/data-grid/keyboardNavigation';
+
+function buildGridCell(rowId: string, field: string): HTMLElement {
+  const row = document.createElement('div');
+  row.setAttribute('role', 'row');
+  row.dataset.id = rowId;
+  const cell = document.createElement('div');
+  cell.setAttribute('role', 'gridcell');
+  cell.dataset.field = field;
+  row.append(cell);
+  return cell;
+}
 
 describe('keyboardNavigation', () => {
   it('focuses the edit input inside a focused editable cell', () => {
@@ -33,6 +45,25 @@ describe('keyboardNavigation', () => {
   });
 });
 
+describe('getCellLocationFromDomTarget', () => {
+  it('resolves a cell and parses a numeric row id', () => {
+    const cell = buildGridCell('42', 'name');
+
+    expect(getCellLocationFromDomTarget(cell)).toEqual({ id: 42, field: 'name' });
+  });
+
+  it('keeps a non-numeric row id as a string', () => {
+    const cell = buildGridCell('draft-1', 'name');
+
+    expect(getCellLocationFromDomTarget(cell)).toEqual({ id: 'draft-1', field: 'name' });
+  });
+
+  it('returns null for targets outside a grid cell', () => {
+    expect(getCellLocationFromDomTarget(null)).toBeNull();
+    expect(getCellLocationFromDomTarget(document.createElement('span'))).toBeNull();
+  });
+});
+
 describe('resolveFocusedCellFromEvent', () => {
   it('prefers the grid focus state when a cell is tracked', () => {
     const api = { state: { focus: { cell: { id: 7, field: 'width_m' } } } };
@@ -42,31 +73,11 @@ describe('resolveFocusedCellFromEvent', () => {
     expect(result).toEqual({ id: 7, field: 'width_m' });
   });
 
-  it('falls back to the event target DOM and parses a numeric row id', () => {
-    const row = document.createElement('div');
-    row.setAttribute('role', 'row');
-    row.dataset.id = '42';
-    const cell = document.createElement('div');
-    cell.setAttribute('role', 'gridcell');
-    cell.dataset.field = 'name';
-    row.append(cell);
-
-    const result = resolveFocusedCellFromEvent(null, { target: cell });
-
-    expect(result).toEqual({ id: 42, field: 'name' });
-  });
-
-  it('keeps a non-numeric row id as a string', () => {
-    const row = document.createElement('div');
-    row.setAttribute('role', 'row');
-    row.dataset.id = 'draft-1';
-    const cell = document.createElement('div');
-    cell.setAttribute('role', 'gridcell');
-    cell.dataset.field = 'name';
-    row.append(cell);
+  it('falls back to the event target DOM when no cell is tracked', () => {
+    const cell = buildGridCell('42', 'name');
 
     expect(resolveFocusedCellFromEvent(null, { target: cell })).toEqual({
-      id: 'draft-1',
+      id: 42,
       field: 'name',
     });
   });
