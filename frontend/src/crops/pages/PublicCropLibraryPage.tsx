@@ -9,6 +9,7 @@ import {
   CircularProgress,
   Divider,
   FormControl,
+  IconButton,
   InputLabel,
   List,
   ListItemButton,
@@ -19,6 +20,7 @@ import {
   Tab,
   Tabs,
   TextField,
+  Tooltip,
   Typography,
   useMediaQuery,
 } from '@mui/material';
@@ -400,29 +402,6 @@ export default function PublicCropLibraryPage() {
     <PageContainer variant="xwide">
       <PageSurface variant="contentFit" sx={{ width: '100%', maxWidth: 1180 }}>
         <Stack spacing={2.25}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between">
-            <Box>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <SpaOutlinedIcon sx={{ color: 'success.main' }} />
-                <Typography variant="h5" component="h1" sx={{ fontWeight: 800 }}>
-                  {t('library.page.title')}
-                </Typography>
-              </Stack>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, maxWidth: 720 }}>
-                {t('library.page.description')}
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              startIcon={<DownloadOutlinedIcon />}
-              disabled={!selectedCulture || importingId !== null}
-              onClick={() => void handleImport()}
-              sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}
-            >
-              {importingId ? t('library.importing') : t('library.importButton')}
-            </Button>
-          </Stack>
-
           {loadError ? <Alert severity="error">{loadError}</Alert> : null}
 
           <Box
@@ -507,8 +486,8 @@ export default function PublicCropLibraryPage() {
               ) : (
                 <Stack sx={{ minHeight: '100%' }}>
                   <CardContent sx={{ p: { xs: 2, sm: 2.5 }, '&:last-child': { pb: { xs: 2, sm: 2.5 } }, bgcolor: 'action.hover' }}>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between">
-                      <Box>
+                    <Stack direction="row" spacing={1.5} alignItems="flex-start" justifyContent="space-between">
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography variant="h5" component="h2" sx={{ fontWeight: 800, overflowWrap: 'anywhere' }}>
                           {getCultureTitle(selectedCulture)}
                         </Typography>
@@ -518,6 +497,32 @@ export default function PublicCropLibraryPage() {
                           <Chip size="small" label={t('library.page.byAuthor', { author: selectedCulture.created_by_label || anonymousLabel })} variant="outlined" />
                         </Stack>
                       </Box>
+                      {isMobile ? (
+                        <Tooltip title={t('library.importButton')}>
+                          <span>
+                            <IconButton
+                              color="primary"
+                              aria-label={t('library.importButton')}
+                              disabled={importingId !== null}
+                              onClick={() => void handleImport()}
+                              sx={{ mt: -0.5 }}
+                            >
+                              <DownloadOutlinedIcon />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      ) : (
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={<DownloadOutlinedIcon />}
+                          disabled={importingId !== null}
+                          onClick={() => void handleImport()}
+                          sx={{ flexShrink: 0 }}
+                        >
+                          {importingId ? t('library.importing') : t('library.importButton')}
+                        </Button>
+                      )}
                     </Stack>
                   </CardContent>
                   <Divider />
