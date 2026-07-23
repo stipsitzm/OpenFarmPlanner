@@ -60,18 +60,10 @@ import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined
 import FolderOpenOutlinedIcon from '@mui/icons-material/FolderOpenOutlined';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import PublicIcon from '@mui/icons-material/Public';
-import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
-import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { ProjectMenu } from './ProjectMenu';
+import { GlobalMenu } from './GlobalMenu';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
-import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
-import KeyboardOutlinedIcon from '@mui/icons-material/KeyboardOutlined';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
-import LogoutIcon from '@mui/icons-material/Logout';
-import ExitToAppIcon from '@mui/icons-material/ExitToApp';
 import { cultureAPI, projectAPI } from '../api/api';
 import type { CultureHistoryEntry } from '../api/types';
 import { MobileProjectSwitcherDialog } from './MobileProjectSwitcherDialog';
@@ -114,8 +106,6 @@ import {
 import { PanelLeft } from 'lucide-react';
 
 const CONTENT_ALIGNMENT_MODE = 'centered';
-const ACTION_MENU_ITEM_ICON_SX = { minWidth: 32, color: 'text.secondary' } as const;
-const ACTION_MENU_ICON_PROPS = { fontSize: 'small' } as const;
 const HIERARCHY_CREATE_LOCATION_ACTION_ID = 'fields-global-add-location';
 const TOPBAR_ACTION_GROUP_GAP = 1.25;
 const COMPACT_TOPBAR_TOGGLE_SIZE = 44;
@@ -135,171 +125,6 @@ interface SnackbarState {
   actionLabel?: string;
   onAction?: () => void | Promise<void>;
 }
-
-interface ProjectMenuProps {
-  anchorEl: HTMLElement | null;
-  open: boolean;
-  memberships: { project_id: number; project_name: string; role: 'admin' | 'member' }[];
-  activeProjectId: number | null;
-  isSwitchingProject: boolean;
-  isCreatingDemoProject: boolean;
-  deletedProjectsCount: number;
-  onClose: () => void;
-  onSwitchProject: (projectId: number) => Promise<void>;
-  onOpenProjectSettings: () => void;
-  onOpenProjectSelection: () => void;
-  onOpenCreateProject: () => void;
-  onCreateDemoProject: () => void;
-  onOpenProjectTrash: () => void;
-  t: (key: string, options?: Record<string, unknown>) => string;
-}
-
-function ProjectMenu(props: ProjectMenuProps) {
-  const {
-    anchorEl,
-    open,
-    memberships,
-    activeProjectId,
-    isSwitchingProject,
-    isCreatingDemoProject,
-    deletedProjectsCount,
-    onClose,
-    onSwitchProject,
-    onOpenProjectSettings,
-    onOpenProjectSelection,
-    onOpenCreateProject,
-    onCreateDemoProject,
-    onOpenProjectTrash,
-    t,
-  } = props;
-
-  return (
-    <Menu
-      id="project-switcher-menu"
-      anchorEl={anchorEl}
-      open={open}
-      onClose={onClose}
-    >
-      {memberships.length === 0 ? (
-        <MenuItem disabled>{t('projectSwitcher.zeroProjects')}</MenuItem>
-      ) : (
-        memberships.map((membership) => (
-          <MenuItem
-            key={membership.project_id}
-            onClick={() => void onSwitchProject(membership.project_id)}
-            selected={membership.project_id === activeProjectId}
-            disabled={isSwitchingProject}
-          >
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ width: '100%' }}>
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{membership.project_name}</span>
-              {membership.project_id === activeProjectId ? <CheckIcon fontSize="small" /> : null}
-            </Stack>
-          </MenuItem>
-        ))
-      )}
-      <Divider />
-      <MenuItem onClick={onOpenProjectSelection}>
-        <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SwapHorizIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
-        {t('project.switch')}
-      </MenuItem>
-      <MenuItem onClick={onOpenProjectSettings}>
-        <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
-        {t('project.settings')}
-      </MenuItem>
-      <Divider />
-      <MenuItem onClick={onOpenCreateProject}>
-        <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><AddIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
-        {t('project.create')}
-      </MenuItem>
-      <MenuItem onClick={onCreateDemoProject} disabled={isCreatingDemoProject}>
-        <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><PlayCircleOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
-        {t('projectSwitcher.loadDemoProject')}
-      </MenuItem>
-      {deletedProjectsCount > 0 ? (
-        <MenuItem onClick={onOpenProjectTrash}>
-          <ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><DeleteOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>
-          {t('projectSwitcher.trash', { count: deletedProjectsCount })}
-        </MenuItem>
-      ) : null}
-    </Menu>
-  );
-}
-
-interface GlobalMenuProps {
-  anchorEl: HTMLElement | null;
-  open: boolean;
-  historyLoading: boolean;
-  userLabel: string;
-  isMobile: boolean;
-  onClose: () => void;
-  onOpenProjectSwitcher: () => void;
-  onOpenCreateProject: () => void;
-  onOpenProjectSettings: () => void;
-  onOpenProjectHistory: () => Promise<void>;
-  onOpenAccountSettings: () => void;
-  onOpenShortcuts: () => void;
-  onOpenHelp: () => void;
-  canLeaveDemoProject: boolean;
-  isGuestDemoSession: boolean;
-  onLeaveDemoProject: () => Promise<void>;
-  onLogout: () => Promise<void>;
-  t: (key: string) => string;
-}
-
-function GlobalMenu(props: GlobalMenuProps) {
-  const {
-    anchorEl,
-    open,
-    historyLoading,
-    userLabel,
-    isMobile,
-    onClose,
-    onOpenProjectSwitcher,
-    onOpenCreateProject,
-    onOpenProjectSettings,
-    onOpenProjectHistory,
-    onOpenAccountSettings,
-    onOpenShortcuts,
-    onOpenHelp,
-    canLeaveDemoProject,
-    isGuestDemoSession,
-    onLeaveDemoProject,
-    onLogout,
-    t,
-  } = props;
-
-  const wrap = (fn: () => void): () => void => () => { onClose(); fn(); };
-  const wrapAsync = (fn: () => Promise<void>): () => void => () => { onClose(); void fn(); };
-
-  const mobileMenuItems = [
-    <MenuItem key="mobile-section-project" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.projectActions')}</MenuItem>,
-    <MenuItem key="mobile-project-switcher" onClick={wrap(onOpenProjectSwitcher)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SwapHorizIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('projectSwitcher.ariaLabel')}</MenuItem>,
-    <MenuItem key="mobile-project-create" onClick={wrap(onOpenCreateProject)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><AddIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.create')}</MenuItem>,
-    <MenuItem key="mobile-project-settings" onClick={wrap(onOpenProjectSettings)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.settings')}</MenuItem>,
-    <MenuItem key="mobile-project-history" onClick={wrapAsync(onOpenProjectHistory)} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
-    <Divider key="mobile-divider-project-app" />,
-    <MenuItem key="mobile-section-app" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.app')}</MenuItem>,
-    <MenuItem key="mobile-app-shortcuts" onClick={wrap(onOpenShortcuts)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.shortcuts')}</MenuItem>,
-    <MenuItem key="mobile-app-help" onClick={wrap(onOpenHelp)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.appHelp')}</MenuItem>,
-    <MenuItem key="mobile-app-account-settings" onClick={wrap(onOpenAccountSettings)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
-    <Divider key="mobile-divider-app-account" />,
-    <MenuItem key="mobile-section-account" disabled sx={{ opacity: 1, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: 0.5 }}>{t('globalMenu.account')}</MenuItem>,
-    canLeaveDemoProject ? <MenuItem key="mobile-account-leave-demo" onClick={wrapAsync(onLeaveDemoProject)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><ExitToAppIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.leaveDemo')}</MenuItem> : null,
-    !isGuestDemoSession ? <MenuItem key="mobile-account-logout" onClick={wrapAsync(onLogout)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem> : null,
-  ];
-  const desktopMenuItems = [
-    <MenuItem key="desktop-project-settings" onClick={wrap(onOpenProjectSettings)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('project.settings')}</MenuItem>,
-    <MenuItem key="desktop-history" onClick={wrapAsync(onOpenProjectHistory)} disabled={historyLoading}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HistoryOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.openVersionHistory')}</MenuItem>,
-    <Divider key="desktop-divider" />,
-    <MenuItem key="desktop-account-settings" onClick={wrap(onOpenAccountSettings)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><SettingsOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('accountSettings')}</MenuItem>,
-    <MenuItem key="desktop-shortcuts" onClick={wrap(onOpenShortcuts)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><KeyboardOutlinedIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.shortcuts')}</MenuItem>,
-    <MenuItem key="desktop-help" onClick={wrap(onOpenHelp)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><HelpOutlineIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('globalMenu.appHelp')}</MenuItem>,
-    canLeaveDemoProject ? <MenuItem key="desktop-leave-demo" onClick={wrapAsync(onLeaveDemoProject)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><ExitToAppIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.leaveDemo')}</MenuItem> : null,
-    !isGuestDemoSession ? <MenuItem key="desktop-logout" onClick={wrapAsync(onLogout)}><ListItemIcon sx={ACTION_MENU_ITEM_ICON_SX}><LogoutIcon {...ACTION_MENU_ICON_PROPS} /></ListItemIcon>{t('commandPalette.commands.logout')} {userLabel}</MenuItem> : null,
-  ];
-  return <Menu id="global-actions-menu" anchorEl={anchorEl} open={open} onClose={onClose}>{isMobile ? mobileMenuItems : desktopMenuItems}</Menu>;
-}
-
 
 function getCompactTopbarActionIcon(actionId: string): React.ReactNode {
   switch (actionId) {
