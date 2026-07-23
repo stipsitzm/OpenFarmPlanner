@@ -111,6 +111,7 @@ import {
   getKeyboardNavigationTarget,
   getVerticalKeyboardNavigationTarget,
   getCellLocationFromDomTarget,
+  getHorizontalKeyboardNavigationTarget,
   isCellKeyboardNavigable,
   isInteractiveCellTarget,
   preventReadOnlyCellMouseFocus,
@@ -777,20 +778,14 @@ export function EditableDataGrid<T extends EditableRow>({
     rowId: GridRowId,
     field: string,
     direction: 1 | -1,
-  ): { id: GridRowId; field: string } | null => {
-    const editableFields = getKeyboardNavigableFieldsForRow(rowId);
-    const fieldIndex = editableFields.indexOf(field);
-    if (fieldIndex === -1) {
-      return null;
-    }
-
-    const nextField = editableFields[fieldIndex + direction];
-    if (nextField) {
-      return { id: rowId, field: nextField };
-    }
-
-    return null;
-  }, [getKeyboardNavigableFieldsForRow]);
+  ): { id: GridRowId; field: string } | null => (
+    getHorizontalKeyboardNavigationTarget(
+      getKeyboardNavigableFieldsForRow(rowId),
+      rowId,
+      field,
+      direction,
+    )
+  ), [getKeyboardNavigableFieldsForRow]);
 
   const handleReadOnlyCellMouseDown = useCallback((event: React.MouseEvent<HTMLElement>): void => {
     const target = event.target;

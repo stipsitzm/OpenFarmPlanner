@@ -240,6 +240,26 @@ export function getVerticalKeyboardNavigationTarget<Row extends GridValidRowMode
   return null;
 }
 
+/**
+ * Resolves the next horizontally-adjacent navigable cell within the same row,
+ * given the row's already-computed ordered list of navigable fields. Returns
+ * null at the row edges. Pure function of its arguments.
+ */
+export function getHorizontalKeyboardNavigationTarget(
+  navigableFields: readonly string[],
+  rowId: GridRowId,
+  field: string,
+  direction: Direction,
+): CellLocation | null {
+  const fieldIndex = navigableFields.indexOf(field);
+  if (fieldIndex === -1) {
+    return null;
+  }
+
+  const nextField = navigableFields[fieldIndex + direction];
+  return nextField ? { id: rowId, field: nextField } : null;
+}
+
 export function focusKeyboardNavigableCell<Row extends GridValidRowModel>({
   api,
   cell,
